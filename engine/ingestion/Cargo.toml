@@ -16,3 +16,4 @@ byteorder = "1.5"
 
 [dev-dependencies]
 approx = "0.5"
+tempfile = "3.17"

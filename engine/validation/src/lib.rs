@@ -59,6 +59,61 @@ mod tests {
     }
 
     #[test]
+    fn test_san_francisco_dataset_validation() {
+        use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
+        let dataset = create_san_francisco_dataset();
+        let (validated, report) = validate_dataset(&dataset);
+
+        assert_eq!(validated.roads.len(), 6);
+        assert_eq!(validated.buildings.len(), 5);
+        assert_eq!(validated.water_bodies.len(), 1);
+        assert_eq!(validated.land_cover.len(), 2);
+        assert_eq!(
+            report.quarantined.len(),
+            0,
+            "Quarantined features found in SF dataset"
+        );
+
+        // Verify Salesforce Tower height provenance
+        let salesforce = validated
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Salesforce Tower"))
+            .expect("Salesforce Tower missing");
+        assert_eq!(salesforce.height.height_meters, 326.0);
+        assert_eq!(salesforce.height.provenance, HeightProvenance::Surveyed);
+        assert_eq!(salesforce.height.confidence, 1.0);
+
+        // Verify Transamerica Pyramid height provenance
+        let transamerica = validated
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Transamerica Pyramid"))
+            .expect("Transamerica missing");
+        assert_eq!(transamerica.height.height_meters, 260.0);
+        assert_eq!(transamerica.height.provenance, HeightProvenance::Surveyed);
+
+        // Verify Bay Bridge I-80 Approach (elevated bridge)
+        let bay_bridge = validated
+            .roads
+            .iter()
+            .find(|r| r.name.as_deref() == Some("Interstate 80 Bay Bridge Approach"))
+            .expect("Bay Bridge approach missing");
+        assert_eq!(bay_bridge.layer, 1);
+        assert!(bay_bridge.is_bridge);
+        assert_eq!(bay_bridge.lanes, 5);
+
+        // Verify Broadway Tunnel
+        let tunnel = validated
+            .roads
+            .iter()
+            .find(|r| r.name.as_deref() == Some("Broadway Tunnel"))
+            .expect("Broadway Tunnel missing");
+        assert_eq!(tunnel.layer, -1);
+        assert!(tunnel.is_tunnel);
+    }
+
+    #[test]
     fn test_polygon_unclosed_ring_repair() {
         let mut dataset = IngestedDataset::default();
         // Open ring (first != last)

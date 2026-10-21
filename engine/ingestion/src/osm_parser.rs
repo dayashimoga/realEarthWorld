@@ -1,7 +1,8 @@
 //! Streaming OpenStreetMap XML parser.
 
 use crate::osm_types::{
-    BuildingType, HighwayType, IngestedDataset, OsmBuildingFeature, OsmRoadFeature, OsmWaterFeature,
+    BuildingType, HighwayType, IngestedDataset, LandCoverClass, OsmBuildingFeature,
+    OsmLandCoverFeature, OsmRoadFeature, OsmWaterFeature, WaterType,
 };
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
@@ -155,7 +156,16 @@ pub fn parse_osm_xml(xml_content: &str) -> Result<IngestedDataset> {
 
                                 let speed_limit_kph = current_way_tags
                                     .get("maxspeed")
-                                    .and_then(|s| s.trim_end_matches(" km/h").parse::<u32>().ok())
+                                    .and_then(|s| {
+                                        if let Some(mph) = s.strip_suffix(" mph") {
+                                            mph.trim()
+                                                .parse::<f32>()
+                                                .map(|v| (v * 1.60934).round() as u32)
+                                                .ok()
+                                        } else {
+                                            s.trim_end_matches(" km/h").parse::<u32>().ok()
+                                        }
+                                    })
                                     .unwrap_or_else(|| hw_type.default_speed_limit());
 
                                 let is_oneway = current_way_tags
@@ -193,15 +203,46 @@ pub fn parse_osm_xml(xml_content: &str) -> Result<IngestedDataset> {
                             }
                         } else if (current_way_tags.get("natural").map(|s| s.as_str())
                             == Some("water")
+                            || current_way_tags.get("natural").map(|s| s.as_str())
+                                == Some("coastline")
                             || current_way_tags.contains_key("water"))
                             && coords.len() >= 3
                         {
                             let name = current_way_tags.get("name").cloned();
+                            let is_coastline = current_way_tags.get("natural").map(|s| s.as_str())
+                                == Some("coastline")
+                                || current_way_tags.get("water").map(|s| s.as_str()) == Some("bay");
+                            let w_tag = current_way_tags
+                                .get("water")
+                                .map(|s| s.as_str())
+                                .unwrap_or("bay");
+                            let water_type = WaterType::from_tag(w_tag);
+
                             dataset.water_bodies.push(OsmWaterFeature {
                                 id: way_id,
                                 name,
+                                water_type,
                                 outer_ring: coords,
+                                is_coastline,
+                                target_elevation_msl: 0.0,
                             });
+                        } else if coords.len() >= 3
+                            && (current_way_tags.contains_key("leisure")
+                                || current_way_tags.contains_key("landuse"))
+                        {
+                            let leisure = current_way_tags.get("leisure").map(|s| s.as_str());
+                            let landuse = current_way_tags.get("landuse").map(|s| s.as_str());
+                            let natural = current_way_tags.get("natural").map(|s| s.as_str());
+                            let class = LandCoverClass::from_tags(landuse, leisure, natural);
+
+                            if class != LandCoverClass::Other {
+                                dataset.land_cover.push(OsmLandCoverFeature {
+                                    id: way_id,
+                                    name: current_way_tags.get("name").cloned(),
+                                    class,
+                                    polygon: coords,
+                                });
+                            }
                         }
                     }
                 }

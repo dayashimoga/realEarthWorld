@@ -79,7 +79,7 @@ fn bench_compiler_operations(c: &mut Criterion) {
             chunk_x: 0,
             chunk_y: 0,
             lod_level: 0,
-            bounds: GeoBounds::new(12.9700, 77.5800, 12.9800, 77.5900),
+            bounds: GeoBounds::new(12.9700, 12.9800, 77.5800, 77.5900),
             anchor,
             min_elevation: 900.0,
             max_elevation: 935.0,

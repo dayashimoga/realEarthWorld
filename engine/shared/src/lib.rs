@@ -4,3 +4,6 @@
 pub mod bounds;
 pub mod coordinates;
 pub mod errors;
+pub mod region;
+
+pub use region::RegionProfile;

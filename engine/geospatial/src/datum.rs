@@ -10,6 +10,8 @@ pub enum VerticalDatum {
     /// Orthometric Height (Height above Mean Sea Level / Geoid, e.g. EGM96 or EGM2008).
     Egm96Geoid,
     Egm2008Geoid,
+    /// North American Vertical Datum of 1988 (NAVD88) for US regions.
+    Navd88,
 }
 
 /// Metadata indicating vertical datum and geoid separation.
@@ -25,6 +27,14 @@ impl VerticalDatumMetadata {
         Self {
             datum: VerticalDatum::Wgs84Ellipsoidal,
             geoid_undulation_meters: 0.0,
+        }
+    }
+
+    /// Approximate geoid undulation for San Francisco region (GEOID18/EGM96 is approx -32.4m in Northern California).
+    pub fn san_francisco_navd88() -> Self {
+        Self {
+            datum: VerticalDatum::Navd88,
+            geoid_undulation_meters: -32.4,
         }
     }
 

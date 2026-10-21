@@ -35,6 +35,20 @@ fn bench_geospatial_transforms(c: &mut Criterion) {
         });
     });
 
+    let transamerica = Wgs84Coord::new(37.7952, -122.4028, 10.0);
+    group.bench_function("wgs84_to_utm_zone10n_sf", |b| {
+        b.iter(|| {
+            let _ = wgs84_to_utm(black_box(transamerica));
+        });
+    });
+
+    let navd88 = realearth_geospatial::datum::VerticalDatumMetadata::san_francisco_navd88();
+    group.bench_function("ellipsoidal_to_navd88_sf", |b| {
+        b.iter(|| {
+            let _ = navd88.ellipsoidal_to_orthometric(black_box(10.0));
+        });
+    });
+
     group.finish();
 }
 

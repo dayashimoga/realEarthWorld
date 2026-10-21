@@ -1,7 +1,8 @@
 //! High-fidelity sample dataset for Bengaluru Central (Vidhana Soudha, Cubbon Park, MG Road).
 
 use crate::osm_types::{
-    BuildingType, HighwayType, IngestedDataset, OsmBuildingFeature, OsmRoadFeature, OsmWaterFeature,
+    BuildingType, HighwayType, IngestedDataset, OsmBuildingFeature, OsmRoadFeature,
+    OsmWaterFeature, WaterType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 
@@ -156,6 +157,7 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
     dataset.water_bodies.push(OsmWaterFeature {
         id: 300_001,
         name: Some("Cubbon Park Lotus Pond".to_string()),
+        water_type: WaterType::Lake,
         outer_ring: vec![
             Wgs84Coord::new(12.9730, 77.5910, 0.0),
             Wgs84Coord::new(12.9740, 77.5910, 0.0),
@@ -163,6 +165,8 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
             Wgs84Coord::new(12.9730, 77.5925, 0.0),
             Wgs84Coord::new(12.9730, 77.5910, 0.0),
         ],
+        is_coastline: false,
+        target_elevation_msl: 915.0,
     });
 
     dataset

@@ -3,7 +3,9 @@
 use crate::polygon_validator::{validate_building, ValidatedBuilding};
 use crate::report::ValidationReport;
 use crate::road_validator::{validate_road, verify_grade_separations};
-use realearth_ingestion::osm_types::{IngestedDataset, OsmRoadFeature, OsmWaterFeature};
+use realearth_ingestion::osm_types::{
+    IngestedDataset, OsmLandCoverFeature, OsmRoadFeature, OsmWaterFeature,
+};
 
 /// Fully validated and sanitized dataset ready for the world compiler.
 #[derive(Debug, Clone, PartialEq)]
@@ -11,6 +13,7 @@ pub struct ValidatedDataset {
     pub roads: Vec<OsmRoadFeature>,
     pub buildings: Vec<ValidatedBuilding>,
     pub water_bodies: Vec<OsmWaterFeature>,
+    pub land_cover: Vec<OsmLandCoverFeature>,
 }
 
 /// Runs the complete validation, repair, and quarantine pipeline on an ingested dataset.
@@ -44,6 +47,7 @@ pub fn validate_dataset(dataset: &IngestedDataset) -> (ValidatedDataset, Validat
         roads: valid_roads,
         buildings: valid_buildings,
         water_bodies: dataset.water_bodies.clone(),
+        land_cover: dataset.land_cover.clone(),
     };
 
     (validated, report)

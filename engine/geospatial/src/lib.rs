@@ -135,4 +135,20 @@ mod tests {
         let back_ortho = meta.ellipsoidal_to_orthometric(ellipsoidal);
         assert_eq!(back_ortho, 920.0);
     }
+
+    #[test]
+    fn test_san_francisco_utm_zone_and_navd88() {
+        // Transamerica Pyramid, San Francisco: 37.7952° N, 122.4028° W, 10m MSL
+        let sf_coord = Wgs84Coord::new(37.7952, -122.4028, 10.0);
+        let utm = wgs84_to_utm(sf_coord);
+        assert_eq!(utm.zone, 10, "San Francisco must be in UTM Zone 10");
+        assert!(utm.north, "San Francisco is in Northern hemisphere");
+        assert!(utm.easting > 500_000.0 && utm.easting < 600_000.0);
+        assert!(utm.northing > 4_100_000.0 && utm.northing < 4_200_000.0);
+
+        let navd88 = VerticalDatumMetadata::san_francisco_navd88();
+        assert_eq!(navd88.datum, VerticalDatum::Navd88);
+        let ellip = navd88.orthometric_to_ellipsoidal(10.0);
+        assert!((ellip - (10.0 - 32.4)).abs() < 1e-6);
+    }
 }

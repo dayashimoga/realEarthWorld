@@ -8,6 +8,9 @@ use realearth_ingestion::osm_parser::parse_osm_xml;
 use realearth_ingestion::sample_bengaluru::{
     create_bengaluru_central_dataset, generate_bengaluru_osm_xml,
 };
+use realearth_ingestion::sample_san_francisco::{
+    create_san_francisco_dataset, generate_san_francisco_osm_xml,
+};
 use realearth_validation::pipeline::validate_dataset;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -24,8 +27,10 @@ struct Cli {
 enum Commands {
     /// Compiles a real-world region into binary .rec chunks and SQLite index
     Compile {
-        #[arg(short, long, default_value = "target/world_bengaluru")]
+        #[arg(short, long, default_value = "target/world_san_francisco")]
         output: PathBuf,
+        #[arg(short, long, default_value = "san-francisco")]
+        region: String,
         #[arg(short, long, default_value_t = 1000.0)]
         chunk_size: f64,
     },
@@ -33,6 +38,8 @@ enum Commands {
     Validate {
         #[arg(short, long)]
         input: Option<PathBuf>,
+        #[arg(short, long, default_value = "san-francisco")]
+        region: String,
     },
     /// Inspects a compiled .rec binary chunk file
     InspectChunk {
@@ -48,19 +55,38 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Compile { output, chunk_size } => {
+        Commands::Compile {
+            output,
+            region,
+            chunk_size,
+        } => {
             println!("🚀 Starting Real Earth World Compilation...");
             let start = Instant::now();
 
-            println!("📦 Ingesting Bengaluru Central reference dataset...");
-            let raw_dataset = create_bengaluru_central_dataset();
+            let is_sf =
+                region.to_lowercase().contains("san-francisco") || region.to_lowercase() == "sf";
+            let (raw_dataset, dem, region_name) = if is_sf {
+                println!("📦 Ingesting San Francisco Downtown & Waterfront reference dataset...");
+                (
+                    create_san_francisco_dataset(),
+                    DemGrid::create_san_francisco_coastal_dem(64, 64),
+                    "San Francisco Downtown (US)",
+                )
+            } else {
+                println!("📦 Ingesting Bengaluru Central reference dataset...");
+                (
+                    create_bengaluru_central_dataset(),
+                    DemGrid::create_bengaluru_plateau_dem(64, 64),
+                    "Bengaluru Central (IN)",
+                )
+            };
 
-            println!("🔍 Validating topology and grade separations...");
+            println!(
+                "🔍 Validating topology and grade separations for {}...",
+                region_name
+            );
             let (validated, report) = validate_dataset(&raw_dataset);
             println!("  {}", report.summary());
-
-            println!("🗺️ Generating Bengaluru DEM elevation grid (900m-935m MSL)...");
-            let dem = DemGrid::create_bengaluru_plateau_dem(64, 64);
 
             let options = CompilerOptions {
                 chunk_size_meters: chunk_size,
@@ -75,6 +101,7 @@ fn main() -> anyhow::Result<()> {
 
             let elapsed = start.elapsed();
             println!("\n✅ World Compilation Completed in {:.2?}!", elapsed);
+            println!("  Region: {}", region_name);
             println!("  Total Chunks: {}", stats.total_chunks_generated);
             println!("  Total Vertices: {}", stats.total_vertices);
             println!("  Total Triangles: {}", stats.total_triangles);
@@ -91,14 +118,23 @@ fn main() -> anyhow::Result<()> {
                 stats.total_uncompressed_bytes as f64 / stats.total_compressed_bytes.max(1) as f64
             );
         }
-        Commands::Validate { input } => {
+        Commands::Validate { input, region } => {
             let xml = match input {
                 Some(p) => std::fs::read_to_string(p)?,
                 None => {
-                    println!(
-                        "ℹ️ No input file specified, using built-in Bengaluru Central dataset."
-                    );
-                    generate_bengaluru_osm_xml()
+                    if region.to_lowercase().contains("sf")
+                        || region.to_lowercase().contains("san-francisco")
+                    {
+                        println!(
+                            "ℹ️ No input file specified, using built-in San Francisco Downtown dataset."
+                        );
+                        generate_san_francisco_osm_xml()
+                    } else {
+                        println!(
+                            "ℹ️ No input file specified, using built-in Bengaluru Central dataset."
+                        );
+                        generate_bengaluru_osm_xml()
+                    }
                 }
             };
 

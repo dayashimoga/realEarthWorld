@@ -157,4 +157,55 @@ mod tests {
         let chunk = read_chunk_file(&first_chunk_file).expect("Failed to read chunk from disk");
         assert_eq!(&chunk.header.magic, CHUNK_MAGIC);
     }
+
+    #[test]
+    fn test_compile_san_francisco_world_package() {
+        use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
+
+        let dir = tempdir().expect("Failed to create tempdir");
+        let output_dir = dir.path().join("sf_world");
+
+        let raw_dataset = create_san_francisco_dataset();
+        let (validated, report) = validate_dataset(&raw_dataset);
+        assert_eq!(report.quarantined.len(), 0);
+
+        let dem = DemGrid::create_san_francisco_coastal_dem(32, 32);
+
+        let options = CompilerOptions {
+            chunk_size_meters: 500.0,
+            terrain_grid_resolution: 8,
+        };
+
+        let stats = compile_world_package(&validated, &dem, &output_dir, &options)
+            .expect("San Francisco world compilation failed");
+
+        assert!(stats.total_chunks_generated >= 4, "Expected >= 4 chunks");
+        assert!(stats.total_vertices > 0);
+        assert!(stats.total_triangles > 0);
+
+        // Verify SQLite index
+        let db_path = output_dir.join("chunks.db");
+        assert!(db_path.exists());
+        let db = ChunkDatabase::open(&db_path).expect("Failed to read chunks.db");
+        assert_eq!(db.count_chunks().unwrap(), stats.total_chunks_generated);
+
+        // Verify min/max elevation in chunks captures coastal to hill range
+        let all_chunks = db.query_bbox(&dem.bounds).expect("Query failed");
+        let min_recorded = all_chunks
+            .iter()
+            .map(|c| c.min_alt)
+            .fold(f32::INFINITY, f32::min);
+        let max_recorded = all_chunks
+            .iter()
+            .map(|c| c.max_alt)
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!(
+            min_recorded <= 5.0,
+            "Coastal chunk min elevation must be <= 5m MSL"
+        );
+        assert!(
+            max_recorded >= 50.0,
+            "Telegraph/Nob hill chunk max elevation must be >= 50m MSL"
+        );
+    }
 }

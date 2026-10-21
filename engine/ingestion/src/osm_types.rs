@@ -125,12 +125,105 @@ pub struct OsmBuildingFeature {
     pub levels: Option<u32>,
 }
 
-/// Water body feature (lake, river, tank).
+/// Specific classification for water bodies and maritime coastlines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum WaterType {
+    #[default]
+    Ocean,
+    Bay,
+    River,
+    Canal,
+    Lake,
+    Wetland,
+    Other,
+}
+
+impl WaterType {
+    pub fn from_tag(tag: &str) -> Self {
+        match tag {
+            "ocean" | "sea" => Self::Ocean,
+            "bay" | "harbour" => Self::Bay,
+            "river" | "stream" | "riverbank" => Self::River,
+            "canal" => Self::Canal,
+            "lake" | "reservoir" | "pond" | "tank" => Self::Lake,
+            "wetland" | "marsh" => Self::Wetland,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Water body feature (lake, bay, river, coastline).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OsmWaterFeature {
     pub id: u64,
     pub name: Option<String>,
+    pub water_type: WaterType,
     pub outer_ring: Vec<Wgs84Coord>,
+    pub is_coastline: bool,
+    pub target_elevation_msl: f32,
+}
+
+/// Authoritative Land Cover Classification (aligned with USGS NLCD).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum LandCoverClass {
+    OpenWater,
+    DevelopedOpenSpace,
+    DevelopedLowIntensity,
+    DevelopedMediumIntensity,
+    #[default]
+    DevelopedHighIntensity,
+    DeciduousForest,
+    EvergreenForest,
+    MixedForest,
+    ShrubScrub,
+    GrasslandHerbaceous,
+    PastureHay,
+    CultivatedCrops,
+    WoodyWetlands,
+    EmergentHerbaceousWetlands,
+    UrbanPark,
+    Other,
+}
+
+impl LandCoverClass {
+    pub fn from_tags(landuse: Option<&str>, leisure: Option<&str>, natural: Option<&str>) -> Self {
+        if let Some(l) = leisure {
+            if l == "park" || l == "garden" || l == "recreation_ground" {
+                return Self::UrbanPark;
+            }
+        }
+        if let Some(n) = natural {
+            match n {
+                "wood" | "tree_row" => return Self::DeciduousForest,
+                "scrub" | "heath" => return Self::ShrubScrub,
+                "grassland" => return Self::GrasslandHerbaceous,
+                "wetland" => return Self::WoodyWetlands,
+                "water" | "bay" => return Self::OpenWater,
+                _ => {}
+            }
+        }
+        if let Some(lu) = landuse {
+            match lu {
+                "forest" => return Self::DeciduousForest,
+                "meadow" | "grass" => return Self::GrasslandHerbaceous,
+                "farmland" | "farm" => return Self::CultivatedCrops,
+                "commercial" | "retail" => return Self::DevelopedHighIntensity,
+                "residential" => return Self::DevelopedMediumIntensity,
+                "industrial" => return Self::DevelopedHighIntensity,
+                _ => {}
+            }
+        }
+        Self::Other
+    }
+}
+
+/// Normalized land cover / vegetation parcel.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OsmLandCoverFeature {
+    pub id: u64,
+    pub name: Option<String>,
+    pub class: LandCoverClass,
+    pub polygon: Vec<Wgs84Coord>,
 }
 
 /// Collection of raw ingested features for a geographic area.
@@ -139,4 +232,5 @@ pub struct IngestedDataset {
     pub roads: Vec<OsmRoadFeature>,
     pub buildings: Vec<OsmBuildingFeature>,
     pub water_bodies: Vec<OsmWaterFeature>,
+    pub land_cover: Vec<OsmLandCoverFeature>,
 }

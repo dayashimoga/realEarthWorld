@@ -43,3 +43,20 @@
   - 100% test pass rate (31/31 tests passing across workspace).
   - Zero compiler warnings, zero clippy warnings (`-D warnings`), zero formatting drift (`cargo fmt --check`).
   - Bengaluru MVP: 165.2 FPS (6.05 ms/frame vs $\le 16.67$ ms budget), 0.23 MB resident memory (budget 1024 MB), sub-200ms cold startup.
+
+## STAGE 1: Real US GIS Acquisition and Normalization (San Francisco Pilot)
+- [x] Stage 1.1: Implement configurable `RegionProfile` architecture supporting arbitrary US and global bounding boxes.
+- [x] Stage 1.1: Author authentic San Francisco reference dataset (`assets/san_francisco_sample`) including downtown, coastal waterfront, Bay Bridge approach, Broadway Tunnel, and surveyed skyscrapers.
+- [x] Stage 1.1: Ingestion pipeline with SHA-256 provenance verification, caching, and offline bundle fallback.
+- [x] Stage 1.2: Geographic normalization for Western US: UTM Zone 10N, NAVD88 vertical datum, and high-relief coastal DEM grid (0m to 115m MSL).
+- [x] Stage 1.3: Extended feature extraction for water bodies, coastlines, piers, land-cover classifications, and US highway attributes.
+- [x] Stage 1.4: Coastal terrain alignment, road elevation invariance, and defect quarantine reporting.
+- [x] Stage 1.4: Update CLI tool with San Francisco compilation, inspection, and benchmark subcommands.
+- [x] Stage 1.4: Execute full test suite, regression verification, and publish Stage 1 Certification Matrix.
+
+## STAGE 2: High-Performance Large-Scale World Streaming & Chunk Hierarchies (Roadmap)
+- [ ] Stage 2.1: Implement multi-LOD binary chunk generation (LOD0 fine, LOD1 medium, LOD2 distant).
+- [ ] Stage 2.2: Implement hierarchical quadtree spatial index in SQLite and FlatBuffers chunk format.
+- [ ] Stage 2.3: Expand streaming predictive prefetching along vehicle velocity vectors.
+- [ ] Stage 2.4: Benchmarking and memory budget validation under rapid multi-kilometer camera motion.
+

@@ -96,6 +96,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Multi-stage `Dockerfile` and `Containerfile` for Podman/Docker headless deployment and builds.
   - Automation scripts for Windows (`.ps1`) and POSIX (`.sh`) in `scripts/` (`setup`, `build`, `test`, `run`, `bench`, `clean`).
 
+## [0.2.0] - 2026-10-21 — STAGE 1: Real US GIS Acquisition and Normalization (San Francisco Pilot)
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0006-us-gis-acquisition-and-san-francisco-normalization.md`: Documents multi-region profile architecture, US coordinate normalization (UTM Zone 10N, NAVD88), coastal elevation constraints, and SHA-256 data provenance.
+- **Multi-Region Profile Configuration (`realearth-shared`)**:
+  - `RegionProfile` struct in `engine/shared/src/region.rs` supporting arbitrary bounding boxes, coordinate anchors, regional UTM projection zones, vertical datums, and elevation extents.
+  - Built-in profiles for `san_francisco_downtown()` (US) and `bengaluru_central()` (IN).
+- **US Geospatial Normalization & Vertical Datums (`realearth-geospatial`)**:
+  - Added `VerticalDatum::Navd88` and `VerticalDatumMetadata::san_francisco_navd88()` (-32.4m GEOID18/EGM96 undulation in Northern California) in `engine/geospatial/src/datum.rs`.
+  - Added automated UTM Zone 10N calculation and conversion tests for San Francisco ($lon \approx -122.40^\circ$).
+- **US GIS Acquisition & Ingestion Engine (`realearth-ingestion`)**:
+  - Expanded OSM data models in `engine/ingestion/src/osm_types.rs`: added `WaterType` (Bay, Ocean, River, Lake), coastline tagging (`is_coastline`), `LandCoverClass` (aligned with USGS NLCD), and `OsmLandCoverFeature`.
+  - Added US speed limit parsing in `engine/ingestion/src/osm_parser.rs` converting `mph` strings to integer `km/h`.
+  - Added `AcquisitionEngine` in `engine/ingestion/src/acquisition.rs` with FIPS 180-4 SHA-256 checksum computation, file manifest validation, caching, and offline bundle fallbacks.
+  - Implemented USGS 3DEP coastal Digital Elevation Model raster grid (`create_san_francisco_coastal_dem`) modeling real San Francisco topography ($0.0\text{m}$ at Embarcadero Bay waterfront up to $105.0\text{m}$ at Nob Hill).
+  - Authored authentic San Francisco Downtown & Coastal Waterfront dataset in `engine/ingestion/src/sample_san_francisco.rs` and `assets/san_francisco_sample/` (`manifest.json`, `san_francisco_downtown.osm.xml`). Includes surveyed skyscrapers (Salesforce Tower 326m, Transamerica 260m, 555 California 237m, Ferry Building 75m, Coit Tower 64m), Bay Bridge I-80 elevated approach (Layer 1), Broadway Tunnel subterranean section (Layer -1), and urban parks (Portsmouth Square, Sue Bierman Park).
+- **Validation Pipeline (`realearth-validation`)**:
+  - Added land cover and water body preservation in `ValidatedDataset`.
+  - Validated San Francisco dataset: 6 roads valid, 5 buildings valid, 1 water body, 2 parks, 5 polygon winding repairs to CCW, and 0 quarantined features.
+- **Adaptive World Compiler (`realearth-compiler`)**:
+  - Dynamically computes metric longitude degree scaling from center latitude ($\cos \phi$).
+  - Dynamically calculates minimum and maximum elevation per chunk from DEM heightfields.
+  - Added unit test `test_compile_san_francisco_world_package` verifying chunk files and SQLite index for San Francisco.
+- **CLI Tooling (`realearth-cli`)**:
+  - Added `--region` CLI argument to `compile` and `validate` subcommands, defaulting to `san-francisco` with automatic dataset and DEM routing.
+- **End-to-End Integration Suite (`realearth-tests`)**:
+  - Added `test_full_san_francisco_end_to_end_gis_vertical_slice` verifying the complete San Francisco GIS pipeline from ingestion through validation, compilation, streaming, simulation, navigation, physics, and headless rendering.
+- **Criterion Microbenchmarks (`realearth-benchmarks`)**:
+  - Added `wgs84_to_utm_zone10n_sf` and `ellipsoidal_to_navd88_sf` benchmarks.
+
+
 
 
 

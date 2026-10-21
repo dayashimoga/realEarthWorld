@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth-GIS-SF">
+  <!-- 1. Salesforce Tower (326m, 61 floors) -->
+  <node id="1001" lat="37.7893000" lon="-122.3976000"/>
+  <node id="1002" lat="37.7901000" lon="-122.3976000"/>
+  <node id="1003" lat="37.7901000" lon="-122.3968000"/>
+  <node id="1004" lat="37.7893000" lon="-122.3968000"/>
+  <node id="1005" lat="37.7893000" lon="-122.3976000"/>
+  <way id="110001">
+    <nd ref="1001"/>
+    <nd ref="1002"/>
+    <nd ref="1003"/>
+    <nd ref="1004"/>
+    <nd ref="1005"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Salesforce Tower"/>
+    <tag k="height" v="326.0m"/>
+    <tag k="building:levels" v="61"/>
+  </way>
+
+  <!-- 2. Transamerica Pyramid (260m, 48 floors) -->
+  <node id="1006" lat="37.7948000" lon="-122.4032000"/>
+  <node id="1007" lat="37.7956000" lon="-122.4032000"/>
+  <node id="1008" lat="37.7956000" lon="-122.4024000"/>
+  <node id="1009" lat="37.7948000" lon="-122.4024000"/>
+  <node id="1010" lat="37.7948000" lon="-122.4032000"/>
+  <way id="110002">
+    <nd ref="1006"/>
+    <nd ref="1007"/>
+    <nd ref="1008"/>
+    <nd ref="1009"/>
+    <nd ref="1010"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Transamerica Pyramid"/>
+    <tag k="height" v="260.0m"/>
+    <tag k="building:levels" v="48"/>
+  </way>
+
+  <!-- 3. 555 California Street (237m, 52 floors) -->
+  <node id="1011" lat="37.7924000" lon="-122.4043000"/>
+  <node id="1012" lat="37.7932000" lon="-122.4043000"/>
+  <node id="1013" lat="37.7932000" lon="-122.4033000"/>
+  <node id="1014" lat="37.7924000" lon="-122.4033000"/>
+  <node id="1015" lat="37.7924000" lon="-122.4043000"/>
+  <way id="110003">
+    <nd ref="1011"/>
+    <nd ref="1012"/>
+    <nd ref="1013"/>
+    <nd ref="1014"/>
+    <nd ref="1015"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="555 California Street"/>
+    <tag k="height" v="237.0m"/>
+    <tag k="building:levels" v="52"/>
+  </way>
+
+  <!-- 4. San Francisco Ferry Building (75m clock tower) -->
+  <node id="1016" lat="37.7948000" lon="-122.3942000"/>
+  <node id="1017" lat="37.7962000" lon="-122.3942000"/>
+  <node id="1018" lat="37.7962000" lon="-122.3932000"/>
+  <node id="1019" lat="37.7948000" lon="-122.3932000"/>
+  <node id="1020" lat="37.7948000" lon="-122.3942000"/>
+  <way id="110004">
+    <nd ref="1016"/>
+    <nd ref="1017"/>
+    <nd ref="1018"/>
+    <nd ref="1019"/>
+    <nd ref="1020"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="San Francisco Ferry Building"/>
+    <tag k="height" v="75.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- 5. Coit Tower (Telegraph Hill - 64m) -->
+  <node id="1021" lat="37.8021000" lon="-122.4061000"/>
+  <node id="1022" lat="37.8027000" lon="-122.4061000"/>
+  <node id="1023" lat="37.8027000" lon="-122.4055000"/>
+  <node id="1024" lat="37.8021000" lon="-122.4055000"/>
+  <node id="1025" lat="37.8021000" lon="-122.4061000"/>
+  <way id="110005">
+    <nd ref="1021"/>
+    <nd ref="1022"/>
+    <nd ref="1023"/>
+    <nd ref="1024"/>
+    <nd ref="1025"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Coit Tower"/>
+    <tag k="height" v="64.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- 6. Market Street (Primary, 4 lanes, 25 mph) -->
+  <node id="1026" lat="37.7880000" lon="-122.4030000"/>
+  <node id="1027" lat="37.7910000" lon="-122.3990000"/>
+  <node id="1028" lat="37.7940000" lon="-122.3950000"/>
+  <way id="210001">
+    <nd ref="1026"/>
+    <nd ref="1027"/>
+    <nd ref="1028"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Market Street"/>
+    <tag k="lanes" v="4"/>
+    <tag k="layer" v="0"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <!-- 7. The Embarcadero (Primary coastal boulevard, 4 lanes, 30 mph) -->
+  <node id="1029" lat="37.7900000" lon="-122.3900000"/>
+  <node id="1030" lat="37.7950000" lon="-122.3935000"/>
+  <node id="1031" lat="37.8000000" lon="-122.3980000"/>
+  <node id="1032" lat="37.8040000" lon="-122.4020000"/>
+  <way id="210002">
+    <nd ref="1029"/>
+    <nd ref="1030"/>
+    <nd ref="1031"/>
+    <nd ref="1032"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="The Embarcadero"/>
+    <tag k="lanes" v="4"/>
+    <tag k="layer" v="0"/>
+    <tag k="maxspeed" v="30 mph"/>
+  </way>
+
+  <!-- 8. California Street (Secondary, climbs Nob Hill) -->
+  <node id="1033" lat="37.7930000" lon="-122.3970000"/>
+  <node id="1034" lat="37.7928000" lon="-122.4038000"/>
+  <node id="1035" lat="37.7925000" lon="-122.4110000"/>
+  <way id="210003">
+    <nd ref="1033"/>
+    <nd ref="1034"/>
+    <nd ref="1035"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="California Street"/>
+    <tag k="lanes" v="2"/>
+    <tag k="layer" v="0"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <!-- 9. Montgomery Street (Secondary, Financial District) -->
+  <node id="1036" lat="37.7890000" lon="-122.4020000"/>
+  <node id="1037" lat="37.7952000" lon="-122.4028000"/>
+  <node id="1038" lat="37.7990000" lon="-122.4035000"/>
+  <way id="210004">
+    <nd ref="1036"/>
+    <nd ref="1037"/>
+    <nd ref="1038"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Montgomery Street"/>
+    <tag k="lanes" v="2"/>
+    <tag k="layer" v="0"/>
+    <tag k="maxspeed" v="25 mph"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+
+  <!-- 10. Bay Bridge I-80 Approach (Motorway, elevated layer 1, bridge) -->
+  <node id="1039" lat="37.7865000" lon="-122.3950000"/>
+  <node id="1040" lat="37.7885000" lon="-122.3900000"/>
+  <node id="1041" lat="37.7910000" lon="-122.3840000"/>
+  <way id="210005">
+    <nd ref="1039"/>
+    <nd ref="1040"/>
+    <nd ref="1041"/>
+    <tag k="highway" v="motorway"/>
+    <tag k="name" v="Interstate 80 Bay Bridge Approach"/>
+    <tag k="lanes" v="5"/>
+    <tag k="layer" v="1"/>
+    <tag k="bridge" v="yes"/>
+    <tag k="maxspeed" v="50 mph"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+
+  <!-- 11. Broadway Tunnel (Subterranean layer -1, tunnel) -->
+  <node id="1042" lat="37.7978000" lon="-122.4100000"/>
+  <node id="1043" lat="37.7980000" lon="-122.4135000"/>
+  <node id="1044" lat="37.7982000" lon="-122.4170000"/>
+  <way id="210006">
+    <nd ref="1042"/>
+    <nd ref="1043"/>
+    <nd ref="1044"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Broadway Tunnel"/>
+    <tag k="lanes" v="4"/>
+    <tag k="layer" v="-1"/>
+    <tag k="tunnel" v="yes"/>
+    <tag k="maxspeed" v="35 mph"/>
+  </way>
+
+  <!-- 12. San Francisco Bay Coastline and Water Body -->
+  <node id="1045" lat="37.7890000" lon="-122.3890000"/>
+  <node id="1046" lat="37.7950000" lon="-122.3930000"/>
+  <node id="1047" lat="37.8045000" lon="-122.4010000"/>
+  <node id="1048" lat="37.8045000" lon="-122.3850000"/>
+  <node id="1049" lat="37.7890000" lon="-122.3850000"/>
+  <node id="1050" lat="37.7890000" lon="-122.3890000"/>
+  <way id="310001">
+    <nd ref="1045"/>
+    <nd ref="1046"/>
+    <nd ref="1047"/>
+    <nd ref="1048"/>
+    <nd ref="1049"/>
+    <nd ref="1050"/>
+    <tag k="natural" v="coastline"/>
+    <tag k="water" v="bay"/>
+    <tag k="name" v="San Francisco Bay"/>
+  </way>
+
+  <!-- 13. Portsmouth Square Park -->
+  <node id="1051" lat="37.7945000" lon="-122.4055000"/>
+  <node id="1052" lat="37.7955000" lon="-122.4055000"/>
+  <node id="1053" lat="37.7955000" lon="-122.4045000"/>
+  <node id="1054" lat="37.7945000" lon="-122.4045000"/>
+  <node id="1055" lat="37.7945000" lon="-122.4055000"/>
+  <way id="410001">
+    <nd ref="1051"/>
+    <nd ref="1052"/>
+    <nd ref="1053"/>
+    <nd ref="1054"/>
+    <nd ref="1055"/>
+    <tag k="leisure" v="park"/>
+    <tag k="name" v="Portsmouth Square"/>
+  </way>
+</osm>

@@ -58,9 +58,12 @@ pub fn compile_world_package(
     let bounds = dem.bounds;
 
     // Compute chunk grid dimensions based on metric size
-    // 1 deg lat ~ 111,000m, 1 deg lon at lat 13 ~ 108,000m
+    // 1 deg lat ~ 111,000m, 1 deg lon scales with cos(lat)
+    let center_lat = bounds.center().lat;
     let m_per_deg_lat = 111_000.0;
-    let m_per_deg_lon = 108_000.0;
+    let m_per_deg_lon = (111_320.0 * center_lat.to_radians().cos())
+        .abs()
+        .max(10_000.0);
 
     let chunk_d_lat = options.chunk_size_meters / m_per_deg_lat;
     let chunk_d_lon = options.chunk_size_meters / m_per_deg_lon;
@@ -139,6 +142,22 @@ pub fn compile_world_package(
 
             let feature_count = building_meta.len();
 
+            let (min_elev, max_elev) = if terrain_mesh.vertices.is_empty() {
+                (0.0, 100.0)
+            } else {
+                let mut min_e = f32::MAX;
+                let mut max_e = f32::MIN;
+                for v in &terrain_mesh.vertices {
+                    if v.position[1] < min_e {
+                        min_e = v.position[1];
+                    }
+                    if v.position[1] > max_e {
+                        max_e = v.position[1];
+                    }
+                }
+                (min_e, max_e)
+            };
+
             let header = ChunkHeader {
                 magic: *CHUNK_MAGIC,
                 version: CHUNK_VERSION,
@@ -147,8 +166,8 @@ pub fn compile_world_package(
                 lod_level: 0,
                 bounds: chunk_bounds,
                 anchor: chunk_anchor,
-                min_elevation: 850.0,
-                max_elevation: 1050.0,
+                min_elevation: min_elev,
+                max_elevation: max_elev,
             };
 
             let chunk = WorldChunk {
@@ -174,8 +193,8 @@ pub fn compile_world_package(
                 chunk_y: cy as i32,
                 lod_level: 0,
                 bounds: chunk_bounds,
-                min_alt: 850.0,
-                max_alt: 1050.0,
+                min_alt: min_elev,
+                max_alt: max_elev,
                 compressed_bytes,
                 uncompressed_bytes,
                 feature_count,
