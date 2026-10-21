@@ -150,6 +150,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `apps/world-viewer/src/main.rs`: Full CLI argument parsing (`--region`, `--headless`, `--benchmark`, `--camera-mode`, `--location`, `--frames`), Bevy ECS chunk sync, telemetry overlay, and automated tests.
   - Added unit tests: `test_camera_controller_fly_and_walk_modes`, `test_camera_controller_landmarks_and_coordinates`, and `test_frustum_culling_logic`.
 
+## [0.4.0] - 2026-10-21 — STAGE 4: Comprehensive GIS Validation and Controlled Repair
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0008-comprehensive-gis-validation-and-controlled-repair.md`: Documents modular deep validators, transactional controlled repair engine, multi-format diagnostics, source-resolution tolerances, and compiler publication gates.
+- **Extended Ingestion Data Models (`realearth-ingestion`)**:
+  - Added `OsmRailwayFeature` and `RailwayType` (Mainline, LightRail, Subway, Tram, HighSpeed, Spur) supporting track geometry, layers, and gauge.
+  - Added `OsmAerowayFeature` and `AerowayType` (Runway, Taxiway, Apron, Helipad, Gate, Terminal) with length/width metrics.
+  - Added `OsmPortFeature` and `PortType` (Pier, Dock, Berth, Slipway, FerryTerminal) with depth and closed polygon boundaries.
+  - Updated `IngestedDataset` and XML parser to seamlessly ingest railway, aeroway, and maritime infrastructure.
+- **Modular Deep Validators (`realearth-validation`)**:
+  - `road_network_validator.rs`: Evaluates network graph connectivity, dead-end stubs, lane count sanity ($\ge 1$), speed limit ranges ($5 \le v \le 160$ km/h), one-way restrictions, acute hairpin junctions ($< 15^\circ$), duplicate vertex culling, and grade separation invariance.
+  - `railway_validator.rs`: Evaluates track vertex counts, minimum curve radii, gauge sanity ($600 \le g \le 2140$ mm), and at-grade rail-highway crossings.
+  - `building_deep_validator.rs`: Evaluates unclosed rings, CCW winding order, self-intersecting bow-tie / figure-8 rings, footprint ground area ($\ge 4.0\text{ m}^2$), DEM foundation slopes ($< 45^\circ$), coastal sea-level feasibility ($\ge 0.0\text{m}$ MSL), and inter-building footprint overlap collisions.
+  - `terrain_water_validator.rs`: Evaluates DEM raster slope continuity, step-discontinuity seam cracks, and water polygon closure and CCW winding.
+  - `aeroway_port_validator.rs`: Evaluates runway length ($\ge 300\text{m}$), standard 45m runway width, and closed port/pier polygons.
+  - `chunk_integrity_validator.rs`: Evaluates coordinate continuity across local chunk grid boundaries ($< 1\text{mm}$) and duplicate feature IDs.
+- **Controlled Reversible Repair Engine (`repair_engine.rs`)**:
+  - Deterministic repairs with before/after geometry snapshots (`GeometrySnapshot`), explicit rule IDs, confidence scoring ($0.0$ to $1.0$), and reversible transactions.
+  - Strict quarantine policy isolating ambiguous defects (confidence $< 0.80$); zero infrastructure fabrication.
+- **Hierarchical Diagnostics & Multi-Format Reporting (`diagnostic.rs`, `report.rs`)**:
+  - Severity classifications: `Blocker`, `Error`, `Warning`, `Info`.
+  - Machine-readable JSON output (`to_json()`).
+  - GitHub-flavored Markdown output (`to_markdown()`).
+  - Standalone styled HTML dashboard with KPI cards and severity-badged tables (`to_html()`).
+  - Geolocated 3D viewer debug overlays (`to_overlay()`).
+  - Source-resolution-aware tolerance profiles: `Surveyed` (0.05m snap), `Satellite` (0.5m snap), `Coarse` (2.0m snap).
+- **Compiler Publication Gate (`publication_gate.rs`)**:
+  - `CompilerPublicationGate` enforcing zero Blocker defects and controlled Error quarantine budgets prior to world package compilation.
+- **Regression Test Suite (`tests/tests/validation_regression.rs`)**:
+  - Documented intentionally malformed defect suite testing bow-tie polygons, zero-length roads, invalid lanes/speeds, railway curvature, open water rings, and short runways.
+  - Proved authentic geography (San Francisco skyscrapers, roads, tunnels, bridges) remains 100% bit-exact and unchanged.
+
+
 
 
 

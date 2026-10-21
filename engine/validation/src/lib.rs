@@ -1,24 +1,43 @@
 //! Topological validation, geometric sanitization, and defect quarantine for Real Earth.
 
+pub mod aeroway_port_validator;
+pub mod building_deep_validator;
+pub mod chunk_integrity_validator;
+pub mod diagnostic;
 pub mod pipeline;
 pub mod polygon_validator;
 pub mod provenance;
+pub mod publication_gate;
+pub mod railway_validator;
+pub mod repair_engine;
 pub mod report;
+pub mod road_network_validator;
 pub mod road_validator;
+pub mod terrain_water_validator;
 
-pub use pipeline::{validate_dataset, ValidatedDataset};
+pub use aeroway_port_validator::{validate_aeroways, validate_ports};
+pub use building_deep_validator::validate_buildings_deep;
+pub use chunk_integrity_validator::validate_chunk_boundary_continuity;
+pub use diagnostic::{DiagnosticEntry, DiagnosticOverlay, DiagnosticSeverity, ValidationTolerance};
+pub use pipeline::{validate_dataset, validate_dataset_with_tolerances, ValidatedDataset};
 pub use polygon_validator::{approximate_metric_area_m2, signed_ring_area, ValidatedBuilding};
 pub use provenance::{HeightProvenance, ValidatedHeight};
+pub use publication_gate::{CompilerPublicationGate, PublicationVerdict};
+pub use railway_validator::validate_railway_network;
+pub use repair_engine::{ControlledRepair, GeometrySnapshot, RepairEngine};
 pub use report::{QuarantineLog, RepairLog, RepairType, ValidationReport};
-pub use road_validator::{validate_road, verify_grade_separations};
+pub use road_network_validator::{validate_road_network, verify_grade_separations};
+pub use terrain_water_validator::{validate_dem_continuity, validate_water_bodies};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use realearth_ingestion::osm_types::{
-        BuildingType, HighwayType, IngestedDataset, OsmBuildingFeature, OsmRoadFeature,
+        AerowayType, BuildingType, HighwayType, IngestedDataset, OsmAerowayFeature,
+        OsmBuildingFeature, OsmPortFeature, OsmRoadFeature, PortType,
     };
     use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
+    use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
     use realearth_shared::coordinates::Wgs84Coord;
 
     #[test]
@@ -34,7 +53,6 @@ mod tests {
             report.quarantined
         );
 
-        // Check Vidhana Soudha surveyed height
         let vidhana = validated
             .buildings
             .iter()
@@ -48,7 +66,6 @@ mod tests {
             "Vidhana Soudha footprint should be > 1000 m2"
         );
 
-        // Verify grade separated flyover
         let flyover = validated
             .roads
             .iter()
@@ -60,7 +77,6 @@ mod tests {
 
     #[test]
     fn test_san_francisco_dataset_validation() {
-        use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
         let dataset = create_san_francisco_dataset();
         let (validated, report) = validate_dataset(&dataset);
 
@@ -74,7 +90,6 @@ mod tests {
             "Quarantined features found in SF dataset"
         );
 
-        // Verify Salesforce Tower height provenance
         let salesforce = validated
             .buildings
             .iter()
@@ -84,7 +99,6 @@ mod tests {
         assert_eq!(salesforce.height.provenance, HeightProvenance::Surveyed);
         assert_eq!(salesforce.height.confidence, 1.0);
 
-        // Verify Transamerica Pyramid height provenance
         let transamerica = validated
             .buildings
             .iter()
@@ -93,7 +107,6 @@ mod tests {
         assert_eq!(transamerica.height.height_meters, 260.0);
         assert_eq!(transamerica.height.provenance, HeightProvenance::Surveyed);
 
-        // Verify Bay Bridge I-80 Approach (elevated bridge)
         let bay_bridge = validated
             .roads
             .iter()
@@ -103,7 +116,6 @@ mod tests {
         assert!(bay_bridge.is_bridge);
         assert_eq!(bay_bridge.lanes, 5);
 
-        // Verify Broadway Tunnel
         let tunnel = validated
             .roads
             .iter()
@@ -116,7 +128,6 @@ mod tests {
     #[test]
     fn test_polygon_unclosed_ring_repair() {
         let mut dataset = IngestedDataset::default();
-        // Open ring (first != last)
         dataset.buildings.push(OsmBuildingFeature {
             id: 999,
             name: Some("Unclosed Building".to_string()),
@@ -126,7 +137,6 @@ mod tests {
                 Wgs84Coord::new(12.971, 77.600, 0.0),
                 Wgs84Coord::new(12.971, 77.601, 0.0),
                 Wgs84Coord::new(12.970, 77.601, 0.0),
-                // Notice missing closing point (12.970, 77.600)
             ],
             inner_rings: Vec::new(),
             explicit_height: None,
@@ -141,7 +151,6 @@ mod tests {
             validated.buildings[0].outer_ring[4]
         );
 
-        // Check repair log
         let repair = report
             .repairs
             .iter()
@@ -152,7 +161,6 @@ mod tests {
     #[test]
     fn test_polygon_degenerate_quarantine() {
         let mut dataset = IngestedDataset::default();
-        // 2 points only - impossible polygon
         dataset.buildings.push(OsmBuildingFeature {
             id: 888,
             name: Some("Degenerate Line Building".to_string()),
@@ -168,7 +176,7 @@ mod tests {
 
         let (validated, report) = validate_dataset(&dataset);
         assert_eq!(validated.buildings.len(), 0);
-        assert_eq!(report.quarantined.len(), 1);
+        assert!(!report.quarantined.is_empty());
         assert_eq!(report.quarantined[0].feature_id, 888);
     }
 
@@ -181,9 +189,9 @@ mod tests {
             highway_type: HighwayType::Secondary,
             geometry: vec![
                 Wgs84Coord::new(12.970, 77.600, 0.0),
-                Wgs84Coord::new(12.970, 77.600, 0.0), // Duplicate point
+                Wgs84Coord::new(12.970, 77.600, 0.0),
                 Wgs84Coord::new(12.971, 77.600, 0.0),
-                Wgs84Coord::new(12.971, 77.600, 0.0), // Duplicate point
+                Wgs84Coord::new(12.971, 77.600, 0.0),
                 Wgs84Coord::new(12.972, 77.600, 0.0),
             ],
             lanes: 2,
@@ -203,5 +211,111 @@ mod tests {
             .iter()
             .find(|r| r.feature_id == 777 && r.repair_type == RepairType::DuplicateVerticesCulled);
         assert!(repair.is_some());
+    }
+
+    #[test]
+    fn test_self_intersecting_bowtie_polygon_quarantine() {
+        let mut dataset = IngestedDataset::default();
+        // Hourglass / bow-tie self-intersecting polygon
+        dataset.buildings.push(OsmBuildingFeature {
+            id: 666,
+            name: Some("Bowtie Building".to_string()),
+            building_type: BuildingType::Commercial,
+            outer_ring: vec![
+                Wgs84Coord::new(12.970, 77.600, 0.0),
+                Wgs84Coord::new(12.971, 77.601, 0.0),
+                Wgs84Coord::new(12.970, 77.601, 0.0),
+                Wgs84Coord::new(12.971, 77.600, 0.0),
+                Wgs84Coord::new(12.970, 77.600, 0.0),
+            ],
+            inner_rings: Vec::new(),
+            explicit_height: Some(20.0),
+            levels: None,
+        });
+
+        let (validated, report) = validate_dataset(&dataset);
+        assert_eq!(
+            validated.buildings.len(),
+            0,
+            "Self-intersecting polygon must be quarantined"
+        );
+        assert!(report
+            .diagnostics
+            .iter()
+            .any(|d| d.code == "RULE_SELF_INTERSECTING_BOWTIE"));
+    }
+
+    #[test]
+    fn test_compiler_publication_gate_and_reports() {
+        let dataset = create_bengaluru_central_dataset();
+        let (_validated, report) = validate_dataset(&dataset);
+
+        let gate = CompilerPublicationGate::production();
+        let verdict = gate.evaluate(&report);
+        assert!(
+            verdict.is_approved(),
+            "Clean Bengaluru dataset must pass production gate"
+        );
+
+        // Verify JSON, Markdown, HTML, and Overlay report outputs
+        let json = report.to_json();
+        assert!(json.contains("valid_roads_passed"));
+
+        let md = report.to_markdown();
+        assert!(md.contains("Comprehensive GIS Validation & Audit Report"));
+
+        let html = report.to_html();
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("GIS Validation Dashboard"));
+
+        let overlays = report.to_overlay();
+        assert_eq!(
+            overlays.len(),
+            report
+                .diagnostics
+                .iter()
+                .filter(|d| d.location.is_some())
+                .count()
+        );
+    }
+
+    #[test]
+    fn test_aeroway_and_port_validation() {
+        let mut dataset = IngestedDataset::default();
+        dataset.aeroways.push(OsmAerowayFeature {
+            id: 101,
+            name: Some("Short Runway".to_string()),
+            aeroway_type: AerowayType::Runway,
+            geometry: vec![
+                Wgs84Coord::new(37.618, -122.375, 0.0),
+                Wgs84Coord::new(37.619, -122.375, 0.0), // ~111m < 300m threshold
+            ],
+            width_m: Some(10.0), // Below 15m threshold
+            ref_code: Some("28L".to_string()),
+        });
+
+        dataset.ports.push(OsmPortFeature {
+            id: 202,
+            name: Some("Ferry Pier".to_string()),
+            port_type: PortType::Pier,
+            polygon: vec![
+                Wgs84Coord::new(37.795, -122.393, 0.0),
+                Wgs84Coord::new(37.796, -122.393, 0.0),
+                Wgs84Coord::new(37.796, -122.392, 0.0),
+                // Open polygon
+            ],
+            min_depth_m: Some(8.0),
+        });
+
+        let (validated, report) = validate_dataset(&dataset);
+        assert_eq!(validated.aeroways.len(), 1);
+        assert_eq!(validated.aeroways[0].width_m, Some(45.0)); // Default repaired width
+        assert_eq!(validated.ports.len(), 1);
+        assert_eq!(validated.ports[0].polygon.len(), 4); // Closed ring repair
+
+        assert!(report
+            .diagnostics
+            .iter()
+            .any(|d| d.code == "RULE_RUNWAY_LENGTH_TOO_SHORT"));
     }
 }

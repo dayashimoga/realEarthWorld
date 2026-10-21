@@ -11,7 +11,8 @@ use realearth_ingestion::sample_bengaluru::{
 use realearth_ingestion::sample_san_francisco::{
     create_san_francisco_dataset, generate_san_francisco_osm_xml,
 };
-use realearth_validation::pipeline::validate_dataset;
+use realearth_validation::pipeline::{validate_dataset, validate_dataset_with_tolerances};
+use realearth_validation::{CompilerPublicationGate, PublicationVerdict, ValidationTolerance};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -33,6 +34,8 @@ enum Commands {
         region: String,
         #[arg(short, long, default_value_t = 1000.0)]
         chunk_size: f64,
+        #[arg(long, default_value_t = false)]
+        allow_errors: bool,
     },
     /// Validates an OSM XML dataset and outputs topological verification report
     Validate {
@@ -40,6 +43,12 @@ enum Commands {
         input: Option<PathBuf>,
         #[arg(short, long, default_value = "san-francisco")]
         region: String,
+        #[arg(short, long, default_value = "summary")]
+        format: String,
+        #[arg(long)]
+        output_report: Option<PathBuf>,
+        #[arg(long, default_value = "surveyed")]
+        tolerance: String,
     },
     /// Inspects a compiled .rec binary chunk file
     InspectChunk {
@@ -59,6 +68,7 @@ fn main() -> anyhow::Result<()> {
             output,
             region,
             chunk_size,
+            allow_errors,
         } => {
             println!("🚀 Starting Real Earth World Compilation...");
             let start = Instant::now();
@@ -87,6 +97,40 @@ fn main() -> anyhow::Result<()> {
             );
             let (validated, report) = validate_dataset(&raw_dataset);
             println!("  {}", report.summary());
+
+            // Enforce Compiler Publication Gate
+            let gate = if allow_errors {
+                CompilerPublicationGate::development(10)
+            } else {
+                CompilerPublicationGate::production()
+            };
+
+            let verdict = gate.evaluate(&report);
+            match verdict {
+                PublicationVerdict::Approved {
+                    total_features,
+                    repairs_applied,
+                } => {
+                    println!(
+                        "✅ Compiler Publication Gate PASSED: {} features approved ({} repairs applied).",
+                        total_features, repairs_applied
+                    );
+                }
+                PublicationVerdict::Rejected {
+                    blocker_count,
+                    error_count,
+                    reasons,
+                } => {
+                    eprintln!(
+                        "❌ Compiler Publication Gate REJECTED: {} blockers, {} errors.",
+                        blocker_count, error_count
+                    );
+                    for reason in reasons {
+                        eprintln!("  • {}", reason);
+                    }
+                    anyhow::bail!("Compilation halted by CompilerPublicationGate");
+                }
+            }
 
             let options = CompilerOptions {
                 chunk_size_meters: chunk_size,
@@ -118,9 +162,15 @@ fn main() -> anyhow::Result<()> {
                 stats.total_uncompressed_bytes as f64 / stats.total_compressed_bytes.max(1) as f64
             );
         }
-        Commands::Validate { input, region } => {
-            let xml = match input {
-                Some(p) => std::fs::read_to_string(p)?,
+        Commands::Validate {
+            input,
+            region,
+            format,
+            output_report,
+            tolerance,
+        } => {
+            let (xml, dem) = match input {
+                Some(p) => (std::fs::read_to_string(p)?, None),
                 None => {
                     if region.to_lowercase().contains("sf")
                         || region.to_lowercase().contains("san-francisco")
@@ -128,40 +178,105 @@ fn main() -> anyhow::Result<()> {
                         println!(
                             "ℹ️ No input file specified, using built-in San Francisco Downtown dataset."
                         );
-                        generate_san_francisco_osm_xml()
+                        (
+                            generate_san_francisco_osm_xml(),
+                            Some(DemGrid::create_san_francisco_coastal_dem(64, 64)),
+                        )
                     } else {
                         println!(
                             "ℹ️ No input file specified, using built-in Bengaluru Central dataset."
                         );
-                        generate_bengaluru_osm_xml()
+                        (
+                            generate_bengaluru_osm_xml(),
+                            Some(DemGrid::create_bengaluru_plateau_dem(64, 64)),
+                        )
                     }
                 }
             };
 
-            let dataset = parse_osm_xml(&xml)?;
-            let (_validated, report) = validate_dataset(&dataset);
+            let tol = match tolerance.to_lowercase().as_str() {
+                "satellite" => ValidationTolerance::satellite(),
+                "coarse" => ValidationTolerance::coarse(),
+                _ => ValidationTolerance::surveyed(),
+            };
 
-            println!("\n📊 Validation Report:");
-            println!("  Roads Evaluated: {}", report.total_roads_evaluated);
-            println!("  Roads Valid: {}", report.valid_roads_passed);
-            println!(
-                "  Buildings Evaluated: {}",
-                report.total_buildings_evaluated
-            );
-            println!("  Buildings Valid: {}", report.valid_buildings_passed);
-            println!("  Total Repairs Applied: {}", report.repairs.len());
-            for r in &report.repairs {
-                println!(
-                    "    [REPAIR] Feature {}: {:?} - {} (Confidence: {:.2})",
-                    r.feature_id, r.repair_type, r.description, r.confidence_score
-                );
-            }
-            println!("  Total Quarantined Features: {}", report.quarantined.len());
-            for q in &report.quarantined {
-                println!(
-                    "    [QUARANTINE] Feature {}: {}",
-                    q.feature_id, q.failure_reason
-                );
+            let dataset = parse_osm_xml(&xml)?;
+            let (_validated, report) =
+                validate_dataset_with_tolerances(&dataset, &tol, dem.as_ref());
+
+            let formatted = match format.to_lowercase().as_str() {
+                "json" => report.to_json(),
+                "markdown" | "md" => report.to_markdown(),
+                "html" => report.to_html(),
+                _ => {
+                    let mut s = String::new();
+                    s.push_str(&format!(
+                        "\n📊 Validation Report (Tolerance: {:?}):\n",
+                        tolerance
+                    ));
+                    s.push_str(&format!(
+                        "  Roads Evaluated: {}\n",
+                        report.total_roads_evaluated
+                    ));
+                    s.push_str(&format!("  Roads Valid: {}\n", report.valid_roads_passed));
+                    s.push_str(&format!(
+                        "  Buildings Evaluated: {}\n",
+                        report.total_buildings_evaluated
+                    ));
+                    s.push_str(&format!(
+                        "  Buildings Valid: {}\n",
+                        report.valid_buildings_passed
+                    ));
+                    s.push_str(&format!(
+                        "  Railways Evaluated: {}\n",
+                        report.total_railways_evaluated
+                    ));
+                    s.push_str(&format!(
+                        "  Railways Valid: {}\n",
+                        report.valid_railways_passed
+                    ));
+                    s.push_str(&format!(
+                        "  Aeroways Evaluated: {}\n",
+                        report.total_aeroways_evaluated
+                    ));
+                    s.push_str(&format!(
+                        "  Aeroways Valid: {}\n",
+                        report.valid_aeroways_passed
+                    ));
+                    s.push_str(&format!(
+                        "  Ports Evaluated: {}\n",
+                        report.total_ports_evaluated
+                    ));
+                    s.push_str(&format!("  Ports Valid: {}\n", report.valid_ports_passed));
+                    s.push_str(&format!(
+                        "  Total Repairs Applied: {}\n",
+                        report.repairs.len()
+                    ));
+                    for r in &report.repairs {
+                        s.push_str(&format!(
+                            "    [REPAIR] Feature {}: {:?} - {} (Confidence: {:.2})\n",
+                            r.feature_id, r.repair_type, r.description, r.confidence_score
+                        ));
+                    }
+                    s.push_str(&format!(
+                        "  Total Quarantined Features: {}\n",
+                        report.quarantined.len()
+                    ));
+                    for q in &report.quarantined {
+                        s.push_str(&format!(
+                            "    [QUARANTINE] Feature {}: {}\n",
+                            q.feature_id, q.failure_reason
+                        ));
+                    }
+                    s
+                }
+            };
+
+            println!("{}", formatted);
+
+            if let Some(out_path) = output_report {
+                std::fs::write(&out_path, &formatted)?;
+                println!("📁 Saved diagnostic report to {:?}", out_path);
             }
         }
         Commands::InspectChunk { path } => {

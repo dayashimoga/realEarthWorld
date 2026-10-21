@@ -183,4 +183,51 @@
   - Total Scene Geometry: 13,631 triangles across terrain, buildings, roads, water, and vegetation.
   - Offscreen Screenshot Artifact: `target/screenshots/san_francisco_view.ppm` (1280x720, 2,764,816 bytes, valid P6 binary PPM). **PASS ✅**.
 
+## STAGE 4: Comprehensive GIS Validation and Controlled Repair
+- [x] Phase 4.1 — Deep Validators
+  - Road graph connectivity, lane/turn/access semantics, one-way restrictions, intersections, ramps/roundabouts, bridges, tunnels, flyovers.
+  - Railway continuity, track curvature, gauge verification, and highway level-crossing grade separation.
+  - Building footprint overlap detection, foundation elevation on DEM slopes, and self-intersecting polygon checks.
+  - Terrain raster slope continuity, step-discontinuity seam checks, and coastal water boundary closure.
+  - Aeroway runway/taxiway geometry and maritime port/pier connectivity with positive freeboard.
+  - Chunk boundary continuity and feature stitching integrity ($< 1\text{mm}$).
+- [x] Phase 4.2 — Controlled Repair Engine
+  - Deterministic, confidence-scored reversible corrections with complete before/after audit trails.
+  - Rule-based repair catalog: closing open rings, reversing clockwise rings, culling duplicate vertices, removing collinear nodes.
+  - Strict quarantine policy isolating ambiguous defects (confidence $< 0.80$); zero infrastructure fabrication.
+- [x] Phase 4.3 — Diagnostics & Publication Gates
+  - Geolocated severity reports in JSON, Markdown, and styled HTML dashboard formats.
+  - Visual error overlay coordinate export for 3D simulation viewer integration.
+  - Source-resolution-aware tolerance profiles (Surveyed, Satellite DEM, Coarse).
+  - Blocking compiler publication gate rejecting packages with unresolved Blocker defects.
+  - Regression fixtures and property tests validating defect detection, repair, and invariance of correct features.
+
+### Stage 4 Verification & Certification Matrix (GIS Validation & Controlled Repair)
+- **Full Workspace Test Suite**: 44 passed; 0 failed; 0 ignored (100% pass rate).
+- **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+- **Code Style Gate**: `cargo fmt --check` passed with 0 formatting violations.
+- **Defect Detection & Quarantine Suite (`test_intentionally_malformed_defect_suite`)**:
+  - Bow-tie self-intersecting polygon: detected and quarantined (`RULE_SELF_INTERSECTING_BOWTIE`). **PASS ✅**.
+  - Degenerate single-vertex road: detected and quarantined (`RULE_ROAD_MIN_VERTICES`, Blocker). **PASS ✅**.
+  - Invalid 0-lane road with 500 km/h speed limit: normalized and repaired with provenance. **PASS ✅**.
+  - Acute 90-degree railway switch: detected and flagged (`RULE_RAILWAY_EXCESSIVE_CURVATURE`, Warning). **PASS ✅**.
+  - Unclosed water polygon ring: closed with confidence 1.0 (`RULE_CLOSE_OPEN_RING`). **PASS ✅**.
+  - Runway length $< 300\text{m}$ / width $< 15\text{m}$: flagged and width assigned standard 45m default. **PASS ✅**.
+- **Authentic Geography Invariance Proof (`test_authentic_geography_invariance_proof`)**:
+  - San Francisco surveyed buildings (Salesforce Tower 326m, Transamerica 260m, 555 California 237m, Ferry Building 75m, Coit Tower 64m): 100% bit-exact coordinate retention. **PASS ✅**.
+  - San Francisco arterial roads (Market St, Embarcadero, California St, Montgomery St, I-80 Bay Bridge approach, Broadway Tunnel): 100% bit-exact geometry, layer, and bridge/tunnel flag retention. **PASS ✅**.
+- **Controlled Reversible Repair Engine & Audit Trail (`test_reversible_repair_audit_trail_and_reports`)**:
+  - All applied repairs marked `is_reversible: true` with recorded before/after geometries. **PASS ✅**.
+  - All repair confidence scores $\ge 0.80$. **PASS ✅**.
+- **Compiler Publication Gate**:
+  - Clean datasets (Bengaluru Central, San Francisco Downtown): Approved (`PublicationVerdict::Approved`). **PASS ✅**.
+  - Malformed datasets with Blocker/Error defects: Rejected (`PublicationVerdict::Rejected`). **PASS ✅**.
+- **Multi-Format Export**:
+  - JSON machine-readable export (`target/validation_report.json`). **PASS ✅**.
+  - Markdown documentation export (`target/validation_report.md`). **PASS ✅**.
+  - Standalone styled HTML dashboard (`target/validation_report.html`). **PASS ✅**.
+  - Geolocated 3D viewer debug overlays (`to_overlay()`). **PASS ✅**.
+
+
+
 

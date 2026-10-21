@@ -243,6 +243,81 @@ pub fn parse_osm_xml(xml_content: &str) -> Result<IngestedDataset> {
                                     polygon: coords,
                                 });
                             }
+                        } else if let Some(rail_tag) = current_way_tags.get("railway") {
+                            if coords.len() >= 2 {
+                                let r_type = crate::osm_types::RailwayType::from_tag(rail_tag);
+                                let name = current_way_tags.get("name").cloned();
+                                let layer = current_way_tags
+                                    .get("layer")
+                                    .and_then(|l| l.parse::<i8>().ok())
+                                    .unwrap_or(0);
+                                let is_bridge = current_way_tags
+                                    .get("bridge")
+                                    .map(|b| b == "yes" || b == "viaduct")
+                                    .unwrap_or(false);
+                                let is_tunnel = current_way_tags
+                                    .get("tunnel")
+                                    .map(|t| t == "yes")
+                                    .unwrap_or(false);
+                                let is_electrified = current_way_tags
+                                    .get("electrified")
+                                    .map(|e| e == "contact_line" || e == "yes")
+                                    .unwrap_or(true);
+                                let gauge_mm = current_way_tags
+                                    .get("gauge")
+                                    .and_then(|g| g.parse::<u32>().ok())
+                                    .or(Some(1435));
+
+                                dataset.railways.push(crate::osm_types::OsmRailwayFeature {
+                                    way_id,
+                                    name,
+                                    railway_type: r_type,
+                                    geometry: coords,
+                                    layer,
+                                    is_bridge,
+                                    is_tunnel,
+                                    is_electrified,
+                                    gauge_mm,
+                                });
+                            }
+                        } else if let Some(aero_tag) = current_way_tags.get("aeroway") {
+                            if coords.len() >= 2 {
+                                let a_type = crate::osm_types::AerowayType::from_tag(aero_tag);
+                                let name = current_way_tags.get("name").cloned();
+                                let width_m = current_way_tags.get("width").and_then(|w| {
+                                    w.trim_end_matches('m').trim().parse::<f32>().ok()
+                                });
+                                let ref_code = current_way_tags.get("ref").cloned();
+
+                                dataset.aeroways.push(crate::osm_types::OsmAerowayFeature {
+                                    id: way_id,
+                                    name,
+                                    aeroway_type: a_type,
+                                    geometry: coords,
+                                    width_m,
+                                    ref_code,
+                                });
+                            }
+                        } else if (current_way_tags.get("man_made").map(|s| s.as_str())
+                            == Some("pier")
+                            || current_way_tags.get("amenity").map(|s| s.as_str())
+                                == Some("ferry_terminal"))
+                            && coords.len() >= 3
+                        {
+                            let p_type = if current_way_tags.get("amenity").map(|s| s.as_str())
+                                == Some("ferry_terminal")
+                            {
+                                crate::osm_types::PortType::FerryTerminal
+                            } else {
+                                crate::osm_types::PortType::Pier
+                            };
+                            dataset.ports.push(crate::osm_types::OsmPortFeature {
+                                id: way_id,
+                                name: current_way_tags.get("name").cloned(),
+                                port_type: p_type,
+                                polygon: coords,
+                                min_depth_m: Some(10.0),
+                            });
                         }
                     }
                 }

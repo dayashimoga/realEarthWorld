@@ -72,4 +72,26 @@
 - [x] Stage 3.3: Deterministic offscreen GPU framebuffer copy and binary PPM export (`target/screenshots/san_francisco_view.ppm`).
 - [x] Stage 3.3: Execute full regression suite (41/41 tests passing), static analysis, and headless benchmark (84.2 FPS, 31.5 ms startup, 0.58 MB RSS).
 
+## STAGE 4: Comprehensive GIS Validation and Controlled Repair (Completed)
+- [x] Stage 4.1: Expand ingestion models (`realearth-ingestion`) with Railway, Aeroway, and Port features.
+- [x] Stage 4.1: Implement `RoadNetworkValidator` with connectivity, access, speed limit, intersection angles, and grade-separation checks.
+- [x] Stage 4.1: Implement `RailwayValidator` with track continuity, curvature, and road level-crossing verification.
+- [x] Stage 4.1: Implement `BuildingDeepValidator` with overlap collision detection, DEM slope foundation feasibility, and self-intersection tests.
+- [x] Stage 4.1: Implement `TerrainWaterValidator` with DEM slope/crack seam validation and water boundary closure.
+- [x] Stage 4.1: Implement `AerowayPortValidator` with runway/taxiway geometry and maritime dock/pier connectivity.
+- [x] Stage 4.1: Implement `ChunkIntegrityValidator` ensuring border coordinate continuity ($< 1\text{mm}$).
+- [x] Stage 4.2: Implement `RepairEngine` with deterministic reversible corrections, confidence scoring ($0.0$ to $1.0$), before/after snapshots, and strict quarantine isolation.
+- [x] Stage 4.3: Implement multi-format report generator (JSON, Markdown, interactive HTML dashboard).
+- [x] Stage 4.3: Implement visual error overlay generation for 3D viewer integration.
+- [x] Stage 4.3: Implement `CompilerPublicationGate` blocking compilation on Blocker/Error defects.
+- [x] Stage 4.3: Create documented regression test suite with intentionally malformed fixtures, property tests, and proof that valid features remain unchanged.
+
+## STAGE 5: Hierarchical Multi-LOD Compiler & Scalable Streaming (Roadmap)
+- [ ] Stage 5.1: Hierarchical Quadtree chunk compilation (LOD0 fine, LOD1 medium, LOD2 regional).
+- [ ] Stage 5.2: Geometric mesh decimation using Quadric Error Metrics (QEM) preserving coastal shorelines and highway grade separations.
+- [ ] Stage 5.3: Predictive prefetching pipeline along camera velocity vector and lookahead cone.
+- [ ] Stage 5.4: Stress testing and continuous 60 FPS validation across rapid 10-kilometer transits.
+
+
+
 

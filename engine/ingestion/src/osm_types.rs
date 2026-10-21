@@ -226,6 +226,120 @@ pub struct OsmLandCoverFeature {
     pub polygon: Vec<Wgs84Coord>,
 }
 
+/// Railway track classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RailwayType {
+    Mainline,
+    #[default]
+    LightRail,
+    Subway,
+    Tram,
+    HighSpeed,
+    Spur,
+    Other,
+}
+
+impl RailwayType {
+    pub fn from_tag(tag: &str) -> Self {
+        match tag {
+            "rail" => Self::Mainline,
+            "light_rail" => Self::LightRail,
+            "subway" => Self::Subway,
+            "tram" => Self::Tram,
+            "highspeed" => Self::HighSpeed,
+            "spur" | "siding" | "yard" => Self::Spur,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Normalized railway track segment extracted from OSM.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OsmRailwayFeature {
+    pub way_id: u64,
+    pub name: Option<String>,
+    pub railway_type: RailwayType,
+    pub geometry: Vec<Wgs84Coord>,
+    pub layer: i8,
+    pub is_bridge: bool,
+    pub is_tunnel: bool,
+    pub is_electrified: bool,
+    pub gauge_mm: Option<u32>,
+}
+
+/// Aeroway facility classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum AerowayType {
+    #[default]
+    Runway,
+    Taxiway,
+    Apron,
+    Helipad,
+    Gate,
+    Terminal,
+    Other,
+}
+
+impl AerowayType {
+    pub fn from_tag(tag: &str) -> Self {
+        match tag {
+            "runway" => Self::Runway,
+            "taxiway" => Self::Taxiway,
+            "apron" => Self::Apron,
+            "helipad" => Self::Helipad,
+            "gate" => Self::Gate,
+            "terminal" => Self::Terminal,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Normalized airport / aeroway feature.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OsmAerowayFeature {
+    pub id: u64,
+    pub name: Option<String>,
+    pub aeroway_type: AerowayType,
+    pub geometry: Vec<Wgs84Coord>,
+    pub width_m: Option<f32>,
+    pub ref_code: Option<String>,
+}
+
+/// Maritime port facility classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PortType {
+    #[default]
+    Pier,
+    Dock,
+    Berth,
+    Slipway,
+    FerryTerminal,
+    Other,
+}
+
+impl PortType {
+    pub fn from_tag(tag: &str) -> Self {
+        match tag {
+            "pier" => Self::Pier,
+            "dock" => Self::Dock,
+            "berth" => Self::Berth,
+            "slipway" => Self::Slipway,
+            "ferry_terminal" => Self::FerryTerminal,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Normalized port / dock / maritime feature.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OsmPortFeature {
+    pub id: u64,
+    pub name: Option<String>,
+    pub port_type: PortType,
+    pub polygon: Vec<Wgs84Coord>,
+    pub min_depth_m: Option<f32>,
+}
+
 /// Collection of raw ingested features for a geographic area.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct IngestedDataset {
@@ -233,4 +347,10 @@ pub struct IngestedDataset {
     pub buildings: Vec<OsmBuildingFeature>,
     pub water_bodies: Vec<OsmWaterFeature>,
     pub land_cover: Vec<OsmLandCoverFeature>,
+    #[serde(default)]
+    pub railways: Vec<OsmRailwayFeature>,
+    #[serde(default)]
+    pub aeroways: Vec<OsmAerowayFeature>,
+    #[serde(default)]
+    pub ports: Vec<OsmPortFeature>,
 }
