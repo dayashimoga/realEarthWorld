@@ -1,0 +1,25 @@
+[package]
+name = "realearth-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../engine/shared" }
+realearth-geospatial = { path = "../engine/geospatial" }
+realearth-ingestion = { path = "../engine/ingestion" }
+realearth-validation = { path = "../engine/validation" }
+realearth-compiler = { path = "../engine/compiler" }
+realearth-streaming = { path = "../engine/streaming" }
+realearth-simulation = { path = "../engine/simulation" }
+realearth-navigation = { path = "../engine/navigation" }
+realearth-vehicles = { path = "../engine/vehicles" }
+realearth-rendering = { path = "../engine/rendering" }
+wgpu.workspace = true
+glam.workspace = true
+tempfile = "3.17"
+tokio.workspace = true
+
+[[test]]
+name = "end_to_end_pipeline"
+path = "tests/end_to_end_pipeline.rs"

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth">
+  <node id="10001" lat="12.9791000" lon="77.5901000"/>
+  <node id="10002" lat="12.9803000" lon="77.5901000"/>
+  <node id="10003" lat="12.9803000" lon="77.5913000"/>
+  <node id="10004" lat="12.9791000" lon="77.5913000"/>
+  <node id="10005" lat="12.9780000" lon="77.5915000"/>
+  <node id="10006" lat="12.9788000" lon="77.5915000"/>
+  <node id="10007" lat="12.9788000" lon="77.5925000"/>
+  <node id="10008" lat="12.9780000" lon="77.5925000"/>
+  <node id="10009" lat="12.9782000" lon="77.5985000"/>
+  <node id="10010" lat="12.9802000" lon="77.5985000"/>
+  <node id="10011" lat="12.9802000" lon="77.6005000"/>
+  <node id="10012" lat="12.9782000" lon="77.6005000"/>
+  <node id="10013" lat="12.9745000" lon="77.6070000"/>
+  <node id="10014" lat="12.9752000" lon="77.6070000"/>
+  <node id="10015" lat="12.9752000" lon="77.6078000"/>
+  <node id="10016" lat="12.9745000" lon="77.6078000"/>
+  <node id="10017" lat="12.9740000" lon="77.6000000"/>
+  <node id="10018" lat="12.9748000" lon="77.6060000"/>
+  <node id="10019" lat="12.9755000" lon="77.6120000"/>
+  <node id="10020" lat="12.9760000" lon="77.6150000"/>
+  <node id="10021" lat="12.9700000" lon="77.6062000"/>
+  <node id="10022" lat="12.9650000" lon="77.6065000"/>
+  <node id="10023" lat="12.9700000" lon="77.5950000"/>
+  <node id="10024" lat="12.9750000" lon="77.5950000"/>
+  <node id="10025" lat="12.9800000" lon="77.5950000"/>
+  <node id="10026" lat="12.9750000" lon="77.5920000"/>
+  <node id="10027" lat="12.9750000" lon="77.5980000"/>
+  <way id="100001">
+    <nd ref="10001"/>
+    <nd ref="10002"/>
+    <nd ref="10003"/>
+    <nd ref="10004"/>
+    <nd ref="10001"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Vidhana Soudha"/>
+    <tag k="height" v="46.0m"/>
+    <tag k="building:levels" v="4"/>
+  </way>
+  <way id="100002">
+    <nd ref="10005"/>
+    <nd ref="10006"/>
+    <nd ref="10007"/>
+    <nd ref="10008"/>
+    <nd ref="10005"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="High Court of Karnataka"/>
+    <tag k="height" v="22.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+  <way id="100003">
+    <nd ref="10009"/>
+    <nd ref="10010"/>
+    <nd ref="10011"/>
+    <nd ref="10012"/>
+    <nd ref="10009"/>
+    <tag k="building" v="stadium"/>
+    <tag k="name" v="M. Chinnaswamy Stadium"/>
+    <tag k="height" v="35.0m"/>
+    <tag k="building:levels" v="5"/>
+  </way>
+  <way id="100004">
+    <nd ref="10013"/>
+    <nd ref="10014"/>
+    <nd ref="10015"/>
+    <nd ref="10016"/>
+    <nd ref="10013"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Utility Building (MG Road)"/>
+    <tag k="height" v="85.0m"/>
+    <tag k="building:levels" v="24"/>
+  </way>
+  <way id="200001">
+    <nd ref="10017"/>
+    <nd ref="10018"/>
+    <nd ref="10019"/>
+    <nd ref="10020"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Mahatma Gandhi Road"/>
+    <tag k="lanes" v="4"/>
+    <tag k="layer" v="0"/>
+  </way>
+  <way id="200002">
+    <nd ref="10018"/>
+    <nd ref="10021"/>
+    <nd ref="10022"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Brigade Road"/>
+    <tag k="lanes" v="2"/>
+    <tag k="oneway" v="yes"/>
+    <tag k="layer" v="0"/>
+  </way>
+  <way id="200003">
+    <nd ref="10023"/>
+    <nd ref="10024"/>
+    <nd ref="10025"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Kasturba Road"/>
+    <tag k="lanes" v="4"/>
+    <tag k="layer" v="0"/>
+  </way>
+  <way id="200004">
+    <nd ref="10026"/>
+    <nd ref="10024"/>
+    <nd ref="10027"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Cubbon Park Elevated Flyover"/>
+    <tag k="lanes" v="2"/>
+    <tag k="layer" v="1"/>
+    <tag k="bridge" v="yes"/>
+  </way>
+</osm>

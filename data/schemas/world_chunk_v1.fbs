@@ -1,0 +1,72 @@
+// Real Earth World Platform — FlatBuffers Chunk Schema v1
+// Version: 1.0.0
+
+namespace RealEarth.Schema.v1;
+
+enum HeightProvenance : byte {
+    Surveyed = 0,
+    InferredLevels = 1,
+    DefaultCategory = 2,
+    Unknown = 3
+}
+
+struct Vec3f {
+    x: float;
+    y: float;
+    z: float;
+}
+
+struct Vertex {
+    position: Vec3f;
+    normal: Vec3f;
+    color: [float:4];
+    uv: [float:2];
+}
+
+table ChunkMesh {
+    vertices: [Vertex];
+    indices: [uint32];
+}
+
+struct GeoBounds {
+    min_lat: double;
+    min_lon: double;
+    max_lat: double;
+    max_lon: double;
+}
+
+struct Wgs84Coord {
+    lat: double;
+    lon: double;
+    alt: double;
+}
+
+table ChunkHeader {
+    magic: [ubyte:4];
+    version: uint32;
+    chunk_x: int32;
+    chunk_y: int32;
+    lod_level: uint32;
+    bounds: GeoBounds;
+    anchor: Wgs84Coord;
+    min_elevation: float;
+    max_elevation: float;
+}
+
+table ChunkBuildingMeta {
+    feature_id: uint64;
+    name: string;
+    height_meters: float;
+    provenance: HeightProvenance;
+    confidence: float;
+}
+
+table WorldChunk {
+    header: ChunkHeader;
+    terrain: ChunkMesh;
+    roads: ChunkMesh;
+    buildings: ChunkMesh;
+    building_metadata: [ChunkBuildingMeta];
+}
+
+root_type WorldChunk;

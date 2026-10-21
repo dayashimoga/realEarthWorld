@@ -1,0 +1,24 @@
+[package]
+name = "realearth-benchmarks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../engine/shared" }
+realearth-geospatial = { path = "../engine/geospatial" }
+realearth-ingestion = { path = "../engine/ingestion" }
+realearth-validation = { path = "../engine/validation" }
+realearth-compiler = { path = "../engine/compiler" }
+realearth-streaming = { path = "../engine/streaming" }
+realearth-simulation = { path = "../engine/simulation" }
+criterion.workspace = true
+tempfile = "3.17"
+
+[[bench]]
+name = "geospatial_bench"
+harness = false
+
+[[bench]]
+name = "compiler_bench"
+harness = false

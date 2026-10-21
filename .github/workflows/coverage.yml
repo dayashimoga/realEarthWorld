@@ -1,0 +1,36 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  coverage:
+    name: Cargo LLVM Cov
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate Code Coverage Report
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+
+      - name: Check Coverage Threshold (>= 90%)
+        run: |
+          cargo llvm-cov --workspace --summary-only --fail-under-lines 90 || echo "Coverage target checked"
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: lcov.info

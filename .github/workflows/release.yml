@@ -1,0 +1,54 @@
+name: Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build & Package ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: realearth-linux-x64.tar.gz
+            bin_ext: ""
+          - os: windows-latest
+            artifact_name: realearth-windows-x64.zip
+            bin_ext: ".exe"
+          - os: macos-latest
+            artifact_name: realearth-macos-universal.tar.gz
+            bin_ext: ""
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Release Binaries
+        run: cargo build --workspace --release
+
+      - name: Package Windows Artifacts
+        if: matrix.os == 'windows-latest'
+        run: |
+          Compress-Archive -Path target/release/realearth-cli.exe, target/release/realearth-viewer.exe, assets, data -DestinationPath realearth-windows-x64.zip
+          Get-FileHash -Algorithm SHA256 realearth-windows-x64.zip | Out-File -FilePath realearth-windows-x64.zip.sha256
+
+      - name: Package Unix Artifacts
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar -czvf ${{ matrix.artifact_name }} -C target/release realearth-cli${{ matrix.bin_ext }} realearth-viewer${{ matrix.bin_ext }}
+          shasum -a 256 ${{ matrix.artifact_name }} > ${{ matrix.artifact_name }}.sha256
+
+      - name: Upload Release Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_name }}
+            ${{ matrix.artifact_name }}.sha256

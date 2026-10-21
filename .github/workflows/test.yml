@@ -1,0 +1,58 @@
+name: Test & Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    name: Formatting & Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy (-D warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test-workspace:
+    name: Workspace Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Workspace Tests
+        run: cargo test --workspace --verbose
+
+      - name: Run Integration Tests
+        run: cargo test -p realearth-tests --verbose
+
+      - name: Run Bengaluru Compilation Smoke Test
+        run: cargo run -p realearth-cli -- compile --output target/world_bengaluru
+
+      - name: Run Viewer Smoke Test
+        run: cargo run -p realearth-viewer

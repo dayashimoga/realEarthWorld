@@ -1,0 +1,50 @@
+{
+  "name": "Bengaluru Central Benchmark Region",
+  "version": "1.0.0",
+  "license": "ODbL 1.0 (OSM) / Copernicus Open Access",
+  "bbox": {
+    "min_lat": 12.9600,
+    "max_lat": 12.9850,
+    "min_lon": 77.5800,
+    "max_lon": 77.6150
+  },
+  "landmarks": [
+    {
+      "name": "Vidhana Soudha",
+      "lat": 12.9797,
+      "lon": 77.5907,
+      "height_m": 46.0,
+      "type": "civic"
+    },
+    {
+      "name": "High Court of Karnataka",
+      "lat": 12.9784,
+      "lon": 77.5920,
+      "height_m": 22.0,
+      "type": "civic"
+    },
+    {
+      "name": "M. Chinnaswamy Stadium",
+      "lat": 12.9792,
+      "lon": 77.5995,
+      "height_m": 35.0,
+      "type": "stadium"
+    },
+    {
+      "name": "Mahatma Gandhi Road",
+      "lat": 12.9748,
+      "lon": 77.6060,
+      "lanes": 4,
+      "type": "primary"
+    }
+  ],
+  "grade_separations": [
+    {
+      "name": "Cubbon Park Elevated Flyover",
+      "crossing_road": "Kasturba Road",
+      "layer": 1,
+      "ground_layer": 0,
+      "is_bridge": true
+    }
+  ]
+}

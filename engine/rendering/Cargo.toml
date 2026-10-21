@@ -1,0 +1,19 @@
+[package]
+name = "realearth-rendering"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+realearth-geospatial = { path = "../geospatial" }
+realearth-compiler = { path = "../compiler" }
+wgpu.workspace = true
+bytemuck.workspace = true
+glam.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+pollster = "0.4"
+
+[dev-dependencies]
+approx = "0.5"

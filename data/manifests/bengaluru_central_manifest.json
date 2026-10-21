@@ -1,0 +1,46 @@
+{
+  "region_name": "Bengaluru Central",
+  "country": "India",
+  "state": "Karnataka",
+  "version": "1.0.0",
+  "datum": {
+    "ellipsoid": "WGS84 (EPSG:4326)",
+    "geoid": "EGM96",
+    "projected_crs": "UTM Zone 43N (EPSG:32643)",
+    "vertical_units": "meters",
+    "horizontal_units": "degrees_decimal"
+  },
+  "bounds": {
+    "min_lat": 12.9600,
+    "min_lon": 77.5800,
+    "max_lat": 12.9850,
+    "max_lon": 77.6150
+  },
+  "anchor_point": {
+    "name": "Vidhana Soudha",
+    "lat": 12.9797,
+    "lon": 77.5907,
+    "altitude_msl": 920.0
+  },
+  "sources": [
+    {
+      "type": "OpenStreetMap",
+      "dataset": "Bengaluru Central Extract (Highway & Building)",
+      "license": "ODbL (Open Database License)",
+      "attribution": "© OpenStreetMap contributors",
+      "timestamp": "2026-10-21T00:00:00Z"
+    },
+    {
+      "type": "DEM",
+      "dataset": "Copernicus GLO-30 / NASA SRTM 30m Global DEM",
+      "license": "Open Data Policy",
+      "elevation_range_msl": [900.0, 935.0]
+    }
+  ],
+  "validation_metrics": {
+    "total_roads": 4,
+    "total_buildings": 4,
+    "topological_validity": "100%",
+    "grade_separation_invariance": "Passed (Cubbon Park Flyover layer=1 clearance=6.0m)"
+  }
+}

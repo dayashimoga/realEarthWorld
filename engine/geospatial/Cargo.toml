@@ -1,0 +1,15 @@
+[package]
+name = "realearth-geospatial"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+glam.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+approx = "0.5"

@@ -1,0 +1,18 @@
+[package]
+name = "realearth-ingestion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+realearth-geospatial = { path = "../geospatial" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+quick-xml = { version = "0.37", features = ["serialize"] }
+byteorder = "1.5"
+
+[dev-dependencies]
+approx = "0.5"

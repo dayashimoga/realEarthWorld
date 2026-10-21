@@ -1,0 +1,23 @@
+name: Security & Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Run Cargo Audit
+        run: cargo audit --deny warnings

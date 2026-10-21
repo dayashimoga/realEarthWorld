@@ -1,0 +1,25 @@
+[package]
+name = "realearth-compiler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+realearth-geospatial = { path = "../geospatial" }
+realearth-ingestion = { path = "../ingestion" }
+realearth-validation = { path = "../validation" }
+earcutr.workspace = true
+bincode.workspace = true
+zstd.workspace = true
+rusqlite.workspace = true
+bytemuck.workspace = true
+glam.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+approx = "0.5"
+tempfile = "3.17"

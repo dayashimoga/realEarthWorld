@@ -1,0 +1,20 @@
+[package]
+name = "realearth-vehicles"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+realearth-geospatial = { path = "../geospatial" }
+realearth-navigation = { path = "../navigation" }
+bevy_ecs.workspace = true
+rapier3d.workspace = true
+glam.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+approx = "0.5"
