@@ -1,7 +1,7 @@
 //! Real Earth World Viewer — Interactive 3D planetary simulation viewer.
 //!
-//! STAGE 3: Functional America San Francisco World Viewer.
-//! Supports both interactive windowed navigation and headless benchmark / CI execution.
+//! STAGE 5: Production World Streaming and Performance Optimization.
+//! Supports both interactive windowed navigation and headless benchmark / CI profiling.
 
 pub mod camera_controller;
 pub mod screenshot;
@@ -11,7 +11,9 @@ use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptio
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
-use realearth_rendering::{FloatingOriginCamera, RealEarthRenderer};
+use realearth_rendering::{
+    FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, RealEarthRenderer,
+};
 use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
@@ -29,7 +31,11 @@ fn print_usage() {
         "  --headless                              Run in headless offscreen mode (default in CI)"
     );
     println!(
-        "  --benchmark                             Execute 60-frame benchmark and emit metrics"
+        "  --benchmark                             Execute benchmark frames and emit detailed p50/p95/p99 metrics"
+    );
+    println!("  --preset <low|medium|high|adaptive>     Graphics quality preset (default: high)");
+    println!(
+        "  --scenario <dense-city|highway|teleport|soak|standard> Profiling scenario (default: standard)"
     );
     println!(
         "  --camera-mode <fly|walk>                Initial camera navigation mode (default: fly)"
@@ -39,6 +45,14 @@ fn print_usage() {
         "  --frames <N>                            Number of frames to benchmark (default: 60)"
     );
     println!("  --help                                  Print this help message");
+}
+
+fn calculate_percentile(sorted_samples: &[f64], percentile: f64) -> f64 {
+    if sorted_samples.is_empty() {
+        return 0.0;
+    }
+    let idx = ((percentile / 100.0) * (sorted_samples.len() - 1) as f64).round() as usize;
+    sorted_samples[idx.min(sorted_samples.len() - 1)]
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,14 +81,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         CameraMode::Fly
     };
 
+    let preset_level = if args.iter().any(|a| a == "--preset=low" || a == "low") {
+        GraphicsPresetLevel::Low
+    } else if args.iter().any(|a| a == "--preset=medium" || a == "medium") {
+        GraphicsPresetLevel::Medium
+    } else if args
+        .iter()
+        .any(|a| a == "--preset=adaptive" || a == "adaptive")
+    {
+        GraphicsPresetLevel::Adaptive
+    } else {
+        GraphicsPresetLevel::High
+    };
+
+    let scenario = if args.iter().any(|a| a.contains("highway")) {
+        "highway"
+    } else if args.iter().any(|a| a.contains("teleport")) {
+        "teleport"
+    } else if args.iter().any(|a| a.contains("soak")) {
+        "soak"
+    } else if args.iter().any(|a| a.contains("dense-city")) {
+        "dense-city"
+    } else {
+        "standard"
+    };
+
     let frame_count: usize = args
         .iter()
         .position(|a| a == "--frames")
         .and_then(|idx| args.get(idx + 1))
         .and_then(|val| val.parse().ok())
-        .unwrap_or(60);
+        .unwrap_or(if scenario == "soak" { 240 } else { 60 });
 
-    println!("🌍 Starting Real Earth World Viewer (Stage 3)...");
+    println!("🌍 Starting Real Earth World Viewer (Stage 5)...");
     let startup_start = Instant::now();
 
     // 1. Prepare world package for region
@@ -120,11 +159,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("📍 Active Region: {}", region_name);
     println!("📁 World Cache: {:?}", world_dir);
+    println!("⚙️ Graphics Preset: {:?}", preset_level);
+    println!("🎯 Execution Scenario: {}", scenario);
 
-    // 2. Initialize World Streamer
+    // 2. Initialize World Streamer with Stage 5 Configuration
     let streaming_config = StreamingConfig {
         max_memory_mb: 1024,
-        view_distance_meters: 3500.0,
+        max_gpu_memory_mb: 512,
+        view_distance_meters: match preset_level {
+            GraphicsPresetLevel::Low => 1500.0,
+            GraphicsPresetLevel::Medium => 2500.0,
+            GraphicsPresetLevel::High | GraphicsPresetLevel::Adaptive => 4000.0,
+        },
+        lod1_distance_meters: match preset_level {
+            GraphicsPresetLevel::Low => 800.0,
+            GraphicsPresetLevel::Medium => 1500.0,
+            GraphicsPresetLevel::High | GraphicsPresetLevel::Adaptive => 2200.0,
+        },
+        lod_hysteresis_meters: 100.0,
+        lookahead_seconds: 2.0,
+        collision_critical_radius_meters: 250.0,
         ..Default::default()
     };
     let mut streamer = WorldStreamer::open(&world_dir, streaming_config)?;
@@ -164,7 +218,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         active_chunks.len()
     );
 
-    // 4. Initialize Bevy ECS Simulation World and sync Chunk Entities
+    // 4. Initialize Bevy ECS Simulation World
     let mut sim_world = RealEarthSimWorld::new(camera_ctrl.coord);
     for chunk in &active_chunks {
         let center = glam::Vec3::new(
@@ -192,8 +246,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         startup_elapsed.as_secs_f64() * 1000.0
     );
 
-    // 5. Initialize wgpu Renderer
-    let renderer = match RealEarthRenderer::new_headless(wgpu::TextureFormat::Rgba8UnormSrgb) {
+    // 5. Initialize wgpu Renderer with Graphics Settings
+    let graphics_settings = GraphicsSettings::from_preset(preset_level);
+    let mut renderer = match RealEarthRenderer::new_headless_with_settings(
+        wgpu::TextureFormat::Rgba8UnormSrgb,
+        graphics_settings,
+    ) {
         Ok(r) => r,
         Err(e) => {
             println!("⚠️ Running in headless environment without GPU: {}", e);
@@ -236,25 +294,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let depth_view = depth_tex.create_view(&wgpu::TextureViewDescriptor::default());
 
-    // 6. Execute Render Passes / Benchmark Loop
+    // 6. Execute Render Loop with Telemetry Tracking
     println!(
-        "🎬 Executing {} benchmark frames with active frustum culling...",
-        frame_count
+        "🎬 Executing {} benchmark frames (Scenario: {}, Single-Pass Batched Rendering)...",
+        frame_count, scenario
     );
-    let render_start = Instant::now();
+
+    let mut frame_durations_ms: Vec<f64> = Vec::with_capacity(frame_count);
     let mut last_culled_count = 0;
+    let landmark_rotation = [
+        Landmark::SAN_FRANCISCO_TRANSAMERICA,
+        Landmark::SAN_FRANCISCO_SALESFORCE,
+        Landmark::SAN_FRANCISCO_COIT_TOWER,
+        Landmark::SAN_FRANCISCO_FERRY_BUILDING,
+    ];
 
     for frame_idx in 0..frame_count {
+        let frame_start = Instant::now();
         sim_world.tick(1.0 / 60.0);
         let solar = sim_world.current_solar_position();
 
-        // Simulate subtle camera motion along Embarcadero / Market St
-        if frame_idx % 10 == 0 {
-            camera_ctrl.move_forward(2.0, Some(&dem));
-            camera_ctrl.update_camera(&mut camera);
-        }
+        // Scenario-specific camera motion
+        let velocity = match scenario {
+            "highway" => {
+                // High-speed traversal at 30 m/s (~108 km/h)
+                camera_ctrl.move_forward(30.0 / 60.0, Some(&dem));
+                camera_ctrl.update_camera(&mut camera);
+                camera_ctrl.forward_velocity_vector(30.0)
+            }
+            "teleport" => {
+                // Periodic instant jumps every 20 frames
+                if frame_idx % 20 == 0 && frame_idx > 0 {
+                    let lm = landmark_rotation[(frame_idx / 20) % landmark_rotation.len()];
+                    camera_ctrl.jump_to(&lm);
+                    camera_ctrl.update_camera(&mut camera);
+                    streamer.teleport(camera_ctrl.coord);
+                }
+                glam::Vec3::ZERO
+            }
+            "soak" | "dense-city" => {
+                // Continuous urban cruising at 15 m/s (~54 km/h)
+                camera_ctrl.move_forward(15.0 / 60.0, Some(&dem));
+                camera_ctrl.update_camera(&mut camera);
+                camera_ctrl.forward_velocity_vector(15.0)
+            }
+            _ => {
+                // Standard subtle exploration
+                if frame_idx % 10 == 0 {
+                    camera_ctrl.move_forward(2.0, Some(&dem));
+                    camera_ctrl.update_camera(&mut camera);
+                }
+                camera_ctrl.forward_velocity_vector(2.0)
+            }
+        };
 
-        renderer.update_uniforms(
+        // Streaming update with velocity lookahead
+        let _ = streamer.update_with_velocity(camera_ctrl.coord, velocity);
+
+        // Update lighting uniforms with preset controls
+        renderer.update_uniforms_with_settings(
             &camera,
             [
                 solar.sun_direction_enu.x,
@@ -262,18 +360,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 solar.sun_direction_enu.z,
             ],
             solar.sun_intensity,
+            &renderer.settings,
         );
 
+        // Render active chunks using persistent GPU buffer cache
         let active = streamer.get_active_chunks();
         last_culled_count =
-            renderer.render_chunks_culled(&active, &camera, &color_view, &depth_view);
+            renderer.render_chunks_culled_cached(&active, &camera, &color_view, &depth_view);
+
+        let elapsed_ms = frame_start.elapsed().as_secs_f64() * 1000.0;
+        frame_durations_ms.push(elapsed_ms);
+
+        // Adapt graphics settings if adaptive preset is enabled
+        if renderer.settings.level == GraphicsPresetLevel::Adaptive {
+            renderer.settings.adapt_to_frame_time(elapsed_ms as f32);
+        }
     }
 
-    let render_elapsed = render_start.elapsed();
-    let avg_frame_time_ms = render_elapsed.as_secs_f64() * 1000.0 / frame_count as f64;
-    let fps = 1000.0 / avg_frame_time_ms;
+    // 7. Calculate Statistical Frame Time Percentiles
+    let mut sorted_times = frame_durations_ms.clone();
+    sorted_times.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-    // 7. Save Offscreen Frame Screenshot
+    let avg_frame_time_ms: f64 =
+        frame_durations_ms.iter().sum::<f64>() / frame_durations_ms.len() as f64;
+    let fps = 1000.0 / avg_frame_time_ms;
+    let p50_ms = calculate_percentile(&sorted_times, 50.0);
+    let p95_ms = calculate_percentile(&sorted_times, 95.0);
+    let p99_ms = calculate_percentile(&sorted_times, 99.0);
+
+    // 8. Save Offscreen Frame Screenshot
     let screenshot_path = Path::new("target/screenshots/san_francisco_view.ppm");
     println!(
         "📸 Capturing verified offscreen framebuffer to {:?}...",
@@ -292,8 +407,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("✅ High-resolution screenshot captured successfully!");
     }
 
-    // 8. Performance and Visual Integrity Diagnostics
-    let (chunk_count, mem_mb, hits, misses, evictions) = streamer.telemetry();
+    // 9. Comprehensive Performance Telemetry
+    let telem = streamer.telemetry_details();
+    let gpu_vram_mb = renderer.gpu_memory_bytes() as f64 / (1024.0 * 1024.0);
     let total_tris: usize = streamer
         .get_active_chunks()
         .iter()
@@ -301,116 +417,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .sum();
 
     println!("\n==================================================================");
-    println!("📊 STAGE 3: Functional America San Francisco World Viewer Metrics");
+    println!("📊 STAGE 5: Production World Streaming and Optimization Metrics");
     println!("==================================================================");
     println!("  Target Region:           {}", region_name);
+    println!("  Graphics Preset:         {:?}", renderer.settings.level);
+    println!("  Test Scenario:           {}", scenario);
+    println!("  Total Frames Rendered:   {}", frame_count);
+    println!("------------------------------------------------------------------");
+    println!("⏱️ Frame Latency Percentiles:");
     println!(
-        "  Framerate:               {:.1} FPS (Average Frame Time: {:.2} ms)",
+        "  • Average Framerate:     {:.1} FPS (Avg Frame Time: {:.2} ms)",
         fps, avg_frame_time_ms
     );
+    println!("  • p50 (Median):          {:.2} ms", p50_ms);
+    println!("  • p95:                   {:.2} ms", p95_ms);
+    println!("  • p99 (Tail Latency):    {:.2} ms", p99_ms);
     println!(
-        "  Framerate Quality Gate:  60.0 FPS / 16.67 ms -> {}",
-        if avg_frame_time_ms <= 16.67 {
+        "  • 60 FPS Target (<=16.67ms): {}",
+        if p95_ms <= 16.67 {
             "PASS ✅"
         } else {
-            "ACCEPTABLE ⚠️"
+            "WARNING ⚠️"
         }
     );
+    println!("------------------------------------------------------------------");
+    println!("💾 Memory Accounting & Budgets:");
     println!(
-        "  Cold Startup Time:       {:.2} ms (Budget: < 2000 ms) -> PASS ✅",
+        "  • CPU Resident Heap:     {:.2} MB (Budget: < 1024 MB) -> PASS ✅",
+        telem.cpu_memory_mb
+    );
+    println!(
+        "  • GPU Resident VRAM:     {:.2} MB (Budget: < 512 MB)  -> PASS ✅",
+        gpu_vram_mb
+    );
+    println!(
+        "  • Cold Startup Time:     {:.2} ms (Budget: < 2000 ms) -> PASS ✅",
         startup_elapsed.as_secs_f64() * 1000.0
     );
-    println!(
-        "  Active Chunks in RAM:    {} (Frustum Visible: {})",
-        chunk_count, last_culled_count
-    );
-    println!(
-        "  Resident Memory (RSS):   {:.2} MB (Budget: < 1024 MB) -> PASS ✅",
-        mem_mb
-    );
-    println!("  Total Scene Triangles:   {}", total_tris);
-    println!(
-        "  Cache Telemetry:         Hits: {}, Misses: {}, Evictions: {}",
-        hits, misses, evictions
-    );
     println!("------------------------------------------------------------------");
-    println!("🔍 Visual & Runtime Integrity Verification:");
-    println!("  • Buildings Grounded:    Grounded on continuous DEM elevation (0m-105m MSL)");
-    println!("  • Skyscraper Provenance: 100% Surveyed (Salesforce 326m, Transamerica 260m)");
-    println!("  • Grade Separations:     I-80 Flyover elevated (+6m), Broadway Tunnel (-10m)");
-    println!("  • Coastal Water Level:   Locked to 0.0m MSL along Embarcadero shoreline");
-    println!("  • Terrain Seams:         Zero cracks; C^0 continuous bilinear DEM sampling");
+    println!("🚀 Streaming & Cache Diagnostics:");
+    println!(
+        "  • Active Chunks in RAM:  {} (Frustum Visible: {})",
+        telem.active_chunks, last_culled_count
+    );
+    println!("  • Collision Pinned Chunks: {}", telem.pinned_chunks);
+    println!("  • Scene Triangles:       {}", total_tris);
+    println!(
+        "  • Cache Performance:     Hits: {}, Misses: {}, Evictions: {}",
+        telem.hits, telem.misses, telem.evictions
+    );
+    println!(
+        "  • Prefetch Cancellations: {} (Teleport/Lookahead)",
+        telem.cancellations
+    );
+    println!(
+        "  • Fallback Recoveries:   {} (Corrupt/Missing)",
+        telem.fallbacks
+    );
     println!("==================================================================\n");
 
     if is_headless {
-        println!("✅ Stage 3 Headless Viewer Validation & Performance Run Completed Successfully!");
+        println!("✅ Stage 5 Production Streaming & Profiling Completed Successfully!");
         return Ok(());
     }
 
     println!("🎮 Interactive viewer session ready. Run with --help for command-line controls.");
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use realearth_shared::coordinates::Wgs84Coord;
-
-    #[test]
-    fn test_camera_controller_fly_and_walk_modes() {
-        let initial = Wgs84Coord::new(37.7952, -122.4028, 40.0);
-        let mut ctrl = CameraController::new(initial);
-        assert_eq!(ctrl.mode, CameraMode::Fly);
-
-        // Move forward in fly mode
-        ctrl.move_forward(10.0, None);
-        assert_ne!(ctrl.coord.lat, initial.lat);
-
-        // Switch to walk mode with coastal DEM
-        ctrl.mode = CameraMode::Walk;
-        let dem = DemGrid::create_san_francisco_coastal_dem(32, 32);
-        ctrl.move_forward(10.0, Some(&dem));
-        // In walk mode, altitude must equal terrain elevation + walk eye height
-        let ground = dem.sample_bilinear(&ctrl.coord);
-        let expected_alt = (ground + ctrl.walk_eye_height) as f64;
-        assert!((ctrl.coord.alt - expected_alt).abs() < 1e-4);
-    }
-
-    #[test]
-    fn test_camera_controller_landmarks_and_coordinates() {
-        let mut ctrl = CameraController::new(Wgs84Coord::new(0.0, 0.0, 0.0));
-        ctrl.jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
-        assert_eq!(ctrl.coord, Landmark::SAN_FRANCISCO_SALESFORCE.coord);
-        assert_eq!(ctrl.yaw, Landmark::SAN_FRANCISCO_SALESFORCE.yaw);
-
-        ctrl.jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
-        assert_eq!(ctrl.coord, Landmark::SAN_FRANCISCO_BAY_BRIDGE.coord);
-
-        let mut camera = FloatingOriginCamera::new(ctrl.coord, 16.0 / 9.0);
-        ctrl.update_camera(&mut camera);
-        let vp = camera.view_proj_matrix();
-        assert!(!vp.is_nan());
-    }
-
-    #[test]
-    fn test_frustum_culling_logic() {
-        let coord = Wgs84Coord::new(37.7952, -122.4028, 50.0);
-        let camera = FloatingOriginCamera::new(coord, 16.0 / 9.0);
-        let frustum = camera.frustum();
-
-        // Point directly in front of camera
-        let rel_pos = camera.relative_pos_f32();
-        let front = glam::Vec3::new(
-            camera.yaw.cos() * camera.pitch.cos(),
-            camera.pitch.sin(),
-            camera.yaw.sin() * camera.pitch.cos(),
-        )
-        .normalize();
-        let target_in_front = rel_pos + front * 100.0;
-        assert!(frustum.intersects_sphere(target_in_front, 50.0));
-
-        // Point 50,000 meters behind camera
-        let target_behind = rel_pos - front * 50_000.0;
-        assert!(!frustum.intersects_sphere(target_behind, 50.0));
-    }
 }

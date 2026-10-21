@@ -130,6 +130,18 @@ impl CameraController {
         self.pitch = landmark.pitch;
     }
 
+    /// Computes the forward 3D velocity vector in meters per second for streaming lookahead.
+    pub fn forward_velocity_vector(&self, speed_mps: f64) -> glam::Vec3 {
+        let forward_x = self.yaw.cos() * self.pitch.cos();
+        let forward_y = self.pitch.sin();
+        let forward_z = self.yaw.sin() * self.pitch.cos();
+        glam::Vec3::new(
+            forward_x * speed_mps as f32,
+            forward_y * speed_mps as f32,
+            forward_z * speed_mps as f32,
+        )
+    }
+
     /// Moves camera forward/backward along view heading.
     pub fn move_forward(&mut self, amount: f64, dem: Option<&DemGrid>) {
         let forward_x = (self.yaw.cos() * self.pitch.cos()) as f64;

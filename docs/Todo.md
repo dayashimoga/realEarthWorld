@@ -86,11 +86,28 @@
 - [x] Stage 4.3: Implement `CompilerPublicationGate` blocking compilation on Blocker/Error defects.
 - [x] Stage 4.3: Create documented regression test suite with intentionally malformed fixtures, property tests, and proof that valid features remain unchanged.
 
-## STAGE 5: Hierarchical Multi-LOD Compiler & Scalable Streaming (Roadmap)
-- [ ] Stage 5.1: Hierarchical Quadtree chunk compilation (LOD0 fine, LOD1 medium, LOD2 regional).
-- [ ] Stage 5.2: Geometric mesh decimation using Quadric Error Metrics (QEM) preserving coastal shorelines and highway grade separations.
-- [ ] Stage 5.3: Predictive prefetching pipeline along camera velocity vector and lookahead cone.
-- [ ] Stage 5.4: Stress testing and continuous 60 FPS validation across rapid 10-kilometer transits.
+## STAGE 5: Production World Streaming and Performance Optimization (Completed)
+- [x] Stage 5.1: Hierarchical spatial indexing and quadtree chunk levels in `realearth-streaming`.
+- [x] Stage 5.1: Velocity- and direction-aware prefetching lookahead cone along motion vector.
+- [x] Stage 5.1: Prioritized, cancellable Tokio async I/O worker with Rayon decompression and bounded backpressure.
+- [x] Stage 5.1: Dual CPU heap and GPU VRAM accounting in `LruChunkCache`.
+- [x] Stage 5.1: Safe collision-critical readiness and chunk pinning (`pinned: bool`).
+- [x] Stage 5.1: Chunk corruption recovery with checksums and safe fallback geometry.
+- [x] Stage 5.1: Chunk and LOD distance hysteresis ($\Delta_{\text{hyst}} = 100\text{m}$) to eliminate boundary popping.
+- [x] Stage 5.2: Persistent GPU buffer caching (`GpuChunkCache`, `GpuChunkMesh`) eliminating per-frame vertex/index reallocation.
+- [x] Stage 5.2: Graphics quality presets (`Low`, `Medium`, `High`, `Adaptive`) with dynamic frame-time regulator.
+- [x] Stage 5.2: Shader enhancements: road lane markings (white/yellow dashes), specular reflections, atmospheric haze, day/night lighting.
+- [x] Stage 5.3: Accurate percentile frame time telemetry (p50, p95, p99), draw calls, GPU/CPU time, RSS, and cache stats.
+- [x] Stage 5.3: Dense city, highway, rapid movement, teleportation, and soak scenario profiling.
+- [x] Stage 5.3: Planetary scaling demonstration: 100,000 and 1,000,000 managed objects at 60 FPS reference target.
+- [x] Stage 5.3: Regression test suite and performance certification matrix.
+
+## STAGE 6: Autonomous Vehicle Simulation, Traffic & Multi-Modal Kinematics (Roadmap)
+- [ ] Stage 6.1: Full vehicle kinematics and dynamics for multi-axle trucks, buses, motorcycles, and emergency vehicles.
+- [ ] Stage 6.2: Multi-agent synthetic traffic flow generation adhering to lane disciplines and intersection signals.
+- [ ] Stage 6.3: Multi-modal transport: integration of passenger rail transit, airport runway operations, and maritime ferries.
+
+
 
 
 

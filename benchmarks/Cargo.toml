@@ -13,6 +13,7 @@ realearth-compiler = { path = "../engine/compiler" }
 realearth-streaming = { path = "../engine/streaming" }
 realearth-simulation = { path = "../engine/simulation" }
 criterion.workspace = true
+glam.workspace = true
 tempfile = "3.17"
 
 [[bench]]
@@ -21,4 +22,8 @@ harness = false
 
 [[bench]]
 name = "compiler_bench"
+harness = false
+
+[[bench]]
+name = "streaming_bench"
 harness = false

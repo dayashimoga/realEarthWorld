@@ -2,20 +2,24 @@
 
 pub mod camera;
 pub mod culling;
+pub mod preset;
 pub mod renderer;
 pub mod shaders;
 pub mod uniforms;
 
 pub use camera::FloatingOriginCamera;
 pub use culling::{Frustum, FrustumPlane};
-pub use renderer::RealEarthRenderer;
+pub use preset::{GraphicsPresetLevel, GraphicsSettings};
+pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
 pub use shaders::WORLD_SHADER_WGSL;
 pub use uniforms::SceneUniforms;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use realearth_compiler::chunk::{ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION};
     use realearth_compiler::mesh::{ChunkMesh, Vertex};
+    use realearth_shared::bounds::GeoBounds;
     use realearth_shared::coordinates::{EcefCoord, Wgs84Coord};
 
     #[test]
@@ -44,7 +48,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wgpu_headless_offscreen_render() {
+    fn test_wgpu_headless_offscreen_render_and_cached_buffers() {
         let renderer = match RealEarthRenderer::new_headless(wgpu::TextureFormat::Rgba8UnormSrgb) {
             Ok(r) => r,
             Err(e) => {
@@ -91,32 +95,60 @@ mod tests {
         });
         let depth_view = depth_tex.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut mesh = ChunkMesh::default();
-        mesh.vertices.push(Vertex::new(
+        let mut terrain = ChunkMesh::default();
+        terrain.vertices.push(Vertex::new(
             [0.0, 10.0, -20.0],
             [0.0, 0.0, 1.0],
             [0.0, 0.0],
-            [1.0, 0.0, 0.0, 1.0],
+            [0.3, 0.6, 0.2, 1.0],
         ));
-        mesh.vertices.push(Vertex::new(
+        terrain.vertices.push(Vertex::new(
             [-10.0, -10.0, -20.0],
             [0.0, 0.0, 1.0],
             [0.0, 1.0],
-            [0.0, 1.0, 0.0, 1.0],
+            [0.3, 0.6, 0.2, 1.0],
         ));
-        mesh.vertices.push(Vertex::new(
+        terrain.vertices.push(Vertex::new(
             [10.0, -10.0, -20.0],
             [0.0, 0.0, 1.0],
             [1.0, 1.0],
-            [0.0, 0.0, 1.0, 1.0],
+            [0.3, 0.6, 0.2, 1.0],
         ));
-        mesh.indices.extend_from_slice(&[0, 1, 2]);
+        terrain.indices.extend_from_slice(&[0, 1, 2]);
 
         let vidhana = Wgs84Coord::new(12.9797, 77.5907, 920.0);
         let camera = FloatingOriginCamera::new(vidhana, 1.0);
         renderer.update_uniforms(&camera, [0.0, 1.0, 0.0], 1.0);
 
-        // Render mesh to offscreen texture
-        renderer.render_mesh(&mesh, &color_view, &depth_view, true);
+        let chunk = WorldChunk {
+            header: ChunkHeader {
+                magic: *CHUNK_MAGIC,
+                version: CHUNK_VERSION,
+                chunk_x: 0,
+                chunk_y: 0,
+                lod_level: 0,
+                bounds: GeoBounds::new(12.97, 12.98, 77.59, 77.60),
+                anchor: vidhana,
+                min_elevation: 0.0,
+                max_elevation: 50.0,
+            },
+            terrain,
+            roads: ChunkMesh::default(),
+            buildings: ChunkMesh::default(),
+            water: ChunkMesh::default(),
+            vegetation: ChunkMesh::default(),
+            building_metadata: Vec::new(),
+        };
+
+        // Render with persistent GPU buffer cache
+        let rendered =
+            renderer.render_chunks_culled_cached(&[&chunk], &camera, &color_view, &depth_view);
+        assert_eq!(rendered, 1);
+        assert!(renderer.gpu_memory_bytes() > 0);
+
+        // Second render frame: reuses persistent GPU cache
+        let rendered_frame2 =
+            renderer.render_chunks_culled_cached(&[&chunk], &camera, &color_view, &depth_view);
+        assert_eq!(rendered_frame2, 1);
     }
 }

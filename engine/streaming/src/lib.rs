@@ -1,14 +1,21 @@
 //! High-performance asynchronous spatial world streaming and memory management.
 
+pub mod async_loader;
 pub mod config;
 pub mod lod;
 pub mod lru_cache;
+pub mod prefetch;
 pub mod streamer;
 
+pub use async_loader::{
+    generate_fallback_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest,
+    LoadedChunkResult,
+};
 pub use config::StreamingConfig;
-pub use lod::select_lod;
+pub use lod::{select_lod, select_lod_with_hysteresis};
 pub use lru_cache::{CachedChunk, ChunkKey, LruChunkCache};
-pub use streamer::WorldStreamer;
+pub use prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkPriority};
+pub use streamer::{StreamingTelemetry, WorldStreamer};
 
 #[cfg(test)]
 mod tests {
@@ -57,7 +64,7 @@ mod tests {
         }
 
         assert_eq!(cache.len(), 10);
-        let mem = cache.total_memory_bytes();
+        let mem = cache.total_cpu_bytes();
         assert!(mem > 0);
 
         // Evict to half of current memory
@@ -65,8 +72,51 @@ mod tests {
         let evicted = cache.evict_to_budget(target, 9, 0);
 
         assert!(evicted > 0, "Should have evicted chunks");
-        assert!(cache.total_memory_bytes() <= target);
+        assert!(cache.total_cpu_bytes() <= target);
         assert_eq!(cache.evictions, evicted as u64);
+    }
+
+    #[test]
+    fn test_collision_critical_pinning_prevents_eviction() {
+        let mut cache = LruChunkCache::new();
+
+        for i in 0..6 {
+            let key = ChunkKey::new(i, 0, 0);
+            let chunk = make_dummy_chunk(i, 0);
+            let pinned = i == 0; // Chunk 0 is pinned for collision
+            cache.insert_with_options(key, chunk, i as u64, pinned, false);
+        }
+
+        assert_eq!(cache.pinned_count(), 1);
+        let key0 = ChunkKey::new(0, 0, 0);
+        assert!(cache.is_pinned(&key0));
+
+        // Evict with extreme budget of 0 bytes
+        cache.evict_to_budget(0, 5, 0);
+
+        // All unpinned chunks evicted, but chunk 0 MUST remain in cache!
+        assert_eq!(cache.len(), 1);
+        assert!(cache.get(&key0).is_some());
+    }
+
+    #[test]
+    fn test_chunk_corruption_recovery() {
+        let dir = tempdir().expect("Failed to create tempdir");
+        let corrupt_file = dir.path().join("corrupt.rec");
+        // Write invalid corrupted bytes
+        std::fs::write(&corrupt_file, b"GARBAGE_NOT_A_VALID_ZSTD_RECH_CHUNK").unwrap();
+
+        let bounds = GeoBounds::new(12.0, 12.1, 77.0, 77.1);
+        let res = read_chunk_with_corruption_recovery(&corrupt_file, 0, 0, 0, &bounds)
+            .expect("Should safely recover with fallback chunk");
+
+        assert!(res.is_fallback, "Expected fallback flag to be true");
+        assert!(
+            !res.chunk.terrain.is_empty(),
+            "Fallback should supply non-empty safe terrain"
+        );
+        assert_eq!(res.chunk.terrain.vertices.len(), 4);
+        assert_eq!(res.chunk.terrain.indices.len(), 6);
     }
 
     #[test]
@@ -107,9 +157,18 @@ mod tests {
         assert!(!active.is_empty(), "Expected active chunks in memory");
 
         // Check telemetry
-        let (count, mem_mb, _hits, misses, _) = streamer.telemetry();
-        assert_eq!(count, active.len());
-        assert!(mem_mb > 0.0);
-        assert!(misses > 0);
+        let telem = streamer.telemetry_details();
+        assert_eq!(telem.active_chunks, active.len());
+        assert!(telem.cpu_memory_mb > 0.0);
+        assert!(telem.misses > 0);
+
+        // Check collision readiness
+        assert!(streamer.is_collision_ready(vidhana_soudha));
+
+        // Test teleportation
+        let distant_spot = Wgs84Coord::new(13.10, 77.70, 900.0);
+        streamer.teleport(distant_spot);
+        let telem2 = streamer.telemetry_details();
+        assert_eq!(telem2.pending_queue, 0);
     }
 }

@@ -2326,6 +2326,7 @@ name = "realearth-benchmarks"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "glam",
  "realearth-compiler",
  "realearth-geospatial",
  "realearth-ingestion",
@@ -2430,6 +2431,7 @@ dependencies = [
  "realearth-compiler",
  "realearth-geospatial",
  "realearth-shared",
+ "serde",
  "thiserror 2.0.21",
  "tracing",
  "wgpu",
