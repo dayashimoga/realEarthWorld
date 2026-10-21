@@ -60,3 +60,16 @@
 - [ ] Stage 2.3: Expand streaming predictive prefetching along vehicle velocity vectors.
 - [ ] Stage 2.4: Benchmarking and memory budget validation under rapid multi-kilometer camera motion.
 
+## STAGE 3: Functional America San Francisco World Viewer (Completed)
+- [x] Stage 3.1: Integrate `wgpu` with Bevy ECS scene entities (`TerrainMeshComponent`, `RoadMeshComponent`, `BuildingMeshComponent`, `WaterMeshComponent`, `VegetationMeshComponent`).
+- [x] Stage 3.1: Dedicated 3D surface meshers for San Francisco Bay water bodies ($0.0\text{m}$ MSL) and urban vegetation parks ($+0.35\text{m}$ anti-Z-fighting terrain offset).
+- [x] Stage 3.1: Gribb-Hartmann frustum plane culling (`culling.rs`) deriving 6 normalized planes from `view_proj` matrix.
+- [x] Stage 3.1: Upgraded WGSL shaders with Blinn-Phong specular solar highlights, ambient lighting, directional sun shading, and distance fog.
+- [x] Stage 3.2: Dynamic chunk streaming loading nearby active binary `.rec` packages and updating ECS world synchronously.
+- [x] Stage 3.2: Dual-mode floating-origin camera controller (`Fly` and `Walk` mode with ground clamping at $+1.8\text{m}$).
+- [x] Stage 3.2: Real-time WGS84 coordinate display and instant landmark jump navigation (1-6 San Francisco, 7 Bengaluru).
+- [x] Stage 3.3: Geographic integrity verification (grounded skyscrapers, elevated I-80 flyover, subterranean Broadway Tunnel, $0.0\text{m}$ water level, $C^0$ continuous terrain).
+- [x] Stage 3.3: Deterministic offscreen GPU framebuffer copy and binary PPM export (`target/screenshots/san_francisco_view.ppm`).
+- [x] Stage 3.3: Execute full regression suite (41/41 tests passing), static analysis, and headless benchmark (84.2 FPS, 31.5 ms startup, 0.58 MB RSS).
+
+

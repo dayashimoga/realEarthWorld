@@ -72,6 +72,58 @@ impl RealEarthSimWorld {
             ))
             .id()
     }
+
+    /// Registers or syncs a world chunk into the Bevy ECS hierarchy.
+    #[allow(clippy::too_many_arguments)]
+    pub fn spawn_chunk_entity(
+        &mut self,
+        cx: i32,
+        cy: i32,
+        lod: u32,
+        center: glam::Vec3,
+        radius: f32,
+        has_terrain: bool,
+        has_roads: bool,
+        has_buildings: bool,
+        has_water: bool,
+        has_vegetation: bool,
+    ) -> Entity {
+        use crate::components::{
+            BoundingSphere, BuildingMeshComponent, ChunkEntity, RoadMeshComponent,
+            TerrainMeshComponent, VegetationMeshComponent, WaterMeshComponent,
+        };
+
+        let mut entity_builder = self.world.spawn((
+            ChunkEntity {
+                chunk_x: cx,
+                chunk_y: cy,
+                lod,
+            },
+            BoundingSphere { center, radius },
+            LocalTransform {
+                translation: center,
+                ..Default::default()
+            },
+        ));
+
+        if has_terrain {
+            entity_builder.insert(TerrainMeshComponent);
+        }
+        if has_roads {
+            entity_builder.insert(RoadMeshComponent);
+        }
+        if has_buildings {
+            entity_builder.insert(BuildingMeshComponent);
+        }
+        if has_water {
+            entity_builder.insert(WaterMeshComponent);
+        }
+        if has_vegetation {
+            entity_builder.insert(VegetationMeshComponent);
+        }
+
+        entity_builder.id()
+    }
 }
 
 /// ECS System: advances entity local transforms by their linear and angular velocities.

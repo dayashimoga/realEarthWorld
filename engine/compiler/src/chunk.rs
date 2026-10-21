@@ -42,17 +42,25 @@ pub struct WorldChunk {
     pub terrain: ChunkMesh,
     pub roads: ChunkMesh,
     pub buildings: ChunkMesh,
+    pub water: ChunkMesh,
+    pub vegetation: ChunkMesh,
     pub building_metadata: Vec<ChunkBuildingMeta>,
 }
 
 impl WorldChunk {
     pub fn total_vertices(&self) -> usize {
-        self.terrain.vertex_count() + self.roads.vertex_count() + self.buildings.vertex_count()
+        self.terrain.vertex_count()
+            + self.roads.vertex_count()
+            + self.buildings.vertex_count()
+            + self.water.vertex_count()
+            + self.vegetation.vertex_count()
     }
 
     pub fn total_triangles(&self) -> usize {
         self.terrain.triangle_count()
             + self.roads.triangle_count()
             + self.buildings.triangle_count()
+            + self.water.triangle_count()
+            + self.vegetation.triangle_count()
     }
 }

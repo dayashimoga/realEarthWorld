@@ -5,7 +5,11 @@ pub mod sim_world;
 pub mod solar;
 pub mod time_weather;
 
-pub use components::{EcefPosition, EntityTag, GeoPosition, LocalTransform, Velocity};
+pub use components::{
+    BoundingSphere, BuildingMeshComponent, ChunkEntity, EcefPosition, EntityTag, GeoPosition,
+    LocalTransform, RoadMeshComponent, TerrainMeshComponent, VegetationMeshComponent, Velocity,
+    WaterMeshComponent,
+};
 pub use sim_world::{ActiveObserver, RealEarthSimWorld};
 pub use solar::{compute_solar_position, SolarPosition};
 pub use time_weather::{AtmosphericState, SimulationClock, WeatherType};

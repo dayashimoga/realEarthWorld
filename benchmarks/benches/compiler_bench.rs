@@ -87,6 +87,8 @@ fn bench_compiler_operations(c: &mut Criterion) {
         terrain: ChunkMesh::default(),
         roads: ChunkMesh::default(),
         buildings: ChunkMesh::default(),
+        water: ChunkMesh::default(),
+        vegetation: ChunkMesh::default(),
         building_metadata: Vec::new(),
     };
     let packed = pack_chunk_to_bytes(&chunk).expect("pack failed");

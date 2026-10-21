@@ -7,6 +7,8 @@ use crate::mesh::ChunkMesh;
 use crate::packager::write_chunk_file;
 use crate::road_mesher::mesh_road;
 use crate::terrain_mesher::mesh_terrain;
+use crate::vegetation_mesher::mesh_vegetation;
+use crate::water_mesher::mesh_water;
 use realearth_geospatial::transforms::EnuConverter;
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_shared::bounds::GeoBounds;
@@ -140,6 +142,38 @@ pub fn compile_world_package(
                 }
             }
 
+            // 4. Water Bodies Mesh
+            let mut water_mesh = ChunkMesh::default();
+            for w in &dataset.water_bodies {
+                let mut intersects = false;
+                for pt in &w.outer_ring {
+                    if chunk_bounds.contains(pt) {
+                        intersects = true;
+                        break;
+                    }
+                }
+                if intersects {
+                    let m = mesh_water(w, &chunk_converter, dem);
+                    water_mesh.append(&m);
+                }
+            }
+
+            // 5. Vegetation & Urban Parks Mesh
+            let mut vegetation_mesh = ChunkMesh::default();
+            for lc in &dataset.land_cover {
+                let mut intersects = false;
+                for pt in &lc.polygon {
+                    if chunk_bounds.contains(pt) {
+                        intersects = true;
+                        break;
+                    }
+                }
+                if intersects {
+                    let m = mesh_vegetation(lc, &chunk_converter, dem);
+                    vegetation_mesh.append(&m);
+                }
+            }
+
             let feature_count = building_meta.len();
 
             let (min_elev, max_elev) = if terrain_mesh.vertices.is_empty() {
@@ -175,6 +209,8 @@ pub fn compile_world_package(
                 terrain: terrain_mesh,
                 roads: road_mesh,
                 buildings: building_mesh,
+                water: water_mesh,
+                vegetation: vegetation_mesh,
                 building_metadata: building_meta,
             };
 

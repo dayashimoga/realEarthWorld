@@ -54,3 +54,38 @@ pub struct EntityTag {
     pub id: u64,
     pub name: String,
 }
+
+/// Chunk entity identifier in Bevy ECS.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ChunkEntity {
+    pub chunk_x: i32,
+    pub chunk_y: i32,
+    pub lod: u32,
+}
+
+/// Marker component for terrain mesh entities.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct TerrainMeshComponent;
+
+/// Marker component for road mesh entities.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct RoadMeshComponent;
+
+/// Marker component for building mesh entities.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct BuildingMeshComponent;
+
+/// Marker component for water mesh entities.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct WaterMeshComponent;
+
+/// Marker component for vegetation mesh entities.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct VegetationMeshComponent;
+
+/// Bounding sphere for ECS frustum and visibility queries.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct BoundingSphere {
+    pub center: Vec3,
+    pub radius: f32,
+}

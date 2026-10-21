@@ -43,13 +43,19 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let sun_dir = normalize(uniforms.sun_direction.xyz);
     let normal = normalize(in.normal);
+    let view_dir = normalize(uniforms.camera_pos.xyz - in.world_pos);
 
     // Directional sunlight diffuse factor
     let n_dot_l = max(dot(normal, sun_dir), 0.0);
     let diffuse = uniforms.sun_color_intensity.rgb * n_dot_l * uniforms.sun_color_intensity.w;
     let ambient = uniforms.ambient_light.rgb;
 
-    let lit_color = in.color.rgb * (ambient + diffuse);
+    // Specular highlight (Blinn-Phong) for reflective materials (e.g. water, glass)
+    let half_dir = normalize(sun_dir + view_dir);
+    let spec_factor = pow(max(dot(normal, half_dir), 0.0), 48.0);
+    let specular = uniforms.sun_color_intensity.rgb * spec_factor * 0.45 * uniforms.sun_color_intensity.w;
+
+    let lit_color = in.color.rgb * (ambient + diffuse) + specular;
 
     // Atmospheric distance fog
     let dist = length(uniforms.camera_pos.xyz - in.world_pos);

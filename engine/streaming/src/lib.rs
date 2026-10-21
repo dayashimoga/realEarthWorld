@@ -39,6 +39,8 @@ mod tests {
             terrain: ChunkMesh::default(),
             roads: ChunkMesh::default(),
             buildings: ChunkMesh::default(),
+            water: ChunkMesh::default(),
+            vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
         }
     }

@@ -126,6 +126,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Criterion Microbenchmarks (`realearth-benchmarks`)**:
   - Added `wgs84_to_utm_zone10n_sf` and `ellipsoidal_to_navd88_sf` benchmarks.
 
+## [0.3.0] - 2026-10-21 — STAGE 3: Functional America San Francisco World Viewer
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0007-functional-san-francisco-world-viewer.md`: Documents Bevy ECS entity mapping, Gribb-Hartmann frustum culling, dedicated surface meshers, dual-mode floating camera, and deterministic offscreen PPM framebuffer export.
+- **Surface Meshers (`realearth-compiler`)**:
+  - Created `engine/compiler/src/water_mesher.rs`: Triangulates coastal water polygons (San Francisco Bay) locked to $0.0\text{m}$ MSL with ocean blue vertex coloration.
+  - Created `engine/compiler/src/vegetation_mesher.rs`: Triangulates urban park areas (Sue Bierman Park, Portsmouth Square) with organic foliage green coloration and $+0.35\text{m}$ vertical offset over DEM to prevent Z-fighting.
+  - Added `water` and `vegetation` mesh slots to `WorldChunk`, updating total vertex and triangle calculations.
+  - Updated compiler pipeline to synthesize water and vegetation alongside terrain, roads, and buildings.
+- **Frustum Culling & Shader Lighting (`realearth-rendering`)**:
+  - Created `engine/rendering/src/culling.rs`: Implemented 6-plane normalized Gribb-Hartmann frustum extraction from the camera's `view_proj` matrix with `intersects_sphere` and `intersects_aabb` testing.
+  - Added `camera.frustum()` method in `engine/rendering/src/camera.rs`.
+  - Added `render_chunks_culled` in `engine/rendering/src/renderer.rs` issuing draw commands only for visible chunks and returning the visible count.
+  - Enhanced WGSL shaders with Blinn-Phong specular solar highlights on reflective water and building glass, ambient base illumination, directional sun lighting, and distance fog.
+- **Bevy ECS Scene Entities (`realearth-simulation`)**:
+  - Added `ChunkEntity`, `TerrainMeshComponent`, `RoadMeshComponent`, `BuildingMeshComponent`, `WaterMeshComponent`, `VegetationMeshComponent`, and `BoundingSphere` components in `engine/simulation/src/components.rs`.
+  - Added `spawn_chunk_entity` in `engine/simulation/src/sim_world.rs` to maintain synchronized ECS representations of active streamed chunks.
+- **Stage 3 World Viewer Executable (`apps/world-viewer`)**:
+  - Created `apps/world-viewer/src/camera_controller.rs`: Dual-mode camera navigation (`CameraMode::Fly` 6-DOF and `CameraMode::Walk` pedestrian ground clamping at $+1.8\text{m}$ eye level).
+  - Added real-time WGS84 coordinate display and instant landmark jump navigation keys (`1`..`6` for San Francisco landmarks, `7` for Bengaluru Vidhana Soudha).
+  - Created `apps/world-viewer/src/screenshot.rs`: Offscreen framebuffer staging buffer copy with 256-byte row alignment and Netpbm binary PPM export (`capture_texture_to_ppm`).
+  - Updated `apps/world-viewer/src/main.rs`: Full CLI argument parsing (`--region`, `--headless`, `--benchmark`, `--camera-mode`, `--location`, `--frames`), Bevy ECS chunk sync, telemetry overlay, and automated tests.
+  - Added unit tests: `test_camera_controller_fly_and_walk_modes`, `test_camera_controller_landmarks_and_coordinates`, and `test_frustum_culling_logic`.
+
+
 
 
 

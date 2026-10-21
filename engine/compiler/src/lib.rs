@@ -8,6 +8,8 @@ pub mod mesh;
 pub mod packager;
 pub mod road_mesher;
 pub mod terrain_mesher;
+pub mod vegetation_mesher;
+pub mod water_mesher;
 
 pub use building_mesher::mesh_building;
 pub use chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION};
@@ -19,6 +21,8 @@ pub use packager::{
 };
 pub use road_mesher::mesh_road;
 pub use terrain_mesher::mesh_terrain;
+pub use vegetation_mesher::mesh_vegetation;
+pub use water_mesher::mesh_water;
 
 #[cfg(test)]
 mod tests {
@@ -70,6 +74,8 @@ mod tests {
             terrain,
             roads: ChunkMesh::default(),
             buildings: ChunkMesh::default(),
+            water: ChunkMesh::default(),
+            vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
         };
 

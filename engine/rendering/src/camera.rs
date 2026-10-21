@@ -84,4 +84,9 @@ impl FloatingOriginCamera {
     pub fn view_proj_matrix(&self) -> Mat4 {
         self.proj_matrix() * self.view_matrix()
     }
+
+    /// Extracts active viewing frustum for geometric culling.
+    pub fn frustum(&self) -> crate::culling::Frustum {
+        crate::culling::Frustum::from_view_proj(&self.view_proj_matrix())
+    }
 }

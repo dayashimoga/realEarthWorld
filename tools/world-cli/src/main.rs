@@ -208,6 +208,16 @@ fn main() -> anyhow::Result<()> {
                 chunk.buildings.triangle_count()
             );
             println!(
+                "  Water: {} vertices, {} triangles",
+                chunk.water.vertex_count(),
+                chunk.water.triangle_count()
+            );
+            println!(
+                "  Vegetation: {} vertices, {} triangles",
+                chunk.vegetation.vertex_count(),
+                chunk.vegetation.triangle_count()
+            );
+            println!(
                 "  Total: {} vertices, {} triangles",
                 chunk.total_vertices(),
                 chunk.total_triangles()

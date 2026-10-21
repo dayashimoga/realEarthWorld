@@ -307,10 +307,49 @@ impl RealEarthRenderer {
             // Render terrain
             self.render_mesh(&chunk.terrain, color_view, depth_view, first);
             first = false;
+            // Render vegetation zones
+            self.render_mesh(&chunk.vegetation, color_view, depth_view, false);
             // Render roads
             self.render_mesh(&chunk.roads, color_view, depth_view, false);
             // Render buildings
             self.render_mesh(&chunk.buildings, color_view, depth_view, false);
+            // Render water bodies
+            self.render_mesh(&chunk.water, color_view, depth_view, false);
         }
+    }
+
+    /// Renders active world chunks with frustum culling.
+    /// Returns the number of visible chunks rendered.
+    pub fn render_chunks_culled(
+        &self,
+        chunks: &[&WorldChunk],
+        camera: &FloatingOriginCamera,
+        color_view: &wgpu::TextureView,
+        depth_view: &wgpu::TextureView,
+    ) -> usize {
+        let frustum = camera.frustum();
+        let mut rendered_count = 0;
+        let mut first = true;
+
+        for chunk in chunks {
+            let rel_center = glam::Vec3::new(
+                0.0,
+                (chunk.header.min_elevation + chunk.header.max_elevation) * 0.5,
+                0.0,
+            );
+            let radius = 750.0; // Metric radius enclosing 500m chunk and tall vertical skyscrapers
+
+            if frustum.intersects_sphere(rel_center, radius) {
+                self.render_mesh(&chunk.terrain, color_view, depth_view, first);
+                first = false;
+                self.render_mesh(&chunk.vegetation, color_view, depth_view, false);
+                self.render_mesh(&chunk.roads, color_view, depth_view, false);
+                self.render_mesh(&chunk.buildings, color_view, depth_view, false);
+                self.render_mesh(&chunk.water, color_view, depth_view, false);
+                rendered_count += 1;
+            }
+        }
+
+        rendered_count
     }
 }
