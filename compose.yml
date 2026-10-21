@@ -1,0 +1,34 @@
+# Real Earth World Platform — Podman & Docker Compose Definition
+# Enables headless compilation, validation, and benchmarking in isolated containers.
+
+services:
+  world-compiler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: realearth-compiler
+    volumes:
+      - ./target/world_bengaluru:/app/target/world_bengaluru
+      - ./assets:/app/assets:ro
+      - ./data:/app/data:ro
+    command: ["compile", "--output", "target/world_bengaluru"]
+    environment:
+      - RUST_LOG=info
+
+  world-validator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: realearth-validator
+    command: ["validate"]
+    environment:
+      - RUST_LOG=info
+
+  benchmark-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: realearth-benchmark
+    command: ["bench"]
+    environment:
+      - RUST_LOG=info
