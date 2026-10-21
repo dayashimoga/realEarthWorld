@@ -129,4 +129,81 @@ impl RoadNetworkGraph {
 
         best_node
     }
+
+    /// Computes parallel lane centerline coordinates offset according to traffic rules.
+    pub fn compute_lane_coordinates(
+        &self,
+        p0: Wgs84Coord,
+        p1: Wgs84Coord,
+        lane: &LaneDescriptor,
+    ) -> (Wgs84Coord, Wgs84Coord) {
+        let d_lat = (p1.lat - p0.lat) * 111_000.0;
+        let d_lon = (p1.lon - p0.lon) * 108_000.0;
+        let len = (d_lat * d_lat + d_lon * d_lon).sqrt().max(0.1);
+
+        // Unit forward vector in meters: (u_lon, u_lat)
+        let u_lon = d_lon / len;
+        let u_lat = d_lat / len;
+
+        // Perpendicular vector pointing to the right of forward heading: (u_lat, -u_lon)
+        let perp_lon = u_lat;
+        let perp_lat = -u_lon;
+
+        let offset = lane.lateral_offset_meters() as f64;
+        let off_lon_deg = (perp_lon * offset) / 108_000.0;
+        let off_lat_deg = (perp_lat * offset) / 111_000.0;
+
+        (
+            Wgs84Coord::new(p0.lat + off_lat_deg, p0.lon + off_lon_deg, p0.alt),
+            Wgs84Coord::new(p1.lat + off_lat_deg, p1.lon + off_lon_deg, p1.alt),
+        )
+    }
+}
+
+/// Rule of the road governing traffic flow side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum RuleOfTheRoad {
+    #[default]
+    DriveOnLeft, // India, UK, Japan, Australia
+    DriveOnRight, // USA, Canada, Continental Europe
+}
+
+/// Lane descriptor with lateral offset calculation.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LaneDescriptor {
+    pub lane_index: u32,
+    pub total_lanes: u32,
+    pub is_oneway: bool,
+    pub rule: RuleOfTheRoad,
+    pub lane_width_meters: f32,
+}
+
+impl LaneDescriptor {
+    pub fn new(lane_index: u32, total_lanes: u32, is_oneway: bool, rule: RuleOfTheRoad) -> Self {
+        Self {
+            lane_index,
+            total_lanes: total_lanes.max(1),
+            is_oneway,
+            rule,
+            lane_width_meters: 3.5,
+        }
+    }
+
+    /// Computes signed lateral offset from road centerline in meters.
+    /// Positive offset is to the right of travel direction; negative is to the left.
+    pub fn lateral_offset_meters(&self) -> f32 {
+        if self.is_oneway {
+            let center = (self.total_lanes as f32 - 1.0) * 0.5;
+            (self.lane_index as f32 - center) * self.lane_width_meters
+        } else {
+            let forward_lanes = (self.total_lanes / 2).max(1);
+            let lane_in_dir = (self.lane_index % forward_lanes) as f32;
+            let offset_mag = (lane_in_dir + 0.5) * self.lane_width_meters;
+
+            match self.rule {
+                RuleOfTheRoad::DriveOnLeft => -offset_mag, // Left-Hand Traffic: drive on left side of center
+                RuleOfTheRoad::DriveOnRight => offset_mag, // Right-Hand Traffic: drive on right side of center
+            }
+        }
+    }
 }

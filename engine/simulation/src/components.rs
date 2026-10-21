@@ -89,3 +89,43 @@ pub struct BoundingSphere {
     pub center: Vec3,
     pub radius: f32,
 }
+
+/// Decoupled presentation transform interpolated between previous and current physics ticks.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct InterpolatedTransform {
+    pub previous: LocalTransform,
+    pub current: LocalTransform,
+    pub render: LocalTransform,
+}
+
+impl InterpolatedTransform {
+    pub fn new(initial: LocalTransform) -> Self {
+        Self {
+            previous: initial,
+            current: initial,
+            render: initial,
+        }
+    }
+
+    /// Interpolates rendering transform between `previous` and `current` using fraction `alpha` in [0, 1].
+    pub fn update_render(&mut self, alpha: f32) {
+        let alpha = alpha.clamp(0.0, 1.0);
+        self.render.translation = self
+            .previous
+            .translation
+            .lerp(self.current.translation, alpha);
+        self.render.rotation_yaw =
+            Self::lerp_yaw(self.previous.rotation_yaw, self.current.rotation_yaw, alpha);
+        self.render.scale = self.previous.scale.lerp(self.current.scale, alpha);
+    }
+
+    fn lerp_yaw(a: f32, b: f32, t: f32) -> f32 {
+        let mut diff = (b - a) % std::f32::consts::TAU;
+        if diff < -std::f32::consts::PI {
+            diff += std::f32::consts::TAU;
+        } else if diff > std::f32::consts::PI {
+            diff -= std::f32::consts::TAU;
+        }
+        a + diff * t
+    }
+}

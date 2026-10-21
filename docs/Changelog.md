@@ -209,6 +209,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Criterion Benchmark Suite (`benchmarks/benches/streaming_bench.rs`)**:
   - Microbenchmarks for predictive prefetch bounds calculation, LOD hysteresis selection, and LRU cache operations.
 
+## [0.6.0] - 2026-10-21 — STAGE 6: Complete Drivable Car Simulation
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0010-complete-drivable-car-simulation.md`: Comprehensive documentation of fixed-timestep ECS simulation, physics/presentation separation with $\alpha$-interpolation, 4-wheel independent raycast suspension dynamics, Pacejka friction circle tire model, spatial collision filtering, Intelligent Driver Model (IDM) traffic simulation, and Bengaluru connected road network driving.
+- **Fixed-Timestep Simulation & Physics Integration (`realearth-simulation`, `realearth-vehicles`)**:
+  - `sim_world.rs`: Introduced `FixedTimestepAccumulator` resource running physics at 60 Hz independent of variable display framerates, with smooth accumulator carry-over.
+  - `components.rs`: Introduced `InterpolatedTransform` component supporting linear translation interpolation ($\mathbf{p} = (1 - \alpha)\mathbf{p}_{N-1} + \alpha\mathbf{p}_N$) and shortest-path angular slerp.
+  - `physics.rs`: Integrated Rapier3D physics engine with `QueryPipeline` and collision interaction groups (`GROUP_VEHICLE`, `GROUP_TERRAIN`, `GROUP_ROAD`, `GROUP_BUILDING`, `GROUP_OBSTACLE`).
+  - Safe Spawning & Clamping: Implemented `spawn_safe_vehicle` clamping spawn elevation to the highest underlying road/terrain collider $+ \text{half\_height} + \text{clearance}$, preventing physics drop-throughs.
+- **Realistic Automotive Vehicle Dynamics (`realearth-vehicles`)**:
+  - `dynamics.rs`: 4-wheel independent raycast suspension model with compression velocity damping, spring stiffness ($35,000\text{ N/m}$), damping ($3,200\text{ N}\cdot\text{s/m}$), and dynamic weight transfer.
+  - Pacejka & Friction Circle Tire Model: Combined longitudinal traction/braking and lateral cornering forces constrained by $\sqrt{F_x^2 + F_y^2} \le \mu F_z$.
+  - Transmission Modes: `Drive` (with 60/40 rear/front torque split), `Reverse` (50% torque), `Neutral`, and `Park` (mechanical lock).
+  - Smooth Zero-Speed Braking & Hill Hold: Eliminated Coulomb jitter on slopes via velocity-threshold ramp and static hill-hold lock when stationary under braking.
+  - Flip & Crash Recovery: `recover_on_surface` rights overturned vehicles and zeros residual angular velocities without resetting position.
+  - Deterministic Snapshotting: `snapshot` and `restore_snapshot` enabling rewinding, replay, and headless determinism.
+  - `ground.rs`: `FunctionalGroundQuery` supporting analytical ground functions and bilinear raster DEM elevation queries.
+  - `camera.rs`: `VehicleCameraController` implementing spring-damper `Chase`, first-person `Hood`, and front-bumper `Bumper` cameras.
+- **Road Navigation & Autonomous Traffic Simulation (`realearth-navigation`, `realearth-vehicles`)**:
+  - `road_graph.rs`: Added `RuleOfTheRoad` (`DriveOnLeft` for India/UK vs. `DriveOnRight` for US) and `LaneDescriptor` with lateral offset calculations.
+  - `traffic.rs`: Multi-agent autonomous traffic simulation implementing the Intelligent Driver Model (IDM) for safe car-following headway and pure pursuit steering.
+  - `sample_bengaluru.rs`: Added connected corridor roads (Cubbon Rd, Dr. Ambedkar Veedhi, Residency Rd) linking Vidhana Soudha, Cubbon Park, Kasturba Rd, MG Road, and Brigade Road into a fully traversable network.
+- **World Viewer Integration (`apps/world-viewer`)**:
+  - Added `--drive`, `--traffic <count>`, and `--vehicle-cam <chase|hood|bumper>` CLI flags.
+  - Integrated real-time automotive telemetry HUD displaying speed (km/h), gear, RPM, position, suspension travel, tire normal forces, and active traffic fleet.
+  - Preserved standalone world-viewer operation (runs fly/walk mode at $>600\text{ FPS}$ when `--drive` is omitted).
+- **Test Suite (`tests/tests/vehicle_simulation.rs`)**:
+  - Full end-to-end integration tests for slope climbing, hill holding, neutral rollback, crash/flip recovery, snapshot determinism, 4-car IDM convoy spacing, elevated flyover grade separation, and connected Bengaluru route driving.
+
 
 
 

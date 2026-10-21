@@ -7,10 +7,10 @@ pub mod time_weather;
 
 pub use components::{
     BoundingSphere, BuildingMeshComponent, ChunkEntity, EcefPosition, EntityTag, GeoPosition,
-    LocalTransform, RoadMeshComponent, TerrainMeshComponent, VegetationMeshComponent, Velocity,
-    WaterMeshComponent,
+    InterpolatedTransform, LocalTransform, RoadMeshComponent, TerrainMeshComponent,
+    VegetationMeshComponent, Velocity, WaterMeshComponent,
 };
-pub use sim_world::{ActiveObserver, RealEarthSimWorld};
+pub use sim_world::{ActiveObserver, FixedTimestepAccumulator, RealEarthSimWorld};
 pub use solar::{compute_solar_position, SolarPosition};
 pub use time_weather::{AtmosphericState, SimulationClock, WeatherType};
 
@@ -119,5 +119,38 @@ mod tests {
 
         assert_eq!(t1.translation, t2.translation);
         assert_eq!(t1.rotation_yaw, t2.rotation_yaw);
+    }
+
+    #[test]
+    fn test_fixed_timestep_accumulator_and_interpolation() {
+        let vidhana = Wgs84Coord::new(12.9797, 77.5907, 920.0);
+        let mut sim = RealEarthSimWorld::new(vidhana);
+
+        let entity = sim.spawn_entity(
+            "Car",
+            42,
+            vidhana,
+            LocalTransform::default(),
+            Velocity {
+                linear: Vec3::new(60.0, 0.0, 0.0), // 60 m/s
+                angular_yaw: 0.0,
+            },
+        );
+
+        // Advance 0.025s (which is 1.5 fixed ticks of 1/60s = 0.016667s)
+        let steps = sim.tick_fixed_accumulator(0.025);
+        assert_eq!(steps, 1, "Exactly 1 fixed step should have executed");
+
+        let interp = sim.world.get::<InterpolatedTransform>(entity).unwrap();
+        // After 1 step (1/60s) at 60m/s: previous was 0.0m, current is 1.0m.
+        // Remainder accumulator is 0.025 - 0.016667 = 0.008333s => alpha = 0.5.
+        // Render translation.x should be interpolated to 0.5m!
+        assert!((interp.previous.translation.x - 0.0).abs() < 1e-4);
+        assert!((interp.current.translation.x - 1.0).abs() < 1e-4);
+        assert!(
+            (interp.render.translation.x - 0.5).abs() < 0.05,
+            "Render transform should be interpolated between previous and current with alpha ~0.5, got {}",
+            interp.render.translation.x
+        );
     }
 }

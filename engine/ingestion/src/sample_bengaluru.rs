@@ -153,7 +153,61 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
         is_tunnel: false,
     });
 
-    // 9. Ulsoor Lake / Cubbon Lotus Pond water body
+    // 9. Cubbon Road - Connecting Kasturba Rd past Stadium to MG Road
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 200_005,
+        name: Some("Cubbon Road".to_string()),
+        highway_type: HighwayType::Primary,
+        geometry: vec![
+            Wgs84Coord::new(12.9800, 77.5950, 0.0),
+            Wgs84Coord::new(12.9782, 77.5985, 0.0),
+            Wgs84Coord::new(12.9740, 77.6000, 0.0),
+        ],
+        lanes: 4,
+        speed_limit_kph: 50,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
+    // 10. Dr. Ambedkar Veedhi - Connecting Vidhana Soudha to Kasturba Road
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 200_006,
+        name: Some("Dr. Ambedkar Veedhi".to_string()),
+        highway_type: HighwayType::Primary,
+        geometry: vec![
+            Wgs84Coord::new(12.9791, 77.5901, 0.0),
+            Wgs84Coord::new(12.9795, 77.5925, 0.0),
+            Wgs84Coord::new(12.9800, 77.5950, 0.0),
+        ],
+        lanes: 4,
+        speed_limit_kph: 50,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
+    // 11. Residency Road - Connecting Kasturba Road South to Brigade Road
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 200_007,
+        name: Some("Residency Road".to_string()),
+        highway_type: HighwayType::Primary,
+        geometry: vec![
+            Wgs84Coord::new(12.9700, 77.5950, 0.0),
+            Wgs84Coord::new(12.9700, 77.6010, 0.0),
+            Wgs84Coord::new(12.9700, 77.6062, 0.0),
+        ],
+        lanes: 4,
+        speed_limit_kph: 50,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
+    // 12. Ulsoor Lake / Cubbon Lotus Pond water body
     dataset.water_bodies.push(OsmWaterFeature {
         id: 300_001,
         name: Some("Cubbon Park Lotus Pond".to_string()),

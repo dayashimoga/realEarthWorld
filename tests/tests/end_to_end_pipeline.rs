@@ -26,13 +26,13 @@ fn test_full_bengaluru_end_to_end_vertical_slice() {
     // 1. Data Ingestion
     println!("Step 1: Ingestion...");
     let dataset = create_bengaluru_central_dataset();
-    assert_eq!(dataset.roads.len(), 4);
+    assert_eq!(dataset.roads.len(), 7);
     assert_eq!(dataset.buildings.len(), 4);
 
     // 2. Validation & Topology Checking
     println!("Step 2: Validation & Topology Checking...");
     let (validated, report) = validate_dataset(&dataset);
-    assert_eq!(report.valid_roads_passed, 4);
+    assert_eq!(report.valid_roads_passed, 7);
     assert_eq!(report.valid_buildings_passed, 4);
     assert_eq!(report.quarantined.len(), 0);
     // Verified polygon winding orders repaired to CCW and water boundary closed

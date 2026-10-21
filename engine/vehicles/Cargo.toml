@@ -11,6 +11,7 @@ realearth-navigation = { path = "../navigation" }
 bevy_ecs.workspace = true
 rapier3d.workspace = true
 glam.workspace = true
+petgraph.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

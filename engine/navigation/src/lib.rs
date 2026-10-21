@@ -3,7 +3,7 @@
 pub mod road_graph;
 pub mod router;
 
-pub use road_graph::{RoadEdge, RoadNetworkGraph, RoadNode};
+pub use road_graph::{LaneDescriptor, RoadEdge, RoadNetworkGraph, RoadNode, RuleOfTheRoad};
 pub use router::{find_route, NavigationRoute, RoutingPreference};
 
 #[cfg(test)]
@@ -39,5 +39,52 @@ mod tests {
             "MG Road length should be > 1km"
         );
         assert!(route.estimated_duration_seconds > 0.0);
+    }
+
+    #[test]
+    fn test_lane_offset_calculation() {
+        // 4-lane two-way road: 2 lanes each direction
+        // Lane 0: inner forward lane
+        let lht_lane0 = LaneDescriptor::new(0, 4, false, RuleOfTheRoad::DriveOnLeft);
+        assert!(
+            lht_lane0.lateral_offset_meters() < 0.0,
+            "LHT traffic should be offset to the left (negative)"
+        );
+        assert!((lht_lane0.lateral_offset_meters() - -1.75).abs() < 1e-4);
+
+        let rht_lane0 = LaneDescriptor::new(0, 4, false, RuleOfTheRoad::DriveOnRight);
+        assert!(
+            rht_lane0.lateral_offset_meters() > 0.0,
+            "RHT traffic should be offset to the right (positive)"
+        );
+        assert!((rht_lane0.lateral_offset_meters() - 1.75).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_vidhana_soudha_to_mg_road_connected_route() {
+        let dataset = create_bengaluru_central_dataset();
+        let network = RoadNetworkGraph::from_roads(&dataset.roads);
+
+        // Vidhana Soudha -> MG Road Anil Kumble Circle
+        let vidhana = Wgs84Coord::new(12.9791, 77.5901, 0.0);
+        let mg_road_start = Wgs84Coord::new(12.9740, 77.6000, 0.0);
+
+        let route = find_route(
+            &network,
+            vidhana,
+            mg_road_start,
+            RoutingPreference::ShortestDistance,
+        )
+        .expect("Connected pathfinding from Vidhana Soudha to MG Road must succeed");
+
+        assert!(
+            route.waypoints.len() >= 3,
+            "Route should span multiple waypoints"
+        );
+        assert!(
+            route.total_distance_meters > 1200.0,
+            "Distance between Vidhana Soudha and MG Road should exceed 1.2km, got {}",
+            route.total_distance_meters
+        );
     }
 }

@@ -32,7 +32,7 @@ mod tests {
         let dataset = parse_osm_xml(&xml).expect("Failed to parse generated Bengaluru OSM XML");
 
         assert_eq!(dataset.buildings.len(), 4, "Expected 4 landmark buildings");
-        assert_eq!(dataset.roads.len(), 4, "Expected 4 road segments");
+        assert_eq!(dataset.roads.len(), 7, "Expected 7 road segments");
 
         // Verify Vidhana Soudha
         let vidhana = dataset

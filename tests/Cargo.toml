@@ -31,3 +31,8 @@ path = "tests/validation_regression.rs"
 [[test]]
 name = "streaming_performance"
 path = "tests/streaming_performance.rs"
+
+[[test]]
+name = "vehicle_simulation"
+path = "tests/vehicle_simulation.rs"
+

@@ -1,11 +1,24 @@
-//! Vehicle kinematics, pure pursuit path tracking, and Rapier3D physics dynamics.
+//! Vehicle kinematics, automotive dynamics, camera controllers, and Rapier3D physics.
 
+pub mod camera;
+pub mod dynamics;
+pub mod ground;
 pub mod kinematics;
 pub mod physics;
+pub mod traffic;
 pub mod vehicle_agent;
 
+pub use camera::{VehicleCameraController, VehicleCameraPerspective};
+pub use dynamics::{
+    DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs, VehicleStateSnapshot,
+    WheelIndex, WheelState,
+};
+pub use ground::{FlatGround, FunctionalGroundQuery, GroundQuery, SlopedGround};
 pub use kinematics::AckermannVehicle;
-pub use physics::PhysicsWorld;
+pub use physics::{
+    PhysicsWorld, GROUP_BUILDING, GROUP_OBSTACLE, GROUP_ROAD, GROUP_TERRAIN, GROUP_VEHICLE,
+};
+pub use traffic::{IdmConfig, TrafficAgent, TrafficSimulation};
 pub use vehicle_agent::PurePursuitController;
 
 #[cfg(test)]

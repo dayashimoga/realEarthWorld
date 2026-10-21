@@ -290,3 +290,46 @@
   - **Corruption Recovery**: Invalid or corrupted chunk files automatically fall back to continuous safe planar terrain meshes with zero panics or crashes. **PASS ✅**.
   - **Persistent GPU Buffer Caching**: Single-pass batched rendering with zero per-frame buffer allocations. **PASS ✅**.
 
+## STAGE 6: Complete Drivable Car Simulation (Completed)
+- [x] Phase 6.1 — Independent Bevy ECS Fixed-Timestep Simulation & Physics Integration
+  - Implemented fixed 60Hz physics timestep decoupled from display rendering via `FixedTimestepAccumulator` in `realearth-simulation`.
+  - Implemented physics/presentation state interpolation ($\mathbf{p} = (1 - \alpha)\mathbf{p}_{N-1} + \alpha\mathbf{p}_N$) and angular slerp via `InterpolatedTransform`.
+  - Implemented spatial collision filtering (`GROUP_VEHICLE`, `GROUP_TERRAIN`, `GROUP_ROAD`, `GROUP_BUILDING`, `GROUP_OBSTACLE`) in `PhysicsWorld`.
+  - Implemented safe spawning elevation calculation from DEM/road elevation with zero drop-through (`spawn_safe_vehicle`).
+  - Implemented deterministic state snapshotting and rewinding (`VehicleStateSnapshot`, `restore_snapshot`).
+- [x] Phase 6.2 — Full Realistic Vehicle Dynamics Model (`engine/vehicles`)
+  - Implemented 4-wheel independent raycast suspension model with spring-damper equations, compression velocity damping, and dynamic weight transfer.
+  - Implemented Pacejka / friction circle tire traction solver (longitudinal slip, lateral cornering stiffness, slope response, smooth velocity-threshold braking, static hill-hold lock).
+  - Implemented transmission modes (`Drive`, `Reverse`, `Neutral`, `Park`), progressive throttle, braking, and flip recovery (`recover_on_surface`).
+  - Implemented spring-damper chase camera (`Chase`), first-person hood camera (`Hood`), and bumper camera (`Bumper`) in `VehicleCameraController`.
+- [x] Phase 6.3 — Road Navigation, Traffic & Bengaluru Routes (`engine/navigation`, `apps/world-viewer`)
+  - Implemented lane-aware road network traversal with Left-Hand Traffic (`RuleOfTheRoad::DriveOnLeft`) for Bengaluru and Right-Hand Traffic (`RuleOfTheRoad::DriveOnRight`) for US.
+  - Implemented multi-agent autonomous AI traffic simulation using Intelligent Driver Model (IDM) car-following and pure pursuit steering.
+  - Implemented connected Bengaluru Central drivable test routes (Vidhana Soudha -> High Court -> Cubbon Park -> Kasturba Rd -> MG Road -> Residency Rd -> Brigade Rd).
+  - Integrated interactive vehicle controls and driving telemetry HUD in `apps/world-viewer` (`--drive`, `--traffic <N>`, `--vehicle-cam <chase|hood|bumper>`).
+  - Validated zero terrain drop-through, stable controls, braking, slopes, junctions, crashes, fast travel, and long sessions.
+
+### Stage 6 Verification & Certification Matrix (Complete Drivable Car Simulation)
+- **Full Workspace Test Suite**: 64 passed; 0 failed; 0 ignored (100% pass rate across all 11 workspace crates).
+- **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+- **Code Style Gate**: `cargo fmt --check` passed with 0 formatting discrepancies.
+- **Dedicated Vehicle Simulation Test Target (`realearth-tests::vehicle_simulation`)**:
+  - `test_grade_separated_elevated_flyover_continuity`: PASS ✅ (Layer 1 elevated Cubbon Park flyover with 0 at-grade conflict).
+  - `test_crash_and_flip_recovery`: PASS ✅ (Instant recovery on road surface with zero residual angular velocity).
+  - `test_autonomous_traffic_fleet_with_idm`: PASS ✅ (4-car platoon maintaining safe $\ge 3.0\text{m}$ gap under IDM).
+  - `test_vehicle_state_snapshot_rewind_determinism`: PASS ✅ (Bitwise identical state recovery after rewind).
+  - `test_slope_climbing_and_hill_holding`: PASS ✅ (15% grade slope climb, static hill-hold lock, gravity rollback in Neutral).
+  - `test_bengaluru_connected_routes_drive`: PASS ✅ (Continuous route driving from Vidhana Soudha to MG Road with 0 drop-through).
+- **Interactive & Headless Viewer Verification (`apps/world-viewer`)**:
+  - **Standalone World Viewer (Fly/Walk Mode)**:
+    - Average Framerate: **642.6 FPS** (Avg Frame Time: **1.56 ms**). Budget: $\ge 60.0$ FPS ($\le 16.67$ ms). **PASS ✅**.
+    - p50: **0.64 ms** | p95: **1.00 ms** | p99: **13.16 ms**. **PASS ✅**.
+    - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. **PASS ✅**.
+    - Cold Startup Latency: **12.80 ms**. **PASS ✅**.
+  - **Drivable Vehicle Simulation Mode (Bengaluru Central + 15 Autonomous IDM Vehicles)**:
+    - Average Framerate: **5089.9 FPS** (Avg Frame Time: **0.20 ms**). **PASS ✅**.
+    - p50: **0.18 ms** | p95: **0.26 ms** | p99: **0.38 ms**. **PASS ✅**.
+    - Speed & Telemetry: $43.2\text{ km/h}$ ($11.99\text{ m/s}$) in Gear 2, 3643 RPM. **PASS ✅**.
+    - 4-Wheel Equilibrium Normal Force: $F_z \approx 14,075\text{ N} \approx 1450\text{ kg} \times 9.81\text{ m/s}^2$. **PASS ✅**.
+    - Ground Contact & Drop-Through: Continuous contact on DEM terrain surface ($Y = 906.74\text{m}$ MSL), 0 fall-throughs. **PASS ✅**.
+

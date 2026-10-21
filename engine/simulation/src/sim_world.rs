@@ -1,6 +1,6 @@
 //! Headless Bevy ECS simulation world and execution loop.
 
-use crate::components::{EntityTag, GeoPosition, LocalTransform, Velocity};
+use crate::components::{EntityTag, GeoPosition, InterpolatedTransform, LocalTransform, Velocity};
 use crate::solar::{compute_solar_position, SolarPosition};
 use crate::time_weather::{AtmosphericState, SimulationClock};
 use bevy_ecs::prelude::*;
@@ -10,6 +10,26 @@ use realearth_shared::coordinates::Wgs84Coord;
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub struct ActiveObserver {
     pub coord: Wgs84Coord,
+}
+
+/// Fixed timestep accumulator resource for physics/presentation decoupling.
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct FixedTimestepAccumulator {
+    pub accumulator: f64,
+    pub fixed_dt: f64,
+    pub alpha: f32,
+    pub tick_count: u64,
+}
+
+impl Default for FixedTimestepAccumulator {
+    fn default() -> Self {
+        Self {
+            accumulator: 0.0,
+            fixed_dt: 1.0 / 60.0,
+            alpha: 0.0,
+            tick_count: 0,
+        }
+    }
 }
 
 /// Headless decoupled simulation runtime engine.
@@ -26,6 +46,7 @@ impl RealEarthSimWorld {
         world.insert_resource(ActiveObserver { coord: anchor });
         world.insert_resource(SimulationClock::default());
         world.insert_resource(AtmosphericState::default());
+        world.insert_resource(FixedTimestepAccumulator::default());
 
         let mut schedule = Schedule::default();
         schedule.add_systems((time_progression_system, kinematic_movement_system));
@@ -42,6 +63,63 @@ impl RealEarthSimWorld {
         if let Some(mut clock) = self.world.get_resource_mut::<SimulationClock>() {
             clock.advance(delta_seconds);
         }
+    }
+
+    /// Advances simulation with a fixed-timestep accumulator, updating InterpolatedTransform render states.
+    pub fn tick_fixed_accumulator(&mut self, frame_dt: f64) -> usize {
+        let fixed_dt = self.world.resource::<FixedTimestepAccumulator>().fixed_dt;
+        let mut accum = self
+            .world
+            .resource::<FixedTimestepAccumulator>()
+            .accumulator
+            + frame_dt.min(0.25);
+        let mut steps = 0;
+
+        while accum >= fixed_dt {
+            // 1. Store previous state
+            for mut interp in self
+                .world
+                .query::<&mut InterpolatedTransform>()
+                .iter_mut(&mut self.world)
+            {
+                interp.previous = interp.current;
+            }
+
+            // 2. Step fixed-rate schedule
+            self.schedule.run(&mut self.world);
+            if let Some(mut clock) = self.world.get_resource_mut::<SimulationClock>() {
+                clock.advance(fixed_dt);
+            }
+
+            // 3. Update current state from LocalTransform
+            let mut query = self
+                .world
+                .query::<(&LocalTransform, &mut InterpolatedTransform)>();
+            for (local, mut interp) in query.iter_mut(&mut self.world) {
+                interp.current = *local;
+            }
+
+            accum -= fixed_dt;
+            steps += 1;
+        }
+
+        let alpha = (accum / fixed_dt) as f32;
+        if let Some(mut ft) = self.world.get_resource_mut::<FixedTimestepAccumulator>() {
+            ft.accumulator = accum;
+            ft.alpha = alpha;
+            ft.tick_count += steps as u64;
+        }
+
+        // 4. Update presentation interpolation
+        for mut interp in self
+            .world
+            .query::<&mut InterpolatedTransform>()
+            .iter_mut(&mut self.world)
+        {
+            interp.update_render(alpha);
+        }
+
+        steps
     }
 
     /// Computes the active solar position relative to the observer anchor.
@@ -68,6 +146,7 @@ impl RealEarthSimWorld {
                 },
                 GeoPosition::new(geo),
                 transform,
+                InterpolatedTransform::new(transform),
                 velocity,
             ))
             .id()

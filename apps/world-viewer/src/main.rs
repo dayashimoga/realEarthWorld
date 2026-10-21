@@ -1,7 +1,7 @@
 //! Real Earth World Viewer — Interactive 3D planetary simulation viewer.
 //!
-//! STAGE 5: Production World Streaming and Performance Optimization.
-//! Supports both interactive windowed navigation and headless benchmark / CI profiling.
+//! STAGE 6: Complete Drivable Car Simulation & Production World Streaming.
+//! Supports both interactive windowed navigation, drivable vehicle dynamics, and headless profiling.
 
 pub mod camera_controller;
 pub mod screenshot;
@@ -11,12 +11,17 @@ use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptio
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
+use realearth_navigation::{RoadNetworkGraph, RuleOfTheRoad};
 use realearth_rendering::{
     FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, RealEarthRenderer,
 };
 use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
+use realearth_vehicles::{
+    DynamicVehicle, FunctionalGroundQuery, TrafficSimulation, VehicleCameraController,
+    VehicleCameraPerspective, VehicleConfig, VehicleInputs,
+};
 use screenshot::capture_texture_to_ppm;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -39,6 +44,13 @@ fn print_usage() {
     );
     println!(
         "  --camera-mode <fly|walk>                Initial camera navigation mode (default: fly)"
+    );
+    println!(
+        "  --drive                                 Enable complete drivable car dynamics mode"
+    );
+    println!("  --traffic <N>                           Spawn N autonomous AI traffic vehicles (default: 8 with --drive)");
+    println!(
+        "  --vehicle-cam <chase|hood|bumper>       Vehicle camera perspective (default: chase)"
     );
     println!("  --location <name>                       Preset location (transamerica, salesforce, ferry, coit, bay-bridge, broadway-tunnel)");
     println!(
@@ -106,6 +118,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "standard"
     };
 
+    let is_drive = args.iter().any(|a| a == "--drive" || a == "-d");
+    let traffic_count: usize = args
+        .iter()
+        .position(|a| a == "--traffic")
+        .and_then(|idx| args.get(idx + 1))
+        .and_then(|val| val.parse().ok())
+        .unwrap_or(if is_drive { 8 } else { 0 });
+
+    let vehicle_cam_perspective = if args.iter().any(|a| a.contains("hood")) {
+        VehicleCameraPerspective::Hood
+    } else if args.iter().any(|a| a.contains("bumper")) {
+        VehicleCameraPerspective::Bumper
+    } else {
+        VehicleCameraPerspective::Chase
+    };
+
     let frame_count: usize = args
         .iter()
         .position(|a| a == "--frames")
@@ -113,16 +141,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|val| val.parse().ok())
         .unwrap_or(if scenario == "soak" { 240 } else { 60 });
 
-    println!("🌍 Starting Real Earth World Viewer (Stage 5)...");
+    println!("🌍 Starting Real Earth World Viewer (Stage 6)...");
     let startup_start = Instant::now();
 
     // 1. Prepare world package for region
-    let (world_dir, region_name, default_landmark, dem) = if is_bengaluru {
+    let (world_dir, region_name, default_landmark, dem, raw_dataset) = if is_bengaluru {
         let dir = PathBuf::from("target/world_bengaluru");
         let dem = DemGrid::create_bengaluru_plateau_dem(64, 64);
+        let raw = create_bengaluru_central_dataset();
         if !dir.join("chunks.db").exists() {
             println!("📦 Compiling cached Bengaluru Central package...");
-            let raw = create_bengaluru_central_dataset();
             let (val, _) = validate_dataset(&raw);
             let options = CompilerOptions {
                 chunk_size_meters: 1000.0,
@@ -135,13 +163,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Bengaluru Central (IN)",
             Landmark::BENGALURU_VIDHANA_SOUDHA,
             dem,
+            raw,
         )
     } else {
         let dir = PathBuf::from("target/world_san_francisco");
         let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
+        let raw = create_san_francisco_dataset();
         if !dir.join("chunks.db").exists() {
             println!("📦 Compiling cached San Francisco Downtown & Waterfront package...");
-            let raw = create_san_francisco_dataset();
             let (val, _) = validate_dataset(&raw);
             let options = CompilerOptions {
                 chunk_size_meters: 500.0,
@@ -154,6 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "San Francisco Downtown & Waterfront (US)",
             Landmark::SAN_FRANCISCO_TRANSAMERICA,
             dem,
+            raw,
         )
     };
 
@@ -161,8 +191,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📁 World Cache: {:?}", world_dir);
     println!("⚙️ Graphics Preset: {:?}", preset_level);
     println!("🎯 Execution Scenario: {}", scenario);
+    if is_drive {
+        println!("🏎️ Simulation Mode: Complete Drivable Vehicle Dynamics (Stage 6)");
+        println!("🚗 Traffic Fleet: {} Autonomous Vehicles", traffic_count);
+    } else {
+        println!(
+            "🎥 Simulation Mode: Standalone World Viewer ({:?})",
+            initial_mode
+        );
+    }
 
-    // 2. Initialize World Streamer with Stage 5 Configuration
+    // 2. Initialize World Streamer with Stage 5/6 Configuration
     let streaming_config = StreamingConfig {
         max_memory_mb: 1024,
         max_gpu_memory_mb: 512,
@@ -183,7 +222,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let mut streamer = WorldStreamer::open(&world_dir, streaming_config)?;
 
-    // 3. Setup Camera & Landmark
+    // 3. Setup Ground Elevation Query for Vehicle Dynamics
+    let anchor = default_landmark.coord;
+    let dem_query = dem.clone();
+    let ground_query = FunctionalGroundQuery::new(move |x: f32, z: f32| -> f32 {
+        let lat = anchor.lat + (z as f64 / 111_000.0);
+        let lon = anchor.lon + (x as f64 / 108_000.0);
+        let coord = realearth_shared::coordinates::Wgs84Coord::new(lat, lon, 0.0);
+        dem_query.sample_bilinear(&coord)
+    });
+
+    let initial_elevation = (ground_query.elevation_fn)(0.0, 0.0);
+    let mut vehicle = DynamicVehicle::new(
+        VehicleConfig::default(),
+        glam::Vec3::new(0.0, initial_elevation, 0.0),
+        default_landmark.yaw,
+    );
+    let mut vehicle_cam = VehicleCameraController::new(vehicle_cam_perspective);
+    let mut traffic_sim = TrafficSimulation::new();
+
+    if is_drive {
+        vehicle.recover_on_surface(initial_elevation);
+        println!(
+            "🏎️ Drivable Vehicle Initialized: Mass=1450kg, 4-wheel independent raycast suspension"
+        );
+        if traffic_count > 0 {
+            let road_graph = RoadNetworkGraph::from_roads(&raw_dataset.roads);
+            let rule = if is_bengaluru {
+                RuleOfTheRoad::DriveOnLeft
+            } else {
+                RuleOfTheRoad::DriveOnRight
+            };
+            traffic_sim.populate_from_road_network(&road_graph, traffic_count, rule);
+            println!(
+                "🚗 AI Traffic Fleet: Spawned {} vehicles using Intelligent Driver Model",
+                traffic_sim.agents.len()
+            );
+        }
+    }
+
+    // 4. Setup Camera & Landmark
     let mut camera_ctrl = CameraController::new(default_landmark.coord);
     camera_ctrl.mode = initial_mode;
     camera_ctrl.yaw = default_landmark.yaw;
@@ -314,37 +392,79 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sim_world.tick(1.0 / 60.0);
         let solar = sim_world.current_solar_position();
 
-        // Scenario-specific camera motion
-        let velocity = match scenario {
-            "highway" => {
-                // High-speed traversal at 30 m/s (~108 km/h)
-                camera_ctrl.move_forward(30.0 / 60.0, Some(&dem));
-                camera_ctrl.update_camera(&mut camera);
-                camera_ctrl.forward_velocity_vector(30.0)
-            }
-            "teleport" => {
-                // Periodic instant jumps every 20 frames
-                if frame_idx % 20 == 0 && frame_idx > 0 {
-                    let lm = landmark_rotation[(frame_idx / 20) % landmark_rotation.len()];
-                    camera_ctrl.jump_to(&lm);
-                    camera_ctrl.update_camera(&mut camera);
-                    streamer.teleport(camera_ctrl.coord);
+        // Scenario-specific camera motion or Vehicle Dynamics simulation
+        let velocity = if is_drive {
+            let mut inputs = VehicleInputs::default();
+            match scenario {
+                "highway" => {
+                    inputs.throttle = 0.9;
+                    inputs.steer = (frame_idx as f32 * 0.04).sin() * 0.04;
                 }
-                glam::Vec3::ZERO
-            }
-            "soak" | "dense-city" => {
-                // Continuous urban cruising at 15 m/s (~54 km/h)
-                camera_ctrl.move_forward(15.0 / 60.0, Some(&dem));
-                camera_ctrl.update_camera(&mut camera);
-                camera_ctrl.forward_velocity_vector(15.0)
-            }
-            _ => {
-                // Standard subtle exploration
-                if frame_idx % 10 == 0 {
-                    camera_ctrl.move_forward(2.0, Some(&dem));
-                    camera_ctrl.update_camera(&mut camera);
+                "dense-city" => {
+                    inputs.throttle = 0.65;
+                    inputs.steer = (frame_idx as f32 * 0.07).sin() * 0.1;
                 }
-                camera_ctrl.forward_velocity_vector(2.0)
+                "soak" => {
+                    if (frame_idx % 60) < 45 {
+                        inputs.throttle = 0.8;
+                        inputs.steer = (frame_idx as f32 * 0.03).sin() * 0.05;
+                    } else {
+                        inputs.brake = 0.85; // Periodic brake deceleration test
+                    }
+                }
+                _ => {
+                    inputs.throttle = 0.75;
+                    inputs.steer = (frame_idx as f32 * 0.03).sin() * 0.04;
+                }
+            }
+
+            vehicle.step(&inputs, &ground_query, 1.0 / 60.0);
+            traffic_sim.step(1.0 / 60.0, &ground_query);
+
+            let (cam_pos, cam_yaw, cam_pitch) = vehicle_cam.update(&vehicle, 1.0 / 60.0);
+            let cam_lat = anchor.lat + (cam_pos.z as f64 / 111_000.0);
+            let cam_lon = anchor.lon + (cam_pos.x as f64 / 108_000.0);
+            camera_ctrl.coord =
+                realearth_shared::coordinates::Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+            camera_ctrl.yaw = cam_yaw;
+            camera_ctrl.pitch = cam_pitch;
+            camera_ctrl.update_camera(&mut camera);
+
+            let rot = glam::Mat3::from_quat(vehicle.orientation);
+            let forward = rot.col(2);
+            forward * (vehicle.speed_kph * (1000.0 / 3600.0))
+        } else {
+            match scenario {
+                "highway" => {
+                    // High-speed traversal at 30 m/s (~108 km/h)
+                    camera_ctrl.move_forward(30.0 / 60.0, Some(&dem));
+                    camera_ctrl.update_camera(&mut camera);
+                    camera_ctrl.forward_velocity_vector(30.0)
+                }
+                "teleport" => {
+                    // Periodic instant jumps every 20 frames
+                    if frame_idx % 20 == 0 && frame_idx > 0 {
+                        let lm = landmark_rotation[(frame_idx / 20) % landmark_rotation.len()];
+                        camera_ctrl.jump_to(&lm);
+                        camera_ctrl.update_camera(&mut camera);
+                        streamer.teleport(camera_ctrl.coord);
+                    }
+                    glam::Vec3::ZERO
+                }
+                "soak" | "dense-city" => {
+                    // Continuous urban cruising at 15 m/s (~54 km/h)
+                    camera_ctrl.move_forward(15.0 / 60.0, Some(&dem));
+                    camera_ctrl.update_camera(&mut camera);
+                    camera_ctrl.forward_velocity_vector(15.0)
+                }
+                _ => {
+                    // Standard subtle exploration
+                    if frame_idx % 10 == 0 {
+                        camera_ctrl.move_forward(2.0, Some(&dem));
+                        camera_ctrl.update_camera(&mut camera);
+                    }
+                    camera_ctrl.forward_velocity_vector(2.0)
+                }
             }
         };
 
@@ -417,12 +537,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .sum();
 
     println!("\n==================================================================");
-    println!("📊 STAGE 5: Production World Streaming and Optimization Metrics");
+    println!("📊 STAGE 6: Drivable Vehicle Simulation & World Streaming Metrics");
     println!("==================================================================");
     println!("  Target Region:           {}", region_name);
     println!("  Graphics Preset:         {:?}", renderer.settings.level);
     println!("  Test Scenario:           {}", scenario);
     println!("  Total Frames Rendered:   {}", frame_count);
+    if is_drive {
+        println!("------------------------------------------------------------------");
+        println!("🏎️ Automotive Vehicle Dynamics Telemetry:");
+        println!(
+            "  • Vehicle Speed:         {:.1} km/h ({:.2} m/s)",
+            vehicle.speed_kph,
+            vehicle.speed_kph * (1000.0 / 3600.0)
+        );
+        println!("  • Transmission Mode:     Gear {}", vehicle.current_gear);
+        println!("  • Engine RPM:            {:.0} RPM", vehicle.engine_rpm);
+        println!(
+            "  • Position (Metric ENU): X={:.2}m, Y={:.2}m, Z={:.2}m",
+            vehicle.position.x, vehicle.position.y, vehicle.position.z
+        );
+        println!(
+            "  • Suspension Travel:     FL={:.3}m, FR={:.3}m, RL={:.3}m, RR={:.3}m",
+            vehicle.wheels[0].compression,
+            vehicle.wheels[1].compression,
+            vehicle.wheels[2].compression,
+            vehicle.wheels[3].compression
+        );
+        println!(
+            "  • Tire Normal Force Fz:  FL={:.0} N, FR={:.0} N, RL={:.0} N, RR={:.0} N",
+            vehicle.wheels[0].normal_force_fz,
+            vehicle.wheels[1].normal_force_fz,
+            vehicle.wheels[2].normal_force_fz,
+            vehicle.wheels[3].normal_force_fz
+        );
+        println!("  • Camera Perspective:    {:?}", vehicle_cam.perspective);
+        println!(
+            "  • AI Traffic Fleet:      {} active vehicles",
+            traffic_sim.agents.len()
+        );
+    }
     println!("------------------------------------------------------------------");
     println!("⏱️ Frame Latency Percentiles:");
     println!(
@@ -477,7 +631,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==================================================================\n");
 
     if is_headless {
-        println!("✅ Stage 5 Production Streaming & Profiling Completed Successfully!");
+        println!("✅ Stage 6 Drivable Vehicle Simulation & Streaming Completed Successfully!");
         return Ok(());
     }
 

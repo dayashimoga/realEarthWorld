@@ -17,6 +17,8 @@ realearth-compiler = { path = "../../engine/compiler" }
 realearth-streaming = { path = "../../engine/streaming" }
 realearth-simulation = { path = "../../engine/simulation" }
 realearth-rendering = { path = "../../engine/rendering" }
+realearth-vehicles = { path = "../../engine/vehicles" }
+realearth-navigation = { path = "../../engine/navigation" }
 winit.workspace = true
 wgpu.workspace = true
 glam.workspace = true

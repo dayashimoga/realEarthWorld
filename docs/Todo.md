@@ -102,10 +102,20 @@
 - [x] Stage 5.3: Planetary scaling demonstration: 100,000 and 1,000,000 managed objects at 60 FPS reference target.
 - [x] Stage 5.3: Regression test suite and performance certification matrix.
 
-## STAGE 6: Autonomous Vehicle Simulation, Traffic & Multi-Modal Kinematics (Roadmap)
-- [ ] Stage 6.1: Full vehicle kinematics and dynamics for multi-axle trucks, buses, motorcycles, and emergency vehicles.
-- [ ] Stage 6.2: Multi-agent synthetic traffic flow generation adhering to lane disciplines and intersection signals.
-- [ ] Stage 6.3: Multi-modal transport: integration of passenger rail transit, airport runway operations, and maritime ferries.
+## STAGE 6: Complete Drivable Car Simulation (Completed)
+- [x] Stage 6.1: Fixed-timestep (60Hz) Bevy ECS simulation loop with Rapier physics/presentation interpolation.
+- [x] Stage 6.1: Spatial collision filtering (Vehicles, Roads, Terrain, Obstacles) and safe spawning elevation clamping.
+- [x] Stage 6.1: Deterministic state snapshotting (`VehicleStateSnapshot`) and headless physics verification tests.
+- [x] Stage 6.2: 4-wheel independent raycast suspension solver with spring-damper dynamics and weight transfer.
+- [x] Stage 6.2: Tire traction and friction circle model (longitudinal slip, lateral cornering stiffness, slope response).
+- [x] Stage 6.2: Transmission modes (`Drive`, `Reverse`, `Neutral`, `Park`), progressive throttle, braking, and flip recovery.
+- [x] Stage 6.2: Camera systems: 3rd-person spring-damper `ChaseCamera`, first-person `HoodCamera`, and `BumperCamera`.
+- [x] Stage 6.3: Lane-aware road network traversal with Left-Hand Traffic (`RuleOfTheRoad::DriveOnLeft`) for Bengaluru routes.
+- [x] Stage 6.3: Multi-agent autonomous AI traffic simulation using Intelligent Driver Model (IDM) car-following.
+- [x] Stage 6.3: Drivable Bengaluru Central test routes (Vidhana Soudha -> Cubbon Park -> Kasturba Rd -> MG Road).
+- [x] Stage 6.3: Integrated driving HUD in `apps/world-viewer` with `--drive` flag and full regression testing suite.
+
+
 
 
 

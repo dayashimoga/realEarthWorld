@@ -45,7 +45,7 @@ mod tests {
         let dataset = create_bengaluru_central_dataset();
         let (validated, report) = validate_dataset(&dataset);
 
-        assert_eq!(validated.roads.len(), 4);
+        assert_eq!(validated.roads.len(), 7);
         assert_eq!(validated.buildings.len(), 4);
         assert!(
             report.is_clean(),
