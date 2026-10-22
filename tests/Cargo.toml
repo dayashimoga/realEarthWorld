@@ -16,6 +16,7 @@ realearth-navigation = { path = "../engine/navigation" }
 realearth-vehicles = { path = "../engine/vehicles" }
 realearth-rendering = { path = "../engine/rendering" }
 realearth-gameplay = { path = "../engine/gameplay" }
+realearth-networking = { path = "../engine/networking" }
 wgpu.workspace = true
 glam.workspace = true
 tempfile = "3.17"
@@ -48,3 +49,7 @@ path = "tests/gameplay_careers.rs"
 [[test]]
 name = "multi_transport_simulation"
 path = "tests/multi_transport_simulation.rs"
+
+[[test]]
+name = "multiplayer_networking"
+path = "tests/multiplayer_networking.rs"

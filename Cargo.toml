@@ -12,6 +12,7 @@ members = [
     "engine/vehicles",
     "engine/rendering",
     "engine/gameplay",
+    "engine/networking",
     "tools/world-cli",
     "apps/world-viewer",
     "benchmarks",

@@ -2439,6 +2439,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "realearth-networking"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "glam",
+ "realearth-shared",
+ "realearth-vehicles",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "realearth-rendering"
 version = "0.1.0"
 dependencies = [
@@ -2513,6 +2529,7 @@ dependencies = [
  "realearth-geospatial",
  "realearth-ingestion",
  "realearth-navigation",
+ "realearth-networking",
  "realearth-rendering",
  "realearth-shared",
  "realearth-simulation",
