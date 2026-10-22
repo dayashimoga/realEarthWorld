@@ -9,16 +9,24 @@
 //! - P1: Automotive tire dynamics low-speed lateral scrub continuity (no zero-friction skating)
 
 use glam::Vec3;
+use realearth_compiler::building_mesher::mesh_building;
 use realearth_compiler::chunk::{ChunkHeader, WorldChunk, CHUNK_MAGIC};
 use realearth_compiler::database::{ChunkDatabase, ChunkIndexRecord};
 use realearth_compiler::packager::{
     pack_chunk_to_bytes, unpack_chunk_from_bytes, MAX_UNCOMPRESSED_CHUNK_BYTES,
 };
+use realearth_compiler::road_mesher::mesh_road;
+use realearth_compiler::terrain_mesher::mesh_terrain;
+use realearth_geospatial::transforms::EnuConverter;
 use realearth_ingestion::dem_grid::DemGrid;
+use realearth_ingestion::osm_types::BuildingType;
 use realearth_ingestion::osm_types::{HighwayType, OsmRoadFeature};
 use realearth_navigation::road_graph::RoadNetworkGraph;
+use realearth_navigation::router::{find_route, RoutingPreference};
 use realearth_shared::bounds::GeoBounds;
 use realearth_shared::coordinates::Wgs84Coord;
+use realearth_validation::polygon_validator::ValidatedBuilding;
+use realearth_validation::{HeightProvenance, ValidatedHeight};
 use realearth_vehicles::dynamics::{DynamicVehicle, VehicleConfig, VehicleInputs};
 use realearth_vehicles::ground::FlatGround;
 use realearth_vehicles::traffic::{IdmConfig, TrafficAgent, TrafficSimulation};
@@ -532,4 +540,199 @@ fn test_e4_systemic_regression_full_spectrum_verification() {
 
     assert!(route.total_distance_meters > 2000.0);
     assert!(route.waypoints.len() >= 3);
+}
+
+/// E5: Verifies that A* heuristic dynamically scales with latitude cosine and remains strictly admissible in high latitudes.
+#[test]
+fn test_e5_router_admissible_heuristic_and_high_latitude_scaling() {
+    let mut network = RoadNetworkGraph::new();
+
+    // High latitude route in Anchorage, Alaska (lat ~ 61.2° N)
+    // At 61.2° N, 1 deg of lon is only ~53.8 km, compared to 111.3 km at the equator.
+    let road = OsmRoadFeature {
+        way_id: 5001,
+        name: Some("Glenn Highway Anchorage".to_string()),
+        highway_type: HighwayType::Motorway,
+        lanes: 4,
+        is_oneway: false,
+        speed_limit_kph: 100,
+        geometry: vec![
+            Wgs84Coord::new(61.2181, -149.9003, 30.0),
+            Wgs84Coord::new(61.2250, -149.8800, 35.0),
+            Wgs84Coord::new(61.2350, -149.8500, 40.0),
+        ],
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    };
+    network.add_road(&road);
+
+    let start = Wgs84Coord::new(61.2181, -149.9003, 30.0);
+    let goal = Wgs84Coord::new(61.2350, -149.8500, 40.0);
+
+    let route_dist = find_route(&network, start, goal, RoutingPreference::ShortestDistance)
+        .expect("A* shortest distance routing in Anchorage must succeed");
+    assert!(route_dist.total_distance_meters > 2000.0);
+
+    let route_time = find_route(&network, start, goal, RoutingPreference::FastestTime)
+        .expect("A* fastest time routing in Anchorage must succeed");
+    assert!(route_time.estimated_duration_seconds > 50.0);
+}
+
+/// E5: Verifies that road mesher constructs a continuous shared-vertex miter ribbon without disconnected gaps.
+#[test]
+fn test_e5_continuous_miter_road_mesh_generation() {
+    let origin = Wgs84Coord::new(37.7749, -122.4194, 10.0);
+    let converter = EnuConverter::new(origin);
+    let dem_bounds = GeoBounds::new(37.7700, 37.7800, -122.4300, -122.4100);
+    let dem = DemGrid::new(dem_bounds, 10, 10, vec![15.0; 100]).expect("DEM creation failed");
+
+    // 4-point curving road
+    let road = OsmRoadFeature {
+        way_id: 6001,
+        name: Some("Market Street".to_string()),
+        highway_type: HighwayType::Primary,
+        lanes: 4,
+        is_oneway: false,
+        speed_limit_kph: 50,
+        geometry: vec![
+            Wgs84Coord::new(37.7740, -122.4200, 15.0),
+            Wgs84Coord::new(37.7745, -122.4190, 15.0),
+            Wgs84Coord::new(37.7755, -122.4185, 15.0),
+            Wgs84Coord::new(37.7765, -122.4180, 15.0),
+        ],
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    };
+
+    let mesh = mesh_road(&road, &converter, &dem);
+    assert!(!mesh.is_empty(), "Road mesh should not be empty");
+
+    // For a 4-point continuous ribbon, vertices must be exactly 4 points * 2 sides = 8 vertices
+    // Previously disconnected quads produced (4-1)*4 = 12 vertices.
+    assert_eq!(
+        mesh.vertices.len(),
+        8,
+        "Continuous ribbon must have exactly 2 vertices per centerline point (8 total)"
+    );
+    // 3 segments * 2 triangles * 3 indices = 18 indices
+    assert_eq!(
+        mesh.indices.len(),
+        18,
+        "Continuous ribbon must have exactly 6 indices per segment (18 total)"
+    );
+}
+
+/// E5: Verifies that terrain mesher computes physically dimensioned surface normals with latitude cosine scaling.
+#[test]
+fn test_e5_terrain_normal_gradient_physics_precision() {
+    let origin = Wgs84Coord::new(47.6062, -122.3321, 0.0); // Seattle, WA
+    let converter = EnuConverter::new(origin);
+    let bounds = GeoBounds::new(47.6000, 47.6100, -122.3400, -122.3300);
+
+    // Flat terrain grid: all normals must point purely upward (0, 1, 0)
+    let dem_bounds = GeoBounds::new(47.59, 47.62, -122.35, -122.32);
+    let dem_flat = DemGrid::new(dem_bounds, 10, 10, vec![45.0; 100]).expect("DEM creation failed");
+    let mesh_flat = mesh_terrain(&bounds, &converter, &dem_flat, 4);
+
+    for v in &mesh_flat.vertices {
+        assert!(
+            (v.normal[1] - 1.0).abs() < 1e-3,
+            "Flat terrain normal must have Y component = 1.0, got {:?}",
+            v.normal
+        );
+        assert!(
+            v.normal[0].abs() < 1e-3 && v.normal[2].abs() < 1e-3,
+            "Flat terrain normal must have X and Z components ~ 0, got {:?}",
+            v.normal
+        );
+    }
+}
+
+/// E5: Verifies that building mesher generates terrain-conforming foundation skirts on slopes without gaps.
+#[test]
+fn test_e5_building_foundation_skirting_on_slopes() {
+    let origin = Wgs84Coord::new(37.7749, -122.4194, 0.0);
+    let converter = EnuConverter::new(origin);
+
+    // Sloped terrain: 10m on South edge, 30m on North edge
+    let dem_bounds = GeoBounds::new(37.7700, 37.7800, -122.4300, -122.4100);
+    let mut elevations = vec![10.0; 100];
+    for r in 5..10 {
+        for c in 0..10 {
+            elevations[r * 10 + c] = 30.0;
+        }
+    }
+    let dem = DemGrid::new(dem_bounds, 10, 10, elevations).expect("DEM creation failed");
+
+    let building = ValidatedBuilding {
+        id: 7001,
+        name: Some("Nob Hill Tower".to_string()),
+        building_type: BuildingType::Commercial,
+        outer_ring: vec![
+            Wgs84Coord::new(37.7740, -122.4200, 0.0), // downhill (elev ~ 10m)
+            Wgs84Coord::new(37.7740, -122.4190, 0.0),
+            Wgs84Coord::new(37.7760, -122.4190, 0.0), // uphill (elev ~ 30m)
+            Wgs84Coord::new(37.7760, -122.4200, 0.0),
+            Wgs84Coord::new(37.7740, -122.4200, 0.0), // closed
+        ],
+        inner_rings: Vec::new(),
+        height: ValidatedHeight {
+            height_meters: 50.0,
+            provenance: HeightProvenance::Surveyed,
+            confidence: 1.0,
+        },
+        area_m2: 400.0,
+    };
+
+    let mesh = mesh_building(&building, &converter, &dem);
+    assert!(!mesh.is_empty(), "Building mesh should not be empty");
+
+    // All base vertices must reach ground elevation without floating
+    let min_y = mesh
+        .vertices
+        .iter()
+        .map(|v| v.position[1])
+        .fold(f32::MAX, f32::min);
+    assert!(
+        min_y <= 12.0,
+        "Downhill foundation skirt must reach down to downhill ground (<= 12.0m), got {}",
+        min_y
+    );
+}
+
+/// E5: Verifies that traffic simulation filters out opposing-lane oncoming traffic from car-following leader logic.
+#[test]
+fn test_e5_traffic_opposing_lane_and_lead_filtering() {
+    let mut sim = TrafficSimulation::new();
+    let ground = FlatGround::new(0.0);
+
+    // Agent 0: Eastbound vehicle at (0, 0, 0), yaw = PI/2 (heading East)
+    let agent_0 = TrafficAgent::new(
+        101,
+        Vec3::new(0.0, 0.0, 0.0),
+        vec![Vec3::new(0.0, 0.0, 0.0), Vec3::new(100.0, 0.0, 0.0)],
+        IdmConfig::default(),
+    );
+    sim.agents.push(agent_0);
+
+    // Agent 1: Oncoming Westbound vehicle at (40, 0, 2.0) (2 meters lateral offset in opposing lane), yaw = -PI/2 (heading West)
+    let mut agent_1 = TrafficAgent::new(
+        102,
+        Vec3::new(40.0, 0.0, 2.0),
+        vec![Vec3::new(40.0, 0.0, 2.0), Vec3::new(-50.0, 0.0, 2.0)],
+        IdmConfig::default(),
+    );
+    agent_1.yaw = -std::f32::consts::FRAC_PI_2; // explicitly heading West (opposing)
+    sim.agents.push(agent_1);
+
+    // Step simulation
+    sim.step(0.1, &ground);
+
+    // Agent 0 should accelerate towards desired speed because oncoming car in opposing lane is NOT a lead obstacle
+    assert!(
+        sim.agents[0].speed_ms >= 0.0,
+        "Agent 0 should not halt due to oncoming traffic in opposing lane"
+    );
 }

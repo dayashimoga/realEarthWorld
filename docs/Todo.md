@@ -243,8 +243,15 @@
 - [x] Stage E.2: Root-cause remediation of P2 continuous keypress tracking and framerate-independent camera navigation in `apps/world-viewer/src/interactive.rs`.
 - [x] Stage E.3: Implement dedicated regression test suite (`tests/tests/defect_remediation_regression.rs`) reproducing and verifying all remediated defect categories (8 tests passing in 0.19s).
 - [x] Stage E.4: Verify systemic quality across all comparable modules (SQLite calls, decompression routines, spatial keys, and multimodal routing).
-- [x] Stage E.4: Verify 100% workspace test suite pass rate (213 tests across 14 integration test suites and 13 unit test suites).
-- [x] Stage E.4: Publish ADR-0021 (`docs/adr/0021-stage-e-complete-defect-remediation.md`) and Stage E Forensic Report (`docs/reports/StageE_Defect_Remediation_Report.md`).
+- [x] Stage E.5: Remediate high-latitude A* heuristic non-admissibility with dynamic latitude cosine scaling in `engine/navigation/src/router.rs`.
+- [x] Stage E.5: Remediate disconnected road quads on curves with continuous shared-vertex miter ribbons in `engine/compiler/src/road_mesher.rs`.
+- [x] Stage E.5: Remediate unscaled terrain normal gradients with physical metric slopes and latitude cosine scaling in `engine/compiler/src/terrain_mesher.rs`.
+- [x] Stage E.5: Remediate downhill building floating on slopes with adaptive foundation skirts in `engine/compiler/src/building_mesher.rs`.
+- [x] Stage E.5: Remediate closing vertex duplicate averaging in polygon centroids in `engine/validation/src/scene_placement_auditor.rs`.
+- [x] Stage E.5: Remediate opposing-lane oncoming phantom braking with directional heading alignment filtering in `engine/vehicles/src/traffic.rs`.
+- [x] Stage E.5: Expand dedicated regression test suite (`tests/tests/defect_remediation_regression.rs`) to 13 passing tests.
+- [x] Stage E.5: Verify 100% workspace test suite pass rate (218 tests across 14 integration test suites and 13 unit test suites).
+- [x] Stage E.5: Publish ADR-0021 (`docs/adr/0021-stage-e-complete-defect-remediation.md`) and Stage E Forensic Report (`docs/reports/StageE_Defect_Remediation_Report.md`).
 
 
 

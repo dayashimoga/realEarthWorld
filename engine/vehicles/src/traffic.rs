@@ -227,15 +227,20 @@ impl TrafficSimulation {
                 let to_j = other.position - p_i;
                 let forward_dist = forward_i.dot(to_j);
 
-                // Is vehicle j ahead within 100 meters?
-                if forward_dist > 0.0 && forward_dist < 100.0 {
+                // Is vehicle j ahead within 100 meters, or physically overlapping chassis?
+                if forward_dist > -other.length_meters && forward_dist < 100.0 {
                     let lateral_dist = (to_j - forward_i * forward_dist).length();
                     // In same lane if lateral distance < 2.5 meters
                     if lateral_dist < 2.5 {
-                        let bumper_gap = forward_dist - other.length_meters;
-                        if bumper_gap < min_gap {
-                            min_gap = bumper_gap;
-                            lead_speed = Some(other.speed_ms);
+                        let forward_j = Vec3::new(other.yaw.sin(), 0.0, other.yaw.cos());
+                        let heading_dot = forward_i.dot(forward_j);
+                        // Filter out oncoming opposing-lane traffic unless dangerously encroaching into same lane
+                        if heading_dot > 0.2 || (heading_dot <= 0.2 && lateral_dist < 1.2) {
+                            let bumper_gap = forward_dist - other.length_meters;
+                            if bumper_gap < min_gap {
+                                min_gap = bumper_gap;
+                                lead_speed = Some(other.speed_ms);
+                            }
                         }
                     }
                 }

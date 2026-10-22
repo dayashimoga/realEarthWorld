@@ -346,10 +346,15 @@ fn compute_polygon_centroid(ring: &[Wgs84Coord]) -> Wgs84Coord {
     if ring.is_empty() {
         return Wgs84Coord::new(0.0, 0.0, 0.0);
     }
-    let sum_lat: f64 = ring.iter().map(|p| p.lat).sum();
-    let sum_lon: f64 = ring.iter().map(|p| p.lon).sum();
-    let sum_alt: f64 = ring.iter().map(|p| p.alt).sum();
-    let n = ring.len() as f64;
+    let slice = if ring.len() > 1 && ring.first() == ring.last() {
+        &ring[..ring.len() - 1]
+    } else {
+        ring
+    };
+    let sum_lat: f64 = slice.iter().map(|p| p.lat).sum();
+    let sum_lon: f64 = slice.iter().map(|p| p.lon).sum();
+    let sum_alt: f64 = slice.iter().map(|p| p.alt).sum();
+    let n = slice.len() as f64;
     Wgs84Coord::new(sum_lat / n, sum_lon / n, sum_alt / n)
 }
 

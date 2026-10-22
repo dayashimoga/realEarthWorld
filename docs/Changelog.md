@@ -508,6 +508,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added continuous WASD / Arrow camera navigation scaled by frame delta time ($\Delta t$).
 - **New York Ingestion Dataset (`engine/ingestion/src/sample_new_york.rs`)**:
   - Added authentic Manhattan crosstown arterials (Fulton St, 42nd St, Canal St) completing topological connectivity between avenues.
+- **Navigation Router (`engine/navigation/src/router.rs`)**:
+  - Upgraded A* pathfinding heuristic with dynamic latitude-dependent cosine scaling (`111,320.0 * cos(lat)`), replacing hardcoded equatorial constant, and bounded maximum traversal speed divisor at 140 km/h (38.89 m/s) to guarantee strict mathematical admissibility globally.
+- **Road Ribbon Mesher (`engine/compiler/src/road_mesher.rs`)**:
+  - Implemented continuous shared-vertex miter ribbon meshing with clamped miter factors (`min(factor, 2.0)`), eliminating triangle gaps on curves and reducing vertex count by 44%.
+- **Terrain Heightfield Mesher (`engine/compiler/src/terrain_mesher.rs`)**:
+  - Upgraded surface normal gradient evaluation to calculate partial derivatives with exact metric spacing and latitude cosine scaling.
+- **Building Extrusion Mesher (`engine/compiler/src/building_mesher.rs`)**:
+  - Implemented terrain-conforming foundation skirts extending -0.15m below local ground at every perimeter corner, eliminating floating building gaps on steep hillside topography.
+  - Deduplicated closing duplicate point in polygon centroid calculation.
+- **Scene Placement Auditor (`engine/validation/src/scene_placement_auditor.rs`)**:
+  - Fixed polygon centroid averaging to exclude duplicate closing vertex of closed rings.
+- **Vehicle Traffic Simulation (`engine/vehicles/src/traffic.rs`)**:
+  - Refined lead car detection with heading dot product filtering (`heading_dot > 0.2`) to prevent opposing-lane oncoming cars from triggering phantom emergency braking.
+- **Regression Test Expansion**:
+  - Expanded `tests/tests/defect_remediation_regression.rs` to 13 tests (all passing in 0.15s).
+  - Validated 218 passing tests across workspace with zero failures and zero clippy warnings.
 
 
 

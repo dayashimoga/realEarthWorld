@@ -56,15 +56,18 @@ pub fn find_route(
             RoutingPreference::FastestTime => e.weight().traversal_time_seconds(),
         },
         |node_idx| {
-            // Admissible heuristic: Euclidean distance in meters
+            // Strictly admissible heuristic: Euclidean metric distance in meters
             let node = &network.graph[node_idx];
+            let mean_lat = (node.coord.lat + target_pos.lat) * 0.5;
+            let m_per_deg_lon = 111_320.0 * (mean_lat.to_radians()).cos().abs().max(0.1);
             let d_lat = (node.coord.lat - target_pos.lat) * 111_000.0;
-            let d_lon = (node.coord.lon - target_pos.lon) * 108_000.0;
+            let d_lon = (node.coord.lon - target_pos.lon) * m_per_deg_lon;
             let dist = (d_lat * d_lat + d_lon * d_lon).sqrt();
 
             match preference {
                 RoutingPreference::ShortestDistance => dist,
-                RoutingPreference::FastestTime => dist / (100.0 * 1000.0 / 3600.0), // Max highway speed
+                // Upper bound highway velocity (140 km/h = 38.89 m/s) guarantees h(n) <= h*(n) globally
+                RoutingPreference::FastestTime => dist / (140.0 * 1000.0 / 3600.0),
             }
         },
     );

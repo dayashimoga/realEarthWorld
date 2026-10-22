@@ -37,16 +37,20 @@ pub fn mesh_terrain(
 
             let enu = converter.wgs84_to_enu(coord);
 
-            // Compute normal by sampling slight offsets
+            // Compute physically accurate normal vector via partial derivatives with latitude cosine scaling
             let eps_deg = 1e-5;
             let e_r = dem.sample_bilinear(&Wgs84Coord::new(lat, lon + eps_deg, 0.0));
             let e_l = dem.sample_bilinear(&Wgs84Coord::new(lat, lon - eps_deg, 0.0));
             let e_u = dem.sample_bilinear(&Wgs84Coord::new(lat + eps_deg, lon, 0.0));
             let e_d = dem.sample_bilinear(&Wgs84Coord::new(lat - eps_deg, lon, 0.0));
 
-            let dx = (e_r - e_l) / 2.0;
-            let dz = (e_u - e_d) / 2.0;
-            let normal = Vec3::new(-dx, 1.0, -dz).normalize();
+            let cos_lat = (lat.to_radians()).cos().abs().max(0.1);
+            let delta_x_m = 2.0 * eps_deg * 111_320.0 * cos_lat;
+            let delta_z_m = 2.0 * eps_deg * 111_000.0;
+
+            let slope_x = (e_r - e_l) / (delta_x_m as f32);
+            let slope_z = (e_u - e_d) / (delta_z_m as f32);
+            let normal = Vec3::new(-slope_x, 1.0, -slope_z).normalize();
 
             vertices.push(Vertex::new(
                 [enu.east as f32, elev, enu.north as f32],

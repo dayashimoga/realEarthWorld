@@ -18,11 +18,16 @@ pub fn mesh_building(
         return ChunkMesh::default();
     }
 
-    // 1. Calculate centroid to sample base ground elevation
-    let mean_lat =
-        building.outer_ring.iter().map(|p| p.lat).sum::<f64>() / building.outer_ring.len() as f64;
-    let mean_lon =
-        building.outer_ring.iter().map(|p| p.lon).sum::<f64>() / building.outer_ring.len() as f64;
+    // 1. Calculate centroid to sample base ground elevation (excluding closing duplicate point)
+    let ring_slice = if building.outer_ring.len() > 1
+        && building.outer_ring.first() == building.outer_ring.last()
+    {
+        &building.outer_ring[..building.outer_ring.len() - 1]
+    } else {
+        &building.outer_ring[..]
+    };
+    let mean_lat = ring_slice.iter().map(|p| p.lat).sum::<f64>() / ring_slice.len() as f64;
+    let mean_lon = ring_slice.iter().map(|p| p.lon).sum::<f64>() / ring_slice.len() as f64;
     let centroid = realearth_shared::coordinates::Wgs84Coord::new(mean_lat, mean_lon, 0.0);
     let base_elev = dem.sample_bilinear(&centroid);
     let roof_elev = base_elev + building.height.height_meters as f32;
@@ -50,7 +55,7 @@ pub fn mesh_building(
         BuildingType::Other => ([0.75, 0.75, 0.75, 1.0], [0.50, 0.50, 0.50, 1.0]),
     };
 
-    // 3. Extrude vertical walls
+    // 3. Extrude vertical walls with terrain-adaptive foundation skirts
     for i in 0..(enu_pts.len() - 1) {
         let p0 = enu_pts[i];
         let p1 = enu_pts[i + 1];
@@ -64,10 +69,17 @@ pub fn mesh_building(
         let normal = Vec3::new(-edge.z, 0.0, edge.x).normalize();
         let norm_arr = [normal.x, normal.y, normal.z];
 
+        // Sample terrain height at each vertex to prevent downhill floating or gaps on slopes
+        let ground0 = dem.sample_bilinear(&building.outer_ring[i]);
+        let ground1 = dem.sample_bilinear(&building.outer_ring[i + 1]);
+        // Anchor wall bottom slightly below local ground level (-0.15m skirt)
+        let wall_bottom0 = ground0.min(base_elev) - 0.15;
+        let wall_bottom1 = ground1.min(base_elev) - 0.15;
+
         let base_idx = vertices.len() as u32;
 
-        let v0 = Vertex::new([p0.x, base_elev, p0.z], norm_arr, [0.0, 0.0], wall_color);
-        let v1 = Vertex::new([p1.x, base_elev, p1.z], norm_arr, [1.0, 0.0], wall_color);
+        let v0 = Vertex::new([p0.x, wall_bottom0, p0.z], norm_arr, [0.0, 0.0], wall_color);
+        let v1 = Vertex::new([p1.x, wall_bottom1, p1.z], norm_arr, [1.0, 0.0], wall_color);
         let v2 = Vertex::new([p1.x, roof_elev, p1.z], norm_arr, [1.0, 1.0], wall_color);
         let v3 = Vertex::new([p0.x, roof_elev, p0.z], norm_arr, [0.0, 1.0], wall_color);
 
