@@ -11,7 +11,7 @@ pub struct GeoBounds {
 }
 
 impl GeoBounds {
-    pub fn new(min_lat: f64, max_lat: f64, min_lon: f64, max_lon: f64) -> Self {
+    pub const fn new(min_lat: f64, max_lat: f64, min_lon: f64, max_lon: f64) -> Self {
         assert!(min_lat <= max_lat, "min_lat must be <= max_lat");
         assert!(min_lon <= max_lon, "min_lon must be <= max_lon");
         Self {

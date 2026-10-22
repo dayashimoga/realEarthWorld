@@ -15,6 +15,7 @@ pub mod sample_mysuru;
 pub mod sample_new_york;
 pub mod sample_san_francisco;
 pub mod sample_seattle;
+pub mod us_cities;
 
 pub use acquisition::{
     compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest, SourceProvenance,
@@ -38,6 +39,7 @@ pub use sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 pub use sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
 pub use sample_san_francisco::{create_san_francisco_dataset, generate_san_francisco_osm_xml};
 pub use sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
+pub use us_cities::generate_us_city_dataset;
 
 #[cfg(test)]
 mod tests {

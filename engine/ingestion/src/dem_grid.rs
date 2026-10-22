@@ -401,6 +401,72 @@ impl DemGrid {
         }
     }
 
+    /// Generates a realistic DEM for any defined US city conforming to USGS 3DEP / NAVD88 limits.
+    pub fn create_us_city_dem(
+        city: &realearth_shared::us_catalog::UsCityDefinition,
+        width: usize,
+        height: usize,
+    ) -> Self {
+        match city.id {
+            "san-francisco" => return Self::create_san_francisco_coastal_dem(width, height),
+            "new-york" => return Self::create_new_york_coastal_dem(width, height),
+            "los-angeles" => return Self::create_los_angeles_basin_dem(width, height),
+            "chicago" => return Self::create_chicago_loop_dem(width, height),
+            "seattle" => return Self::create_seattle_coastal_dem(width, height),
+            "miami" => return Self::create_miami_coastal_dem(width, height),
+            _ => {}
+        }
+
+        let bounds = city.bounds;
+        let min_e = city.elevation_min_m;
+        let max_e = city.elevation_max_m;
+        let delta_e = (max_e - min_e).max(1.0);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1).max(1) as f64; // North to South
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64; // West to East
+
+                let elev = if city.has_maritime_port {
+                    // Coastal slope: water along eastern edge, rising inland to west
+                    if u > 0.85 {
+                        min_e
+                    } else {
+                        let inland_factor = (0.85 - u) / 0.85;
+                        let wave = ((v * 8.0).sin() * 0.15) as f32;
+                        min_e + (inland_factor as f32 * delta_e * 0.85) + wave * delta_e
+                    }
+                } else if city.id == "denver" {
+                    // Rocky mountain front range rising to the west (u -> 0)
+                    let west_rise = (1.0 - u).powf(1.5) as f32;
+                    min_e + west_rise * delta_e
+                } else if city.id == "salt-lake-city" {
+                    // Wasatch range rising steeply to the east (u -> 1)
+                    let east_rise = u.powf(1.5) as f32;
+                    min_e + east_rise * delta_e
+                } else if city.id == "pittsburgh" {
+                    // River valley confluence at center, hills rising North/South
+                    let valley_dist = (v - 0.50).abs() as f32;
+                    min_e + valley_dist * delta_e
+                } else {
+                    // Rolling urban topography
+                    let wave = ((u * 6.0).sin() * 0.35 + (v * 5.0).cos() * 0.35 + 0.7) as f32;
+                    min_e + (wave * 0.5 * delta_e)
+                };
+
+                elevations.push(elev.clamp(min_e, max_e));
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
     /// Returns elevation at discrete grid indices (x, y).
     #[inline]
     pub fn get_at(&self, x: usize, y: usize) -> f32 {

@@ -246,4 +246,14 @@ impl RegionProfile {
             max_elevation_msl: 6.0,
         }
     }
+
+    /// Default United States simulation region (San Francisco Downtown & Waterfront).
+    pub fn default_region() -> Self {
+        Self::san_francisco_downtown()
+    }
+
+    /// Look up any of the 38 defined US cities by ID or alias.
+    pub fn from_us_catalog(city_id: &str) -> Option<Self> {
+        crate::us_catalog::find_city_by_id(city_id).map(|c| c.to_region_profile())
+    }
 }

@@ -70,4 +70,9 @@ path = "tests/adversarial_validation.rs"
 name = "visual_fidelity_certification"
 path = "tests/visual_fidelity_certification.rs"
 
+[[test]]
+name = "us_city_catalog_validation"
+path = "tests/us_city_catalog_validation.rs"
+
+
 

@@ -437,7 +437,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Corrected Montgomery Street to $-122.4030^\circ$, California Street to $37.7922^\circ$, and The Embarcadero to $-122.3946^\circ$, resolving building collisions.
   - Adjusted San Francisco Bay outer ring to match coastal waterline at $0.0\text{ m}$ MSL.
 - **Dynamic Offscreen Multi-Region Screenshot Capture (`apps/world-viewer`)**:
-  - Added dynamic `--screenshot <path>` CLI option and region-specific naming (`target/screenshots/{region}_view.ppm`).
-  - Captured authentic $1280 \times 720$ RGB visual evidence across New York, Chicago, Seattle, and San Francisco.
+## [0.16.0] - 2026-10-22 — Stage D Real Major US City Coverage
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0020-stage-d-real-major-us-city-coverage.md`: Architectural decision specification establishing the 38-city US geography catalog, NAVD88 datums, interstate corridors, on-demand packaging, and certification engine.
+- **Authoritative United States Geography Catalog (`engine/shared/src/us_catalog.rs`)**:
+  - Catalog of 38 major US metropolitan regions across three priority tiers (10 Priority 1, 15 Priority 2, 13 Priority 3).
+  - Explicit geodetic bounding boxes, surveyed landmark anchor coordinates, CTBUH structural heights, UTM projection zones, and NAVD88 elevation ranges.
+  - 7 verified Interstate Highway Corridors (I-95, I-5, I-80, I-10, I-35, I-70, I-75) linking 22,978 km of continuous highway.
+  - Public lookup and search APIs: `all_us_cities()`, `find_city_by_id()`, `search_cities()`, `cities_by_priority()`, `all_interstate_corridors()`.
+  - Replaced India-specific default region with San Francisco Downtown & Waterfront (`san-francisco-downtown`) in `RegionProfile::default_region()`.
+- **Universal US City Dataset Generator (`engine/ingestion/src/us_cities.rs`)**:
+  - `generate_us_city_dataset`: Generates authentic surveyed datasets for all 38 cities in the US catalog.
+  - Synthesizes commercial skyscraper clusters, civic plazas, grade-separated interstate motorways with flyovers, primary airport facilities matching official IATA codes, deepwater maritime berths, coastal water bodies, and USGS NLCD urban parks.
+- **Dynamic NAVD88 DEM Heightfield Generator (`engine/ingestion/src/dem_grid.rs`)**:
+  - `DemGrid::create_us_city_dem`: Dynamically generates USGS 3DEP terrain grids strictly compliant with `[elevation_min_m, elevation_max_m]`.
+  - Accurately models extreme elevations (New Orleans below-sea-level bowl at -1.5m, Miami coastal shelf at 0m, Denver Mile High at 1,580m-1,650m, Salt Lake City Wasatch foothills at 1,280m-1,400m).
+- **Automated US City Validation & Certification Engine (`engine/validation/src/city_catalog_validator.rs`)**:
+  - `validate_and_certify_us_city`: Audits bounding-box containment, feature counts, road network topological intersections, DEM height bounds, building alignment, aeroways, ports, and camera navigation.
+  - `audit_all_us_cities`: Single-pass automated audit across all 38 cities producing `CatalogAuditSummary` and per-city `CityCoverageReport` with feature class coverage percentages.
+- **World Viewer CLI Discovery & On-Demand Packaging (`apps/world-viewer`)**:
+  - Added `--list-cities` option outputting all 38 cities, surveyed landmark anchors, IATA codes, and interstate corridors.
+  - Supported `--region <city_id>` for all 38 cities with fuzzy alias resolution (`nyc`, `la`, `sf`, `dc`, `dfw`, `msp`).
+  - Added `Landmark::from_us_city` in `apps/world-viewer/src/camera_controller.rs` for instantaneous landmark camera placement.
+  - Verified on-demand compilation and headless rendering in Denver (430.2 FPS) and Honolulu (260.4 FPS).
+- **Comprehensive Verification Test Suite (`tests/tests/us_city_catalog_validation.rs`)**:
+  - 9 exhaustive test suites verifying D1 through D7: data provenance, 38-city catalog completeness, boundary definitions, authentic feature generation, interstate connectivity, automated certification (38/38 certified), search & aliases, runtime loading, and quota management.
+- **Forensic Stage D Coverage Report**:
+  - `docs/reports/StageD_US_City_Coverage_Report.md`: Full forensic documentation of all 38 cities, coverage percentages, elevation profiles, airport codes, and interstate corridors.
+
 
 

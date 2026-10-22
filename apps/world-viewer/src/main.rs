@@ -13,6 +13,7 @@ use realearth_gameplay::{
     CareerType, GameplayEventBus, GameplayHudModel, JobCatalogGenerator, PlayerProfile,
 };
 use realearth_ingestion::dem_grid::DemGrid;
+use realearth_ingestion::generate_us_city_dataset;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
 use realearth_ingestion::sample_chicago::create_chicago_dataset;
@@ -27,6 +28,9 @@ use realearth_ingestion::sample_seattle::create_seattle_dataset;
 use realearth_navigation::{RoadNetworkGraph, RuleOfTheRoad};
 use realearth_rendering::{
     FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, RealEarthRenderer,
+};
+use realearth_shared::us_catalog::{
+    all_interstate_corridors, cities_by_priority, find_city_by_id, CityPriorityTier,
 };
 use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
@@ -45,7 +49,10 @@ fn print_usage() {
     println!();
     println!("Options:");
     println!(
-        "  --region <nyc|la|chicago|seattle|miami|sf|bengaluru|mysuru|chennai|hyderabad|corridors> Target region (default: san-francisco)"
+        "  --region <city-id>                      Target region (e.g. sf, nyc, la, chicago, seattle, miami, boston, phx, denver, dallas, etc. Run --list-cities for all 38, default: san-francisco)"
+    );
+    println!(
+        "  --list-cities                           List all 38 supported United States metropolitan regions and status"
     );
     println!(
         "  --multi-region                          Stream across all mounted geographic regions"
@@ -96,6 +103,56 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    if args.iter().any(|a| a == "--list-cities") {
+        println!("==========================================================================================");
+        println!(
+            "AUTHORITATIVE UNITED STATES GEOGRAPHY CATALOG (38 CITIES ACROSS 3 PRIORITY TIERS)"
+        );
+        println!("==========================================================================================");
+        for tier in [
+            CityPriorityTier::Priority1Primary,
+            CityPriorityTier::Priority2Major,
+            CityPriorityTier::Priority3Extended,
+        ] {
+            let label = match tier {
+                CityPriorityTier::Priority1Primary => {
+                    "PRIORITY 1: PRIMARY METROPOLITAN REGIONS (10 CITIES)"
+                }
+                CityPriorityTier::Priority2Major => {
+                    "PRIORITY 2: ADDITIONAL MAJOR METROPOLITAN REGIONS (15 CITIES)"
+                }
+                CityPriorityTier::Priority3Extended => "PRIORITY 3: EXTENDED US CITIES (13 CITIES)",
+            };
+            println!("\n--- {} ---", label);
+            for city in cities_by_priority(tier) {
+                println!(
+                    "  [{:<14}] {:<24} ({}) | Anchor: {:<32} ({:>5.1}m) | IATA: {:<3} | Elev: [{:>4.0}m..{:>4.0}m] | Port: {:<5}",
+                    city.id,
+                    city.name,
+                    city.state,
+                    city.anchor_landmark_name,
+                    city.anchor_height_m,
+                    city.primary_airport_iata,
+                    city.elevation_min_m,
+                    city.elevation_max_m,
+                    if city.has_maritime_port { "Yes" } else { "No" },
+                );
+            }
+        }
+        println!("\n--- INTERSTATE HIGHWAY CORRIDORS (7 CONNECTIVITY CORRIDORS) ---");
+        for corridor in all_interstate_corridors() {
+            println!(
+                "  [{:<5}] {:<32} | {:>6.0} km | Links: {}",
+                corridor.designation,
+                corridor.name,
+                corridor.length_km,
+                corridor.connected_cities.join(" <-> ")
+            );
+        }
+        println!("==========================================================================================");
+        return Ok(());
+    }
+
     let is_headless = args.iter().any(|a| a == "--headless" || a == "--benchmark")
         || std::env::var("CI").is_ok()
         || std::env::var("HEADLESS").is_ok();
@@ -106,23 +163,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|idx| args.get(idx + 1))
         .map(|s| s.to_lowercase())
         .unwrap_or_else(|| {
-            if args.iter().any(|a| {
-                let lower = a.to_lowercase();
-                lower.contains("nyc") || lower.contains("new-york") || lower.contains("manhattan")
-            }) {
-                "new-york".to_string()
-            } else if args.iter().any(|a| {
-                let lower = a.to_lowercase();
-                lower.contains("la") || lower.contains("los-angeles")
-            }) {
-                "los-angeles".to_string()
-            } else if args.iter().any(|a| a.to_lowercase().contains("chicago")) {
-                "chicago".to_string()
-            } else if args.iter().any(|a| a.to_lowercase().contains("seattle")) {
-                "seattle".to_string()
-            } else if args.iter().any(|a| a.to_lowercase().contains("miami")) {
-                "miami".to_string()
-            } else if args
+            for arg in &args {
+                let lower = arg.to_lowercase();
+                if let Some(city) = find_city_by_id(&lower) {
+                    return city.id.to_string();
+                }
+            }
+            if args
                 .iter()
                 .any(|a| a.to_lowercase().contains("bengaluru") || a.to_lowercase() == "in")
             {
@@ -247,7 +294,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. Prepare world package for region
     let (world_dir, region_name, default_landmark, dem, raw_dataset) =
-        if region_arg.contains("mysuru") {
+        if let Some(city) = find_city_by_id(&region_arg) {
+            let dir = PathBuf::from(format!("target/world_{}", city.id.replace('-', "_")));
+            let dem = DemGrid::create_us_city_dem(city, 64, 64);
+            let raw = generate_us_city_dataset(city);
+            if !dir.join("chunks.db").exists() {
+                println!(
+                    "📦 Compiling cached {} ({}) package...",
+                    city.name, city.state
+                );
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (dir, city.name, Landmark::from_us_city(city), dem, raw)
+        } else if region_arg.contains("mysuru") {
             let dir = PathBuf::from("target/world_mysuru");
             let dem = DemGrid::create_mysuru_dem(64, 64);
             let raw = create_mysuru_dataset();

@@ -219,6 +219,20 @@ impl Landmark {
         yaw: -1.57,
         pitch: -0.2,
     };
+
+    /// Creates a camera bookmark dynamically for any US city definition.
+    pub fn from_us_city(city: &realearth_shared::us_catalog::UsCityDefinition) -> Self {
+        Self {
+            name: city.anchor_landmark_name,
+            coord: Wgs84Coord {
+                lat: city.anchor.lat,
+                lon: city.anchor.lon,
+                alt: city.anchor.alt + (city.anchor_height_m as f64 * 0.20).max(25.0),
+            },
+            yaw: city.anchor_yaw,
+            pitch: city.anchor_pitch,
+        }
+    }
 }
 
 /// Interactive camera controller.
