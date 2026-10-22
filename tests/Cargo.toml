@@ -92,5 +92,9 @@ path = "tests/release_integrity_certification.rs"
 name = "performance_security_reliability"
 path = "tests/performance_security_reliability.rs"
 
+[[test]]
+name = "final_production_certification"
+path = "tests/final_production_certification.rs"
+
 
 
