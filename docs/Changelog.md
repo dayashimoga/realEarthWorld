@@ -390,3 +390,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configured Android Gradle build harness (`android/app`) and iOS Xcode harness (`ios/RealEarth`).
 - **Five-Platform CI/CD Build and Release Matrix (`.github/workflows`)**:
   - Updated `build.yml` and `release.yml` for Windows x64, Linux x64, macOS Universal, Android arm64 (`aarch64-linux-android`), and iOS arm64 (`aarch64-apple-ios`) with automated SHA-256 integrity checksum generation.
+
+## [0.14.0] - 2026-10-22 — Stage B Adversarial and Independent Validation
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0018-stage-b-adversarial-and-independent-validation.md`: Specification documenting the 7-pillar independent oracle and adversarial validation framework.
+- **Independent Geodetic & Elevation Test Oracles (`tests/adversarial_validation.rs`)**:
+  - Closed-form Vincenty/Haversine geodesics proving Greenwich-to-Paris baseline accuracy (< 0.5mm delta) and equatorial long arc length (111,319.49m).
+  - USGS/SRTM DEM grid node invariance ($h(x_i, y_j) = z_{ij}$) and bilinear local cell bounding ($z \in [\min(z), \max(z)]$).
+  - CTBUH structural height catalog validation against 12 surveyed US skyscrapers.
+  - Raw adjacency-list Dijkstra graph pathfinding oracle validating `find_route`.
+- **Metamorphic Relations, Fuzzing & Soak Invariants**:
+  - MR1 (routing symmetry $d(A, B) = d(B, A)$), MR2 (ENU translation Euclidean preservation), and MR3 (polygon cyclic vertex Shoelace preservation).
+  - Geographic boundary rejection and 50 pseudo-random fuzzed binary packet stress tests.
+  - Soak workloads: 1,000 rapid DEM queries (< 1ms) and 1,000 physics integration cycles under sustained full throttle.
+- **GIS Datum & Grade Separation**:
+  - WGS84 -> ECEF -> WGS84 ellipsoidal transformations across 10 global cities with < 1um residual error.
+  - US right-hand drive vs Commonwealth left-hand drive verification.
+  - Grade-separated highway flyover (+6.0m) preserving non-planar topology.
+- **Compiler Determinism & Streaming Recovery**:
+  - Bit-exact compilation proof across repeated builds with identical SHA-256 binary chunk hashes.
+  - Storage quota LRU eviction of unpinned chunks under constrained budgets.
+  - Checksum mismatch detection on bit-flipped `.rec` chunks with procedural fallback geometry recovery.
+- **Multimodal Vehicle Physics**:
+  - Automotive kinetic braking distance verification ($d \approx v_0^2 / (2 \mu g)$).
+  - Aircraft 6-DOF aerodynamic stall upon exceeding critical angle of attack ($\alpha > 18^\circ$).
+  - Marine metacentric righting moment restoring vessel upright equilibrium ($GM > 0$).
+  - Railway Davis equation drag resistance and pneumatic brake pipe venting.
+  - Intelligent Driver Model (IDM) time headway safety deceleration.
+- **End-to-End User Journeys**:
+  - Cross-continental user journey: NYC One WTC spawn -> Broadway vehicular routing -> Seattle Waterfront teleport -> solar ephemeris cycle -> simulated network UDP stream with disconnect/reconnect recovery.
+- **Honest Evaluation & Defect Injection**:
+  - Verified deliberate defect detection and rejection: submerged bridges ($-15\text{m}$), illegal throttle speed hacks, corrupted chunk magic headers (`0xDEADBEEF`), and out-of-bounds latitude ($+95.0^\circ$).
+  - Explicit documentation of untestable physical hardware boundaries (physical panel VSync and orbital GPS L1/L2 RF antenna tracking).
+

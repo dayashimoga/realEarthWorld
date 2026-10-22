@@ -62,3 +62,8 @@ path = "tests/planetary_infrastructure.rs"
 name = "gis_validation_compiler"
 path = "tests/gis_validation_compiler.rs"
 
+[[test]]
+name = "adversarial_validation"
+path = "tests/adversarial_validation.rs"
+
+

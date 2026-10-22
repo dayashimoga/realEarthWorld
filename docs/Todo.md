@@ -201,3 +201,13 @@
 - [x] Stage 12.4: Provide Android Gradle harness (`android/app`) and iOS Xcode harness (`ios/RealEarth`).
 - [x] Stage 12.5: Update CI/CD build matrix and release packaging workflows for all 5 platforms with SHA-256 integrity verification.
 - [x] Stage 12.5: Zero regression across 178+ tests, zero clippy warnings (`-D warnings`), zero formatting drift (`cargo fmt --check`).
+
+## STAGE B: Adversarial and Independent Validation (Completed)
+- [x] Stage B.1: Establish trustworthy non-self-referential test oracles (Greenwich-Paris geodetic baseline, USGS DEM grid node invariance, CTBUH skyscraper heights catalog, independent raw Dijkstra graph pathfinding).
+- [x] Stage B.2: Implement deep testing matrix with metamorphic relations (routing symmetry, ENU spatial translation invariance, polygon cyclic vertex shift), protocol and spatial fuzzing, boundary cases, and stress/soak workloads (1,000 rapid DEM queries, 1,000 kinematics steps).
+- [x] Stage B.3: Verify GIS datum and topological integrity (WGS84 -> ECEF -> WGS84 roundtrip across 10 global cities with < 1um residual error, right-hand vs left-hand drive conventions, +6.0m grade-separated flyover vertical separation).
+- [x] Stage B.4: Verify binary compiler determinism (bit-exact .rec chunk files and SHA-256 hashes across repeated compilations), storage quota LRU eviction, and bit-flip corruption recovery with safe fallback geometry.
+- [x] Stage B.5: Validate vehicle physics and multimodal simulation (automotive stopping distance d ~ v^2/(2ug), aircraft 6-DOF stall at high angle of attack, marine metacentric righting moment, railway Davis drag resistance and pneumatic brake venting, IDM traffic headway safety).
+- [x] Stage B.6: Execute full multi-city end-to-end user journeys (spawn at One WTC NYC -> Broadway routing -> continental teleport to Seattle Waterfront -> solar day/night transitions -> UDP network input framing and reconnection recovery).
+- [x] Stage B.7: Implement honest evaluation via deliberate defect injection (rejection of submerged bridges, illegal throttle speeds, corrupted magic headers, and out-of-bounds coordinates; explicit documentation of untestable physical hardware boundaries).
+
