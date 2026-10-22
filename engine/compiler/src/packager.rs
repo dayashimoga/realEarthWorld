@@ -17,10 +17,28 @@ pub fn pack_chunk_to_bytes(chunk: &WorldChunk) -> Result<Vec<u8>> {
     Ok(compressed)
 }
 
+/// Maximum allowable uncompressed chunk buffer size (64 MiB).
+/// Prevents memory exhaustion attacks via decompression bombs.
+pub const MAX_UNCOMPRESSED_CHUNK_BYTES: usize = 64 * 1024 * 1024;
+
 /// Decompresses and deserializes a binary buffer into a WorldChunk.
+/// Enforces bounded memory decompression to protect against malicious compression bombs.
 pub fn unpack_chunk_from_bytes(bytes: &[u8]) -> Result<WorldChunk> {
-    let decompressed = zstd::decode_all(bytes)
+    let mut decoder = zstd::Decoder::new(bytes)
+        .map_err(|e| RealEarthError::Serialization(format!("Zstd decoder init failed: {}", e)))?;
+
+    let mut decompressed = Vec::new();
+    let mut limited = (&mut decoder).take(MAX_UNCOMPRESSED_CHUNK_BYTES as u64 + 1);
+    limited
+        .read_to_end(&mut decompressed)
         .map_err(|e| RealEarthError::Serialization(format!("Chunk decompression failed: {}", e)))?;
+
+    if decompressed.len() > MAX_UNCOMPRESSED_CHUNK_BYTES {
+        return Err(RealEarthError::Serialization(format!(
+            "Decompressed chunk payload exceeds maximum allowed size of {} bytes (potential decompression bomb)",
+            MAX_UNCOMPRESSED_CHUNK_BYTES
+        )));
+    }
 
     let chunk: WorldChunk = bincode::deserialize(&decompressed).map_err(|e| {
         RealEarthError::Serialization(format!("Chunk deserialization failed: {}", e))

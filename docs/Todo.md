@@ -232,5 +232,20 @@
 - [x] Stage D.6: Implement automated city validation and certification engine (`city_catalog_validator.rs`) certifying 38/38 cities with 97.8% mean readiness and 100% NAVD88 DEM compliance.
 - [x] Stage D.7: Implement CLI discovery (`realearth-viewer --list-cities`), fuzzy alias matching (`find_city_by_id`), camera bookmarks (`Landmark::from_us_city`), on-demand single-city compilation, and storage quota management.
 
+## STAGE E: Complete Defect Remediation (Completed)
+- [x] Stage E.1: Prioritize defects by strict severity: P0 data integrity and security, P1 geographic, physics, and navigation invariants, P2 interactive navigation and UX.
+- [x] Stage E.2: Root-cause remediation of P0 SQLite WAL mode concurrency, busy timeout, and antimeridian spatial queries in `engine/compiler/src/database.rs`.
+- [x] Stage E.2: Root-cause remediation of P0 unbounded Zstandard decompression bomb vulnerability with a strict 64 MiB memory budget in `engine/compiler/src/packager.rs`.
+- [x] Stage E.2: Root-cause remediation of P1 Western hemisphere negative longitude coordinate preservation (signed `i64` keying) in `engine/navigation/src/road_graph.rs`.
+- [x] Stage E.2: Root-cause remediation of P1 antimeridian-spanning DEM continuous bilinear interpolation in `engine/ingestion/src/dem_grid.rs`.
+- [x] Stage E.2: Root-cause remediation of P1 IDM car-following zero-headway regularization and bumper collision protection in `engine/vehicles/src/traffic.rs`.
+- [x] Stage E.2: Root-cause remediation of P1 low-speed automotive tire lateral scrub continuity in `engine/vehicles/src/dynamics.rs`.
+- [x] Stage E.2: Root-cause remediation of P2 continuous keypress tracking and framerate-independent camera navigation in `apps/world-viewer/src/interactive.rs`.
+- [x] Stage E.3: Implement dedicated regression test suite (`tests/tests/defect_remediation_regression.rs`) reproducing and verifying all remediated defect categories (8 tests passing in 0.19s).
+- [x] Stage E.4: Verify systemic quality across all comparable modules (SQLite calls, decompression routines, spatial keys, and multimodal routing).
+- [x] Stage E.4: Verify 100% workspace test suite pass rate (213 tests across 14 integration test suites and 13 unit test suites).
+- [x] Stage E.4: Publish ADR-0021 (`docs/adr/0021-stage-e-complete-defect-remediation.md`) and Stage E Forensic Report (`docs/reports/StageE_Defect_Remediation_Report.md`).
+
+
 
 

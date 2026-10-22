@@ -60,6 +60,10 @@ impl ChunkDatabase {
 
         conn.execute_batch(
             "
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA busy_timeout = 5000;
+
             CREATE TABLE IF NOT EXISTS chunks (
                 chunk_x INTEGER NOT NULL,
                 chunk_y INTEGER NOT NULL,
@@ -148,22 +152,31 @@ impl ChunkDatabase {
     }
 
     /// Queries all chunks intersecting a geographic bounding box.
+    /// Fully handles bounding boxes spanning the 180° antimeridian.
     pub fn query_bbox(&self, bbox: &GeoBounds) -> Result<Vec<ChunkIndexRecord>> {
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT chunk_x, chunk_y, lod_level,
-                        min_lat, max_lat, min_lon, max_lon,
-                        min_alt, max_alt,
-                        compressed_bytes, uncompressed_bytes, feature_count,
-                        storage_path, file_offset
-                 FROM chunks
-                 WHERE min_lat <= ?2 AND max_lat >= ?1
-                   AND min_lon <= ?4 AND max_lon >= ?3",
-            )
-            .map_err(|e| {
-                RealEarthError::Compilation(format!("SQLite prepare query error: {}", e))
-            })?;
+        let sql = if bbox.crosses_antimeridian() {
+            "SELECT chunk_x, chunk_y, lod_level,
+                    min_lat, max_lat, min_lon, max_lon,
+                    min_alt, max_alt,
+                    compressed_bytes, uncompressed_bytes, feature_count,
+                    storage_path, file_offset
+             FROM chunks
+             WHERE min_lat <= ?2 AND max_lat >= ?1
+               AND (max_lon >= ?3 OR min_lon <= ?4)"
+        } else {
+            "SELECT chunk_x, chunk_y, lod_level,
+                    min_lat, max_lat, min_lon, max_lon,
+                    min_alt, max_alt,
+                    compressed_bytes, uncompressed_bytes, feature_count,
+                    storage_path, file_offset
+             FROM chunks
+             WHERE min_lat <= ?2 AND max_lat >= ?1
+               AND min_lon <= ?4 AND max_lon >= ?3"
+        };
+
+        let mut stmt = self.conn.prepare(sql).map_err(|e| {
+            RealEarthError::Compilation(format!("SQLite prepare query error: {}", e))
+        })?;
 
         let rows = stmt
             .query_map(
@@ -174,11 +187,17 @@ impl ChunkDatabase {
                     let min_lon: f64 = row.get(5)?;
                     let max_lon: f64 = row.get(6)?;
 
+                    let bounds = if min_lon > max_lon {
+                        GeoBounds::new_antimeridian(min_lat, max_lat, min_lon, max_lon)
+                    } else {
+                        GeoBounds::new(min_lat, max_lat, min_lon, max_lon)
+                    };
+
                     Ok(ChunkIndexRecord {
                         chunk_x: row.get(0)?,
                         chunk_y: row.get(1)?,
                         lod_level: row.get(2)?,
-                        bounds: GeoBounds::new(min_lat, max_lat, min_lon, max_lon),
+                        bounds,
                         min_alt: row.get(7)?,
                         max_alt: row.get(8)?,
                         compressed_bytes: row.get::<_, i64>(9)? as usize,

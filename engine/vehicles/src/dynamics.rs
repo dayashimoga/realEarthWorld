@@ -283,11 +283,11 @@ impl DynamicVehicle {
                 let v_forward = contact_vel.dot(wheel_forward);
                 let v_lateral = contact_vel.dot(wheel_right);
 
-                // Tire Slip Angle
+                // Tire Slip Angle: continuous across all speeds without zero-slip deadzone
                 wheel.slip_angle = if v_forward.abs() > 0.5 {
                     (v_lateral / v_forward.abs()).atan()
                 } else {
-                    0.0
+                    (v_lateral / 0.5).clamp(-1.0, 1.0) * (std::f32::consts::FRAC_PI_4)
                 };
 
                 // Longitudinal Force (Traction & Braking)

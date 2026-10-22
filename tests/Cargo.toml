@@ -21,6 +21,7 @@ wgpu.workspace = true
 glam.workspace = true
 tempfile = "3.17"
 tokio.workspace = true
+zstd = "0.13"
 
 [[test]]
 name = "end_to_end_pipeline"
@@ -73,6 +74,10 @@ path = "tests/visual_fidelity_certification.rs"
 [[test]]
 name = "us_city_catalog_validation"
 path = "tests/us_city_catalog_validation.rs"
+
+[[test]]
+name = "defect_remediation_regression"
+path = "tests/defect_remediation_regression.rs"
 
 
 

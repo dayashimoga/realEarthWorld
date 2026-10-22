@@ -466,5 +466,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Forensic Stage D Coverage Report**:
   - `docs/reports/StageD_US_City_Coverage_Report.md`: Full forensic documentation of all 38 cities, coverage percentages, elevation profiles, airport codes, and interstate corridors.
 
+## [0.17.0] - 2026-10-22 — Stage E Complete Defect Remediation
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0021-stage-e-complete-defect-remediation.md`: Architectural decision specification documenting root causes, prioritized repairs (P0 through P3), regression test harness, systemic audit, and unresolved technical constraints.
+- **Dedicated Regression Test Suite (`tests/tests/defect_remediation_regression.rs`)**:
+  - 8 rigorous regression tests reproducing and certifying all remediated defects:
+    - `test_e1_sqlite_wal_concurrency_and_busy_timeout`: 8 concurrent worker threads reading and writing to `chunks.db` without `SQLITE_BUSY` errors.
+    - `test_e1_antimeridian_spatial_query_remediation`: Queries bounding boxes spanning across 180° meridian (177°E to -177°W) without losing Pacific chunks.
+    - `test_e1_decompression_bomb_dos_mitigation`: Bounded memory decompression rejecting 70+ MiB compression bombs while safely unpacking legitimate chunks.
+    - `test_e2_navigation_western_negative_longitudes_and_layer_isolation`: Preserves negative coordinates across the Western hemisphere with sub-millimeter precision.
+    - `test_e2_dem_antimeridian_bilinear_interpolation_invariance`: Bilinear elevation sampling across the 180° meridian without debug panics or NaN values.
+    - `test_e3_idm_bumper_penetration_and_zero_headway_regularization`: Zero headway triggers `-8.0 m/s^2` emergency braking and zero forward bumper penetration.
+    - `test_e4_vehicle_dynamics_low_speed_lateral_scrub_continuity`: Automotive tires maintain continuous lateral scrub resistance at low/zero forward speed.
+    - `test_e4_systemic_regression_full_spectrum_verification`: WGS84 $\leftrightarrow$ ECEF roundtrip and A* route resolution across Western hemisphere coordinates.
+- **Forensic Stage E Defect Remediation Report**:
+  - `docs/reports/StageE_Defect_Remediation_Report.md`: Full forensic documentation of prioritized defects, root causes, remediations, systemic cross-module reviews, and verification metrics.
+
+### Changed
+- **Database Indexer (`engine/compiler/src/database.rs`)**:
+  - Configured `PRAGMA journal_mode = WAL;`, `PRAGMA synchronous = NORMAL;`, and `PRAGMA busy_timeout = 5000;` on connection establishment.
+  - Implemented `bbox.crosses_antimeridian()` branching in `query_bbox` to support queries crossing the 180° meridian.
+  - Instantiated `GeoBounds::new_antimeridian` when `min_lon > max_lon` to prevent assertions when loading antimeridian tiles.
+- **Binary Chunk Packager (`engine/compiler/src/packager.rs`)**:
+  - Established `MAX_UNCOMPRESSED_CHUNK_BYTES = 64 * 1024 * 1024` (64 MiB).
+  - Used bounded streaming decompression (`take(64MB + 1)`) in `unpack_chunk_from_bytes` to protect against decompression bombs.
+- **Road Network Graph (`engine/navigation/src/road_graph.rs`)**:
+  - Changed node spatial indexing key from unsigned `(u64, u64)` to signed `(i64, i64)`, eliminating negative longitude saturation to 0 in the Western hemisphere.
+  - Updated `find_nearest_node` and `compute_lane_coordinates` with latitude-dependent cosine scaling.
+- **DEM Heightfield Grid (`engine/ingestion/src/dem_grid.rs`)**:
+  - Enhanced `sample_bilinear` to normalize longitude offsets across the 180° antimeridian without `clamp` panics.
+- **Vehicle Traffic Simulation (`engine/vehicles/src/traffic.rs`)**:
+  - Guarded acceleration denominator in `IdmConfig::calculate_acceleration`.
+  - Triggered `-8.0 m/s^2` emergency braking on bumper collision ($s \le 0.05\text{ m}$).
+  - Halted forward velocity in `TrafficAgent::step` when penetrating bumper headway.
+  - Passed true unmasked `min_gap` in `TrafficSimulation::step`.
+- **Automotive Vehicle Dynamics (`engine/vehicles/src/dynamics.rs`)**:
+  - Replaced low-speed zero-slip deadzone with continuous lateral scrub velocity evaluation bounded by the tire friction circle.
+- **Interactive Viewer (`apps/world-viewer/src/interactive.rs`)**:
+  - Integrated `pressed_keys: HashSet<KeyCode>`, `last_frame: Instant`, and `about_to_wait` loop callback.
+  - Added continuous WASD / Arrow camera navigation scaled by frame delta time ($\Delta t$).
+- **New York Ingestion Dataset (`engine/ingestion/src/sample_new_york.rs`)**:
+  - Added authentic Manhattan crosstown arterials (Fulton St, 42nd St, Canal St) completing topological connectivity between avenues.
+
+
 
 

@@ -46,13 +46,16 @@ impl IdmConfig {
         let free_road_term = 1.0 - (v / self.desired_speed_ms.max(0.1)).powf(self.accel_exponent);
 
         let interaction_term = if let (Some(s), Some(v_lead)) = (lead_gap, lead_speed) {
+            if s <= 0.05 {
+                // Severe bumper collision / penetration: apply emergency maximum deceleration immediately
+                return -8.0;
+            }
+            let denom_sqrt =
+                (self.max_accel_ms2.max(0.01) * self.comfortable_decel_ms2.max(0.01)).sqrt();
             let delta_v = v - v_lead.max(0.0);
             let s_star = self.min_gap_meters
-                + (v * self.time_headway_seconds
-                    + (v * delta_v)
-                        / (2.0 * (self.max_accel_ms2 * self.comfortable_decel_ms2).sqrt()))
-                .max(0.0);
-            (s_star / s.max(0.5)).powi(2)
+                + (v * self.time_headway_seconds + (v * delta_v) / (2.0 * denom_sqrt)).max(0.0);
+            (s_star / s.max(0.1)).powi(2)
         } else {
             0.0
         };
@@ -159,6 +162,13 @@ impl TrafficAgent {
             .calculate_acceleration(self.speed_ms, lead_gap, lead_speed);
         self.speed_ms = (self.speed_ms + accel * dt).max(0.0);
 
+        // If bumper contact/penetration occurs with leading vehicle, halt forward speed to prevent mesh penetration
+        if let Some(gap) = lead_gap {
+            if gap <= 0.05 && accel < 0.0 {
+                self.speed_ms = 0.0;
+            }
+        }
+
         // 4. Update Position
         let forward = Vec3::new(self.yaw.sin(), 0.0, self.yaw.cos());
         self.position += forward * self.speed_ms * dt;
@@ -232,7 +242,7 @@ impl TrafficSimulation {
             }
 
             if min_gap < f32::MAX {
-                *info = (Some(min_gap.max(0.1)), lead_speed);
+                *info = (Some(min_gap), lead_speed);
             }
         }
 

@@ -476,18 +476,36 @@ impl DemGrid {
     }
 
     /// Evaluates continuous elevation at WGS84 coordinate using bilinear interpolation.
+    /// Fully robust to antimeridian crossing bounds without panic.
     pub fn sample_bilinear(&self, coord: &Wgs84Coord) -> f32 {
         let clamped_lat = coord.lat.clamp(self.bounds.min_lat, self.bounds.max_lat);
-        let clamped_lon = coord.lon.clamp(self.bounds.min_lon, self.bounds.max_lon);
-
-        let delta_lon = self.bounds.max_lon - self.bounds.min_lon;
         let delta_lat = self.bounds.max_lat - self.bounds.min_lat;
 
-        if delta_lon <= 0.0 || delta_lat <= 0.0 {
+        if delta_lat <= 0.0 {
             return self.get_at(0, 0);
         }
 
-        let u = (clamped_lon - self.bounds.min_lon) / delta_lon * (self.width - 1) as f64;
+        let u = if self.bounds.crosses_antimeridian() {
+            let delta_lon = (self.bounds.max_lon + 360.0) - self.bounds.min_lon;
+            if delta_lon <= 0.0 {
+                return self.get_at(0, 0);
+            }
+            let lon_offset = if coord.lon >= self.bounds.min_lon {
+                coord.lon - self.bounds.min_lon
+            } else {
+                (coord.lon + 360.0) - self.bounds.min_lon
+            };
+            let clamped_offset = lon_offset.clamp(0.0, delta_lon);
+            (clamped_offset / delta_lon) * (self.width - 1) as f64
+        } else {
+            let delta_lon = self.bounds.max_lon - self.bounds.min_lon;
+            if delta_lon <= 0.0 {
+                return self.get_at(0, 0);
+            }
+            let clamped_lon = coord.lon.clamp(self.bounds.min_lon, self.bounds.max_lon);
+            (clamped_lon - self.bounds.min_lon) / delta_lon * (self.width - 1) as f64
+        };
+
         let v = (self.bounds.max_lat - clamped_lat) / delta_lat * (self.height - 1) as f64;
 
         let x0 = u.floor() as usize;

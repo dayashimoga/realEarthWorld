@@ -38,7 +38,7 @@ impl RoadEdge {
 #[derive(Debug, Clone, Default)]
 pub struct RoadNetworkGraph {
     pub graph: DiGraph<RoadNode, RoadEdge>,
-    coord_to_node: HashMap<(u64, u64), NodeIndex>,
+    coord_to_node: HashMap<(i64, i64), NodeIndex>,
 }
 
 impl RoadNetworkGraph {
@@ -99,8 +99,13 @@ impl RoadNetworkGraph {
     }
 
     /// Gets existing node or inserts a new one for a coordinate.
+    /// Preserves negative coordinates across the Western hemisphere (signed i64)
+    /// without saturating to 0, ensuring full geographic accuracy globally.
     fn get_or_create_node(&mut self, coord: Wgs84Coord) -> NodeIndex {
-        let key = ((coord.lat * 1e7) as u64, (coord.lon * 1e7) as u64);
+        let key = (
+            (coord.lat * 1e7).round() as i64,
+            (coord.lon * 1e7).round() as i64,
+        );
         if let Some(&node_idx) = self.coord_to_node.get(&key) {
             node_idx
         } else {
@@ -115,11 +120,12 @@ impl RoadNetworkGraph {
     pub fn find_nearest_node(&self, coord: Wgs84Coord) -> Option<NodeIndex> {
         let mut best_node = None;
         let mut min_dist_sq = f64::MAX;
+        let m_per_deg_lon = 111_320.0 * (coord.lat.to_radians()).cos().abs().max(0.1);
 
         for node_idx in self.graph.node_indices() {
             let node = &self.graph[node_idx];
             let d_lat = (node.coord.lat - coord.lat) * 111_000.0;
-            let d_lon = (node.coord.lon - coord.lon) * 108_000.0;
+            let d_lon = (node.coord.lon - coord.lon) * m_per_deg_lon;
             let dist_sq = d_lat * d_lat + d_lon * d_lon;
 
             if dist_sq < min_dist_sq {
@@ -139,7 +145,8 @@ impl RoadNetworkGraph {
         lane: &LaneDescriptor,
     ) -> (Wgs84Coord, Wgs84Coord) {
         let d_lat = (p1.lat - p0.lat) * 111_000.0;
-        let d_lon = (p1.lon - p0.lon) * 108_000.0;
+        let m_per_deg_lon = 111_320.0 * (p0.lat.to_radians()).cos().abs().max(0.1);
+        let d_lon = (p1.lon - p0.lon) * m_per_deg_lon;
         let len = (d_lat * d_lat + d_lon * d_lon).sqrt().max(0.1);
 
         // Unit forward vector in meters: (u_lon, u_lat)
@@ -151,7 +158,7 @@ impl RoadNetworkGraph {
         let perp_lat = -u_lon;
 
         let offset = lane.lateral_offset_meters() as f64;
-        let off_lon_deg = (perp_lon * offset) / 108_000.0;
+        let off_lon_deg = (perp_lon * offset) / m_per_deg_lon;
         let off_lat_deg = (perp_lat * offset) / 111_000.0;
 
         (

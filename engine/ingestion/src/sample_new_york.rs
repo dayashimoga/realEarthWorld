@@ -223,6 +223,59 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         is_tunnel: false,
     });
 
+    // 7. Fulton / Vesey Street (Lower Manhattan East-West Connector past World Trade Center)
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 220_007,
+        name: Some("Fulton Street".to_string()),
+        highway_type: HighwayType::Secondary,
+        geometry: vec![
+            Wgs84Coord::new(40.7130, -74.0150, 0.0), // West Side Highway / WTC
+            Wgs84Coord::new(40.7125, -74.0075, 0.0), // Broadway / City Hall Park
+        ],
+        lanes: 2,
+        speed_limit_kph: 35,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
+    // 8. 42nd Street (Midtown Crosstown Arterial connecting West Side, Times Sq & 5th Ave)
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 220_008,
+        name: Some("42nd Street".to_string()),
+        highway_type: HighwayType::Primary,
+        geometry: vec![
+            Wgs84Coord::new(40.7530, -74.0040, 0.0), // West Side Highway
+            Wgs84Coord::new(40.7540, -73.9840, 0.0), // Times Square / Broadway
+            Wgs84Coord::new(40.7535, -73.9810, 0.0), // Fifth Avenue
+        ],
+        lanes: 4,
+        speed_limit_kph: 40,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
+    // 9. Canal Street (Major Crosstown Arterial connecting West Side to Broadway & Manhattan Bridge)
+    dataset.roads.push(OsmRoadFeature {
+        way_id: 220_009,
+        name: Some("Canal Street".to_string()),
+        highway_type: HighwayType::Primary,
+        geometry: vec![
+            Wgs84Coord::new(40.7200, -74.0115, 0.0), // West Side Highway
+            Wgs84Coord::new(40.7180, -74.0020, 0.0), // Tribeca
+            Wgs84Coord::new(40.7160, -73.9960, 0.0), // Manhattan Bridge Plaza
+        ],
+        lanes: 4,
+        speed_limit_kph: 45,
+        is_oneway: false,
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    });
+
     // =========================================================================
     // 3. Water Bodies (East River & Hudson River Waterfront)
     // =========================================================================
