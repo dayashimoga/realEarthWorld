@@ -1,0 +1,19 @@
+[package]
+name = "realearth-gameplay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+realearth-shared = { path = "../shared" }
+realearth-geospatial = { path = "../geospatial" }
+realearth-navigation = { path = "../navigation" }
+serde.workspace = true
+serde_json.workspace = true
+glam.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile = "3.17"

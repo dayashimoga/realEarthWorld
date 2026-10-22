@@ -269,6 +269,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dedicated Test Target (`tests/tests/intercity_connectivity.rs`)**:
   - 7 comprehensive integration tests verifying all 5 regional packages compilation and SHA-256 integrity, continuous A* road network routing across all 3 major highway corridors without topological discontinuities, incremental catalog packaging, and bounded memory stability during 50-step high-speed drives.
 
+## [0.8.0] - 2026-10-22 — STAGE 8: Modular Gameplay Platform
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0012-modular-gameplay-platform.md`: Architectural specification for independent event-driven gameplay platform, decoupled job state machines, player progression, vehicle garage upgrades, save/load schema migrations, and minimal-click HUD systems.
+- **Dedicated Gameplay Crate (`engine/gameplay`, `realearth-gameplay`)**:
+  - `events.rs`: Strongly-typed `GameplayEvent` variants and thread-safe `GameplayEventBus` enabling decoupled observer callbacks for UI, telemetry, and audio systems.
+  - `career.rs`: Four authentic playable careers (`FreeRoam`, `TaxiPassenger`, `PackageDelivery`, `HeavyFreight`) with payout/experience multipliers and `ReputationTier` hierarchy (`Novice`, `Professional`, `Expert`, `Master`).
+  - `jobs.rs`: Comprehensive `JobStateMachine` handling full contract lifecycles (`Available`, `Accepted`, `EnRouteToPickup`, `AtPickup`, `Loaded`, `EnRouteToDropoff`, `AtDropoff`, `Completed`, `Failed`, `Abandoned`) with proximity zone checks, vehicle stop condition detection ($< 2.0\text{ km/h}$), dwell boarding timers (2.0s), ride comfort tracking (lateral/longitudinal jerk), dynamic customer tips, and cargo integrity degradation.
+  - `destinations.rs`: Surveyed geographic destination perimeters and `JobCatalogGenerator` generating 9 authentic default contracts connecting surveyed landmarks across Bengaluru, Mysuru, Chennai, Hyderabad, South India Corridors, and San Francisco.
+  - `economy.rs`: Configurable `EconomyConfig` and `Wallet` managing liquid funds, debit/credit validations, and itemized transaction logs.
+  - `profile.rs`: `PlayerProfile` tracking career XP, levels, reputation per career, odometer travel distance, clean-driving streaks, and landmark discoveries.
+  - `garage.rs`: `VehicleGarage` managing player fleet across `VehicleCategory` (`EconomySedan`, `LuxuryCab`, `CargoVan`, `HeavyTruck`) with engine, handling, and comfort upgrade tiers.
+  - `achievements.rs`: `AchievementRegistry` tracking driving milestones and career achievements (`FIRST_FARE`, `SMOOTH_CHAUFFEUR`, `EXPRESS_COURIER`, `DECCAN_EXPRESS`, `CHENNAI_PORT_HAUL`, `HYDERABAD_EXPRESS`, `CENTURION_KM`, `CLEAN_STREAK`, `LANDMARK_EXPLORER`).
+  - `recovery.rs`: `RecoveryDispatcher` roadside assistance towing service safely repositioning immobilized or flipped vehicles onto the nearest surveyed road node with wallet fee deduction and event logging.
+  - `save.rs`: `SaveManager` and `SaveMigrationEngine` serializing game state to versioned JSON with forward schema migrations ($V1 \to V2$) and zero data loss.
+  - `hud.rs`: `GameplayHudModel` synthesizing minimal-click responsive HUD state (`ActiveObjectiveHud`, `EarningsHud`, `JobBrowserHud`, `DebriefModal`).
+- **CLI & World Viewer Enhancements (`tools/world-cli`, `apps/world-viewer`)**:
+  - `realearth-cli`: Added `job` subcommand (`--list`, `--inspect <id>`, `--simulate <id>`) enabling deterministic headless contract execution and payout validation.
+  - `realearth-viewer`: Added `--career <taxi|delivery|freight|free-roam>` and `--job <id>` flags, live gameplay HUD overlay integration, and comprehensive Stage 8 telemetry output.
+- **Dedicated Test Target (`tests/tests/gameplay_careers.rs`)**:
+  - 8 comprehensive integration tests covering real surveyed destinations, end-to-end taxi ride with dwell boarding and 5-star comfort, urgent package delivery speed bonuses, heavy freight cargo integrity across Kaveri Bridge, landmark discovery achievements, roadside recovery towing, persistent save/load with V1 to V2 schema migration, and 100-job continuous soak stability.
+
 
 
 

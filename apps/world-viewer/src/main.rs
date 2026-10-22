@@ -8,6 +8,9 @@ pub mod screenshot;
 
 use camera_controller::{CameraController, CameraMode, Landmark};
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
+use realearth_gameplay::{
+    CareerType, GameplayEventBus, GameplayHudModel, JobCatalogGenerator, PlayerProfile,
+};
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
@@ -57,6 +60,8 @@ fn print_usage() {
     println!(
         "  --drive                                 Enable complete drivable car dynamics mode"
     );
+    println!("  --career <taxi|delivery|freight|free-roam> Select playable career mode");
+    println!("  --job <id>                              Accept and track specific contract ID");
     println!("  --traffic <N>                           Spawn N autonomous AI traffic vehicles (default: 8 with --drive)");
     println!(
         "  --vehicle-cam <chase|hood|bumper>       Vehicle camera perspective (default: chase)"
@@ -172,7 +177,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|val| val.parse().ok())
         .unwrap_or(if scenario == "soak" { 240 } else { 60 });
 
-    println!("🌍 Starting Real Earth World Viewer (Stage 7)...");
+    let career_arg = args
+        .iter()
+        .position(|a| a == "--career")
+        .and_then(|idx| args.get(idx + 1))
+        .map(|s| s.to_lowercase());
+
+    let job_id_arg = args
+        .iter()
+        .position(|a| a == "--job")
+        .and_then(|idx| args.get(idx + 1))
+        .map(|s| s.to_string());
+
+    let gameplay_bus = GameplayEventBus::new();
+    let mut player_profile = PlayerProfile::new("driver-01", "Planetary Transporter");
+    player_profile.add_reputation(CareerType::HeavyFreight, 500);
+
+    let regional_jobs = JobCatalogGenerator::jobs_for_region(&region_arg);
+    let mut active_job = if let Some(ref jid) = job_id_arg {
+        regional_jobs.iter().find(|j| j.id == *jid).cloned()
+    } else if let Some(ref car) = career_arg {
+        let career_type = match car.as_str() {
+            "taxi" => CareerType::TaxiPassenger,
+            "delivery" => CareerType::PackageDelivery,
+            "freight" => CareerType::HeavyFreight,
+            _ => CareerType::FreeRoam,
+        };
+        regional_jobs
+            .iter()
+            .find(|j| j.career == career_type)
+            .cloned()
+    } else if is_drive {
+        regional_jobs
+            .iter()
+            .find(|j| j.career == CareerType::TaxiPassenger)
+            .cloned()
+    } else {
+        None
+    };
+
+    if let Some(ref mut job) = active_job {
+        let _ = job.accept(&player_profile, &gameplay_bus);
+    }
+
+    println!("🌍 Starting Real Earth World Viewer (Stage 8: Modular Gameplay Platform)...");
     let startup_start = Instant::now();
 
     // 1. Prepare world package for region
@@ -559,6 +607,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             vehicle.step(&inputs, &ground_query, 1.0 / 60.0);
             traffic_sim.step(1.0 / 60.0, &ground_query);
 
+            let veh_coord = realearth_shared::coordinates::Wgs84Coord::new(
+                anchor.lat + (vehicle.position.z as f64 / 111_000.0),
+                anchor.lon + (vehicle.position.x as f64 / 108_000.0),
+                vehicle.position.y as f64,
+            );
+            if let Some(ref mut job) = active_job {
+                let _ = job.update(1.0 / 60.0, veh_coord, vehicle.speed_kph, &gameplay_bus);
+            }
+            let speed_mps = vehicle.speed_kph as f64 * (1000.0 / 3600.0);
+            player_profile.record_distance((speed_mps * (1.0 / 60.0)) / 1000.0);
+
             let (cam_pos, cam_yaw, cam_pitch) = vehicle_cam.update(&vehicle, 1.0 / 60.0);
             let cam_lat = anchor.lat + (cam_pos.z as f64 / 111_000.0);
             let cam_lon = anchor.lon + (cam_pos.x as f64 / 108_000.0);
@@ -675,7 +734,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .sum();
 
     println!("\n==================================================================");
-    println!("📊 STAGE 6: Drivable Vehicle Simulation & World Streaming Metrics");
+    println!("📊 STAGE 8: Modular Gameplay Platform & World Simulation Metrics");
     println!("==================================================================");
     println!("  Target Region:           {}", region_name);
     println!("  Graphics Preset:         {:?}", renderer.settings.level);
@@ -713,6 +772,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "  • AI Traffic Fleet:      {} active vehicles",
             traffic_sim.agents.len()
+        );
+        println!("------------------------------------------------------------------");
+        println!("🎮 STAGE 8: Modular Gameplay Platform Telemetry:");
+        let obj_hud = GameplayHudModel::build_objective_hud(
+            active_job.as_ref(),
+            camera_ctrl.coord,
+            vehicle.speed_kph,
+        );
+        let earn_hud = GameplayHudModel::build_earnings_hud(&player_profile, active_job.as_ref());
+        println!("  • Active Career:         {}", obj_hud.career_title);
+        println!("  • Objective Status:      {}", obj_hud.instruction_text);
+        if let Some(ref jid) = obj_hud.active_job_id {
+            println!("  • Contract ID:           {}", jid);
+            println!(
+                "  • Destination Target:    {}",
+                obj_hud.target_location_name
+            );
+            println!(
+                "  • Distance Remaining:    {:.1} m ({:.2} km)",
+                obj_hud.distance_to_target_meters,
+                obj_hud.distance_to_target_meters / 1000.0
+            );
+            if let Some(eta) = obj_hud.eta_seconds {
+                println!("  • Estimated Arrival:     {:.1} s", eta);
+            }
+            if let Some(time_left) = obj_hud.time_limit_remaining_secs {
+                println!("  • Contract Time Left:    {:.1} s", time_left);
+            }
+            println!(
+                "  • Ride Comfort Rating:   {:.1} / 5.0 Stars",
+                obj_hud.comfort_rating_stars
+            );
+            println!(
+                "  • Cargo Integrity:       {:.1}%",
+                obj_hud.cargo_integrity_pct
+            );
+        }
+        println!(
+            "  • Driver Profile:        {} (Level {})",
+            player_profile.name, player_profile.level
+        );
+        println!(
+            "  • Wallet Balance:        ₹{:.2} (Potential Payout: ₹{:.2})",
+            earn_hud.balance, earn_hud.potential_payout
+        );
+        println!(
+            "  • Verified Road Travel:  {:.2} km (Clean Streak: {:.2} km)",
+            player_profile.total_distance_km, earn_hud.clean_streak_km
         );
     }
     println!("------------------------------------------------------------------");
@@ -769,7 +876,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("==================================================================\n");
 
     if is_headless {
-        println!("✅ Stage 6 Drivable Vehicle Simulation & Streaming Completed Successfully!");
+        println!("✅ Stage 8 Modular Gameplay Platform & Simulation Completed Successfully!");
         return Ok(());
     }
 

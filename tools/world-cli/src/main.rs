@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_compiler::packager::read_chunk_file;
 use realearth_compiler::regional_catalog::{PackageManifest, RegionalCatalog};
+use realearth_gameplay::{CareerType, GameplayEventBus, JobCatalogGenerator, PlayerProfile};
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::osm_parser::parse_osm_xml;
 use realearth_ingestion::osm_types::IngestedDataset;
@@ -73,6 +74,17 @@ enum Commands {
         verify: bool,
         #[arg(long)]
         install_manifest: Option<PathBuf>,
+    },
+    /// Browse, inspect, and simulate gameplay contracts and careers
+    Job {
+        #[arg(long)]
+        list: bool,
+        #[arg(short, long)]
+        region: Option<String>,
+        #[arg(long)]
+        inspect: Option<String>,
+        #[arg(long)]
+        simulate: Option<String>,
     },
     /// Runs performance benchmark on coordinate transformations and chunk loading
     Bench,
@@ -453,6 +465,170 @@ fn main() -> anyhow::Result<()> {
                 "\n  Total Installed Packages Disk Usage: {:.2} MB",
                 catalog.total_installed_bytes() as f64 / (1024.0 * 1024.0)
             );
+        }
+        Commands::Job {
+            list: _,
+            region,
+            inspect,
+            simulate,
+        } => {
+            let all_jobs = if let Some(ref r) = region {
+                JobCatalogGenerator::jobs_for_region(r)
+            } else {
+                JobCatalogGenerator::generate_default_catalog()
+            };
+
+            if let Some(ref job_id) = inspect {
+                if let Some(job) = all_jobs.iter().find(|j| j.id == *job_id) {
+                    println!("\n📋 Contract Details: {} ({})", job.title, job.id);
+                    println!("  • Career:             {}", job.career.display_name());
+                    println!("  • Description:        {}", job.description);
+                    println!(
+                        "  • Pickup:             {} ({})",
+                        job.pickup.name, job.pickup.region_id
+                    );
+                    println!(
+                        "    Coordinates:        {:.4}°N, {:.4}°E, {:.1}m MSL",
+                        job.pickup.coord.lat, job.pickup.coord.lon, job.pickup.coord.alt
+                    );
+                    println!(
+                        "  • Dropoff:            {} ({})",
+                        job.dropoff.name, job.dropoff.region_id
+                    );
+                    println!(
+                        "    Coordinates:        {:.4}°N, {:.4}°E, {:.1}m MSL",
+                        job.dropoff.coord.lat, job.dropoff.coord.lon, job.dropoff.coord.alt
+                    );
+                    println!(
+                        "  • Route Distance:     {:.2} km ({:.0} meters)",
+                        job.route_distance_m / 1000.0,
+                        job.route_distance_m
+                    );
+                    println!("  • Base Payout:        ₹{:.2}", job.base_payout);
+                    println!("  • XP Reward:          {} XP", job.xp_reward);
+                    println!("  • Difficulty:         {:?}", job.difficulty);
+                    println!(
+                        "  • Time Limit:         {}",
+                        job.time_limit_secs
+                            .map(|s| format!("{:.0} seconds ({:.1} min)", s, s / 60.0))
+                            .unwrap_or_else(|| "No limit (Relaxed)".to_string())
+                    );
+                    println!("  • Required Rank:      {}", job.required_tier.title());
+                } else {
+                    println!("❌ Job ID '{}' not found in catalog.", job_id);
+                }
+            } else if let Some(ref job_id) = simulate {
+                if let Some(mut job) = all_jobs.into_iter().find(|j| j.id == *job_id) {
+                    println!(
+                        "\n🏎️ Executing Headless Simulation for Contract: {} ({})...",
+                        job.title, job.id
+                    );
+                    let bus = GameplayEventBus::new();
+                    let mut profile = PlayerProfile::new("cli-pilot", "Simulation Driver");
+                    if job.career == CareerType::HeavyFreight {
+                        profile.add_reputation(CareerType::HeavyFreight, 600);
+                    }
+
+                    let initial_bal = profile.wallet.balance();
+                    println!(
+                        "  [1/4] Accepting contract with driver profile '{}'...",
+                        profile.name
+                    );
+                    job.accept(&profile, &bus)
+                        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+                    println!(
+                        "  [2/4] Navigating to pickup location: {}...",
+                        job.pickup.name
+                    );
+                    job.update(0.1, job.pickup.coord, 0.0, &bus);
+                    job.update(2.1, job.pickup.coord, 0.0, &bus);
+
+                    println!(
+                        "  [3/4] En route to destination: {} (distance {:.1} km)...",
+                        job.dropoff.name,
+                        job.route_distance_m / 1000.0
+                    );
+                    job.update(0.1, job.dropoff.coord, 0.0, &bus);
+
+                    println!("  [4/4] Stopping inside destination perimeter for delivery...");
+                    let comp = job.update(2.1, job.dropoff.coord, 0.0, &bus);
+
+                    if let Some(result) = comp {
+                        profile.record_job_completion(
+                            result.career,
+                            result.final_payout,
+                            result.xp_gained,
+                            result.reputation_gained,
+                            1000,
+                        );
+                        profile.record_distance(job.route_distance_m / 1000.0);
+
+                        println!("\n✅ Contract Completed Successfully!");
+                        println!("  • Base Compensation:  ₹{:.2}", result.base_payout);
+                        println!("  • Customer Tip Bonus: ₹{:.2}", result.tip_bonus);
+                        println!("  • Speed Delivery Pay: ₹{:.2}", result.speed_bonus);
+                        println!("  • Net Settlement:     ₹{:.2}", result.final_payout);
+                        println!(
+                            "  • Experience Gained:  +{} XP (Current Level: {})",
+                            result.xp_gained, profile.level
+                        );
+                        println!(
+                            "  • Career Reputation:  +{} points",
+                            result.reputation_gained
+                        );
+                        println!(
+                            "  • Ride Rating:        {:.1} / 5.0 Stars",
+                            result.rating_stars
+                        );
+                        println!(
+                            "  • New Wallet Balance: ₹{:.2} (Earned ₹{:.2})",
+                            profile.wallet.balance(),
+                            profile.wallet.balance() - initial_bal
+                        );
+                    } else {
+                        println!("❌ Simulation failed to finalize job.");
+                    }
+                } else {
+                    println!("❌ Job ID '{}' not found in catalog.", job_id);
+                }
+            } else {
+                println!(
+                    "\n📦 Real Earth Dispatch Job Catalog ({} available contracts):",
+                    all_jobs.len()
+                );
+                println!(
+                    "------------------------------------------------------------------------------------------------------------------"
+                );
+                println!(
+                    "{:<16} {:<24} {:<32} {:<10} {:<10} {:<12}",
+                    "JOB ID", "CAREER", "TITLE", "DISTANCE", "PAYOUT", "DIFFICULTY"
+                );
+                println!(
+                    "------------------------------------------------------------------------------------------------------------------"
+                );
+                for j in &all_jobs {
+                    println!(
+                        "{:<16} {:<24} {:<32} {:>6.1} km   ₹{:>8.2} {:<12?}",
+                        j.id,
+                        j.career.display_name(),
+                        if j.title.len() > 30 {
+                            format!("{}...", &j.title[..27])
+                        } else {
+                            j.title.clone()
+                        },
+                        j.route_distance_m / 1000.0,
+                        j.base_payout,
+                        j.difficulty
+                    );
+                }
+                println!(
+                    "------------------------------------------------------------------------------------------------------------------"
+                );
+                println!(
+                    "Use `realearth-cli job --inspect <id>` or `realearth-cli job --simulate <id>` to evaluate contracts.\n"
+                );
+            }
         }
         Commands::Bench => {
             println!("⚡ Running Real Earth Performance Benchmarks...\n");

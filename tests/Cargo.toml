@@ -15,6 +15,7 @@ realearth-simulation = { path = "../engine/simulation" }
 realearth-navigation = { path = "../engine/navigation" }
 realearth-vehicles = { path = "../engine/vehicles" }
 realearth-rendering = { path = "../engine/rendering" }
+realearth-gameplay = { path = "../engine/gameplay" }
 wgpu.workspace = true
 glam.workspace = true
 tempfile = "3.17"
@@ -40,3 +41,6 @@ path = "tests/vehicle_simulation.rs"
 name = "intercity_connectivity"
 path = "tests/intercity_connectivity.rs"
 
+[[test]]
+name = "gameplay_careers"
+path = "tests/gameplay_careers.rs"

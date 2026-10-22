@@ -2344,6 +2344,7 @@ dependencies = [
  "anyhow",
  "clap",
  "realearth-compiler",
+ "realearth-gameplay",
  "realearth-geospatial",
  "realearth-ingestion",
  "realearth-shared",
@@ -2375,6 +2376,22 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "zstd",
+]
+
+[[package]]
+name = "realearth-gameplay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glam",
+ "realearth-geospatial",
+ "realearth-navigation",
+ "realearth-shared",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tracing",
 ]
 
 [[package]]
@@ -2492,6 +2509,7 @@ version = "0.1.0"
 dependencies = [
  "glam",
  "realearth-compiler",
+ "realearth-gameplay",
  "realearth-geospatial",
  "realearth-ingestion",
  "realearth-navigation",
@@ -2546,6 +2564,7 @@ dependencies = [
  "glam",
  "pollster",
  "realearth-compiler",
+ "realearth-gameplay",
  "realearth-geospatial",
  "realearth-ingestion",
  "realearth-navigation",

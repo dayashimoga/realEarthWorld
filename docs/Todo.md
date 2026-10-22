@@ -127,12 +127,17 @@
 - [x] Stage 7.3: Long-distance intercity vehicle travel with continuous streaming, LRU cache eviction (< 1024 MB RSS), and 60-FPS performance.
 - [x] Stage 7.3: CLI (`realearth-cli`) and World Viewer (`realearth-viewer`) updates supporting all regions and intercity corridor navigation.
 
-
-
-
-
-
-
-
-
+## STAGE 8: Modular Gameplay Platform (Completed)
+- [x] Stage 8.1: Create isolated `realearth-gameplay` crate (`engine/gameplay`) with event-driven architecture and decoupled state machines.
+- [x] Stage 8.1: Implement `JobStateMachine` with strict lifecycle transitions (Available -> Accepted -> EnRouteToPickup -> AtPickup -> CargoLoaded -> EnRouteToDropoff -> AtDropoff -> Completed / Failed / Abandoned / Recovered).
+- [x] Stage 8.1: Implement `GameplayEventBus` with strongly-typed event emissions and listeners.
+- [x] Stage 8.1: Implement `PlayerProfile`, `Wallet`, `ReputationTier`, `VehicleGarage`, and `AchievementSystem`.
+- [x] Stage 8.1: Implement versioned save/load system (`SaveManager`, `SaveData`) with forward schema migrations and vehicle roadside recovery.
+- [x] Stage 8.2: Implement 4 authentic playable careers (`FreeRoam`, `TaxiPassenger`, `PackageDelivery`, `HeavyFreight`) with real surveyed geographic coordinates across all covered regions.
+- [x] Stage 8.2: Implement pickup/drop-off interaction zones with proximity tolerance, vehicle speed stop conditions, and boarding/loading dwell timers.
+- [x] Stage 8.2: Implement topological road-distance-aware objective pricing, dynamic time limits, driving comfort scores, and configurable economy engine (`EconomyConfig`).
+- [x] Stage 8.3: Implement modern minimal-click responsive HUD data structures (`ActiveObjectiveHud`, `EarningsHud`, `JobsBrowserHud`, `DebriefModal`).
+- [x] Stage 8.3: Integrate gameplay systems with `apps/world-viewer` (driving mode HUD overlay, job accept/dropoff interaction) and `tools/world-cli` (job listing/execution simulation).
+- [x] Stage 8.3: Develop comprehensive integration test suite (`tests/tests/gameplay_careers.rs`) covering all careers, save/load, schema migration, and long-session stability.
+- [x] Stage 8.3: Validate zero regression across core simulation, rendering, streaming, and GIS layers; run full test suite and clippy/fmt quality gates.
 
