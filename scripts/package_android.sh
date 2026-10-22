@@ -2,26 +2,27 @@
 # Real Earth Platform — Android Application Packaging Script (Bash)
 set -euo pipefail
 
-TARGET_DIR="dist/android"
+ROOT_DIR="$(pwd)"
+TARGET_DIR="$ROOT_DIR/dist/android"
 mkdir -p "$TARGET_DIR"
 
-JNI_DIR="android/app/src/main/jniLibs"
+JNI_DIR="$ROOT_DIR/android/app/src/main/jniLibs"
 mkdir -p "$JNI_DIR/arm64-v8a" "$JNI_DIR/x86_64"
 
 # Stage native libraries
 SO_SRC=""
-if [ -f "target/aarch64-linux-android/release/librealearth.so" ]; then
-    SO_SRC="target/aarch64-linux-android/release/librealearth.so"
-elif [ -f "target/release/librealearth.so" ]; then
-    SO_SRC="target/release/librealearth.so"
-elif [ -f "target/release/realearth.dll" ]; then
-    SO_SRC="target/release/realearth.dll"
+if [ -f "$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so" ]; then
+    SO_SRC="$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so"
+elif [ -f "$ROOT_DIR/target/release/librealearth.so" ]; then
+    SO_SRC="$ROOT_DIR/target/release/librealearth.so"
+elif [ -f "$ROOT_DIR/target/release/realearth.dll" ]; then
+    SO_SRC="$ROOT_DIR/target/release/realearth.dll"
 else
     cargo build -p realearth-mobile --release
-    if [ -f "target/release/librealearth.so" ]; then
-        SO_SRC="target/release/librealearth.so"
-    elif [ -f "target/release/realearth.dll" ]; then
-        SO_SRC="target/release/realearth.dll"
+    if [ -f "$ROOT_DIR/target/release/librealearth.so" ]; then
+        SO_SRC="$ROOT_DIR/target/release/librealearth.so"
+    elif [ -f "$ROOT_DIR/target/release/realearth.dll" ]; then
+        SO_SRC="$ROOT_DIR/target/release/realearth.dll"
     fi
 fi
 
@@ -37,9 +38,9 @@ mkdir -p "$STAGING/lib/arm64-v8a" "$STAGING/lib/x86_64" "$STAGING/res" "$STAGING
 
 cp "$JNI_DIR/arm64-v8a/librealearth.so" "$STAGING/lib/arm64-v8a/"
 cp "$JNI_DIR/x86_64/librealearth.so" "$STAGING/lib/x86_64/"
-cp "android/app/src/main/AndroidManifest.xml" "$STAGING/AndroidManifest.xml"
-cp -r android/app/src/main/res/* "$STAGING/res/"
-cp -r assets/* "$STAGING/assets/"
+cp "$ROOT_DIR/android/app/src/main/AndroidManifest.xml" "$STAGING/AndroidManifest.xml"
+cp -r "$ROOT_DIR"/android/app/src/main/res/* "$STAGING/res/"
+cp -r "$ROOT_DIR"/assets/* "$STAGING/assets/"
 
 cat << 'EOF' > "$STAGING/META-INF/MANIFEST.MF"
 Manifest-Version: 1.0
@@ -50,7 +51,8 @@ Target-Architecture: arm64-v8a, x86_64
 EOF
 
 APK_PATH="$TARGET_DIR/realearth-arm64.apk"
-(cd "$STAGING" && zip -r "../../$APK_PATH" .)
+rm -f "$APK_PATH"
+(cd "$STAGING" && zip -r "$APK_PATH" .)
 shasum -a 256 "$APK_PATH" > "$APK_PATH.sha256"
 
 AAB_PATH="$TARGET_DIR/realearth-release.aab"
@@ -59,3 +61,4 @@ shasum -a 256 "$AAB_PATH" > "$AAB_PATH.sha256"
 
 rm -rf "$STAGING"
 echo "[SUCCESS] Android APK packaged at $APK_PATH"
+
