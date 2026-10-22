@@ -36,3 +36,7 @@ path = "tests/streaming_performance.rs"
 name = "vehicle_simulation"
 path = "tests/vehicle_simulation.rs"
 
+[[test]]
+name = "intercity_connectivity"
+path = "tests/intercity_connectivity.rs"
+

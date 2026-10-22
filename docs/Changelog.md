@@ -238,6 +238,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Suite (`tests/tests/vehicle_simulation.rs`)**:
   - Full end-to-end integration tests for slope climbing, hill holding, neutral rollback, crash/flip recovery, snapshot determinism, 4-car IDM convoy spacing, elevated flyover grade separation, and connected Bengaluru route driving.
 
+## [0.7.0] - 2026-10-22 — STAGE 7: Geographic Expansion and Intercity Connectivity
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0011-geographic-expansion-and-intercity-connectivity.md`: Architecture specification for multi-region ingestion, transport corridors topology, decentralized regional catalogs, and multi-region spatial streaming with global memory accounting.
+- **Regional Ingestion & Normalization (`engine/shared`, `engine/ingestion`)**:
+  - `region.rs`: Added authentic regional profiles for Mysuru Urban (`KA`), Chennai Central (`TN`), Hyderabad Central (`TG`), and Intercity Corridors (`KA-TN-TG`) with WGS84 bounding boxes, UTM zones (43N/44N), and EGM96 geoid datums.
+  - `dem_grid.rs`: Implemented authentic DEM raster models for Mysuru (Deccan plateau + Chamundi Hill 1065m peak), Chennai (coastal flat 0m at Bay of Bengal to 25m inland), Hyderabad (granite plateau 535m, Golconda ridge 610m, Musi River basin 505m), and South India Intercity Corridors (regional river basins and plateau gradients).
+  - Authentic Datasets:
+    - `sample_mysuru.rs`: Mysore Palace, Chamundi Temple, Mysuru Junction, Devaraja Market, Sayyaji Rao Road, Bengaluru-Nilgiri Rd (NH 766), Mysuru Outer Ring Road (ORR) Layer 1 elevated bypass, and Karanji Lake.
+    - `sample_chennai.rs`: Chennai Central Station, Ripon Building, Fort St. George, LIC Building, Poonamallee High Road (EVR Periyar Salai), Anna Salai, Kamarajar Salai, Napier Bridge (Layer 1 elevated viaduct over Cooum River mouth), and Marina Coastline.
+    - `sample_hyderabad.rs`: Charminar, Mecca Masjid, HITEC City Cyber Towers, Golconda Fort, PVNR Elevated Expressway (Layer 1 elevated viaduct), Inner Ring Road, Tank Bund Promenade, Nayapul Bridge (Layer 1 elevated over Musi River), and Hussain Sagar lake.
+  - `acquisition.rs`: Updated acquisition pipelines with ODbL 1.0, CC-BY 4.0, and Public Domain licensing, provider provenance, and SHA-256 integrity verification manifests.
+- **Transport Corridors & Grade Separations (`engine/ingestion/src/sample_corridors.rs`)**:
+  - Compiled connecting highways:
+    - NH 275 (Bengaluru-Mysuru Expressway): 10-lane access-controlled highway with Ramanagara/Channapatna bypasses and Srirangapatna Kaveri River Bridge (Layer 1 elevated bridge over Kaveri River).
+    - NH 48 / NE 7 (Bengaluru-Chennai Highway): 6-lane trunk expressway via Kolar, Mulbagal, Palamaner Eastern Ghats pass, Chittoor, Ranipet Palar River Bridge (Layer 1), Sriperumbudur, and Poonamallee.
+    - NH 44 (Bengaluru-Hyderabad North-South Expressway): 6-lane national expressway via Hebbal, Devanahalli, Chikballapur, Anantapur, Kurnool Tungabhadra River Bridge (Layer 1), Shadnagar, Shamshabad, and PVNR Elevated Expressway.
+  - City Center Feeder Links: Built 4 zero-gap urban connectors linking Bengaluru MG Road, Mysuru K.R. Circle, Chennai EVR Periyar Salai, and Hyderabad Charminar directly to intercity expressway termini.
+- **Decentralized Regional Packaging & Catalogs (`engine/compiler/src/regional_catalog.rs`)**:
+  - Implemented `PackageManifest`, `PackageState`, and `RegionalCatalog` supporting independent regional packaging, disk scanning, incremental installation, SHA-256 verification, and uninstallation.
+  - Added spatial coverage queries (`find_regions_covering`) resolving intersecting regions for any bounding box.
+- **Multi-Region Streaming & Global LRU Eviction (`engine/streaming/src/multi_region.rs`)**:
+  - Implemented `MultiRegionStreamer` dispatching bounding box prefetch requests across multiple mounted regional SQLite databases.
+  - Namespaced chunk keys (`ChunkKey::for_region`) preventing coordinate collisions across regional origin offsets.
+  - Shared LRU cache budget enforcement across all regions with collision-critical chunk pinning and eviction guarantees.
+- **CLI & World Viewer Enhancements (`tools/world-cli`, `apps/world-viewer`)**:
+  - `world-cli`: Added `catalog` subcommand (`--list`, `--verify`, `--install-manifest`) and updated `compile`/`validate` to support `--region <sf|bengaluru|mysuru|chennai|hyderabad|corridors>`.
+  - `world-viewer`: Added multi-region support and 9 fast-travel landmark hotkeys (1..9): Transamerica, Salesforce, Vidhana Soudha, Mysore Palace, Chennai Central & Marina, Charminar & Hussain Sagar, Kaveri River Bridge, Palar River Bridge, and PVNR Expressway.
+- **Dedicated Test Target (`tests/tests/intercity_connectivity.rs`)**:
+  - 7 comprehensive integration tests verifying all 5 regional packages compilation and SHA-256 integrity, continuous A* road network routing across all 3 major highway corridors without topological discontinuities, incremental catalog packaging, and bounded memory stability during 50-step high-speed drives.
+
 
 
 

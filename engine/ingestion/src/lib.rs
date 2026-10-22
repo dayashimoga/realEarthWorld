@@ -5,6 +5,10 @@ pub mod dem_grid;
 pub mod osm_parser;
 pub mod osm_types;
 pub mod sample_bengaluru;
+pub mod sample_chennai;
+pub mod sample_corridors;
+pub mod sample_hyderabad;
+pub mod sample_mysuru;
 pub mod sample_san_francisco;
 
 pub use acquisition::{
@@ -17,6 +21,12 @@ pub use osm_types::{
     OsmLandCoverFeature, OsmRoadFeature, OsmWaterFeature, WaterType,
 };
 pub use sample_bengaluru::{create_bengaluru_central_dataset, generate_bengaluru_osm_xml};
+pub use sample_chennai::{create_chennai_dataset, generate_chennai_osm_xml};
+pub use sample_corridors::{
+    create_intercity_corridors_dataset, generate_intercity_corridors_osm_xml,
+};
+pub use sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml};
+pub use sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 pub use sample_san_francisco::{create_san_francisco_dataset, generate_san_francisco_osm_xml};
 
 #[cfg(test)]
@@ -194,5 +204,93 @@ mod tests {
         let outside = Wgs84Coord::new(12.9500, 77.5700, 0.0);
         let elev = dem.sample_bilinear(&outside);
         assert!(elev > 0.0);
+    }
+
+    #[test]
+    fn test_mysuru_osm_xml_and_dem() {
+        let xml = generate_mysuru_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Mysuru OSM XML");
+        assert_eq!(dataset.buildings.len(), 4);
+        assert_eq!(dataset.roads.len(), 5);
+
+        let palace = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Mysore Palace (Amba Vilas)"))
+            .expect("Palace missing");
+        assert_eq!(palace.explicit_height, Some(45.0));
+
+        let dem = DemGrid::create_mysuru_dem(32, 32);
+        let chamundi_coord = Wgs84Coord::new(12.2745, 76.6710, 0.0);
+        let elev = dem.sample_bilinear(&chamundi_coord);
+        assert!(
+            elev >= 1000.0,
+            "Chamundi Hill elevation should be >= 1000m (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_chennai_osm_xml_and_coastal_dem() {
+        let xml = generate_chennai_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Chennai OSM XML");
+        assert_eq!(dataset.buildings.len(), 4);
+        assert_eq!(dataset.roads.len(), 5);
+
+        let napier = dataset
+            .roads
+            .iter()
+            .find(|r| r.name.as_deref() == Some("Napier Bridge (Cooum River Crossing)"))
+            .expect("Napier Bridge missing");
+        assert_eq!(napier.layer, 1);
+        assert!(napier.is_bridge);
+
+        let dem = DemGrid::create_chennai_coastal_dem(32, 32);
+        let beach_coord = Wgs84Coord::new(13.0600, 80.2900, 0.0);
+        let elev = dem.sample_bilinear(&beach_coord);
+        assert!(
+            elev <= 5.0,
+            "Marina beach elevation should be near sea level (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_hyderabad_osm_xml_and_dem() {
+        let xml = generate_hyderabad_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Hyderabad OSM XML");
+        assert_eq!(dataset.buildings.len(), 4);
+        assert_eq!(dataset.roads.len(), 5);
+
+        let pvnr = dataset
+            .roads
+            .iter()
+            .find(|r| r.name.as_deref() == Some("PVNR Elevated Expressway"))
+            .expect("PVNR missing");
+        assert_eq!(pvnr.layer, 1);
+        assert!(pvnr.is_bridge);
+
+        let dem = DemGrid::create_hyderabad_plateau_dem(32, 32);
+        let charminar_coord = Wgs84Coord::new(17.3616, 78.4747, 0.0);
+        let elev = dem.sample_bilinear(&charminar_coord);
+        assert!(
+            (510.0..=560.0).contains(&elev),
+            "Charminar elevation should be ~536m (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_intercity_corridors_osm_xml_and_rivers() {
+        let xml = generate_intercity_corridors_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Corridors OSM XML");
+        assert_eq!(dataset.roads.len(), 13); // NH 275 (3), NH 48 (3), NH 44 (3) + 4 feeder links
+
+        // Check Kaveri, Palar, and Tungabhadra bridges are elevated
+        let bridges: Vec<_> = dataset.roads.iter().filter(|r| r.is_bridge).collect();
+        assert_eq!(bridges.len(), 3);
+        for b in bridges {
+            assert_eq!(b.layer, 1);
+        }
     }
 }

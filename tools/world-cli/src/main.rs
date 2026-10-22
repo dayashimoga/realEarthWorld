@@ -3,11 +3,19 @@
 use clap::{Parser, Subcommand};
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_compiler::packager::read_chunk_file;
+use realearth_compiler::regional_catalog::{PackageManifest, RegionalCatalog};
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::osm_parser::parse_osm_xml;
+use realearth_ingestion::osm_types::IngestedDataset;
 use realearth_ingestion::sample_bengaluru::{
     create_bengaluru_central_dataset, generate_bengaluru_osm_xml,
 };
+use realearth_ingestion::sample_chennai::{create_chennai_dataset, generate_chennai_osm_xml};
+use realearth_ingestion::sample_corridors::{
+    create_intercity_corridors_dataset, generate_intercity_corridors_osm_xml,
+};
+use realearth_ingestion::sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml};
+use realearth_ingestion::sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 use realearth_ingestion::sample_san_francisco::{
     create_san_francisco_dataset, generate_san_francisco_osm_xml,
 };
@@ -55,8 +63,66 @@ enum Commands {
         #[arg(short, long)]
         path: PathBuf,
     },
+    /// Manages the decentralized regional packages catalog (list, verify, install)
+    Catalog {
+        #[arg(short, long, default_value = "target/packages")]
+        catalog_dir: PathBuf,
+        #[arg(long)]
+        list: bool,
+        #[arg(long)]
+        verify: bool,
+        #[arg(long)]
+        install_manifest: Option<PathBuf>,
+    },
     /// Runs performance benchmark on coordinate transformations and chunk loading
     Bench,
+}
+
+fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, String) {
+    let r = region_str.to_lowercase();
+    if r.contains("mysuru") {
+        (
+            create_mysuru_dataset(),
+            DemGrid::create_mysuru_dem(64, 64),
+            "Mysuru Urban (IN)",
+            generate_mysuru_osm_xml(),
+        )
+    } else if r.contains("chennai") {
+        (
+            create_chennai_dataset(),
+            DemGrid::create_chennai_coastal_dem(64, 64),
+            "Chennai Central & Marina (IN)",
+            generate_chennai_osm_xml(),
+        )
+    } else if r.contains("hyderabad") {
+        (
+            create_hyderabad_dataset(),
+            DemGrid::create_hyderabad_plateau_dem(64, 64),
+            "Hyderabad Central & HITEC City (IN)",
+            generate_hyderabad_osm_xml(),
+        )
+    } else if r.contains("corridor") {
+        (
+            create_intercity_corridors_dataset(),
+            DemGrid::create_intercity_corridors_dem(64, 64),
+            "South India Intercity Corridors (IN)",
+            generate_intercity_corridors_osm_xml(),
+        )
+    } else if r.contains("sf") || r.contains("san-francisco") {
+        (
+            create_san_francisco_dataset(),
+            DemGrid::create_san_francisco_coastal_dem(64, 64),
+            "San Francisco Downtown (US)",
+            generate_san_francisco_osm_xml(),
+        )
+    } else {
+        (
+            create_bengaluru_central_dataset(),
+            DemGrid::create_bengaluru_plateau_dem(64, 64),
+            "Bengaluru Central (IN)",
+            generate_bengaluru_osm_xml(),
+        )
+    }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -73,23 +139,8 @@ fn main() -> anyhow::Result<()> {
             println!("🚀 Starting Real Earth World Compilation...");
             let start = Instant::now();
 
-            let is_sf =
-                region.to_lowercase().contains("san-francisco") || region.to_lowercase() == "sf";
-            let (raw_dataset, dem, region_name) = if is_sf {
-                println!("📦 Ingesting San Francisco Downtown & Waterfront reference dataset...");
-                (
-                    create_san_francisco_dataset(),
-                    DemGrid::create_san_francisco_coastal_dem(64, 64),
-                    "San Francisco Downtown (US)",
-                )
-            } else {
-                println!("📦 Ingesting Bengaluru Central reference dataset...");
-                (
-                    create_bengaluru_central_dataset(),
-                    DemGrid::create_bengaluru_plateau_dem(64, 64),
-                    "Bengaluru Central (IN)",
-                )
-            };
+            let (raw_dataset, dem, region_name, _) = resolve_region(&region);
+            println!("📦 Ingesting {} reference dataset...", region_name);
 
             println!(
                 "🔍 Validating topology and grade separations for {}...",
@@ -172,25 +223,12 @@ fn main() -> anyhow::Result<()> {
             let (xml, dem) = match input {
                 Some(p) => (std::fs::read_to_string(p)?, None),
                 None => {
-                    if region.to_lowercase().contains("sf")
-                        || region.to_lowercase().contains("san-francisco")
-                    {
-                        println!(
-                            "ℹ️ No input file specified, using built-in San Francisco Downtown dataset."
-                        );
-                        (
-                            generate_san_francisco_osm_xml(),
-                            Some(DemGrid::create_san_francisco_coastal_dem(64, 64)),
-                        )
-                    } else {
-                        println!(
-                            "ℹ️ No input file specified, using built-in Bengaluru Central dataset."
-                        );
-                        (
-                            generate_bengaluru_osm_xml(),
-                            Some(DemGrid::create_bengaluru_plateau_dem(64, 64)),
-                        )
-                    }
+                    let (_, dem, region_name, xml) = resolve_region(&region);
+                    println!(
+                        "ℹ️ No input file specified, using built-in {} reference dataset.",
+                        region_name
+                    );
+                    (xml, Some(dem))
                 }
             };
 
@@ -352,6 +390,69 @@ fn main() -> anyhow::Result<()> {
                     b.confidence
                 );
             }
+        }
+        Commands::Catalog {
+            catalog_dir,
+            list: _,
+            verify,
+            install_manifest,
+        } => {
+            let mut catalog = RegionalCatalog::open(&catalog_dir)?;
+            let count = catalog.list_installed().len();
+            println!(
+                "📚 Regional Catalog ({:?}) — {} packages discovered:",
+                catalog_dir, count
+            );
+
+            if let Some(manifest_path) = install_manifest {
+                println!(
+                    "📦 Installing regional package manifest from {:?}...",
+                    manifest_path
+                );
+                let content = std::fs::read_to_string(&manifest_path)?;
+                let manifest = PackageManifest::from_json(&content)?;
+                let parent_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
+                let id = manifest.region_id.clone();
+                catalog.install_package(parent_dir, &manifest)?;
+                println!("✅ Successfully registered and installed package: {}", id);
+            }
+
+            for manifest in catalog.list_installed() {
+                println!(
+                    "\n  🌍 Package: {} (ID: {})",
+                    manifest.name, manifest.region_id
+                );
+                println!(
+                    "     Version: {} | UTM Zone: {}",
+                    manifest.version, manifest.utm_zone
+                );
+                println!(
+                    "     Total Chunks: {} | Size: {:.2} MB",
+                    manifest.total_chunks,
+                    manifest.compressed_bytes as f64 / (1024.0 * 1024.0)
+                );
+                println!(
+                    "     Bounds: [{:.4}, {:.4}] to [{:.4}, {:.4}]",
+                    manifest.bounds.min_lat,
+                    manifest.bounds.min_lon,
+                    manifest.bounds.max_lat,
+                    manifest.bounds.max_lon
+                );
+
+                if verify {
+                    let is_valid = catalog.verify_package_integrity(&manifest.region_id)?;
+                    if is_valid {
+                        println!("     SHA-256 Integrity: ✅ VERIFIED");
+                    } else {
+                        println!("     SHA-256 Integrity: ❌ MISMATCH / CORRUPTED");
+                    }
+                }
+            }
+
+            println!(
+                "\n  Total Installed Packages Disk Usage: {:.2} MB",
+                catalog.total_installed_bytes() as f64 / (1024.0 * 1024.0)
+            );
         }
         Commands::Bench => {
             println!("⚡ Running Real Earth Performance Benchmarks...\n");

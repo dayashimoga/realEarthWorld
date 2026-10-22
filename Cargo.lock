@@ -2349,6 +2349,7 @@ dependencies = [
  "realearth-shared",
  "realearth-streaming",
  "realearth-validation",
+ "serde_json",
  "tempfile",
  "tracing",
  "tracing-subscriber",

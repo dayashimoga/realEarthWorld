@@ -10,6 +10,10 @@ use camera_controller::{CameraController, CameraMode, Landmark};
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
+use realearth_ingestion::sample_chennai::create_chennai_dataset;
+use realearth_ingestion::sample_corridors::create_intercity_corridors_dataset;
+use realearth_ingestion::sample_hyderabad::create_hyderabad_dataset;
+use realearth_ingestion::sample_mysuru::create_mysuru_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
 use realearth_navigation::{RoadNetworkGraph, RuleOfTheRoad};
 use realearth_rendering::{
@@ -31,7 +35,12 @@ fn print_usage() {
     println!("  realearth-viewer [OPTIONS]");
     println!();
     println!("Options:");
-    println!("  --region <sf|san-francisco|bengaluru>   Target region (default: san-francisco)");
+    println!(
+        "  --region <sf|bengaluru|mysuru|chennai|hyderabad|corridors> Target region (default: san-francisco)"
+    );
+    println!(
+        "  --multi-region                          Stream across all mounted geographic regions"
+    );
     println!(
         "  --headless                              Run in headless offscreen mode (default in CI)"
     );
@@ -52,7 +61,7 @@ fn print_usage() {
     println!(
         "  --vehicle-cam <chase|hood|bumper>       Vehicle camera perspective (default: chase)"
     );
-    println!("  --location <name>                       Preset location (transamerica, salesforce, ferry, coit, bay-bridge, broadway-tunnel)");
+    println!("  --location <name>                       Preset location (transamerica, salesforce, vidhana, mysore, chennai, charminar, kaveri, palar, pvnr)");
     println!(
         "  --frames <N>                            Number of frames to benchmark (default: 60)"
     );
@@ -80,9 +89,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         || std::env::var("CI").is_ok()
         || std::env::var("HEADLESS").is_ok();
 
-    let is_bengaluru = args
+    let region_arg = args
         .iter()
-        .any(|a| a.to_lowercase().contains("bengaluru") || a.to_lowercase() == "in");
+        .position(|a| a == "--region")
+        .and_then(|idx| args.get(idx + 1))
+        .map(|s| s.to_lowercase())
+        .unwrap_or_else(|| {
+            if args
+                .iter()
+                .any(|a| a.to_lowercase().contains("bengaluru") || a.to_lowercase() == "in")
+            {
+                "bengaluru".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("mysuru")) {
+                "mysuru".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("chennai")) {
+                "chennai".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("hyderabad")) {
+                "hyderabad".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("corridor")) {
+                "corridors".to_string()
+            } else {
+                "san-francisco".to_string()
+            }
+        });
+
+    let _is_multi_region = args.iter().any(|a| a == "--multi-region");
 
     let initial_mode = if args
         .iter()
@@ -141,51 +172,126 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|val| val.parse().ok())
         .unwrap_or(if scenario == "soak" { 240 } else { 60 });
 
-    println!("🌍 Starting Real Earth World Viewer (Stage 6)...");
+    println!("🌍 Starting Real Earth World Viewer (Stage 7)...");
     let startup_start = Instant::now();
 
     // 1. Prepare world package for region
-    let (world_dir, region_name, default_landmark, dem, raw_dataset) = if is_bengaluru {
-        let dir = PathBuf::from("target/world_bengaluru");
-        let dem = DemGrid::create_bengaluru_plateau_dem(64, 64);
-        let raw = create_bengaluru_central_dataset();
-        if !dir.join("chunks.db").exists() {
-            println!("📦 Compiling cached Bengaluru Central package...");
-            let (val, _) = validate_dataset(&raw);
-            let options = CompilerOptions {
-                chunk_size_meters: 1000.0,
-                terrain_grid_resolution: 16,
-            };
-            compile_world_package(&val, &dem, &dir, &options)?;
-        }
-        (
-            dir,
-            "Bengaluru Central (IN)",
-            Landmark::BENGALURU_VIDHANA_SOUDHA,
-            dem,
-            raw,
-        )
-    } else {
-        let dir = PathBuf::from("target/world_san_francisco");
-        let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
-        let raw = create_san_francisco_dataset();
-        if !dir.join("chunks.db").exists() {
-            println!("📦 Compiling cached San Francisco Downtown & Waterfront package...");
-            let (val, _) = validate_dataset(&raw);
-            let options = CompilerOptions {
-                chunk_size_meters: 500.0,
-                terrain_grid_resolution: 16,
-            };
-            compile_world_package(&val, &dem, &dir, &options)?;
-        }
-        (
-            dir,
-            "San Francisco Downtown & Waterfront (US)",
-            Landmark::SAN_FRANCISCO_TRANSAMERICA,
-            dem,
-            raw,
-        )
-    };
+    let (world_dir, region_name, default_landmark, dem, raw_dataset) =
+        if region_arg.contains("mysuru") {
+            let dir = PathBuf::from("target/world_mysuru");
+            let dem = DemGrid::create_mysuru_dem(64, 64);
+            let raw = create_mysuru_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Mysuru Urban package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 1000.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (dir, "Mysuru Urban (IN)", Landmark::MYSURU_PALACE, dem, raw)
+        } else if region_arg.contains("chennai") {
+            let dir = PathBuf::from("target/world_chennai");
+            let dem = DemGrid::create_chennai_coastal_dem(64, 64);
+            let raw = create_chennai_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Chennai Central & Marina package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 1000.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Chennai Central & Marina (IN)",
+                Landmark::CHENNAI_CENTRAL,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("hyderabad") {
+            let dir = PathBuf::from("target/world_hyderabad");
+            let dem = DemGrid::create_hyderabad_plateau_dem(64, 64);
+            let raw = create_hyderabad_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Hyderabad Central & HITEC City package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 1000.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Hyderabad Central & HITEC City (IN)",
+                Landmark::HYDERABAD_CHARMINAR,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("corridor") {
+            let dir = PathBuf::from("target/world_corridors");
+            let dem = DemGrid::create_intercity_corridors_dem(64, 64);
+            let raw = create_intercity_corridors_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached South India Intercity Corridors package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 2000.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "South India Intercity Corridors (IN)",
+                Landmark::CORRIDOR_KAVERI_BRIDGE,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("bengaluru") || region_arg == "in" {
+            let dir = PathBuf::from("target/world_bengaluru");
+            let dem = DemGrid::create_bengaluru_plateau_dem(64, 64);
+            let raw = create_bengaluru_central_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Bengaluru Central package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 1000.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Bengaluru Central (IN)",
+                Landmark::BENGALURU_VIDHANA_SOUDHA,
+                dem,
+                raw,
+            )
+        } else {
+            let dir = PathBuf::from("target/world_san_francisco");
+            let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
+            let raw = create_san_francisco_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached San Francisco Downtown & Waterfront package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "San Francisco Downtown & Waterfront (US)",
+                Landmark::SAN_FRANCISCO_TRANSAMERICA,
+                dem,
+                raw,
+            )
+        };
 
     println!("📍 Active Region: {}", region_name);
     println!("📁 World Cache: {:?}", world_dir);
@@ -247,12 +353,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "🏎️ Drivable Vehicle Initialized: Mass=1450kg, 4-wheel independent raycast suspension"
         );
         if traffic_count > 0 {
-            let road_graph = RoadNetworkGraph::from_roads(&raw_dataset.roads);
-            let rule = if is_bengaluru {
+            let is_left_hand = !region_arg.contains("sf") && !region_arg.contains("san-francisco");
+            let rule = if is_left_hand {
                 RuleOfTheRoad::DriveOnLeft
             } else {
                 RuleOfTheRoad::DriveOnRight
             };
+            let road_graph = RoadNetworkGraph::from_roads(&raw_dataset.roads);
             traffic_sim.populate_from_road_network(&road_graph, traffic_count, rule);
             println!(
                 "🚗 AI Traffic Fleet: Spawned {} vehicles using Intelligent Driver Model",
@@ -274,10 +381,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         camera_ctrl.jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
     } else if args.iter().any(|a| a.contains("coit")) {
         camera_ctrl.jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
-    } else if args.iter().any(|a| a.contains("bridge")) {
+    } else if args
+        .iter()
+        .any(|a| a.contains("bridge") && !a.contains("kaveri") && !a.contains("palar"))
+    {
         camera_ctrl.jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
     } else if args.iter().any(|a| a.contains("tunnel")) {
         camera_ctrl.jump_to(&Landmark::SAN_FRANCISCO_BROADWAY_TUNNEL);
+    } else if args.iter().any(|a| a.contains("vidhana")) {
+        camera_ctrl.jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
+    } else if args
+        .iter()
+        .any(|a| a.contains("mysore") || a.contains("palace"))
+    {
+        camera_ctrl.jump_to(&Landmark::MYSURU_PALACE);
+    } else if args
+        .iter()
+        .any(|a| a.contains("chennai") || a.contains("marina"))
+    {
+        camera_ctrl.jump_to(&Landmark::CHENNAI_CENTRAL);
+    } else if args
+        .iter()
+        .any(|a| a.contains("charminar") || a.contains("hyderabad"))
+    {
+        camera_ctrl.jump_to(&Landmark::HYDERABAD_CHARMINAR);
+    } else if args.iter().any(|a| a.contains("kaveri")) {
+        camera_ctrl.jump_to(&Landmark::CORRIDOR_KAVERI_BRIDGE);
+    } else if args.iter().any(|a| a.contains("palar")) {
+        camera_ctrl.jump_to(&Landmark::CORRIDOR_PALAR_BRIDGE);
+    } else if args.iter().any(|a| a.contains("pvnr")) {
+        camera_ctrl.jump_to(&Landmark::CORRIDOR_PVNR_EXPRESSWAY);
     }
 
     let mut camera = FloatingOriginCamera::new(camera_ctrl.coord, 16.0 / 9.0);
@@ -383,8 +516,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let landmark_rotation = [
         Landmark::SAN_FRANCISCO_TRANSAMERICA,
         Landmark::SAN_FRANCISCO_SALESFORCE,
-        Landmark::SAN_FRANCISCO_COIT_TOWER,
-        Landmark::SAN_FRANCISCO_FERRY_BUILDING,
+        Landmark::BENGALURU_VIDHANA_SOUDHA,
+        Landmark::MYSURU_PALACE,
+        Landmark::CHENNAI_CENTRAL,
+        Landmark::HYDERABAD_CHARMINAR,
+        Landmark::CORRIDOR_KAVERI_BRIDGE,
+        Landmark::CORRIDOR_PALAR_BRIDGE,
+        Landmark::CORRIDOR_PVNR_EXPRESSWAY,
     ];
 
     for frame_idx in 0..frame_count {

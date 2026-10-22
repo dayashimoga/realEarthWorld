@@ -98,6 +98,72 @@ impl Landmark {
         yaw: -1.57,
         pitch: -0.3,
     };
+
+    pub const MYSURU_PALACE: Self = Self {
+        name: "Mysore Palace & Chamundi View (Mysuru Urban)",
+        coord: Wgs84Coord {
+            lat: 12.3052,
+            lon: 76.6552,
+            alt: 780.0,
+        },
+        yaw: -1.57,
+        pitch: -0.25,
+    };
+
+    pub const CHENNAI_CENTRAL: Self = Self {
+        name: "Chennai Central Station & Marina (Chennai)",
+        coord: Wgs84Coord {
+            lat: 13.0827,
+            lon: 80.2755,
+            alt: 35.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
+
+    pub const HYDERABAD_CHARMINAR: Self = Self {
+        name: "Charminar & Mecca Masjid (Hyderabad Central)",
+        coord: Wgs84Coord {
+            lat: 17.3616,
+            lon: 78.4747,
+            alt: 565.0,
+        },
+        yaw: -1.57,
+        pitch: -0.25,
+    };
+
+    pub const CORRIDOR_KAVERI_BRIDGE: Self = Self {
+        name: "NH 275 Kaveri River Bridge (Srirangapatna)",
+        coord: Wgs84Coord {
+            lat: 12.4230,
+            lon: 76.6950,
+            alt: 740.0,
+        },
+        yaw: -1.2,
+        pitch: -0.15,
+    };
+
+    pub const CORRIDOR_PALAR_BRIDGE: Self = Self {
+        name: "NH 48 Palar River Bridge (Ranipet / Vellore)",
+        coord: Wgs84Coord {
+            lat: 12.9240,
+            lon: 79.1350,
+            alt: 240.0,
+        },
+        yaw: -1.57,
+        pitch: -0.15,
+    };
+
+    pub const CORRIDOR_PVNR_EXPRESSWAY: Self = Self {
+        name: "PVNR Elevated Expressway (Hyderabad Corridor)",
+        coord: Wgs84Coord {
+            lat: 17.3500,
+            lon: 78.4400,
+            alt: 570.0,
+        },
+        yaw: -1.4,
+        pitch: -0.18,
+    };
 }
 
 /// Interactive camera controller.

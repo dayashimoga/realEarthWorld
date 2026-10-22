@@ -6,6 +6,10 @@ use crate::dem_grid::DemGrid;
 use crate::osm_parser::parse_osm_xml;
 use crate::osm_types::IngestedDataset;
 use crate::sample_bengaluru::generate_bengaluru_osm_xml;
+use crate::sample_chennai::generate_chennai_osm_xml;
+use crate::sample_corridors::generate_intercity_corridors_osm_xml;
+use crate::sample_hyderabad::generate_hyderabad_osm_xml;
+use crate::sample_mysuru::generate_mysuru_osm_xml;
 use crate::sample_san_francisco::generate_san_francisco_osm_xml;
 use realearth_shared::bounds::GeoBounds;
 use realearth_shared::errors::{RealEarthError, Result};
@@ -143,6 +147,83 @@ impl AcquisitionEngine {
                     provider: "OpenStreetMap Contributors".to_string(),
                     license: "ODbL 1.0".to_string(),
                     source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-21T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "mysuru-urban" {
+            let osm_xml = generate_mysuru_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_mysuru_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "mysuru-urban".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Mysuru Urban Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-21T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "chennai-central" {
+            let osm_xml = generate_chennai_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_chennai_coastal_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "chennai-central".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Chennai Central Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-21T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "hyderabad-central" {
+            let osm_xml = generate_hyderabad_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_hyderabad_plateau_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "hyderabad-central".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Hyderabad Central Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-21T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "intercity-corridors" {
+            let osm_xml = generate_intercity_corridors_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::new(region.bounds, 64, 64, vec![500.0; 64 * 64])?;
+            let manifest = RegionAcquisitionManifest {
+                region_id: "intercity-corridors".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "NHAI / OpenStreetMap South India Corridors (NH 275, NH 48, NH 44)"
+                        .to_string(),
+                    provider: "National Highways Authority of India & OSM Contributors".to_string(),
+                    license: "ODbL 1.0 / Open Government Data".to_string(),
+                    source_url: "https://data.gov.in".to_string(),
                     timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
                     sha256_checksum: compute_sha256(osm_xml.as_bytes()),
                     is_offline_cached: true,

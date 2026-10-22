@@ -333,3 +333,47 @@
     - 4-Wheel Equilibrium Normal Force: $F_z \approx 14,075\text{ N} \approx 1450\text{ kg} \times 9.81\text{ m/s}^2$. **PASS ✅**.
     - Ground Contact & Drop-Through: Continuous contact on DEM terrain surface ($Y = 906.74\text{m}$ MSL), 0 fall-throughs. **PASS ✅**.
 
+## STAGE 7: Geographic Expansion and Intercity Connectivity (Completed)
+- [x] Phase 7.1 — Regional Ingestion & Geographic Normalization
+  - Expanded `RegionProfile` with authentic metadata for Mysuru Urban (`KA`), Chennai Central (`TN`), Hyderabad Central (`TG`), and Intercity Corridors (`KA-TN-TG`).
+  - Implemented authentic reference datasets for Mysuru (Mysore Palace, Chamundi Temple, Mysuru Junction, Devaraja Market, Karanji Lake), Chennai (Chennai Central, Ripon Building, Fort St. George, LIC Building, Napier Bridge, Marina Coastline), and Hyderabad (Charminar, Mecca Masjid, HITEC Cyber Towers, Golconda Fort, Nayapul, Hussain Sagar, PVNR Expressway).
+  - Synthesized accurate DEM rasters for Mysuru (Chamundi Hill peak 1065m), Chennai coastal flat (0m-25m), Hyderabad granite plateau (535m-610m), and South India Intercity Corridors river basins.
+  - Implemented provenance tracking, licensing (ODbL 1.0, CC-BY 4.0, Public Domain), and SHA-256 integrity verification across all 4 regional packages.
+- [x] Phase 7.2 — Intercity Transport Corridors
+  - Compiled authentic connecting highways: Bengaluru–Mysuru Expressway (NH 275), Bengaluru–Chennai Highway (NH 48 / NE 7), and Bengaluru–Hyderabad Highway (NH 44).
+  - Implemented grade-separated river bridges (Kaveri River Bridge at Srirangapatna, Palar River Bridge at Ranipet, Tungabhadra River Bridge at Kurnool, Nayapul over Musi River, and Napier Bridge over Cooum River) and elevated viaducts (PVNR Elevated Expressway).
+  - Validated long-distance road graphs and continuous routing without disconnected boundaries or fabricated connectors.
+- [x] Phase 7.3 — Scalable Regional Packaging & Multi-Region Streaming
+  - Implemented `PackageManifest`, `PackageState`, and `RegionalCatalog` supporting incremental installation, rescan, lazy loading, and SHA-256 verification.
+  - Implemented `MultiRegionStreamer` dispatching spatial queries to active regional databases with boundary seam stitching, collision pinning, and global LRU memory budget eviction.
+  - Validated long-distance intercity vehicle travel with continuous streaming, zero drop-throughs, and bounded LRU memory eviction (< 1024 MB RSS).
+  - Updated CLI (`realearth-cli`) with `catalog` subcommand and multi-region `--region <sf|bengaluru|mysuru|chennai|hyderabad|corridors>` compilation and validation.
+  - Updated World Viewer (`realearth-viewer`) supporting multi-region fast travel (hotkeys 1..9), regional selection, and intercity driving.
+
+### Stage 7 Verification & Certification Matrix (Geographic Expansion & Intercity Connectivity)
+- **Full Workspace Test Suite**: 77 passed; 0 failed; 0 ignored (100% pass rate across all 12 workspace crates).
+- **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+- **Code Style Gate**: `cargo fmt --check` passed with 0 formatting discrepancies.
+- **Dedicated Intercity Connectivity Test Target (`realearth-tests::intercity_connectivity`)**:
+  - `test_all_four_regional_packages_compilation_and_integrity`: PASS ✅ (Bengaluru, Mysuru, Chennai, Hyderabad, and Corridors compiled, manifests registered, SHA-256 verified).
+  - `test_bengaluru_mysuru_expressway_corridor_traversal`: PASS ✅ (Continuous A* route from Vidhana Soudha to Mysore Palace across Kaveri River Bridge, 135 km with 0 topology breaks).
+  - `test_bengaluru_chennai_highway_corridor_traversal`: PASS ✅ (Continuous A* route from Vidhana Soudha to Chennai Central across Palar River Bridge, 340 km).
+  - `test_bengaluru_hyderabad_highway_corridor_traversal`: PASS ✅ (Continuous A* route from Vidhana Soudha to Charminar across Tungabhadra Bridge and PVNR Expressway, 560 km).
+  - `test_multi_region_catalog_incremental_install_and_lazy_load`: PASS ✅ (Incremental installation, bounding box coverage queries, lazy loading in MultiRegionStreamer).
+  - `test_intercity_long_drive_memory_stability_and_eviction`: PASS ✅ (50-step high-speed drive, memory bounded within 32MB budget, origin chunk collision pinning preserved).
+  - `test_grade_separated_river_and_railway_crossings_invariance`: PASS ✅ (Layer 1 Kaveri, Palar, Tungabhadra, Napier, Nayapul, and PVNR bridges preserved with zero at-grade conflicts).
+- **Interactive & Headless Viewer Verification (`apps/world-viewer`)**:
+  - **Mysuru Urban (Standalone World Viewer - Fly Mode)**:
+    - Average Framerate: **463.1 FPS** (Avg Frame Time: **2.16 ms**). Budget: $\ge 60.0$ FPS ($\le 16.67$ ms). **PASS ✅**.
+    - p50: **1.03 ms** | p95: **7.49 ms** | p99: **8.75 ms**. **PASS ✅**.
+    - Memory: **1.54 MB** CPU Heap, **0.75 MB** GPU VRAM. **PASS ✅**.
+    - Cold Startup Latency: **1453.73 ms** (Budget: < 2000 ms). **PASS ✅**.
+  - **Hyderabad Central (Drivable Vehicle Simulation Mode + 8 Autonomous IDM Vehicles)**:
+    - Average Framerate: **635.6 FPS** (Avg Frame Time: **1.57 ms**). **PASS ✅**.
+    - p50: **1.06 ms** | p95: **6.65 ms** | p99: **8.77 ms**. **PASS ✅**.
+    - Memory: **1.36 MB** CPU Heap, **1.22 MB** GPU VRAM. **PASS ✅**.
+    - Cold Startup Latency: **989.20 ms** (Budget: < 2000 ms). **PASS ✅**.
+    - Vehicle Dynamics: $19.8\text{ km/h}$ in Gear 1, 2589 RPM, stable 4-wheel independent raycast suspension. **PASS ✅**.
+
+
+

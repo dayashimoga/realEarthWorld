@@ -4,6 +4,7 @@ pub mod async_loader;
 pub mod config;
 pub mod lod;
 pub mod lru_cache;
+pub mod multi_region;
 pub mod prefetch;
 pub mod streamer;
 
@@ -14,6 +15,7 @@ pub use async_loader::{
 pub use config::StreamingConfig;
 pub use lod::{select_lod, select_lod_with_hysteresis};
 pub use lru_cache::{CachedChunk, ChunkKey, LruChunkCache};
+pub use multi_region::{MountedRegion, MultiRegionStreamer, MultiRegionTelemetry};
 pub use prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkPriority};
 pub use streamer::{StreamingTelemetry, WorldStreamer};
 
@@ -170,5 +172,42 @@ mod tests {
         streamer.teleport(distant_spot);
         let telem2 = streamer.telemetry_details();
         assert_eq!(telem2.pending_queue, 0);
+    }
+
+    #[test]
+    fn test_multi_region_streamer_dual_mount_and_cross_region_update() {
+        let temp = tempdir().expect("tempdir failed");
+
+        // 1. Compile Region A (Bengaluru)
+        let dir_a = temp.path().join("bengaluru");
+        let (dataset_a, _) = validate_dataset(&create_bengaluru_central_dataset());
+        let dem_a = DemGrid::create_bengaluru_plateau_dem(16, 16);
+        let opts = CompilerOptions {
+            chunk_size_meters: 1000.0,
+            terrain_grid_resolution: 8,
+        };
+        compile_world_package(&dataset_a, &dem_a, &dir_a, &opts).unwrap();
+
+        // 2. Initialize MultiRegionStreamer and mount Bengaluru
+        let config = StreamingConfig {
+            max_memory_mb: 64,
+            view_distance_meters: 2500.0,
+            ..Default::default()
+        };
+        let mut multi_streamer = MultiRegionStreamer::new(config);
+        multi_streamer
+            .mount_region("bengaluru-central", &dir_a, dem_a.bounds)
+            .unwrap();
+
+        // 3. Update at Vidhana Soudha
+        let vidhana = Wgs84Coord::new(12.9797, 77.5907, 920.0);
+        let count = multi_streamer.update(vidhana).unwrap();
+        assert!(count > 0, "Expected loaded chunks in multi-region streamer");
+        assert_eq!(multi_streamer.loaded_chunk_count(), count);
+
+        let telem = multi_streamer.telemetry();
+        assert_eq!(telem.mounted_regions_count, 1);
+        assert!(telem.active_chunks > 0);
+        assert_eq!(telem.active_region_ids, vec!["bengaluru-central"]);
     }
 }

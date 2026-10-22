@@ -6,6 +6,7 @@ pub mod compiler_pipeline;
 pub mod database;
 pub mod mesh;
 pub mod packager;
+pub mod regional_catalog;
 pub mod road_mesher;
 pub mod terrain_mesher;
 pub mod vegetation_mesher;
@@ -19,6 +20,7 @@ pub use mesh::{ChunkMesh, Vertex};
 pub use packager::{
     pack_chunk_to_bytes, read_chunk_file, unpack_chunk_from_bytes, write_chunk_file,
 };
+pub use regional_catalog::{PackageManifest, PackageState, RegionalCatalog};
 pub use road_mesher::mesh_road;
 pub use terrain_mesher::mesh_terrain;
 pub use vegetation_mesher::mesh_vegetation;
@@ -213,5 +215,55 @@ mod tests {
             max_recorded >= 50.0,
             "Telegraph/Nob hill chunk max elevation must be >= 50m MSL"
         );
+    }
+
+    #[test]
+    fn test_regional_catalog_install_list_uninstall() {
+        let temp = tempdir().expect("tempdir failed");
+        let catalog_root = temp.path().join("packages");
+        let mut catalog = RegionalCatalog::open(&catalog_root).expect("open failed");
+
+        let mysuru_profile = realearth_shared::region::RegionProfile::mysuru_urban();
+        let manifest = PackageManifest::new(
+            &mysuru_profile,
+            "1.0.0",
+            12,
+            120_000,
+            55_000,
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        );
+
+        // Create a dummy source package directory with chunks.db
+        let src_pkg = temp.path().join("src_mysuru");
+        std::fs::create_dir_all(&src_pkg).unwrap();
+        let db_path = src_pkg.join("chunks.db");
+        let db = ChunkDatabase::open(&db_path).unwrap();
+        drop(db);
+
+        // Install package
+        catalog
+            .install_package(&src_pkg, &manifest)
+            .expect("install failed");
+        assert!(catalog.is_installed("mysuru-urban"));
+        assert_eq!(catalog.list_installed().len(), 1);
+
+        // Verify spatial query coverage
+        let covering = catalog.find_regions_covering(&mysuru_profile.bounds);
+        assert_eq!(covering, vec!["mysuru-urban"]);
+
+        // Rescan from disk
+        let mut catalog2 = RegionalCatalog::open(&catalog_root).expect("reopen failed");
+        assert!(catalog2.is_installed("mysuru-urban"));
+        assert_eq!(
+            catalog2.get_manifest("mysuru-urban").unwrap().version,
+            "1.0.0"
+        );
+
+        // Uninstall package
+        catalog2
+            .uninstall_package("mysuru-urban")
+            .expect("uninstall failed");
+        assert!(!catalog2.is_installed("mysuru-urban"));
+        assert_eq!(catalog2.list_installed().len(), 0);
     }
 }

@@ -4,17 +4,38 @@
 use realearth_compiler::chunk::WorldChunk;
 use std::collections::HashMap;
 
-/// Unique coordinate key for a chunk in the cache.
+/// Unique coordinate key for a chunk in the cache, optionally namespaced by region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkKey {
     pub x: i32,
     pub y: i32,
     pub lod: u32,
+    pub region_hash: u32,
 }
 
 impl ChunkKey {
     pub const fn new(x: i32, y: i32, lod: u32) -> Self {
-        Self { x, y, lod }
+        Self {
+            x,
+            y,
+            lod,
+            region_hash: 0,
+        }
+    }
+
+    /// Creates a ChunkKey namespaced to a specific region ID to avoid inter-region chunk coordinate collisions.
+    pub fn for_region(region_id: &str, x: i32, y: i32, lod: u32) -> Self {
+        let mut h = 0x811c_9dc5u32;
+        for byte in region_id.as_bytes() {
+            h ^= *byte as u32;
+            h = h.wrapping_mul(0x0100_0193);
+        }
+        Self {
+            x,
+            y,
+            lod,
+            region_hash: h,
+        }
     }
 }
 

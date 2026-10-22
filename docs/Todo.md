@@ -115,6 +115,20 @@
 - [x] Stage 6.3: Drivable Bengaluru Central test routes (Vidhana Soudha -> Cubbon Park -> Kasturba Rd -> MG Road).
 - [x] Stage 6.3: Integrated driving HUD in `apps/world-viewer` with `--drive` flag and full regression testing suite.
 
+## STAGE 7: Geographic Expansion and Intercity Connectivity (Completed)
+- [x] Stage 7.1: Region profiles and authentic GIS datasets for Mysuru, Chennai, and Hyderabad in `realearth-shared` and `realearth-ingestion`.
+- [x] Stage 7.1: Digital Elevation Models: Mysuru plateau & Chamundi Hill (1060m), Chennai coastal flat (0m-25m), and Hyderabad granite plateau (540m-610m).
+- [x] Stage 7.1: Provenance metadata, licensing (ODbL, CC-BY, Public Domain), and SHA-256 manifests in `AcquisitionEngine`.
+- [x] Stage 7.2: Transport Corridors: Bengaluru–Mysuru Expressway (NH 275), Bengaluru–Chennai Highway (NH 48 / NE 7), and Bengaluru–Hyderabad Highway (NH 44).
+- [x] Stage 7.2: Grade separations: Kaveri River bridge at Srirangapatna, Palar River bridge at Ranipet, Krishna & Tungabhadra bridges at Kurnool, Musi River bridge (Nayapul), and PVNR Elevated Expressway.
+- [x] Stage 7.2: Long-distance road graph traversal without disconnected edges or fabricated connectors in `realearth-navigation`.
+- [x] Stage 7.3: Decentralized regional package format and catalog (`RegionalCatalog`, `PackageManifest`) with incremental install, rescan, verification, and uninstallation.
+- [x] Stage 7.3: Multi-region spatial streamer (`MultiRegionStreamer`) routing queries across multiple regional SQLite databases with boundary seam stitching.
+- [x] Stage 7.3: Long-distance intercity vehicle travel with continuous streaming, LRU cache eviction (< 1024 MB RSS), and 60-FPS performance.
+- [x] Stage 7.3: CLI (`realearth-cli`) and World Viewer (`realearth-viewer`) updates supporting all regions and intercity corridor navigation.
+
+
+
 
 
 

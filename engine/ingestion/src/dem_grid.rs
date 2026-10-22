@@ -113,6 +113,139 @@ impl DemGrid {
         }
     }
 
+    /// Generates a realistic DEM conforming to Mysuru topography and Chamundi Hill (740m to 1065m MSL).
+    pub fn create_mysuru_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(12.2600, 12.3600, 76.6000, 76.7200);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1) as f64; // 0.0 = North, 1.0 = South
+            for x in 0..width {
+                let u = x as f64 / (width - 1) as f64; // 0.0 = West, 1.0 = East
+
+                let base = 755.0;
+                let rolling = ((u * 6.0).sin() * 5.0 + (v * 8.0).cos() * 4.0) as f32;
+
+                // Chamundi Hill peak located at (u ~ 0.5917, v ~ 0.8550) rising to ~1065m MSL
+                let dist_chamundi = ((u - 0.5917).powi(2) + (v - 0.8550).powi(2)).sqrt();
+                let chamundi_hill = ((-dist_chamundi * 8.0).exp() * 320.0) as f32;
+
+                elevations.push(base + rolling + chamundi_hill);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a realistic coastal DEM for Chennai from the Bay of Bengal coastline (0m to 25m MSL).
+    pub fn create_chennai_coastal_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(13.0400, 13.1200, 80.2400, 80.3000);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for _y in 0..height {
+            for x in 0..width {
+                let u = x as f64 / (width - 1) as f64; // 0.0 = West (inland), 1.0 = East (Bay of Bengal)
+
+                let elev = if u >= 0.80 {
+                    0.0
+                } else if u >= 0.65 {
+                    let factor = (0.80 - u) / 0.15;
+                    (factor * 3.5).max(0.0) as f32
+                } else {
+                    let inland_factor = (0.65 - u) / 0.65;
+                    (3.5 + inland_factor * 18.0 + (u * 10.0).sin() * 2.0).max(1.0) as f32
+                };
+
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a realistic DEM for Hyderabad Deccan plateau and Golconda ridge (490m to 615m MSL).
+    pub fn create_hyderabad_plateau_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(17.3400, 17.4400, 78.4300, 78.5200);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1) as f64; // 0.0 = North, 1.0 = South
+            for x in 0..width {
+                let u = x as f64 / (width - 1) as f64; // 0.0 = West, 1.0 = East
+
+                let base = 535.0;
+                let rolling = ((u * 5.0).sin() * 6.0 + (v * 7.0).cos() * 5.0) as f32;
+
+                // Golconda Fort hill ridge in the west (u ~ 0.15, v ~ 0.40)
+                let dist_golconda = ((u - 0.15).powi(2) + (v - 0.40).powi(2)).sqrt();
+                let golconda_hill = ((-dist_golconda * 12.0).exp() * 75.0) as f32;
+
+                // Musi River depression in the south-central (v ~ 0.72)
+                let dist_musi = ((v - 0.72) / 0.04).powi(2);
+                let musi_dip = ((-dist_musi).exp() * -20.0) as f32;
+
+                elevations.push((base + rolling + golconda_hill + musi_dip).max(490.0));
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a regional DEM covering the South India Intercity Corridors
+    /// (Bengaluru, Mysuru, Chennai, Hyderabad, and connecting river basins).
+    pub fn create_intercity_corridors_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(12.2000, 17.5000, 76.5000, 80.3500);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1).max(1) as f64;
+            let lat = bounds.max_lat - v * (bounds.max_lat - bounds.min_lat);
+
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64;
+                let lon = bounds.min_lon + u * (bounds.max_lon - bounds.min_lon);
+
+                // Deccan plateau elevation tapering toward the eastern coast (Bay of Bengal)
+                let coast_factor = ((80.35 - lon) / (80.35 - 76.50)).clamp(0.0, 1.0);
+                let base_elev = 50.0 + coast_factor * 750.0;
+
+                // North-south variation (Hyderabad ~530m, Bengaluru ~920m, Mysuru ~760m)
+                let lat_factor = ((lat - 12.20) / (17.50 - 12.20)).clamp(0.0, 1.0);
+                let lat_mod = (1.0 - lat_factor) * 120.0;
+
+                // River valleys depressions (Kaveri near lat 12.4, Krishna/Tungabhadra near lat 15.8)
+                let kaveri_dist = ((lat - 12.42) / 0.15).powi(2);
+                let krishna_dist = ((lat - 15.85) / 0.20).powi(2);
+                let river_dip = ((-kaveri_dist).exp() + (-krishna_dist).exp()) * -45.0;
+
+                let elev = ((base_elev + lat_mod + river_dip).max(2.0)) as f32;
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
     /// Returns elevation at discrete grid indices (x, y).
     #[inline]
     pub fn get_at(&self, x: usize, y: usize) -> f32 {
