@@ -291,11 +291,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dedicated Test Target (`tests/tests/gameplay_careers.rs`)**:
   - 8 comprehensive integration tests covering real surveyed destinations, end-to-end taxi ride with dwell boarding and 5-star comfort, urgent package delivery speed bonuses, heavy freight cargo integrity across Kaveri Bridge, landmark discovery achievements, roadside recovery towing, persistent save/load with V1 to V2 schema migration, and 100-job continuous soak stability.
 
-
-
-
-
-
-
-
-
+## [0.9.0] - 2026-10-22 — STAGE 9: Extensible Multi-Transport Simulation
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0013-extensible-multi-transport-simulation.md`: Architectural specification for extensible multi-transport simulation across road, railway, marine, and aviation modalities with strict decoupling of physical semantics.
+- **Multimodal Road Transport (`engine/vehicles/src/multimodal/road_transport.rs`)**:
+  - `RoadVehicleCategory`: Functional classifications for `Motorcycle`, `CitySedan`, `TransitBus`, and `HeavyTruck`.
+  - `RoadAccessRestriction`: Operational corridor restrictions (`OpenAccess`, `BusOnly`, `NoHeavyTrucks`, `MotorcycleOnly`, `ExpresswayOnly`).
+  - `MotorcycleModel`: 2-wheeled agile dynamic motorcycle model with roll lean dynamics, equilibrium lean solver ($\tan\phi = v^2 / (R g)$), spring-damper stabilization, camber thrust, and low-speed crash recovery.
+  - `TransitBusModel`: Heavy passenger transit bus with pneumatic suspension, passenger mass payload ($75\text{ kg}$ per passenger), dual-chamber air brake reservoir pressure dynamics, and swept-path tail off-tracking calculation (`rear_tail_position`).
+  - `HeavyTruckModel`: Multi-axle commercial heavy hauler with gross vehicle mass up to $40,000\text{ kg}$, fifth-wheel trailer articulation kinematics ($d\theta_{\text{trailer}}/dt = -(v/L)\sin\theta - \omega_{\text{tractor}}$), dynamic rollover threshold calculation ($a_{\text{crit}} = \frac{T}{2 h_{\text{com}}} g$), rollover detection, and upright recovery.
+- **Railway Track Networks & Train Consist Dynamics (`engine/navigation/src/rail_graph.rs`, `engine/vehicles/src/multimodal/train.rs`)**:
+  - `RailNetworkGraph`: Dedicated track topology with `RailNode`, `RailTrackSegment`, `RailGauge` (Broad, Standard, Metre), turnout/switch points (`SwitchState`: Straight, Diverging, Locked), automatic block signaling (`SignalAspect`: Clear, Approach, Stop), and road/rail level crossings (`RailLevelCrossing`).
+  - `TrainConsist`: Longitudinal railway physics with `TrainCar`, `LocomotiveType` (Electric, DieselElectric, MultipleUnit), continuous rated power curves ($P = F \cdot v$), low-speed tractive effort limits, steel wheel-on-rail adhesion thresholds ($\mu \approx 0.32$), wheel slip detection, Davis resistance equation ($R = A + Bv + Cv^2$), and Westinghouse pneumatic air brake pipe acoustic wave propagation with Automatic Train Protection (ATP) emergency tripping at stop signals.
+- **Marine Waterway Fairways & Hydrodynamic Buoyancy (`engine/navigation/src/waterway.rs`, `engine/vehicles/src/multimodal/marine.rs`)**:
+  - `WaterwayGraph`: Marine fairway navigation with `WaterwayNode`, `ShippingChannel`, `WaterwayCategory` (OpenSea, DredgedChannel, InlandCanal, HarborBasin), navigation aid buoys (`NavigationAids`: PortLateral, StarboardLateral, SafeWater, CardinalNorth, SectorLight), and `MarinePort` with draft-clearance checking and container berth assignment (`PortBerth`).
+  - `MarineVessel`: Hydrodynamic vessel simulation with `MarineVesselType` (CargoContainerShip, PassengerFerry, HarborTugboat), Archimedes buoyancy volume displacement, equilibrium water draft ($T = M / (\rho A C_b)$), transverse metacentric righting moment ($M = mg \cdot GM \sin\phi$), pitch trim stability, harmonic wave-surface interaction, hull hydrodynamic skin friction/wave-making drag, propeller slipstream wash, and rudder hydrofoil lift turning moments.
+- **Aviation Air Navigation & 6-DOF Flight Aerodynamics (`engine/navigation/src/air_navigation.rs`, `engine/vehicles/src/multimodal/aviation.rs`)**:
+  - `AirNavigationDatabase`: Aeronautical navigation database with `Airport`, `AirportRunway`, magnetic headings, threshold coordinates, airway corridors (`AirCorridorSegment`), and Instrument Landing System (`IlsGuidance`) calculating horizontal localizer and 3.0° glideslope approach deviations.
+  - `AircraftFlight`: 6-DOF aircraft aerodynamic flight solver with `AviationCategory` (CommercialAirliner, GeneralAviation, BusinessJet), barometric altitude air density lapse ($\rho(h) = \rho_0 e^{-h/8500}$), dynamic pressure, angle of attack ($\alpha$) and sideslip ($\beta$), non-linear lift polar with post-stall flow separation modeling, ground effect induced drag reduction ($h < b$), control surfaces (elevators, ailerons, rudder, flaps, spoilers), turbofan engine thrust, and tricycle landing gear oleo-pneumatic strut shock compression. Validated zero coupling to road wheel friction models.
+- **Dedicated Multi-Transport Integration Test Target (`tests/tests/multi_transport_simulation.rs`)**:
+  - Comprehensive integration test suite validating road transport dynamics and access policies, railway track topology and train consist physics, marine fairway navigation and hydrodynamic buoyancy, airport runway ILS approach and 6-DOF flight mechanics, and concurrent multi-modal simulation throughput exceeding $1000\text{ Hz}$ in headless simulation.

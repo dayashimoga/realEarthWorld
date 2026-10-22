@@ -44,3 +44,7 @@ path = "tests/intercity_connectivity.rs"
 [[test]]
 name = "gameplay_careers"
 path = "tests/gameplay_careers.rs"
+
+[[test]]
+name = "multi_transport_simulation"
+path = "tests/multi_transport_simulation.rs"

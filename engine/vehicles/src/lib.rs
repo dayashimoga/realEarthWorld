@@ -4,6 +4,7 @@ pub mod camera;
 pub mod dynamics;
 pub mod ground;
 pub mod kinematics;
+pub mod multimodal;
 pub mod physics;
 pub mod traffic;
 pub mod vehicle_agent;
@@ -15,6 +16,12 @@ pub use dynamics::{
 };
 pub use ground::{FlatGround, FunctionalGroundQuery, GroundQuery, SlopedGround};
 pub use kinematics::AckermannVehicle;
+pub use multimodal::{
+    AircraftFlight, AviationCategory, DavisCoefficients, FlightInputs, HeavyTruckModel,
+    LocomotiveType, MarineInputs, MarineVessel, MarineVesselType, MotorcycleModel,
+    RoadAccessRestriction, RoadVehicleCategory, TrainBrakeState, TrainCar, TrainConsist,
+    TransitBusModel,
+};
 pub use physics::{
     PhysicsWorld, GROUP_BUILDING, GROUP_OBSTACLE, GROUP_ROAD, GROUP_TERRAIN, GROUP_VEHICLE,
 };

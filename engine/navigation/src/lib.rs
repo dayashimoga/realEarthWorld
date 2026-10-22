@@ -1,10 +1,24 @@
-//! Lane-level road network graph and A* routing engine for Real Earth.
+//! Multimodal navigation graphs and routing engine for Real Earth (Road, Rail, Waterway, Aviation).
 
+pub mod air_navigation;
+pub mod rail_graph;
 pub mod road_graph;
 pub mod router;
+pub mod waterway;
 
+pub use air_navigation::{
+    AirCorridorSegment, AirNavigationDatabase, Airport, AirportRunway, IlsGuidance,
+};
+pub use rail_graph::{
+    CrossingState, RailGauge, RailLevelCrossing, RailNetworkGraph, RailNode, RailTrackSegment,
+    SignalAspect, SwitchState,
+};
 pub use road_graph::{LaneDescriptor, RoadEdge, RoadNetworkGraph, RoadNode, RuleOfTheRoad};
 pub use router::{find_route, NavigationRoute, RoutingPreference};
+pub use waterway::{
+    MarinePort, NavigationAids, PortBerth, ShippingChannel, WaterwayCategory, WaterwayGraph,
+    WaterwayNode,
+};
 
 #[cfg(test)]
 mod tests {

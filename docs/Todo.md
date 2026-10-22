@@ -141,3 +141,19 @@
 - [x] Stage 8.3: Develop comprehensive integration test suite (`tests/tests/gameplay_careers.rs`) covering all careers, save/load, schema migration, and long-session stability.
 - [x] Stage 8.3: Validate zero regression across core simulation, rendering, streaming, and GIS layers; run full test suite and clippy/fmt quality gates.
 
+## STAGE 9: Extensible Multi-Transport Simulation (Completed)
+- [x] Stage 9.1: Road transport: Extend vehicle models with motorcycles, transit buses, and heavy commercial trucks.
+- [x] Stage 9.1: Implement 2-wheel motorcycle lean angle, camber thrust, and roll dynamics.
+- [x] Stage 9.1: Implement pneumatic transit bus suspension, passenger payload, and swept path turning.
+- [x] Stage 9.1: Implement heavy truck multi-axle load distribution, rollover threshold, and highway access restrictions.
+- [x] Stage 9.1: Validate multi-class road transport operation across surveyed road networks.
+- [x] Stage 9.2: Railway transport: Implement `RailGraph`, switches/turnouts, block signaling, station platforms, and level crossings.
+- [x] Stage 9.2: Implement `TrainConsist` physics: Davis resistance, tractive effort curves, steel wheel adhesion, and pneumatic brake propagation.
+- [x] Stage 9.2: Marine transport: Implement `WaterwayGraph`, shipping fairway channels, harbor docks, and navigational buoys.
+- [x] Stage 9.2: Implement `MarineVessel` physics: Archimedes buoyancy volume displacement, water-surface heave/pitch/roll, metacentric righting moment, and propeller thrust.
+- [x] Stage 9.3: Aviation: Implement airport runway and taxiway interfaces, ILS glide slope corridors, and holding points.
+- [x] Stage 9.3: Implement 6-DOF aircraft aerodynamics: lift/drag polar, control surfaces (ailerons/elevators/rudder/flaps), stall mechanics, and tricycle landing gear.
+- [x] Stage 9.3: Implement high-altitude flight navigation and adaptive wide-horizon streaming ranges.
+- [x] Stage 9.3: Create comprehensive test target (`tests/tests/multi_transport_simulation.rs`) validating road, rail, marine, and aviation modes.
+- [x] Stage 9.3: Validate zero cross-modal coupling, 100% test pass rate across workspace, and >= 60 FPS performance.
+
