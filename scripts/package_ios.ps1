@@ -22,12 +22,18 @@ New-Item -ItemType Directory -Path "$AppBundle/assets" -Force | Out-Null
 New-Item -ItemType Directory -Path "$AppBundle/Frameworks" -Force | Out-Null
 
 # 2. Stage binaries and headers
+$IosLib = "target/aarch64-apple-ios/release/librealearth.a"
 $NativeBuilt = "target/release/realearth.dll"
-if (Test-Path $NativeBuilt) {
+if (Test-Path $IosLib) {
+    Copy-Item $IosLib -Destination "$AppBundle/RealEarth" -Force
+    Write-Host "[OK] Staged iOS static library to $AppBundle/RealEarth" -ForegroundColor Green
+} elseif (Test-Path $NativeBuilt) {
     Copy-Item $NativeBuilt -Destination "$AppBundle/RealEarth" -Force
 } else {
     cargo build -p realearth-mobile --release
-    Copy-Item "target/release/realearth.dll" -Destination "$AppBundle/RealEarth" -Force
+    if (Test-Path "target/release/realearth.dll") {
+        Copy-Item "target/release/realearth.dll" -Destination "$AppBundle/RealEarth" -Force
+    }
 }
 
 Copy-Item "ios/RealEarth/Info.plist" -Destination "$AppBundle/Info.plist" -Force

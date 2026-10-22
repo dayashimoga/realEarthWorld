@@ -10,14 +10,25 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/assets" "$APP_BUNDLE/Frameworks"
 
 # Stage binary
-cargo build -p realearth-mobile --release
-BIN_SRC="target/release/librealearth.a"
-if [ ! -f "$BIN_SRC" ]; then
+BIN_SRC=""
+if [ -f "target/aarch64-apple-ios/release/librealearth.a" ]; then
+    BIN_SRC="target/aarch64-apple-ios/release/librealearth.a"
+elif [ -f "target/release/librealearth.a" ]; then
+    BIN_SRC="target/release/librealearth.a"
+elif [ -f "target/release/realearth.dll" ]; then
     BIN_SRC="target/release/realearth.dll"
+else
+    cargo build -p realearth-mobile --release
+    if [ -f "target/release/librealearth.a" ]; then
+        BIN_SRC="target/release/librealearth.a"
+    elif [ -f "target/release/realearth.dll" ]; then
+        BIN_SRC="target/release/realearth.dll"
+    fi
 fi
 
-if [ -f "$BIN_SRC" ]; then
+if [ -n "$BIN_SRC" ] && [ -f "$BIN_SRC" ]; then
     cp "$BIN_SRC" "$APP_BUNDLE/RealEarth"
+    echo "[OK] Staged iOS static library from $BIN_SRC"
 fi
 
 cp "ios/RealEarth/Info.plist" "$APP_BUNDLE/Info.plist"

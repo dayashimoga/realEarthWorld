@@ -21,16 +21,23 @@ New-Item -ItemType Directory -Path $Arm64Dir -Force | Out-Null
 New-Item -ItemType Directory -Path $X86Dir -Force | Out-Null
 
 # 2. Stage native libraries
+$Arm64So = "target/aarch64-linux-android/release/librealearth.so"
 $NativeBuilt = "target/release/realearth.dll"
-if (Test-Path $NativeBuilt) {
+if (Test-Path $Arm64So) {
+    Copy-Item $Arm64So -Destination "$Arm64Dir/librealearth.so" -Force
+    Copy-Item $Arm64So -Destination "$X86Dir/librealearth.so" -Force
+    Write-Host "[OK] Staged native aarch64 library to $JniDir" -ForegroundColor Green
+} elseif (Test-Path $NativeBuilt) {
     Copy-Item $NativeBuilt -Destination "$Arm64Dir/librealearth.so" -Force
     Copy-Item $NativeBuilt -Destination "$X86Dir/librealearth.so" -Force
     Write-Host "[OK] Staged native libraries to $JniDir" -ForegroundColor Green
 } else {
     Write-Host "[WARN] target/release/realearth.dll not found, building..." -ForegroundColor Yellow
     cargo build -p realearth-mobile --release
-    Copy-Item "target/release/realearth.dll" -Destination "$Arm64Dir/librealearth.so" -Force
-    Copy-Item "target/release/realearth.dll" -Destination "$X86Dir/librealearth.so" -Force
+    if (Test-Path "target/release/realearth.dll") {
+        Copy-Item "target/release/realearth.dll" -Destination "$Arm64Dir/librealearth.so" -Force
+        Copy-Item "target/release/realearth.dll" -Destination "$X86Dir/librealearth.so" -Force
+    }
 }
 
 # 3. Create standalone APK package structure

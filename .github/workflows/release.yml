@@ -135,10 +135,30 @@ jobs:
         with:
           ndk-version: r26b
 
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Configure Android NDK Environment
+        run: |
+          NDK_LLVM_BIN=$(echo $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/*/bin)
+          echo "NDK_LLVM_BIN=$NDK_LLVM_BIN" >> $GITHUB_ENV
+          echo "$NDK_LLVM_BIN" >> $GITHUB_PATH
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_LLVM_BIN/aarch64-linux-android31-clang" >> $GITHUB_ENV
+          echo "CC_aarch64_linux_android=$NDK_LLVM_BIN/aarch64-linux-android31-clang" >> $GITHUB_ENV
+          echo "AR_aarch64_linux_android=$NDK_LLVM_BIN/llvm-ar" >> $GITHUB_ENV
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "release-mobile"
+
+      - name: Build Android JNI Shared Library
+        run: cargo ndk --target aarch64-linux-android --platform 31 build -p realearth-mobile --release
+
+      - name: Build iOS Framework Static Library
+        run: cargo build -p realearth-mobile --target aarch64-apple-ios --release
 
       - name: Package Android Applications
         run: |

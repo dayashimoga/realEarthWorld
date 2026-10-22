@@ -9,15 +9,26 @@ JNI_DIR="android/app/src/main/jniLibs"
 mkdir -p "$JNI_DIR/arm64-v8a" "$JNI_DIR/x86_64"
 
 # Stage native libraries
-cargo build -p realearth-mobile --release
-SO_SRC="target/release/librealearth.so"
-if [ ! -f "$SO_SRC" ]; then
+SO_SRC=""
+if [ -f "target/aarch64-linux-android/release/librealearth.so" ]; then
+    SO_SRC="target/aarch64-linux-android/release/librealearth.so"
+elif [ -f "target/release/librealearth.so" ]; then
+    SO_SRC="target/release/librealearth.so"
+elif [ -f "target/release/realearth.dll" ]; then
     SO_SRC="target/release/realearth.dll"
+else
+    cargo build -p realearth-mobile --release
+    if [ -f "target/release/librealearth.so" ]; then
+        SO_SRC="target/release/librealearth.so"
+    elif [ -f "target/release/realearth.dll" ]; then
+        SO_SRC="target/release/realearth.dll"
+    fi
 fi
 
-if [ -f "$SO_SRC" ]; then
+if [ -n "$SO_SRC" ] && [ -f "$SO_SRC" ]; then
     cp "$SO_SRC" "$JNI_DIR/arm64-v8a/librealearth.so"
     cp "$SO_SRC" "$JNI_DIR/x86_64/librealearth.so"
+    echo "[OK] Staged native library from $SO_SRC to $JNI_DIR"
 fi
 
 STAGING="$TARGET_DIR/staging_apk"
