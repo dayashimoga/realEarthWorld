@@ -12,14 +12,21 @@ use realearth_ingestion::sample_bengaluru::{
     create_bengaluru_central_dataset, generate_bengaluru_osm_xml,
 };
 use realearth_ingestion::sample_chennai::{create_chennai_dataset, generate_chennai_osm_xml};
+use realearth_ingestion::sample_chicago::{create_chicago_dataset, generate_chicago_osm_xml};
 use realearth_ingestion::sample_corridors::{
     create_intercity_corridors_dataset, generate_intercity_corridors_osm_xml,
 };
 use realearth_ingestion::sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml};
+use realearth_ingestion::sample_los_angeles::{
+    create_los_angeles_dataset, generate_los_angeles_osm_xml,
+};
+use realearth_ingestion::sample_miami::{create_miami_dataset, generate_miami_osm_xml};
 use realearth_ingestion::sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
+use realearth_ingestion::sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
 use realearth_ingestion::sample_san_francisco::{
     create_san_francisco_dataset, generate_san_francisco_osm_xml,
 };
+use realearth_ingestion::sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
 use realearth_validation::pipeline::{validate_dataset, validate_dataset_with_tolerances};
 use realearth_validation::{CompilerPublicationGate, PublicationVerdict, ValidationTolerance};
 use std::path::PathBuf;
@@ -126,6 +133,41 @@ fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, 
             DemGrid::create_san_francisco_coastal_dem(64, 64),
             "San Francisco Downtown (US)",
             generate_san_francisco_osm_xml(),
+        )
+    } else if r.contains("nyc") || r.contains("new-york") || r.contains("manhattan") {
+        (
+            create_new_york_dataset(),
+            DemGrid::create_new_york_coastal_dem(64, 64),
+            "New York Lower Manhattan (US)",
+            generate_new_york_osm_xml(),
+        )
+    } else if r.contains("la") || r.contains("los-angeles") {
+        (
+            create_los_angeles_dataset(),
+            DemGrid::create_los_angeles_basin_dem(64, 64),
+            "Los Angeles Downtown (US)",
+            generate_los_angeles_osm_xml(),
+        )
+    } else if r.contains("chicago") {
+        (
+            create_chicago_dataset(),
+            DemGrid::create_chicago_loop_dem(64, 64),
+            "Chicago The Loop (US)",
+            generate_chicago_osm_xml(),
+        )
+    } else if r.contains("seattle") {
+        (
+            create_seattle_dataset(),
+            DemGrid::create_seattle_coastal_dem(64, 64),
+            "Seattle Waterfront & Downtown (US)",
+            generate_seattle_osm_xml(),
+        )
+    } else if r.contains("miami") {
+        (
+            create_miami_dataset(),
+            DemGrid::create_miami_coastal_dem(64, 64),
+            "Miami Brickell & Biscayne (US)",
+            generate_miami_osm_xml(),
         )
     } else {
         (

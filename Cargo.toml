@@ -15,6 +15,7 @@ members = [
     "engine/networking",
     "tools/world-cli",
     "apps/world-viewer",
+    "bindings/mobile",
     "benchmarks",
     "tests",
 ]

@@ -1,0 +1,20 @@
+[package]
+name = "realearth-mobile"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "realearth"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+realearth-shared = { path = "../../engine/shared" }
+realearth-geospatial = { path = "../../engine/geospatial" }
+realearth-ingestion = { path = "../../engine/ingestion" }
+realearth-simulation = { path = "../../engine/simulation" }
+realearth-vehicles = { path = "../../engine/vehicles" }
+realearth-navigation = { path = "../../engine/navigation" }
+realearth-gameplay = { path = "../../engine/gameplay" }
+glam.workspace = true
+tracing.workspace = true

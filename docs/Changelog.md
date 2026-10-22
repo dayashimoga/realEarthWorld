@@ -365,5 +365,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     4. `test_stage2_chunk_integrity_and_corruption_detection`: Verifies cryptographic chunk integrity, bit-flip corruption detection in SQLite manifest, and safe fallback geometry generation without crashing.
     5. `test_stage2_headless_reload_and_seam_continuity`: Headless reload in `WorldStreamer` at Vidhana Soudha, proving neighbor connectivity, active chunk loading, identical geographic alignment, and road routing across the loaded network.
 
-
-
+## [0.13.0] - 2026-10-22 — Forensic Audit, US Major City Expansion, and Five-Platform Certification
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0017-forensic-audit-us-expansion-and-five-platform-certification.md`: Comprehensive specification documenting the forensic quality audit remediation, dynamic cosine longitude geodetic scaling, surveyed US metropolitan datasets across 5 cities, interactive desktop windowing via `winit` 0.30, real OS UDP multiplayer transport, mobile native C FFI/JNI bindings, and 5-platform CI/CD release workflows.
+- **Dynamic Geodetic Longitude Metric Scaling**:
+  - Remediated hardcoded degree scaling (`108_000.0` and `111_000.0`) across `realearth-navigation`, `realearth-vehicles`, and `realearth-viewer` with dynamic cosine-scaled metric conversions: $111,320.0 \times \max(0.01, \cos(\text{lat}))$.
+- **Authentic Surveyed US Metropolitan Expansion (`engine/ingestion`, `engine/shared`)**:
+  - Added 5 major US city profiles in `realearth-shared::region`: `new_york_manhattan`, `los_angeles_downtown`, `chicago_loop`, `seattle_waterfront`, and `miami_brickell`.
+  - Surveyed landmark architectural geometry: One World Trade Center (541.3m), Empire State Building, Chrysler Building, Wilshire Grand Center (335.3m), US Bank Tower, Willis Tower (442.1m), Trump Tower, St. Regis Chicago, Space Needle (184.4m), Columbia Center, Panorama Tower (264.6m), and Southeast Financial Center.
+  - Surveyed transportation corridors: FDR Drive, Broadway, Brooklyn & Manhattan Bridges, I-110 Harbor Freeway, Four Level Interchange, Wacker Drive, Michigan Avenue Bridge, Alaskan Way, SR 99 Deep Subterranean Tunnel, Brickell Avenue, MacArthur Causeway (I-395), and PortMiami Subterranean Tunnel.
+  - Realistic coastal and basin DEM raster elevation models for New York Harbor, Los Angeles Basin, Chicago Loop & Lake Michigan plain, Seattle Elliott Bay, and Miami Biscayne Bay.
+  - Added authentic regional career and transport contracts in `realearth-gameplay::destinations`.
+- **Interactive Desktop Windowing & Input Event Loop (`apps/world-viewer`)**:
+  - Implemented `InteractiveViewerApp` adhering to `winit::application::ApplicationHandler` in `apps/world-viewer/src/interactive.rs`.
+  - Added live keyboard controls: W/A/S/D movement and steering, Space/Shift, numeric landmark navigation (1..9), Tab mode toggle, and clean Escape window shutdown.
+- **Production OS UDP Socket Transport (`engine/networking`)**:
+  - Implemented `UdpSocketTransport` (`engine/networking/src/transport.rs`) managing non-blocking `std::net::UdpSocket` communications with a safe 1,400-byte MTU limit.
+  - Added loopback UDP integration test verifying packet encoding, transmission, reception, and state validation between independent local ports.
+- **Native Mobile C FFI and JNI Layer (`bindings/mobile`)**:
+  - Created `realearth-mobile` producing `cdylib` (`librealearth.so` for Android) and `staticlib` (`librealearth.a` for iOS).
+  - Provided standard C header `realearth.h` exposing `realearth_init`, `realearth_step`, `realearth_get_telemetry`, and `realearth_shutdown`.
+  - Provided Android JNI entry points for `com.realearth.world.RealEarthEngine`.
+  - Configured Android Gradle build harness (`android/app`) and iOS Xcode harness (`ios/RealEarth`).
+- **Five-Platform CI/CD Build and Release Matrix (`.github/workflows`)**:
+  - Updated `build.yml` and `release.yml` for Windows x64, Linux x64, macOS Universal, Android arm64 (`aarch64-linux-android`), and iOS arm64 (`aarch64-apple-ios`) with automated SHA-256 integrity checksum generation.

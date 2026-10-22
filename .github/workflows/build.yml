@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
+  build-desktop:
+    name: Desktop Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,5 +37,29 @@ jobs:
       - name: Build Workspace (Release)
         run: cargo build --workspace --release
 
+      - name: Run Tests (Headless)
+        run: cargo test --workspace
+
       - name: Verify CLI Binary
         run: cargo run --release -p realearth-cli -- --help
+
+  build-mobile:
+    name: Mobile Targets (Android & iOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable with Mobile Targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,aarch64-apple-ios
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check iOS Mobile Library
+        run: cargo check -p realearth-mobile --target aarch64-apple-ios --release
+
+      - name: Check Android Mobile Library
+        run: cargo check -p realearth-mobile --target aarch64-linux-android --release

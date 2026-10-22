@@ -71,9 +71,10 @@ impl RoadNetworkGraph {
             let n0 = self.get_or_create_node(p0);
             let n1 = self.get_or_create_node(p1);
 
-            // Approximate metric distance in meters
+            // Accurate metric distance in meters with latitude-dependent cosine scaling
             let d_lat = (p1.lat - p0.lat) * 111_000.0;
-            let d_lon = (p1.lon - p0.lon) * 108_000.0;
+            let m_per_deg_lon = 111_320.0 * (p0.lat.to_radians()).cos().abs().max(0.1);
+            let d_lon = (p1.lon - p0.lon) * m_per_deg_lon;
             let length_meters = (d_lat * d_lat + d_lon * d_lon).sqrt().max(0.1);
 
             let edge = RoadEdge {

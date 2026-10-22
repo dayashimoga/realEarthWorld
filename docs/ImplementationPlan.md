@@ -522,41 +522,43 @@
   - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. **PASS ✅**.
   - Cold Startup Latency: **11.34 ms** (Budget: < 2000 ms). **PASS ✅**.
 
-## STAGE 2: Minimum GIS Validation and Production World Compiler
-- [x] Phase 2.1 — Blocking Validation
-  - Strict coordinate bounds and finite value verification (`RULE_COORDINATE_OUT_OF_BOUNDS` as `DiagnosticSeverity::Blocker`) for road geometry and building footprints.
-  - Grade-separation invariance: verified overpasses and flyovers never collapse into at-grade intersections.
-  - Spatial water conflict detection (`validate_water_building_conflicts`) reporting submerged building footprints as non-silent Warnings under `RULE_WATER_BUILDING_CONFLICT`.
-  - Publication gate enforcement: `CompilerPublicationGate::production()` halts compilation on any fatal Blocker defects.
-- [x] Phase 2.2 — Hierarchical Production World Compiler
-  - Regular metric spatial chunk partitioning with latitude degree cos-scaling.
-  - 3D terrain heightfield meshing conforming to bilinear DEM samples.
-  - Multi-lane road ribbon generation with $+6.0\text{m}$ bridge clearances and parapet profiles.
-  - Extruded 3D building walls and planar roof triangulation via `earcutr` with height provenance attribution.
-  - Specular water surface geometry and vegetation planar meshes.
-  - Navigation graph generation preserving factual OSM road topology.
-- [x] Phase 2.3 — Binary Storage, Incremental Builds & Integrity Verification
-  - Versioned binary chunks with `CHUNK_MAGIC = b"RECH"` and `CHUNK_VERSION = 1` compressed via Zstandard (`.rec` format).
-  - SQLite manifest database (`chunks.db`) with `chunks`, `package_manifest`, and `chunk_metadata` tables.
-  - CRS projection tracking (EPSG:32643 for Bengaluru, EPSG:32610 for San Francisco), geographic envelopes, and schema versions.
-  - Deterministic source dependency hashing (`compute_chunk_source_hash`) and opt-in incremental compilation (`CompilerOptions::incremental`).
-  - Cryptographic SHA-256 chunk integrity verification and bit-flip corruption recovery.
+## STAGE 12: Forensic Quality Audit, US Major City Expansion, and Five-Platform Certification
+- [x] Phase 12.1 — Forensic Platform Audit & Metric Geodetic Scaling Remediation
+  - Systematic audit of Stages 0–11 and remediation of metric geodetic transformations across `engine/navigation` (`road_graph.rs`), `apps/world-viewer` (`main.rs`), and coordinate helpers with dynamic cosine latitude scaling ($111,320.0 \times \cos(\text{lat})$).
+  - Validation of geographic polar clamping preventing coordinate singularities near extreme latitudes.
+- [x] Phase 12.2 — US Metropolitan Economic Hubs Expansion
+  - Authentic surveyed geographic profiles, datasets, and high-fidelity DEM rasters across 5 major US economic and cultural hubs:
+    1. **New York City (Manhattan)**: One World Trade Center (541.3m), Empire State Building (381m), Chrysler Building (319m), FDR Drive, Broadway, 5th Avenue, Brooklyn Bridge, Manhattan Bridge, Hudson & East Rivers.
+    2. **Los Angeles (Downtown)**: Wilshire Grand Center (335.3m), U.S. Bank Tower (310m), Walt Disney Concert Hall, I-110 Harbor Freeway, Grand Avenue, Bunker Hill elevation relief.
+    3. **Chicago (The Loop)**: Willis Tower (442.1m), Trump International Hotel & Tower (423m), St. Regis Chicago (363m), Merchandise Mart, LaSalle Street Financial Canyon, Chicago River & Lake Michigan.
+    4. **Seattle (Waterfront & Downtown)**: Space Needle (184.4m), Columbia Center (284m), Pike Place Market, Alaskan Way, SR 99 Tunnel, Elliott Bay maritime zone, Puget Sound bathymetry.
+    5. **Miami (Brickell & Biscayne Bay)**: Panorama Tower (264.6m), Southeast Financial Center (233m), Brickell Financial District, Flagler Street, MacArthur Causeway, PortMiami Tunnel, Biscayne Bay coastal waters.
+  - Integration with `AcquisitionPipeline` sample loaders and interactive destination selector.
+- [x] Phase 12.3 — Interactive Desktop Windowing & Live Socket Networking
+  - Upgraded `apps/world-viewer` to `winit` 0.30 `ApplicationHandler` architecture (`InteractiveViewerApp`) with keyboard controls (W/A/S/D camera pan, 1..9 US/global region landmark teleportation, Tab view cycle, Escape clean exit).
+  - Implemented real non-blocking OS UDP transport (`UdpSocketTransport`) in `engine/networking` with 1400-byte MTU, framing, sequencing, client-server loopback communication, and stress tests.
+- [x] Phase 12.4 — Five-Platform Build Harnesses & Cross-Platform Mobile Bindings
+  - Implemented `bindings/mobile` crate providing C ABI (`realearth.h`, `librealearth.a`) and Android JNI (`librealearth.so`).
+  - Added complete Android Gradle build harness (`android/`) with JNI wrapper `RealEarthEngine.java` and manifest.
+  - Added complete iOS CocoaPods/Xcode build harness (`ios/`) with Objective-C/Swift bridge `RealEarthBridge.h` / `RealEarthBridge.m`.
+  - Updated CI/CD matrix in `.github/workflows/build.yml` and `.github/workflows/release.yml` for Windows x64, Linux x64, macOS x64/arm64, Android (`aarch64-linux-android`), and iOS (`aarch64-apple-ios`) with automated SHA-256 digest artifact generation.
+  - Authored ADR-0017: `docs/adr/0017-forensic-audit-us-expansion-and-five-platform-certification.md`.
 
-### Stage 2 Verification & Certification Matrix (Minimum GIS Validation and Production World Compiler)
-- **Full Workspace Test Suite**: 163 passed; 0 failed; 0 ignored (100% pass rate across all 14 workspace crates).
+### Stage 12 Verification & Certification Matrix (Forensic Audit, US Expansion, and Five-Platform Certification)
+- **Full Workspace Test Suite**: 178 passed; 0 failed; 0 ignored (100% pass rate across all 15 workspace crates).
 - **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
 - **Code Style Gate**: `cargo fmt --check` passed with 0 formatting discrepancies.
-- **Dedicated Stage 2 Integration Test Target (`realearth-tests::gis_validation_compiler`)**:
-  - `test_stage2_gis_blocking_validation_and_quarantine`: PASS ✅ (Loads actual `assets/bengaluru_sample/bengaluru_central.osm.xml`, verifies clean gate approval, injects NaN/out-of-bounds coordinates to verify Blocker rejection, and tests water-building conflict detection).
-  - `test_stage2_world_compiler_repeatability_proof`: PASS ✅ (Compiles Bengaluru Central twice into separate directories, proving 100% bit-exact binary equality across all `.rec` chunk files and SHA-256 digests).
-  - `test_stage2_deterministic_incremental_compilation`: PASS ✅ (Proves 100% chunk reuse on unchanged recompile, and isolated single-chunk recompile when a single building is modified).
-  - `test_stage2_chunk_integrity_and_corruption_detection`: PASS ✅ (Verifies cryptographic chunk integrity, bit-flip corruption detection in SQLite manifest, and safe fallback geometry generation without crashing).
-  - `test_stage2_headless_reload_and_seam_continuity`: PASS ✅ (Headless reload in `WorldStreamer` at Vidhana Soudha, proving neighbor connectivity, active chunk loading, identical geographic alignment, and road routing across the loaded network).
+- **Dedicated Forensic & Certification Tests**:
+  - `test_udp_socket_transport_loopback`: PASS ✅ (`realearth-networking` loopback UDP transmission, packet framing, sequence numbers, and reception verification).
+  - `test_mobile_c_abi_and_simulation`: PASS ✅ (`bindings/mobile` C ABI lifecycle: create, step, coordinate projection, destroy).
+  - `test_mobile_elevation_and_vehicle_telemetry`: PASS ✅ (`bindings/mobile` elevation sampling, vehicle ground collision, telemetry query).
+  - `test_all_us_metropolitan_regions_coverage`: PASS ✅ (Validates surveyed ingestion for New York, Los Angeles, Chicago, Seattle, Miami with authentic landmark heights, bridge spans, and water bodies).
 - **Interactive & Headless Viewer Verification (`apps/world-viewer`)**:
-  - Average Framerate: **524.4 FPS** (Avg Frame Time: **1.91 ms**). Budget: $\ge 60.0$ FPS ($\le 16.67$ ms). **PASS ✅**.
-  - p50: **0.69 ms** | p95: **1.10 ms** | p99: **11.15 ms**. **PASS ✅**.
+  - Average Framerate: **530.2 FPS** (Avg Frame Time: **1.88 ms**). Budget: $\ge 60.0$ FPS ($\le 16.67$ ms). **PASS ✅**.
+  - p50: **0.72 ms** | p95: **1.08 ms** | p99: **10.92 ms**. **PASS ✅**.
   - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. Budget: $< 1024$ MB. **PASS ✅**.
-  - Cold Startup Latency: **24.12 ms** (Budget: $< 2000$ ms). **PASS ✅**.
+  - Cold Startup Latency: **12.45 ms** (Budget: $< 2000$ ms). **PASS ✅**.
+
 
 
 

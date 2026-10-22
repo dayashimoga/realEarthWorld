@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  build-release:
-    name: Build & Package ${{ matrix.os }}
+  release-desktop:
+    name: Build & Package Desktop (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -52,3 +52,49 @@ jobs:
           path: |
             ${{ matrix.artifact_name }}
             ${{ matrix.artifact_name }}.sha256
+
+  release-mobile:
+    name: Build & Package Mobile (Android & iOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable with Mobile Targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,aarch64-apple-ios
+
+      - name: Build iOS Framework Static Library
+        run: |
+          cargo build -p realearth-mobile --target aarch64-apple-ios --release
+          mkdir -p package-ios/include
+          cp target/aarch64-apple-ios/release/librealearth.a package-ios/
+          cp bindings/mobile/include/realearth.h package-ios/include/
+          tar -czvf realearth-ios-arm64.tar.gz -C package-ios librealearth.a include
+          shasum -a 256 realearth-ios-arm64.tar.gz > realearth-ios-arm64.tar.gz.sha256
+
+      - name: Build Android Shared Library
+        run: |
+          cargo build -p realearth-mobile --target aarch64-linux-android --release
+          mkdir -p package-android/include
+          cp target/aarch64-linux-android/release/librealearth.so package-android/
+          cp bindings/mobile/include/realearth.h package-android/include/
+          tar -czvf realearth-android-arm64.tar.gz -C package-android librealearth.so include
+          shasum -a 256 realearth-android-arm64.tar.gz > realearth-android-arm64.tar.gz.sha256
+
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-ios-arm64.tar.gz
+          path: |
+            realearth-ios-arm64.tar.gz
+            realearth-ios-arm64.tar.gz.sha256
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-android-arm64.tar.gz
+          path: |
+            realearth-android-arm64.tar.gz
+            realearth-android-arm64.tar.gz.sha256

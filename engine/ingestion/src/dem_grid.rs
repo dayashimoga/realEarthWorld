@@ -206,6 +206,161 @@ impl DemGrid {
         }
     }
 
+    /// Generates a coastal DEM for New York City (Lower Manhattan & Financial District).
+    /// Sea level (0m) along Hudson and East Rivers, gently rising to 12m-18m along Broadway ridge.
+    pub fn create_new_york_coastal_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(40.7000, 40.7550, -74.0250, -73.9700);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1).max(1) as f64; // North to South
+            let _lat = bounds.max_lat - v * (bounds.max_lat - bounds.min_lat);
+
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64; // West (Hudson) to East (East River)
+
+                // Central spine ridge (Broadway) runs near u ~ 0.5
+                let dist_from_spine = (u - 0.50).abs();
+                let spine_elevation = (1.0 - dist_from_spine * 2.2).max(0.0) * 14.0;
+                let midtown_rise = (1.0 - v) * 6.0;
+
+                // River edges clamped to sea level
+                let is_river = u < 0.15 || u > 0.85;
+                let elev = if is_river {
+                    0.0
+                } else {
+                    (2.0 + spine_elevation + midtown_rise) as f32
+                };
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a realistic basin-and-hill DEM for Los Angeles Downtown & Bunker Hill (70m - 145m MSL).
+    pub fn create_los_angeles_basin_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(34.0300, 34.0650, -118.2750, -118.2350);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1).max(1) as f64;
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64;
+
+                let base = 75.0;
+                // Bunker Hill in northwest quadrant (u ~ 0.4, v ~ 0.3)
+                let dist_bunker = ((u - 0.40).powi(2) + (v - 0.30).powi(2)).sqrt();
+                let bunker_hill = ((-dist_bunker * 8.0).exp() * 55.0).max(0.0);
+                // General northward rise toward Hollywood Hills
+                let north_rise = (1.0 - v) * 20.0;
+
+                let elev = (base + bunker_hill + north_rise) as f32;
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a DEM for Chicago The Loop along Lake Michigan shoreline (176.5m - 183m MSL).
+    pub fn create_chicago_loop_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(41.8650, 41.8950, -87.6500, -87.6150);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let _v = y as f64 / (height - 1).max(1) as f64;
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64; // West to East (Lake Michigan at East)
+
+                let lake_level = 176.5;
+                // Urban lake plain elevation (179m - 182m)
+                let elev = if u > 0.82 {
+                    lake_level as f32 // Lake Michigan surface
+                } else {
+                    (lake_level + 2.5 + (1.0 - u) * 3.5) as f32
+                };
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a high-relief coastal DEM for Seattle Downtown & Elliott Bay (0m - 135m MSL).
+    pub fn create_seattle_coastal_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(47.5950, 47.6250, -122.3550, -122.3250);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            let v = y as f64 / (height - 1).max(1) as f64;
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64; // Elliott Bay at West (u < 0.25)
+
+                let elev = if u < 0.20 {
+                    0.0 // Elliott Bay sea level
+                } else {
+                    // Steep climb up First Hill and Queen Anne Hill
+                    let climb = ((u - 0.20) / 0.80).powf(0.85) * 115.0;
+                    let hill_peak =
+                        ((-((u - 0.65).powi(2) + (v - 0.40).powi(2)).sqrt() * 6.0).exp() * 25.0)
+                            .max(0.0);
+                    (climb + hill_peak) as f32
+                };
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
+    /// Generates a low-lying coastal DEM for Miami Downtown & Brickell (0m - 4m MSL).
+    pub fn create_miami_coastal_dem(width: usize, height: usize) -> Self {
+        let bounds = GeoBounds::new(25.7550, 25.7900, -80.2050, -80.1750);
+        let mut elevations = Vec::with_capacity(width * height);
+
+        for _y in 0..height {
+            for x in 0..width {
+                let u = x as f64 / (width - 1).max(1) as f64; // Biscayne Bay at East (u > 0.75)
+
+                let elev = if u > 0.72 {
+                    0.0 // Biscayne Bay surface
+                } else {
+                    // Miami limestone coastal plain
+                    (1.2 + (1.0 - u) * 2.2) as f32
+                };
+                elevations.push(elev);
+            }
+        }
+
+        Self {
+            bounds,
+            width,
+            height,
+            elevations,
+        }
+    }
+
     /// Generates a regional DEM covering the South India Intercity Corridors
     /// (Bengaluru, Mysuru, Chennai, Hyderabad, and connecting river basins).
     pub fn create_intercity_corridors_dem(width: usize, height: usize) -> Self {

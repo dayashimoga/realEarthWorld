@@ -9,6 +9,7 @@ pub mod protocol;
 pub mod replication;
 pub mod server;
 pub mod session;
+pub mod transport;
 
 pub use harness::{NetworkImpairmentConfig, SimulatedNetworkLink};
 pub use interest::{InterestManager, SpatialCellId};
@@ -19,6 +20,7 @@ pub use protocol::{
 pub use replication::{BufferedInput, ClientPredictor, RemoteEntityInterpolator, TimedSnapshot};
 pub use server::{AuthoritativeServer, ServerEntity};
 pub use session::{ClientSession, ConnectionState, SessionManager, TokenBucket};
+pub use transport::{UdpSocketTransport, MAX_UDP_PACKET_SIZE};
 
 #[cfg(test)]
 mod tests {

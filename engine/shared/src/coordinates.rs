@@ -50,7 +50,14 @@ impl EnuCoord {
         Self { east, north, up }
     }
 
+    /// Converts ENU to standard 3D simulation coordinate (X = east, Y = up, Z = north),
+    /// matching the coordinate layout of the compiler terrain/road meshers.
     pub fn to_vec3(self) -> Vec3 {
+        Vec3::new(self.east as f32, self.up as f32, self.north as f32)
+    }
+
+    /// Converts ENU to standard right-handed graphics camera coordinates (X = east, Y = up, Z = -north).
+    pub fn to_graphics_vec3(self) -> Vec3 {
         Vec3::new(self.east as f32, self.up as f32, -self.north as f32)
     }
 }

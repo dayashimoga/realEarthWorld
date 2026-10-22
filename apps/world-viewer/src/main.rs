@@ -4,6 +4,7 @@
 //! Supports both interactive windowed navigation, drivable vehicle dynamics, and headless profiling.
 
 pub mod camera_controller;
+pub mod interactive;
 pub mod screenshot;
 
 use camera_controller::{CameraController, CameraMode, Landmark};
@@ -14,10 +15,15 @@ use realearth_gameplay::{
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
+use realearth_ingestion::sample_chicago::create_chicago_dataset;
 use realearth_ingestion::sample_corridors::create_intercity_corridors_dataset;
 use realearth_ingestion::sample_hyderabad::create_hyderabad_dataset;
+use realearth_ingestion::sample_los_angeles::create_los_angeles_dataset;
+use realearth_ingestion::sample_miami::create_miami_dataset;
 use realearth_ingestion::sample_mysuru::create_mysuru_dataset;
+use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
+use realearth_ingestion::sample_seattle::create_seattle_dataset;
 use realearth_navigation::{RoadNetworkGraph, RuleOfTheRoad};
 use realearth_rendering::{
     FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, RealEarthRenderer,
@@ -39,7 +45,7 @@ fn print_usage() {
     println!();
     println!("Options:");
     println!(
-        "  --region <sf|bengaluru|mysuru|chennai|hyderabad|corridors> Target region (default: san-francisco)"
+        "  --region <nyc|la|chicago|seattle|miami|sf|bengaluru|mysuru|chennai|hyderabad|corridors> Target region (default: san-francisco)"
     );
     println!(
         "  --multi-region                          Stream across all mounted geographic regions"
@@ -100,7 +106,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|idx| args.get(idx + 1))
         .map(|s| s.to_lowercase())
         .unwrap_or_else(|| {
-            if args
+            if args.iter().any(|a| {
+                let lower = a.to_lowercase();
+                lower.contains("nyc") || lower.contains("new-york") || lower.contains("manhattan")
+            }) {
+                "new-york".to_string()
+            } else if args.iter().any(|a| {
+                let lower = a.to_lowercase();
+                lower.contains("la") || lower.contains("los-angeles")
+            }) {
+                "los-angeles".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("chicago")) {
+                "chicago".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("seattle")) {
+                "seattle".to_string()
+            } else if args.iter().any(|a| a.to_lowercase().contains("miami")) {
+                "miami".to_string()
+            } else if args
                 .iter()
                 .any(|a| a.to_lowercase().contains("bengaluru") || a.to_lowercase() == "in")
             {
@@ -324,6 +346,114 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dem,
                 raw,
             )
+        } else if region_arg.contains("nyc")
+            || region_arg.contains("new-york")
+            || region_arg.contains("manhattan")
+        {
+            let dir = PathBuf::from("target/world_new_york");
+            let dem = DemGrid::create_new_york_coastal_dem(64, 64);
+            let raw = create_new_york_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached New York Lower Manhattan package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "New York Lower Manhattan (US)",
+                Landmark::NEW_YORK_ONE_WTC,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("la") || region_arg.contains("los-angeles") {
+            let dir = PathBuf::from("target/world_los_angeles");
+            let dem = DemGrid::create_los_angeles_basin_dem(64, 64);
+            let raw = create_los_angeles_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Los Angeles Downtown package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Los Angeles Downtown (US)",
+                Landmark::LOS_ANGELES_WILSHIRE_GRAND,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("chicago") {
+            let dir = PathBuf::from("target/world_chicago");
+            let dem = DemGrid::create_chicago_loop_dem(64, 64);
+            let raw = create_chicago_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Chicago The Loop package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Chicago The Loop (US)",
+                Landmark::CHICAGO_WILLIS_TOWER,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("seattle") {
+            let dir = PathBuf::from("target/world_seattle");
+            let dem = DemGrid::create_seattle_coastal_dem(64, 64);
+            let raw = create_seattle_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Seattle Waterfront package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Seattle Waterfront & Downtown (US)",
+                Landmark::SEATTLE_SPACE_NEEDLE,
+                dem,
+                raw,
+            )
+        } else if region_arg.contains("miami") {
+            let dir = PathBuf::from("target/world_miami");
+            let dem = DemGrid::create_miami_coastal_dem(64, 64);
+            let raw = create_miami_dataset();
+            if !dir.join("chunks.db").exists() {
+                println!("📦 Compiling cached Miami Brickell package...");
+                let (val, _) = validate_dataset(&raw);
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
+            }
+            (
+                dir,
+                "Miami Brickell & Biscayne (US)",
+                Landmark::MIAMI_BRICKELL_PANORAMA,
+                dem,
+                raw,
+            )
         } else {
             let dir = PathBuf::from("target/world_san_francisco");
             let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
@@ -384,10 +514,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 3. Setup Ground Elevation Query for Vehicle Dynamics
     let anchor = default_landmark.coord;
+    let meters_per_deg_lat = 111_320.0;
+    let meters_per_deg_lon = 111_320.0 * anchor.lat.to_radians().cos().abs().max(0.01);
     let dem_query = dem.clone();
     let ground_query = FunctionalGroundQuery::new(move |x: f32, z: f32| -> f32 {
-        let lat = anchor.lat + (z as f64 / 111_000.0);
-        let lon = anchor.lon + (x as f64 / 108_000.0);
+        let lat = anchor.lat + (z as f64 / meters_per_deg_lat);
+        let lon = anchor.lon + (x as f64 / meters_per_deg_lon);
         let coord = realearth_shared::coordinates::Wgs84Coord::new(lat, lon, 0.0);
         dem_query.sample_bilinear(&coord)
     });
@@ -407,7 +539,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "🏎️ Drivable Vehicle Initialized: Mass=1450kg, 4-wheel independent raycast suspension"
         );
         if traffic_count > 0 {
-            let is_left_hand = !region_arg.contains("sf") && !region_arg.contains("san-francisco");
+            let is_left_hand = matches!(
+                region_arg.as_str(),
+                "bengaluru" | "mysuru" | "chennai" | "hyderabad" | "corridors" | "in"
+            );
             let rule = if is_left_hand {
                 RuleOfTheRoad::DriveOnLeft
             } else {
@@ -465,6 +600,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         camera_ctrl.jump_to(&Landmark::CORRIDOR_PALAR_BRIDGE);
     } else if args.iter().any(|a| a.contains("pvnr")) {
         camera_ctrl.jump_to(&Landmark::CORRIDOR_PVNR_EXPRESSWAY);
+    } else if args
+        .iter()
+        .any(|a| a.contains("wtc") || a.contains("new-york") || a.contains("manhattan"))
+    {
+        camera_ctrl.jump_to(&Landmark::NEW_YORK_ONE_WTC);
+    } else if args
+        .iter()
+        .any(|a| a.contains("wilshire") || a.contains("los-angeles"))
+    {
+        camera_ctrl.jump_to(&Landmark::LOS_ANGELES_WILSHIRE_GRAND);
+    } else if args
+        .iter()
+        .any(|a| a.contains("willis") || a.contains("chicago"))
+    {
+        camera_ctrl.jump_to(&Landmark::CHICAGO_WILLIS_TOWER);
+    } else if args
+        .iter()
+        .any(|a| a.contains("needle") || a.contains("seattle"))
+    {
+        camera_ctrl.jump_to(&Landmark::SEATTLE_SPACE_NEEDLE);
+    } else if args
+        .iter()
+        .any(|a| a.contains("panorama") || a.contains("miami") || a.contains("brickell"))
+    {
+        camera_ctrl.jump_to(&Landmark::MIAMI_BRICKELL_PANORAMA);
     }
 
     let mut camera = FloatingOriginCamera::new(camera_ctrl.coord, 16.0 / 9.0);
@@ -570,6 +730,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let landmark_rotation = [
         Landmark::SAN_FRANCISCO_TRANSAMERICA,
         Landmark::SAN_FRANCISCO_SALESFORCE,
+        Landmark::NEW_YORK_ONE_WTC,
+        Landmark::LOS_ANGELES_WILSHIRE_GRAND,
+        Landmark::CHICAGO_WILLIS_TOWER,
+        Landmark::SEATTLE_SPACE_NEEDLE,
+        Landmark::MIAMI_BRICKELL_PANORAMA,
         Landmark::BENGALURU_VIDHANA_SOUDHA,
         Landmark::MYSURU_PALACE,
         Landmark::CHENNAI_CENTRAL,
@@ -614,8 +779,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             traffic_sim.step(1.0 / 60.0, &ground_query);
 
             let veh_coord = realearth_shared::coordinates::Wgs84Coord::new(
-                anchor.lat + (vehicle.position.z as f64 / 111_000.0),
-                anchor.lon + (vehicle.position.x as f64 / 108_000.0),
+                anchor.lat + (vehicle.position.z as f64 / meters_per_deg_lat),
+                anchor.lon + (vehicle.position.x as f64 / meters_per_deg_lon),
                 vehicle.position.y as f64,
             );
             if let Some(ref mut job) = active_job {
@@ -625,8 +790,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             player_profile.record_distance((speed_mps * (1.0 / 60.0)) / 1000.0);
 
             let (cam_pos, cam_yaw, cam_pitch) = vehicle_cam.update(&vehicle, 1.0 / 60.0);
-            let cam_lat = anchor.lat + (cam_pos.z as f64 / 111_000.0);
-            let cam_lon = anchor.lon + (cam_pos.x as f64 / 108_000.0);
+            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
             camera_ctrl.coord =
                 realearth_shared::coordinates::Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
             camera_ctrl.yaw = cam_yaw;
@@ -886,6 +1051,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    println!("🎮 Interactive viewer session ready. Run with --help for command-line controls.");
+    println!("🎮 Entering interactive viewer session with live winit window loop...");
+    interactive::run_interactive_event_loop(region_name, initial_mode, is_drive)?;
     Ok(())
 }

@@ -161,4 +161,89 @@ impl RegionProfile {
             max_elevation_msl: 1100.0,
         }
     }
+
+    /// New York City: Lower Manhattan & Financial District (US).
+    /// Anchor: One World Trade Center (40.7127°N, -74.0134°W, 10.0m MSL).
+    pub fn new_york_manhattan() -> Self {
+        Self {
+            id: "new-york-manhattan".to_string(),
+            name: "New York City (Lower Manhattan & Financial District)".to_string(),
+            country: "US".to_string(),
+            state_or_province: "NY".to_string(),
+            bounds: GeoBounds::new(40.7000, 40.7550, -74.0250, -73.9700),
+            anchor: Wgs84Coord::new(40.7127, -74.0134, 10.0),
+            utm_zone: 18,
+            vertical_datum: "NAVD88".to_string(),
+            min_elevation_msl: 0.0,
+            max_elevation_msl: 25.0,
+        }
+    }
+
+    /// Los Angeles Downtown & Harbor Freeway Multi-Level Stack (US).
+    /// Anchor: Wilshire Grand Center / US Bank Tower (34.0500°N, -118.2580°W, 95.0m MSL).
+    pub fn los_angeles_downtown() -> Self {
+        Self {
+            id: "los-angeles-downtown".to_string(),
+            name: "Los Angeles Downtown & Harbor Interchange".to_string(),
+            country: "US".to_string(),
+            state_or_province: "CA".to_string(),
+            bounds: GeoBounds::new(34.0300, 34.0650, -118.2750, -118.2350),
+            anchor: Wgs84Coord::new(34.0500, -118.2580, 95.0),
+            utm_zone: 11,
+            vertical_datum: "NAVD88".to_string(),
+            min_elevation_msl: 65.0,
+            max_elevation_msl: 145.0,
+        }
+    }
+
+    /// Chicago The Loop & Lake Michigan Shoreline (US).
+    /// Anchor: Willis Tower (41.8789°N, -87.6359°W, 181.0m MSL).
+    pub fn chicago_loop() -> Self {
+        Self {
+            id: "chicago-loop".to_string(),
+            name: "Chicago The Loop & Michigan Shoreline".to_string(),
+            country: "US".to_string(),
+            state_or_province: "IL".to_string(),
+            bounds: GeoBounds::new(41.8650, 41.8950, -87.6500, -87.6150),
+            anchor: Wgs84Coord::new(41.8789, -87.6359, 181.0),
+            utm_zone: 16,
+            vertical_datum: "NAVD88".to_string(),
+            min_elevation_msl: 176.0,
+            max_elevation_msl: 188.0,
+        }
+    }
+
+    /// Seattle Downtown & Elliott Bay Waterfront (US).
+    /// Anchor: Space Needle (47.6205°N, -122.3493°W, 30.0m MSL).
+    pub fn seattle_waterfront() -> Self {
+        Self {
+            id: "seattle-waterfront".to_string(),
+            name: "Seattle Downtown & Elliott Bay".to_string(),
+            country: "US".to_string(),
+            state_or_province: "WA".to_string(),
+            bounds: GeoBounds::new(47.5950, 47.6250, -122.3550, -122.3250),
+            anchor: Wgs84Coord::new(47.6205, -122.3493, 30.0),
+            utm_zone: 10,
+            vertical_datum: "NAVD88".to_string(),
+            min_elevation_msl: 0.0,
+            max_elevation_msl: 135.0,
+        }
+    }
+
+    /// Miami Downtown & Brickell Financial Waterfront (US).
+    /// Anchor: Panorama Tower (25.7617°N, -80.1918°W, 3.0m MSL).
+    pub fn miami_brickell() -> Self {
+        Self {
+            id: "miami-brickell".to_string(),
+            name: "Miami Brickell & Biscayne Bay".to_string(),
+            country: "US".to_string(),
+            state_or_province: "FL".to_string(),
+            bounds: GeoBounds::new(25.7550, 25.7900, -80.2050, -80.1750),
+            anchor: Wgs84Coord::new(25.7617, -80.1918, 3.0),
+            utm_zone: 17,
+            vertical_datum: "NAVD88".to_string(),
+            min_elevation_msl: 0.0,
+            max_elevation_msl: 6.0,
+        }
+    }
 }

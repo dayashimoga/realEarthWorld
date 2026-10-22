@@ -7,10 +7,15 @@ use crate::osm_parser::parse_osm_xml;
 use crate::osm_types::IngestedDataset;
 use crate::sample_bengaluru::generate_bengaluru_osm_xml;
 use crate::sample_chennai::generate_chennai_osm_xml;
+use crate::sample_chicago::generate_chicago_osm_xml;
 use crate::sample_corridors::generate_intercity_corridors_osm_xml;
 use crate::sample_hyderabad::generate_hyderabad_osm_xml;
+use crate::sample_los_angeles::generate_los_angeles_osm_xml;
+use crate::sample_miami::generate_miami_osm_xml;
 use crate::sample_mysuru::generate_mysuru_osm_xml;
+use crate::sample_new_york::generate_new_york_osm_xml;
 use crate::sample_san_francisco::generate_san_francisco_osm_xml;
+use crate::sample_seattle::generate_seattle_osm_xml;
 use realearth_shared::bounds::GeoBounds;
 use realearth_shared::errors::{RealEarthError, Result};
 use realearth_shared::region::RegionProfile;
@@ -229,6 +234,101 @@ impl AcquisitionEngine {
                     is_offline_cached: true,
                 }],
                 created_at: "2026-10-21T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "new-york-manhattan" {
+            let osm_xml = generate_new_york_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_new_york_coastal_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "new-york-manhattan".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap New York City Lower Manhattan Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-22T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-22T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "los-angeles-downtown" {
+            let osm_xml = generate_los_angeles_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_los_angeles_basin_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "los-angeles-downtown".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Los Angeles Downtown Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-22T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-22T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "chicago-loop" {
+            let osm_xml = generate_chicago_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_chicago_loop_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "chicago-loop".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Chicago The Loop Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-22T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-22T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "seattle-waterfront" {
+            let osm_xml = generate_seattle_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_seattle_coastal_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "seattle-waterfront".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Seattle Downtown Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-22T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-22T12:00:00Z".to_string(),
+            };
+            Ok((dataset, dem, manifest))
+        } else if region.id == "miami-brickell" {
+            let osm_xml = generate_miami_osm_xml();
+            let dataset = parse_osm_xml(&osm_xml)?;
+            let dem = DemGrid::create_miami_coastal_dem(64, 64);
+            let manifest = RegionAcquisitionManifest {
+                region_id: "miami-brickell".to_string(),
+                bounds: region.bounds,
+                sources: vec![SourceProvenance {
+                    name: "OpenStreetMap Miami Brickell Extract".to_string(),
+                    provider: "OpenStreetMap Contributors".to_string(),
+                    license: "ODbL 1.0".to_string(),
+                    source_url: "https://www.openstreetmap.org".to_string(),
+                    timestamp_utc: "2026-10-22T00:00:00Z".to_string(),
+                    sha256_checksum: compute_sha256(osm_xml.as_bytes()),
+                    is_offline_cached: true,
+                }],
+                created_at: "2026-10-22T12:00:00Z".to_string(),
             };
             Ok((dataset, dem, manifest))
         } else {

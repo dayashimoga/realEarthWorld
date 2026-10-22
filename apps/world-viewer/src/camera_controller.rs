@@ -164,6 +164,61 @@ impl Landmark {
         yaw: -1.4,
         pitch: -0.18,
     };
+
+    pub const NEW_YORK_ONE_WTC: Self = Self {
+        name: "One World Trade Center & Lower Manhattan (New York)",
+        coord: Wgs84Coord {
+            lat: 40.7128,
+            lon: -74.0134,
+            alt: 55.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
+
+    pub const LOS_ANGELES_WILSHIRE_GRAND: Self = Self {
+        name: "Wilshire Grand & Downtown Skyline (Los Angeles)",
+        coord: Wgs84Coord {
+            lat: 34.0500,
+            lon: -118.2600,
+            alt: 120.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
+
+    pub const CHICAGO_WILLIS_TOWER: Self = Self {
+        name: "Willis Tower & Chicago River Loop (Chicago)",
+        coord: Wgs84Coord {
+            lat: 41.8789,
+            lon: -87.6359,
+            alt: 210.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
+
+    pub const SEATTLE_SPACE_NEEDLE: Self = Self {
+        name: "Space Needle & Elliott Bay (Seattle)",
+        coord: Wgs84Coord {
+            lat: 47.6205,
+            lon: -122.3493,
+            alt: 75.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
+
+    pub const MIAMI_BRICKELL_PANORAMA: Self = Self {
+        name: "Panorama Tower & Biscayne Bay (Miami)",
+        coord: Wgs84Coord {
+            lat: 25.7628,
+            lon: -80.1912,
+            alt: 25.0,
+        },
+        yaw: -1.57,
+        pitch: -0.2,
+    };
 }
 
 /// Interactive camera controller.

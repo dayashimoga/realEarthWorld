@@ -2423,6 +2423,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "realearth-mobile"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "realearth-gameplay",
+ "realearth-geospatial",
+ "realearth-ingestion",
+ "realearth-navigation",
+ "realearth-shared",
+ "realearth-simulation",
+ "realearth-vehicles",
+ "tracing",
+]
+
+[[package]]
 name = "realearth-navigation"
 version = "0.1.0"
 dependencies = [

@@ -34,6 +34,12 @@ pub enum NetworkError {
 
     #[error("Session error: {0}")]
     SessionError(String),
+
+    #[error("Transport error: {0}")]
+    Transport(String),
+
+    #[error("Malformed packet: {0}")]
+    MalformedPacket(String),
 }
 
 /// Transmission channel semantics.

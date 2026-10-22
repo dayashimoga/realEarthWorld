@@ -229,6 +229,146 @@ impl SurveyedDestinations {
             30.0,
         )
     }
+
+    // --- New York ---
+    pub fn nyc_one_wtc() -> JobLocation {
+        JobLocation::new(
+            "One World Trade Center Plaza",
+            Wgs84Coord::new(40.7128, -74.0134, 10.0),
+            "new-york",
+            25.0,
+        )
+    }
+
+    pub fn nyc_wall_street() -> JobLocation {
+        JobLocation::new(
+            "Wall Street & NYSE Concourse",
+            Wgs84Coord::new(40.7070, -74.0090, 8.0),
+            "new-york",
+            25.0,
+        )
+    }
+
+    pub fn nyc_empire_state() -> JobLocation {
+        JobLocation::new(
+            "Empire State Building Grand Foyer",
+            Wgs84Coord::new(40.7484, -73.9857, 15.0),
+            "new-york",
+            25.0,
+        )
+    }
+
+    // --- Los Angeles ---
+    pub fn la_wilshire_grand() -> JobLocation {
+        JobLocation::new(
+            "Wilshire Grand Center Porte-Cochere",
+            Wgs84Coord::new(34.0500, -118.2600, 85.0),
+            "los-angeles",
+            25.0,
+        )
+    }
+
+    pub fn la_disney_hall() -> JobLocation {
+        JobLocation::new(
+            "Walt Disney Concert Hall Plaza",
+            Wgs84Coord::new(34.0553, -118.2498, 95.0),
+            "los-angeles",
+            25.0,
+        )
+    }
+
+    pub fn la_city_hall() -> JobLocation {
+        JobLocation::new(
+            "Los Angeles City Hall Forecourt",
+            Wgs84Coord::new(34.0537, -118.2427, 90.0),
+            "los-angeles",
+            25.0,
+        )
+    }
+
+    // --- Chicago ---
+    pub fn chicago_willis_tower() -> JobLocation {
+        JobLocation::new(
+            "Willis Tower Wacker Drive Entrance",
+            Wgs84Coord::new(41.8789, -87.6359, 180.0),
+            "chicago",
+            25.0,
+        )
+    }
+
+    pub fn chicago_merchandise_mart() -> JobLocation {
+        JobLocation::new(
+            "Merchandise Mart Riverwalk Terminal",
+            Wgs84Coord::new(41.8885, -87.6355, 178.0),
+            "chicago",
+            25.0,
+        )
+    }
+
+    pub fn chicago_millennium_park() -> JobLocation {
+        JobLocation::new(
+            "Millennium Park Cloud Gate Plaza",
+            Wgs84Coord::new(41.8826, -87.6226, 179.0),
+            "chicago",
+            25.0,
+        )
+    }
+
+    // --- Seattle ---
+    pub fn seattle_space_needle() -> JobLocation {
+        JobLocation::new(
+            "Space Needle Seattle Center Loop",
+            Wgs84Coord::new(47.6205, -122.3493, 65.0),
+            "seattle",
+            25.0,
+        )
+    }
+
+    pub fn seattle_pike_place() -> JobLocation {
+        JobLocation::new(
+            "Pike Place Market Waterfront Concourse",
+            Wgs84Coord::new(47.6097, -122.3422, 35.0),
+            "seattle",
+            25.0,
+        )
+    }
+
+    pub fn seattle_columbia_center() -> JobLocation {
+        JobLocation::new(
+            "Columbia Center 4th Avenue Tower",
+            Wgs84Coord::new(47.6045, -122.3306, 50.0),
+            "seattle",
+            25.0,
+        )
+    }
+
+    // --- Miami ---
+    pub fn miami_panorama_tower() -> JobLocation {
+        JobLocation::new(
+            "Panorama Tower Brickell Bay Drive",
+            Wgs84Coord::new(25.7628, -80.1912, 4.0),
+            "miami",
+            25.0,
+        )
+    }
+
+    pub fn miami_freedom_tower() -> JobLocation {
+        JobLocation::new(
+            "Freedom Tower Biscayne Boulevard",
+            Wgs84Coord::new(25.7800, -80.1895, 3.0),
+            "miami",
+            25.0,
+        )
+    }
+
+    pub fn miami_kaseya_center() -> JobLocation {
+        JobLocation::new(
+            "Kaseya Center Arena Concourse",
+            Wgs84Coord::new(25.7814, -80.1870, 2.0),
+            "miami",
+            25.0,
+        )
+    }
 }
 
 /// Dynamic generator producing authentic regional and corridor transport contracts.
@@ -425,18 +565,141 @@ impl JobCatalogGenerator {
             JobDifficulty::Relaxed,
         ));
 
+        // 10. New York Taxi Contract: One WTC -> Wall Street
+        jobs.push(Job::new(
+            "taxi-nyc-01",
+            CareerType::TaxiPassenger,
+            "Wall Street Financial Commute",
+            "Chauffeur an investment banking partner from One World Trade Center to the New York Stock Exchange.",
+            SurveyedDestinations::nyc_one_wtc(),
+            SurveyedDestinations::nyc_wall_street(),
+            1200.0,
+            Some(240.0),
+            160.0,
+            120,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Senior Managing Director".to_string(),
+                party_size: 1,
+                destination_note: "11 Wall Street Executive Concourse".to_string(),
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 11. Los Angeles Delivery Contract: Wilshire Grand -> Disney Concert Hall
+        jobs.push(Job::new(
+            "del-la-01",
+            CareerType::PackageDelivery,
+            "Grand Avenue Philharmonia Scores",
+            "Deliver archived musical scores from Wilshire Grand Center to Walt Disney Concert Hall on Grand Avenue.",
+            SurveyedDestinations::la_wilshire_grand(),
+            SurveyedDestinations::la_disney_hall(),
+            1500.0,
+            Some(280.0),
+            180.0,
+            130,
+            ReputationTier::Novice,
+            CargoOrPassenger::Package {
+                item_name: "Original Orchestral Folios".to_string(),
+                weight_kg: 12.0,
+                fragile: true,
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 12. Chicago Taxi Contract: Willis Tower -> Millennium Park
+        jobs.push(Job::new(
+            "taxi-chi-01",
+            CareerType::TaxiPassenger,
+            "The Loop Cloud Gate Sightseer",
+            "Transport architects from Willis Tower across The Loop to Cloud Gate (The Bean) at Millennium Park.",
+            SurveyedDestinations::chicago_willis_tower(),
+            SurveyedDestinations::chicago_millennium_park(),
+            1600.0,
+            Some(300.0),
+            150.0,
+            110,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Visiting AIA Delegation".to_string(),
+                party_size: 2,
+                destination_note: "Millennium Park Michigan Ave Plaza".to_string(),
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 13. Seattle Delivery Contract: Pike Place -> Space Needle
+        jobs.push(Job::new(
+            "del-sea-01",
+            CareerType::PackageDelivery,
+            "Pike Place Waterfront Fresh Express",
+            "Deliver premium Pacific salmon from Pike Place Market to SkyCity Restaurant at the Space Needle.",
+            SurveyedDestinations::seattle_pike_place(),
+            SurveyedDestinations::seattle_space_needle(),
+            1800.0,
+            Some(320.0),
+            190.0,
+            140,
+            ReputationTier::Novice,
+            CargoOrPassenger::Package {
+                item_name: "Fresh King Salmon Crates".to_string(),
+                weight_kg: 28.0,
+                fragile: false,
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 14. Miami Taxi Contract: Panorama Tower -> Freedom Tower
+        jobs.push(Job::new(
+            "taxi-mia-01",
+            CareerType::TaxiPassenger,
+            "Brickell Bayfront Chauffeur",
+            "Transport international art patrons from Panorama Tower along Brickell Avenue to the historic Freedom Tower.",
+            SurveyedDestinations::miami_panorama_tower(),
+            SurveyedDestinations::miami_freedom_tower(),
+            2100.0,
+            Some(360.0),
+            170.0,
+            125,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Art Basel Curators".to_string(),
+                party_size: 2,
+                destination_note: "Freedom Tower Portico".to_string(),
+            },
+            JobDifficulty::Standard,
+        ));
+
         jobs
     }
 
-    /// Filters catalog jobs by region identifier.
+    /// Filters catalog jobs by region identifier with canonical aliases.
     pub fn jobs_for_region(region_id: &str) -> Vec<Job> {
         let catalog = Self::generate_default_catalog();
+        let r = region_id.to_lowercase();
         catalog
             .into_iter()
             .filter(|j| {
-                j.pickup.region_id == region_id
-                    || j.dropoff.region_id == region_id
-                    || region_id == "corridors"
+                let p = &j.pickup.region_id;
+                let d = &j.dropoff.region_id;
+                p == &r
+                    || d == &r
+                    || ((r.contains("nyc") || r.contains("new-york") || r.contains("manhattan"))
+                        && (p == "new-york" || d == "new-york"))
+                    || ((r.contains("la") || r.contains("los-angeles"))
+                        && (p == "los-angeles" || d == "los-angeles"))
+                    || (r.contains("chicago") && (p == "chicago" || d == "chicago"))
+                    || (r.contains("seattle") && (p == "seattle" || d == "seattle"))
+                    || (r.contains("miami") && (p == "miami" || d == "miami"))
+                    || ((r.contains("sf") || r.contains("san-francisco"))
+                        && (p == "san-francisco" || d == "san-francisco"))
+                    || (r.contains("bengaluru")
+                        && (p == "bengaluru-central" || d == "bengaluru-central"))
+                    || (r.contains("mysuru") && (p == "mysuru-urban" || d == "mysuru-urban"))
+                    || (r.contains("chennai") && (p == "chennai-central" || d == "chennai-central"))
+                    || (r.contains("hyderabad")
+                        && (p == "hyderabad-central" || d == "hyderabad-central"))
+                    || r == "corridors"
             })
             .collect()
     }

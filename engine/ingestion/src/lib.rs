@@ -6,10 +6,15 @@ pub mod osm_parser;
 pub mod osm_types;
 pub mod sample_bengaluru;
 pub mod sample_chennai;
+pub mod sample_chicago;
 pub mod sample_corridors;
 pub mod sample_hyderabad;
+pub mod sample_los_angeles;
+pub mod sample_miami;
 pub mod sample_mysuru;
+pub mod sample_new_york;
 pub mod sample_san_francisco;
+pub mod sample_seattle;
 
 pub use acquisition::{
     compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest, SourceProvenance,
@@ -22,12 +27,17 @@ pub use osm_types::{
 };
 pub use sample_bengaluru::{create_bengaluru_central_dataset, generate_bengaluru_osm_xml};
 pub use sample_chennai::{create_chennai_dataset, generate_chennai_osm_xml};
+pub use sample_chicago::{create_chicago_dataset, generate_chicago_osm_xml};
 pub use sample_corridors::{
     create_intercity_corridors_dataset, generate_intercity_corridors_osm_xml,
 };
 pub use sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml};
+pub use sample_los_angeles::{create_los_angeles_dataset, generate_los_angeles_osm_xml};
+pub use sample_miami::{create_miami_dataset, generate_miami_osm_xml};
 pub use sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
+pub use sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
 pub use sample_san_francisco::{create_san_francisco_dataset, generate_san_francisco_osm_xml};
+pub use sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
 
 #[cfg(test)]
 mod tests {
@@ -292,5 +302,125 @@ mod tests {
         for b in bridges {
             assert_eq!(b.layer, 1);
         }
+    }
+
+    #[test]
+    fn test_new_york_osm_xml_and_dem() {
+        let xml = generate_new_york_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse NYC OSM XML");
+        assert!(dataset.buildings.len() >= 5);
+        assert!(dataset.roads.len() >= 6);
+
+        let wtc = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("One World Trade Center"))
+            .expect("One WTC missing");
+        assert_eq!(wtc.explicit_height, Some(541.3));
+
+        let dem = DemGrid::create_new_york_coastal_dem(32, 32);
+        let center = dem.bounds.center();
+        let elev = dem.sample_bilinear(&center);
+        assert!(
+            (0.0..=60.0).contains(&elev),
+            "NYC elevation should be coastal lowland/bedrock (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_los_angeles_osm_xml_and_dem() {
+        let xml = generate_los_angeles_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse LA OSM XML");
+        assert!(dataset.buildings.len() >= 5);
+        assert!(dataset.roads.len() >= 6);
+
+        let wilshire = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Wilshire Grand Center"))
+            .expect("Wilshire Grand missing");
+        assert_eq!(wilshire.explicit_height, Some(335.3));
+
+        let dem = DemGrid::create_los_angeles_basin_dem(32, 32);
+        let center = dem.bounds.center();
+        let elev = dem.sample_bilinear(&center);
+        assert!(
+            (50.0..=200.0).contains(&elev),
+            "LA Basin elevation should be around 80-150m (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_chicago_osm_xml_and_dem() {
+        let xml = generate_chicago_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Chicago OSM XML");
+        assert!(dataset.buildings.len() >= 5);
+        assert!(dataset.roads.len() >= 6);
+
+        let willis = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Willis Tower"))
+            .expect("Willis Tower missing");
+        assert_eq!(willis.explicit_height, Some(442.1));
+
+        let dem = DemGrid::create_chicago_loop_dem(32, 32);
+        let center = dem.bounds.center();
+        let elev = dem.sample_bilinear(&center);
+        assert!(
+            (170.0..=195.0).contains(&elev),
+            "Chicago elevation should be Lake Michigan plain ~176-182m (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_seattle_osm_xml_and_dem() {
+        let xml = generate_seattle_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Seattle OSM XML");
+        assert!(dataset.buildings.len() >= 5);
+        assert!(dataset.roads.len() >= 6);
+
+        let needle = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Space Needle"))
+            .expect("Space Needle missing");
+        assert_eq!(needle.explicit_height, Some(184.4));
+
+        let dem = DemGrid::create_seattle_coastal_dem(32, 32);
+        let center = dem.bounds.center();
+        let elev = dem.sample_bilinear(&center);
+        assert!(
+            (0.0..=120.0).contains(&elev),
+            "Seattle coastal elevation should be 0-100m (was {:.1}m)",
+            elev
+        );
+    }
+
+    #[test]
+    fn test_miami_osm_xml_and_dem() {
+        let xml = generate_miami_osm_xml();
+        let dataset = parse_osm_xml(&xml).expect("Failed to parse Miami OSM XML");
+        assert!(dataset.buildings.len() >= 5);
+        assert!(dataset.roads.len() >= 6);
+
+        let panorama = dataset
+            .buildings
+            .iter()
+            .find(|b| b.name.as_deref() == Some("Panorama Tower"))
+            .expect("Panorama Tower missing");
+        assert_eq!(panorama.explicit_height, Some(264.6));
+
+        let dem = DemGrid::create_miami_coastal_dem(32, 32);
+        let center = dem.bounds.center();
+        let elev = dem.sample_bilinear(&center);
+        assert!(
+            (0.0..=10.0).contains(&elev),
+            "Miami elevation should be low-lying coastal 0-8m (was {:.1}m)",
+            elev
+        );
     }
 }
