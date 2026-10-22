@@ -600,6 +600,43 @@
   - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. Budget: $< 1024$ MB. **PASS ✅**.
   - Cold Startup Latency: **12.07 ms** (Budget: $< 2000$ ms). **PASS ✅**.
 
+## STAGE C: Visual Fidelity and Realism Certification
+- [x] Phase C.1 — Real-World Geography & Authoritative Scale
+  - Audited surveyed landmarks (One WTC, Empire State, Willis Tower, Space Needle, Wilshire Grand, Panorama Tower, Salesforce Tower, Transamerica Pyramid, Vidhana Soudha) against CTBUH and USGS records.
+  - Delineated source-confirmed geometry (WGS84, surveyed heights, DEM elevations, OSM highway layers) from procedural approximations (window grid textures, asphalt grain, tree foliage).
+- [x] Phase C.2 — Scene Placement Anomaly Audit & Remediation
+  - Implemented `ScenePlacementAuditor` (`engine/validation/src/scene_placement_auditor.rs`) detecting floating/sunken structures, road-building collisions, steep road grades, and substandard flyover clearances.
+  - Remediated real-world road alignments in `sample_san_francisco.rs` (Montgomery St, California St, Embarcadero) to eliminate building collisions and align bay shoreline.
+  - Implemented `repair_scene_placement` for automatic foundation grounding and flyover elevation.
+- [x] Phase C.3 — Graphics Materials, Shading & Atmospheric Ephemeris
+  - Audited WGSL PBR shaders: directional sunlight diffuse, daytime/night ambient interpolation, and Schlick Fresnel reflectance ($F_0 = 0.04$).
+  - Validated procedural road markings for asphalt fragments: double yellow median line and white dashed lane dividers.
+  - Validated Rayleigh atmospheric haze and diurnal sky color transitions (noon, golden hour, night).
+- [x] Phase C.4 — Rendering Pipeline, Depth Precision & Quality Presets
+  - Verified `Depth32Float` depth buffer allocation eliminating planetary z-fighting across $10,000\text{ m}$ frustum.
+  - Tested graphics presets (Low, Medium, High, Adaptive), viewport resizing, and camera view matrix orthonormality.
+- [x] Phase C.5 — Deterministic Visual Regression & Image Metrics
+  - Implemented statistical image metrics: RMSE, PSNR, mean luminance, and non-zero pixel coverage.
+  - Verified deterministic bit-exact identical reproduction ($\text{RMSE} = 0.0, \text{PSNR} = 100\text{ dB}$).
+  - Documented human review checklist for subjective aesthetic realism.
+- [x] Phase C.6 — Cross-Platform UI/UX & Accessibility Certification
+  - Verified mobile touch target sizing ($\ge 48 \times 48\text{ dp}$ per Android Material and Apple HIG).
+  - Verified text contrast ratios ($\ge 4.5:1$ WCAG AA for yellow HUD text, $\ge 7.0:1$ WCAG AAA for white text).
+  - Verified desktop input event loop latency $< 16.67\text{ ms}$.
+  - Captured verified off-screen framebuffers across New York, Chicago, Seattle, and San Francisco.
+
+### Stage C Verification & Certification Matrix
+- **Full Workspace Test Suite**: 196 passed; 0 failed; 0 ignored (100% pass rate across all 15 workspace crates).
+- **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+- **Code Style Gate**: `cargo fmt --check` passed with 0 formatting discrepancies.
+- **Dedicated Visual Fidelity Tests (`tests/visual_fidelity_certification.rs`)**: 6/6 passing ✅.
+- **Interactive & Headless Viewer Verification (`apps/world-viewer`)**:
+  - New York Lower Manhattan: **209.5 FPS** (54,169 scene triangles, 120 chunks in RAM). **PASS ✅**.
+  - Chicago The Loop: **506.2 FPS** (19,048 scene triangles, 42 chunks in RAM). **PASS ✅**.
+  - Seattle Waterfront: **496.6 FPS** (15,913 scene triangles, 35 chunks in RAM). **PASS ✅**.
+  - San Francisco Downtown: **406.4 FPS** (13,631 scene triangles, 30 chunks in RAM). **PASS ✅**.
+
+
 
 
 

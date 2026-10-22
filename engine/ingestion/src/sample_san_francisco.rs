@@ -41,11 +41,11 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         name: Some("Transamerica Pyramid".to_string()),
         building_type: BuildingType::Commercial,
         outer_ring: vec![
-            Wgs84Coord::new(37.7948, -122.4032, 0.0),
-            Wgs84Coord::new(37.7956, -122.4032, 0.0),
-            Wgs84Coord::new(37.7956, -122.4024, 0.0),
-            Wgs84Coord::new(37.7948, -122.4024, 0.0),
-            Wgs84Coord::new(37.7948, -122.4032, 0.0),
+            Wgs84Coord::new(37.7948, -122.4026, 0.0),
+            Wgs84Coord::new(37.7956, -122.4026, 0.0),
+            Wgs84Coord::new(37.7956, -122.4018, 0.0),
+            Wgs84Coord::new(37.7948, -122.4018, 0.0),
+            Wgs84Coord::new(37.7948, -122.4026, 0.0),
         ],
         inner_rings: Vec::new(),
         explicit_height: Some(260.0),
@@ -135,7 +135,7 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(37.7900, -122.3900, 0.0),
-            Wgs84Coord::new(37.7950, -122.3935, 0.0), // In front of Ferry Building
+            Wgs84Coord::new(37.7950, -122.3946, 0.0), // In front of Ferry Building
             Wgs84Coord::new(37.8000, -122.3980, 0.0),
             Wgs84Coord::new(37.8040, -122.4020, 0.0),
         ],
@@ -153,9 +153,9 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         name: Some("California Street".to_string()),
         highway_type: HighwayType::Secondary,
         geometry: vec![
-            Wgs84Coord::new(37.7930, -122.3970, 0.0),
-            Wgs84Coord::new(37.7928, -122.4038, 0.0), // Passing 555 California
-            Wgs84Coord::new(37.7925, -122.4110, 0.0), // Nob Hill crest (~105m elevation)
+            Wgs84Coord::new(37.7922, -122.3970, 0.0),
+            Wgs84Coord::new(37.7922, -122.4038, 0.0), // Passing south of 555 California
+            Wgs84Coord::new(37.7922, -122.4110, 0.0), // Nob Hill crest (~105m elevation)
         ],
         lanes: 2,
         speed_limit_kph: 40, // 25 mph
@@ -171,9 +171,9 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         name: Some("Montgomery Street".to_string()),
         highway_type: HighwayType::Secondary,
         geometry: vec![
-            Wgs84Coord::new(37.7890, -122.4020, 0.0),
-            Wgs84Coord::new(37.7952, -122.4028, 0.0), // Passing Transamerica Pyramid
-            Wgs84Coord::new(37.7990, -122.4035, 0.0),
+            Wgs84Coord::new(37.7890, -122.4030, 0.0),
+            Wgs84Coord::new(37.7952, -122.4030, 0.0), // Financial Canyon between 555 Cal and Transamerica
+            Wgs84Coord::new(37.7990, -122.4030, 0.0),
         ],
         lanes: 2,
         speed_limit_kph: 40, // 25 mph
@@ -230,8 +230,8 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         water_type: WaterType::Bay,
         outer_ring: vec![
             Wgs84Coord::new(37.7890, -122.3890, 0.0),
-            Wgs84Coord::new(37.7950, -122.3930, 0.0),
-            Wgs84Coord::new(37.8045, -122.4010, 0.0),
+            Wgs84Coord::new(37.7950, -122.3910, 0.0),
+            Wgs84Coord::new(37.8045, -122.3910, 0.0),
             Wgs84Coord::new(37.8045, -122.3850, 0.0),
             Wgs84Coord::new(37.7890, -122.3850, 0.0),
             Wgs84Coord::new(37.7890, -122.3890, 0.0),

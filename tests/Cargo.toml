@@ -66,4 +66,8 @@ path = "tests/gis_validation_compiler.rs"
 name = "adversarial_validation"
 path = "tests/adversarial_validation.rs"
 
+[[test]]
+name = "visual_fidelity_certification"
+path = "tests/visual_fidelity_certification.rs"
+
 

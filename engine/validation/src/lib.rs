@@ -13,6 +13,7 @@ pub mod repair_engine;
 pub mod report;
 pub mod road_network_validator;
 pub mod road_validator;
+pub mod scene_placement_auditor;
 pub mod terrain_water_validator;
 
 pub use aeroway_port_validator::{validate_aeroways, validate_ports};
@@ -27,6 +28,10 @@ pub use railway_validator::validate_railway_network;
 pub use repair_engine::{ControlledRepair, GeometrySnapshot, RepairEngine};
 pub use report::{QuarantineLog, RepairLog, RepairType, ValidationReport};
 pub use road_network_validator::{validate_road_network, verify_grade_separations};
+pub use scene_placement_auditor::{
+    audit_scene_placement, repair_scene_placement, DefectSeverity, PlacementAuditReport,
+    PlacementDefect,
+};
 pub use terrain_water_validator::{validate_dem_continuity, validate_water_bodies};
 
 #[cfg(test)]

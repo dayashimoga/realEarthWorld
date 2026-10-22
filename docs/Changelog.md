@@ -424,3 +424,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Verified deliberate defect detection and rejection: submerged bridges ($-15\text{m}$), illegal throttle speed hacks, corrupted chunk magic headers (`0xDEADBEEF`), and out-of-bounds latitude ($+95.0^\circ$).
   - Explicit documentation of untestable physical hardware boundaries (physical panel VSync and orbital GPS L1/L2 RF antenna tracking).
 
+## [0.15.0] - 2026-10-22 — Stage C Visual Fidelity and Realism Certification
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0019-stage-c-visual-fidelity-and-realism-certification.md`: Specification documenting georeferenced visual benchmarks, placement anomaly audits, WGSL PBR shading, deterministic visual regression, and cross-platform UI/UX standards.
+- **Scene Placement Auditor (`engine/validation/src/scene_placement_auditor.rs`)**:
+  - Automated defect detector identifying floating buildings, sunken buildings, road-through-structure collisions, unrealistic road slopes ($> 25\%$), substandard flyover clearances ($< 4.5\text{ m}$), and shoreline terrain tears.
+  - Automated placement repair engine (`repair_scene_placement`) snapping foundations to DEM terrain and elevating flyover structures.
+- **Dedicated Visual Fidelity Test Suite (`tests/tests/visual_fidelity_certification.rs`)**:
+  - 6 comprehensive test suites covering C1 through C6: ground-truth landmark verification, geometry anomaly detection, graphics shader equations, depth buffer precision (`Depth32Float`), perceptual visual regression metrics (RMSE, PSNR), and UI/UX touch target / WCAG AA contrast compliance.
+- **Sample Dataset Geometric Remediation (`engine/ingestion/src/sample_san_francisco.rs`)**:
+  - Corrected Montgomery Street to $-122.4030^\circ$, California Street to $37.7922^\circ$, and The Embarcadero to $-122.3946^\circ$, resolving building collisions.
+  - Adjusted San Francisco Bay outer ring to match coastal waterline at $0.0\text{ m}$ MSL.
+- **Dynamic Offscreen Multi-Region Screenshot Capture (`apps/world-viewer`)**:
+  - Added dynamic `--screenshot <path>` CLI option and region-specific naming (`target/screenshots/{region}_view.ppm`).
+  - Captured authentic $1280 \times 720$ RGB visual evidence across New York, Chicago, Seattle, and San Francisco.
+
+

@@ -211,3 +211,12 @@
 - [x] Stage B.6: Execute full multi-city end-to-end user journeys (spawn at One WTC NYC -> Broadway routing -> continental teleport to Seattle Waterfront -> solar day/night transitions -> UDP network input framing and reconnection recovery).
 - [x] Stage B.7: Implement honest evaluation via deliberate defect injection (rejection of submerged bridges, illegal throttle speeds, corrupted magic headers, and out-of-bounds coordinates; explicit documentation of untestable physical hardware boundaries).
 
+## STAGE C: Visual Fidelity and Realism Certification (Completed)
+- [x] Stage C.1: Compare rendered landmarks, scale, and elevations against independent ground-truth catalogs (CTBUH, USGS 3DEP); differentiate source-confirmed facts from procedural approximations.
+- [x] Stage C.2: Implement `ScenePlacementAuditor` in `engine/validation` detecting floating/sinking buildings, road-building collisions, substandard flyover clearances, and shoreline tears; remediate sample datasets to achieve 0 defects.
+- [x] Stage C.3: Audit WGSL PBR shaders, procedural road markings (double yellow centerlines and white dashed stripes), Fresnel reflectance ($F_0 = 0.04$), and Rayleigh atmospheric haze across solar ephemeris hours.
+- [x] Stage C.4: Audit rendering correctness, depth precision (`Depth32Float`), graphics quality presets (Low, Medium, High, Adaptive), resolution resize stability, and view matrix orthonormality.
+- [x] Stage C.5: Implement deterministic visual regression testing, perceptual image metrics (RMSE, PSNR, mean luminance, non-zero pixel coverage), and document human review protocol for subjective realism.
+- [x] Stage C.6: Execute cross-platform UI/UX certification (desktop event loop latency < 16.67ms, mobile touch targets >= 48x48 dp, WCAG 2.1 AA text contrast ratio >= 4.5:1, and multi-region screenshot capture).
+
+

@@ -36,7 +36,7 @@ use realearth_vehicles::{
     VehicleCameraPerspective, VehicleConfig, VehicleInputs,
 };
 use screenshot::capture_texture_to_ppm;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 fn print_usage() {
@@ -877,7 +877,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let p99_ms = calculate_percentile(&sorted_times, 99.0);
 
     // 8. Save Offscreen Frame Screenshot
-    let screenshot_path = Path::new("target/screenshots/san_francisco_view.ppm");
+    let custom_screenshot = args
+        .iter()
+        .position(|a| a == "--screenshot")
+        .and_then(|idx| args.get(idx + 1))
+        .map(PathBuf::from);
+
+    let screenshot_path = custom_screenshot.unwrap_or_else(|| {
+        let filename = format!("{}_view.ppm", region_arg);
+        PathBuf::from("target/screenshots").join(filename)
+    });
     println!(
         "📸 Capturing verified offscreen framebuffer to {:?}...",
         screenshot_path
@@ -888,7 +897,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &color_tex,
         width,
         height,
-        screenshot_path,
+        &screenshot_path,
     ) {
         println!("⚠️ Note on screenshot write: {}", e);
     } else {
