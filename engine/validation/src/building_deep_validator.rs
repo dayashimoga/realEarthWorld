@@ -19,6 +19,28 @@ pub fn validate_buildings_deep(
     let mut validated_buildings: Vec<ValidatedBuilding> = Vec::with_capacity(buildings.len());
 
     for building in buildings {
+        // Check for non-finite or out-of-range coordinates
+        let has_invalid_coords = building.outer_ring.iter().any(|pt| {
+            pt.lat.is_nan()
+                || pt.lon.is_nan()
+                || pt.lat.is_infinite()
+                || pt.lon.is_infinite()
+                || pt.lat.abs() > 90.0
+                || pt.lon.abs() > 180.0
+        });
+
+        if has_invalid_coords {
+            repair_engine.record_quarantine(
+                building.id,
+                "Building",
+                "RULE_COORDINATE_OUT_OF_BOUNDS",
+                "Building footprint contains non-finite or out-of-range geodetic coordinates",
+                DiagnosticSeverity::Blocker,
+                building.outer_ring.first().copied(),
+            );
+            continue;
+        }
+
         if building.outer_ring.len() < 3 {
             repair_engine.record_quarantine(
                 building.id,

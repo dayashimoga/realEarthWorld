@@ -344,4 +344,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dedicated Planetary Infrastructure Integration Test Target (`tests/tests/planetary_infrastructure.rs`)**:
   - 7 comprehensive integration tests covering planetary hierarchical indexing, antimeridian continuity, continental Vincenty geodesics, worldwide licensing compliance, resumable acquisition, storage quota LRU eviction, missing-data diagnostics, adaptive LOD streaming, and a **10,000,000 managed spatial objects benchmark** demonstrating 60 FPS reference performance ($0.12\text{ ms}$ avg frame time) and bounded resident memory ($0.05\text{ MB}$, well within 512 MB and 1024 MB contract budgets).
 
+## [0.12.0] - 2026-10-22 — STAGE 2: Minimum GIS Validation and Production World Compiler
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0016-minimum-gis-validation-and-production-world-compiler.md`: Architectural specification for blocking GIS validation, hierarchical spatial partitioning, 3D world meshing, bit-exact repeatability proof, SQLite manifest registries, deterministic incremental compilation, cryptographic checksums, and corruption detection with safe headless reload.
+- **Blocking Validation Pipeline (`engine/validation`)**:
+  - Coordinate sanity verification: rejects non-finite (`NaN`, `Infinity`) or out-of-range geodetic coordinates ($|\text{lat}| > 90^\circ$, $|\text{lon}| > 180^\circ$) as `DiagnosticSeverity::Blocker` under `RULE_COORDINATE_OUT_OF_BOUNDS` for both road networks and building footprints.
+  - Water-conflict detection: implemented `point_in_polygon` ray-casting and `validate_water_building_conflicts` detecting building footprints submerged within water bodies (`RULE_WATER_BUILDING_CONFLICT`), reported as non-silent Warnings without fabricating geometric alterations.
+  - Strict publication gate enforcement: `CompilerPublicationGate::production()` halts compilation if any unresolved Blocker defects are detected.
+- **Production World Compiler & Metadata Registry (`engine/compiler`)**:
+  - SQLite metadata extension in `chunks.db`: added `package_manifest` table storing CRS EPSG codes (e.g. EPSG:32643 for Bengaluru, EPSG:32610 for San Francisco), geographic envelopes, and schema version numbers; added `chunk_metadata` table tracking SHA-256 binary digests, deterministic source dependency hashes, and 4-way cardinal neighbor chunk connectivity (`neighbor_n`, `neighbor_s`, `neighbor_e`, `neighbor_w`).
+  - Added `ChunkDatabase` methods: `set_package_manifest`, `get_package_manifest`, `insert_chunk_metadata`, `get_chunk_metadata`, `verify_chunk_integrity`, and `invalidate_chunk`.
+  - Deterministic source feature hashing: implemented `compute_chunk_source_hash` hashing intersecting buildings, roads, water bodies, land cover, and DEM elevations.
+  - Deterministic incremental compilation: opt-in `CompilerOptions::incremental` skips meshing and compression for unchanged chunks whose on-disk `.rec` matches recorded SHA-256 checksums, recording reused chunks in `CompilationStats::chunks_reused`.
+- **Dedicated Stage 2 Integration Test Target (`tests/tests/gis_validation_compiler.rs`)**:
+  - 5 comprehensive tests validating the full Stage 2 pipeline:
+    1. `test_stage2_gis_blocking_validation_and_quarantine`: Parses actual `assets/bengaluru_sample/bengaluru_central.osm.xml`, verifies clean gate approval, injects NaN/out-of-bounds coordinates to verify Blocker rejection, and tests water-building conflict detection.
+    2. `test_stage2_world_compiler_repeatability_proof`: Compiles Bengaluru Central twice into separate directories, proving 100% bit-exact binary equality across all `.rec` chunk files and SHA-256 digests.
+    3. `test_stage2_deterministic_incremental_compilation`: Proves 100% chunk reuse on unchanged recompile, and isolated single-chunk recompile when a single building is modified.
+    4. `test_stage2_chunk_integrity_and_corruption_detection`: Verifies cryptographic chunk integrity, bit-flip corruption detection in SQLite manifest, and safe fallback geometry generation without crashing.
+    5. `test_stage2_headless_reload_and_seam_continuity`: Headless reload in `WorldStreamer` at Vidhana Soudha, proving neighbor connectivity, active chunk loading, identical geographic alignment, and road routing across the loaded network.
+
+
 

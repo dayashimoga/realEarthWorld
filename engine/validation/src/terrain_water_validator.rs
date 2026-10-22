@@ -141,3 +141,56 @@ pub fn validate_water_bodies(
 
     validated
 }
+
+/// Helper: Checks if a point is inside a closed 2D polygon ring using standard ray-casting.
+pub fn point_in_polygon(pt: Wgs84Coord, ring: &[Wgs84Coord]) -> bool {
+    let mut inside = false;
+    let n = ring.len();
+    if n < 3 {
+        return false;
+    }
+    let mut j = n - 1;
+    for i in 0..n {
+        let pi = ring[i];
+        let pj = ring[j];
+        if ((pi.lat > pt.lat) != (pj.lat > pt.lat))
+            && (pt.lon < (pj.lon - pi.lon) * (pt.lat - pi.lat) / (pj.lat - pi.lat) + pi.lon)
+        {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
+}
+
+/// Validates potential spatial conflicts between buildings and water bodies.
+pub fn validate_water_building_conflicts(
+    buildings: &[crate::polygon_validator::ValidatedBuilding],
+    water_bodies: &[OsmWaterFeature],
+    repair_engine: &mut RepairEngine,
+) {
+    for b in buildings {
+        if b.outer_ring.is_empty() {
+            continue;
+        }
+        let mean_lat = b.outer_ring.iter().map(|p| p.lat).sum::<f64>() / b.outer_ring.len() as f64;
+        let mean_lon = b.outer_ring.iter().map(|p| p.lon).sum::<f64>() / b.outer_ring.len() as f64;
+        let centroid = Wgs84Coord::new(mean_lat, mean_lon, 0.0);
+
+        for w in water_bodies {
+            if point_in_polygon(centroid, &w.outer_ring) {
+                repair_engine.record_quarantine(
+                    b.id,
+                    "Building",
+                    "RULE_WATER_BUILDING_CONFLICT",
+                    &format!(
+                        "Building {} footprint centroid is submerged in water body {}",
+                        b.id, w.id
+                    ),
+                    DiagnosticSeverity::Warning,
+                    Some(centroid),
+                );
+            }
+        }
+    }
+}

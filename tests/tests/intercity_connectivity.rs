@@ -90,6 +90,7 @@ fn test_all_four_regional_packages_compilation_and_integrity() {
         let opts = CompilerOptions {
             chunk_size_meters: chunk_size,
             terrain_grid_resolution: 8,
+            ..Default::default()
         };
 
         let stats = compile_world_package(&validated, &dem, &build_dir, &opts)
@@ -274,6 +275,7 @@ fn test_multi_region_catalog_incremental_install_and_lazy_load() {
     let opts = CompilerOptions {
         chunk_size_meters: 1000.0,
         terrain_grid_resolution: 8,
+        ..Default::default()
     };
     let stats_b = compile_world_package(&dataset_b, &dem_b, &dir_bengaluru, &opts).unwrap();
     let manifest_b = PackageManifest::new(
@@ -330,6 +332,7 @@ fn test_intercity_long_drive_memory_stability_and_eviction() {
     let opts = CompilerOptions {
         chunk_size_meters: 1000.0,
         terrain_grid_resolution: 8,
+        ..Default::default()
     };
     compile_world_package(&dataset, &dem, &dir, &opts).unwrap();
 

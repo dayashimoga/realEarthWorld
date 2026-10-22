@@ -15,7 +15,7 @@ pub mod water_mesher;
 pub use building_mesher::mesh_building;
 pub use chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION};
 pub use compiler_pipeline::{compile_world_package, CompilationStats, CompilerOptions};
-pub use database::{ChunkDatabase, ChunkIndexRecord};
+pub use database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 pub use mesh::{ChunkMesh, Vertex};
 pub use packager::{
     pack_chunk_to_bytes, read_chunk_file, unpack_chunk_from_bytes, write_chunk_file,
@@ -140,6 +140,7 @@ mod tests {
         let options = CompilerOptions {
             chunk_size_meters: 1000.0,
             terrain_grid_resolution: 8,
+            ..Default::default()
         };
 
         let stats = compile_world_package(&validated, &dem, &output_dir, &options)
@@ -182,6 +183,7 @@ mod tests {
         let options = CompilerOptions {
             chunk_size_meters: 500.0,
             terrain_grid_resolution: 8,
+            ..Default::default()
         };
 
         let stats = compile_world_package(&validated, &dem, &output_dir, &options)
@@ -265,5 +267,85 @@ mod tests {
             .expect("uninstall failed");
         assert!(!catalog2.is_installed("mysuru-urban"));
         assert_eq!(catalog2.list_installed().len(), 0);
+    }
+
+    #[test]
+    fn test_incremental_compilation_and_chunk_reuse() {
+        let dir = tempdir().expect("tempdir failed");
+        let output_dir = dir.path().join("bengaluru_incremental");
+
+        let raw_dataset = create_bengaluru_central_dataset();
+        let (validated, _) = validate_dataset(&raw_dataset);
+        let dem = DemGrid::create_bengaluru_plateau_dem(32, 32);
+
+        let options = CompilerOptions {
+            chunk_size_meters: 1000.0,
+            terrain_grid_resolution: 8,
+            incremental: false,
+            crs_epsg: 32643,
+            package_name: "bengaluru_test".to_string(),
+        };
+
+        // First full compilation
+        let stats1 = compile_world_package(&validated, &dem, &output_dir, &options)
+            .expect("First compilation failed");
+        assert!(stats1.total_chunks_generated > 0);
+        assert_eq!(stats1.chunks_reused, 0);
+
+        // Verify package manifest was registered
+        let db = ChunkDatabase::open(&output_dir.join("chunks.db")).unwrap();
+        let manifest = db.get_package_manifest("bengaluru_test").unwrap().unwrap();
+        assert_eq!(manifest.crs_epsg, 32643);
+
+        // Second incremental compilation with zero source changes
+        let mut inc_options = options.clone();
+        inc_options.incremental = true;
+        let stats2 = compile_world_package(&validated, &dem, &output_dir, &inc_options)
+            .expect("Incremental compilation failed");
+
+        assert_eq!(stats2.total_chunks_generated, 0);
+        assert_eq!(stats2.chunks_reused, stats1.total_chunks_generated);
+    }
+
+    #[test]
+    fn test_chunk_integrity_verification_and_corruption_detection() {
+        let dir = tempdir().expect("tempdir failed");
+        let output_dir = dir.path().join("bengaluru_integrity");
+
+        let raw_dataset = create_bengaluru_central_dataset();
+        let (validated, _) = validate_dataset(&raw_dataset);
+        let dem = DemGrid::create_bengaluru_plateau_dem(32, 32);
+
+        let options = CompilerOptions {
+            chunk_size_meters: 1000.0,
+            terrain_grid_resolution: 8,
+            ..Default::default()
+        };
+
+        compile_world_package(&validated, &dem, &output_dir, &options).unwrap();
+
+        let db = ChunkDatabase::open(&output_dir.join("chunks.db")).unwrap();
+        let chunk_file = output_dir.join("chunks/chunk_0_0.rec");
+        assert!(chunk_file.exists());
+
+        // 1. Initial verification should pass
+        let is_valid = db.verify_chunk_integrity(0, 0, 0, &chunk_file).unwrap();
+        assert!(is_valid, "Freshly compiled chunk must pass integrity check");
+
+        // 2. Corrupt one byte in the file
+        let mut file_bytes = std::fs::read(&chunk_file).unwrap();
+        file_bytes[10] ^= 0xFF; // Invert bits
+        std::fs::write(&chunk_file, &file_bytes).unwrap();
+
+        // 3. Verification must now detect corruption
+        let is_valid_after_tamper = db.verify_chunk_integrity(0, 0, 0, &chunk_file).unwrap();
+        assert!(
+            !is_valid_after_tamper,
+            "Tampered chunk must fail integrity check"
+        );
+
+        // 4. Invalidate chunk
+        db.invalidate_chunk(0, 0, 0).unwrap();
+        assert!(db.get_chunk_metadata(0, 0, 0).unwrap().is_none());
     }
 }

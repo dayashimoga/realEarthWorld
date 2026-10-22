@@ -235,6 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 1000.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
@@ -249,6 +250,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 1000.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
@@ -269,6 +271,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 1000.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
@@ -289,6 +292,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 2000.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
@@ -309,6 +313,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 1000.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
@@ -329,6 +334,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let options = CompilerOptions {
                     chunk_size_meters: 500.0,
                     terrain_grid_resolution: 16,
+                    ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }

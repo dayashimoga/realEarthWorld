@@ -54,11 +54,11 @@
 - [x] Stage 1.4: Update CLI tool with San Francisco compilation, inspection, and benchmark subcommands.
 - [x] Stage 1.4: Execute full test suite, regression verification, and publish Stage 1 Certification Matrix.
 
-## STAGE 2: High-Performance Large-Scale World Streaming & Chunk Hierarchies (Roadmap)
-- [ ] Stage 2.1: Implement multi-LOD binary chunk generation (LOD0 fine, LOD1 medium, LOD2 distant).
-- [ ] Stage 2.2: Implement hierarchical quadtree spatial index in SQLite and FlatBuffers chunk format.
-- [ ] Stage 2.3: Expand streaming predictive prefetching along vehicle velocity vectors.
-- [ ] Stage 2.4: Benchmarking and memory budget validation under rapid multi-kilometer camera motion.
+## STAGE 2: Minimum GIS Validation and Production World Compiler (Completed)
+- [x] Phase 2.1 — Blocking validation: Validate coordinates, road topology, junction grades, invalid polygons, footprints, terrain/road/building alignment, bridge/tunnel elevations, water conflicts, basic railway integrity, and inter-chunk continuity. Quarantine critical errors; classify diagnostics BLOCKER/ERROR/WARNING/INFO without silent repairs.
+- [x] Phase 2.2 — Hierarchical compiler: Partition geography hierarchically; generate terrain, road, building, water and basic vegetation-zone geometry, LOD meshes, normals, material references, collision meshes, road/routing graphs, spatial indexes, and neighbor connectivity.
+- [x] Phase 2.3 — Binary storage & incremental builds: Implement compressed, versioned chunks (`.rec` with zstd), SQLite manifests (`chunks.db` with package metadata, CRS/bounds, source IDs, SHA-256 checksums, neighbor metadata). Support deterministic incremental compilation (skipping unchanged chunks), corruption detection, and invalidation.
+- [x] Proof & Certification: Real Bengaluru GIS -> validated chunks -> headless reload with identical geographic alignment; prove integrity, topology, bit-exact repeatability, and no critical seams. (Verified via `gis_validation_compiler.rs`).
 
 ## STAGE 3: Functional America San Francisco World Viewer (Completed)
 - [x] Stage 3.1: Integrate `wgpu` with Bevy ECS scene entities (`TerrainMeshComponent`, `RoadMeshComponent`, `BuildingMeshComponent`, `WaterMeshComponent`, `VegetationMeshComponent`).

@@ -37,6 +37,7 @@ fn test_dense_city_and_highway_velocity_streaming() {
     let options = CompilerOptions {
         chunk_size_meters: 500.0,
         terrain_grid_resolution: 16,
+        ..Default::default()
     };
     compile_world_package(&val, &dem, &world_dir, &options).expect("Compilation failed");
 
@@ -103,6 +104,7 @@ fn test_teleportation_and_cancellation() {
     let options = CompilerOptions {
         chunk_size_meters: 500.0,
         terrain_grid_resolution: 8,
+        ..Default::default()
     };
     compile_world_package(&val, &dem, &world_dir, &options).expect("Compilation failed");
 
@@ -418,6 +420,7 @@ fn test_soak_traversal_zero_memory_leak() {
     let options = CompilerOptions {
         chunk_size_meters: 500.0,
         terrain_grid_resolution: 8,
+        ..Default::default()
     };
     compile_world_package(&val, &dem, &world_dir, &options).expect("Compilation failed");
 

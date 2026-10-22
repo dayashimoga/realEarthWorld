@@ -3,6 +3,7 @@
 use realearth_shared::bounds::GeoBounds;
 use realearth_shared::errors::{RealEarthError, Result};
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Spatial chunk index record stored in SQLite.
@@ -19,6 +20,31 @@ pub struct ChunkIndexRecord {
     pub feature_count: usize,
     pub storage_path: String,
     pub file_offset: u64,
+}
+
+/// High-level package manifest stored in SQLite (`package_manifest` table).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ManifestMetadataRecord {
+    pub package_name: String,
+    pub crs_epsg: i32,
+    pub bounds: GeoBounds,
+    pub version: u32,
+    pub schema_version: u32,
+    pub created_at: String,
+}
+
+/// Chunk checksum, source dependency hash, and neighbor connectivity metadata.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChunkMetaRecord {
+    pub chunk_x: i32,
+    pub chunk_y: i32,
+    pub lod_level: u32,
+    pub sha256_checksum: String,
+    pub source_hash: String,
+    pub neighbor_n: Option<String>,
+    pub neighbor_s: Option<String>,
+    pub neighbor_e: Option<String>,
+    pub neighbor_w: Option<String>,
 }
 
 /// SQLite database connection wrapping spatial queries for world chunks.
@@ -54,6 +80,31 @@ impl ChunkDatabase {
 
             CREATE INDEX IF NOT EXISTS idx_chunks_spatial
             ON chunks (min_lat, max_lat, min_lon, max_lon);
+
+            CREATE TABLE IF NOT EXISTS package_manifest (
+                package_name TEXT PRIMARY KEY,
+                crs_epsg INTEGER NOT NULL,
+                min_lat REAL NOT NULL,
+                max_lat REAL NOT NULL,
+                min_lon REAL NOT NULL,
+                max_lon REAL NOT NULL,
+                version INTEGER NOT NULL,
+                schema_version INTEGER NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS chunk_metadata (
+                chunk_x INTEGER NOT NULL,
+                chunk_y INTEGER NOT NULL,
+                lod_level INTEGER NOT NULL,
+                sha256_checksum TEXT NOT NULL,
+                source_hash TEXT NOT NULL,
+                neighbor_n TEXT,
+                neighbor_s TEXT,
+                neighbor_e TEXT,
+                neighbor_w TEXT,
+                PRIMARY KEY (chunk_x, chunk_y, lod_level)
+            );
             ",
         )
         .map_err(|e| RealEarthError::Compilation(format!("SQLite init schema error: {}", e)))?;
@@ -156,5 +207,203 @@ impl ChunkDatabase {
             .query_row("SELECT COUNT(*) FROM chunks", [], |row| row.get(0))
             .map_err(|e| RealEarthError::Compilation(format!("SQLite count error: {}", e)))?;
         Ok(count as usize)
+    }
+
+    /// Sets or updates the package manifest.
+    pub fn set_package_manifest(&self, manifest: &ManifestMetadataRecord) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO package_manifest (
+                    package_name, crs_epsg,
+                    min_lat, max_lat, min_lon, max_lon,
+                    version, schema_version, created_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    manifest.package_name,
+                    manifest.crs_epsg,
+                    manifest.bounds.min_lat,
+                    manifest.bounds.max_lat,
+                    manifest.bounds.min_lon,
+                    manifest.bounds.max_lon,
+                    manifest.version,
+                    manifest.schema_version,
+                    manifest.created_at,
+                ],
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite set manifest error: {}", e))
+            })?;
+        Ok(())
+    }
+
+    /// Retrieves package manifest by name.
+    pub fn get_package_manifest(
+        &self,
+        package_name: &str,
+    ) -> Result<Option<ManifestMetadataRecord>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT package_name, crs_epsg, min_lat, max_lat, min_lon, max_lon, version, schema_version, created_at
+                 FROM package_manifest WHERE package_name = ?1",
+            )
+            .map_err(|e| RealEarthError::Compilation(format!("SQLite prepare manifest query error: {}", e)))?;
+
+        let mut rows = stmt
+            .query_map(params![package_name], |row| {
+                let name: String = row.get(0)?;
+                let crs: i32 = row.get(1)?;
+                let min_lat: f64 = row.get(2)?;
+                let max_lat: f64 = row.get(3)?;
+                let min_lon: f64 = row.get(4)?;
+                let max_lon: f64 = row.get(5)?;
+                let ver: u32 = row.get(6)?;
+                let s_ver: u32 = row.get(7)?;
+                let created: String = row.get(8)?;
+
+                Ok(ManifestMetadataRecord {
+                    package_name: name,
+                    crs_epsg: crs,
+                    bounds: GeoBounds::new(min_lat, max_lat, min_lon, max_lon),
+                    version: ver,
+                    schema_version: s_ver,
+                    created_at: created,
+                })
+            })
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite query manifest error: {}", e))
+            })?;
+
+        if let Some(r) = rows.next() {
+            let manifest =
+                r.map_err(|e| RealEarthError::Compilation(format!("SQLite row error: {}", e)))?;
+            Ok(Some(manifest))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Inserts or updates chunk checksum, source hash, and neighbor metadata.
+    pub fn insert_chunk_metadata(&self, meta: &ChunkMetaRecord) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO chunk_metadata (
+                    chunk_x, chunk_y, lod_level,
+                    sha256_checksum, source_hash,
+                    neighbor_n, neighbor_s, neighbor_e, neighbor_w
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    meta.chunk_x,
+                    meta.chunk_y,
+                    meta.lod_level,
+                    meta.sha256_checksum,
+                    meta.source_hash,
+                    meta.neighbor_n,
+                    meta.neighbor_s,
+                    meta.neighbor_e,
+                    meta.neighbor_w,
+                ],
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite insert chunk metadata error: {}", e))
+            })?;
+        Ok(())
+    }
+
+    /// Retrieves chunk metadata (checksums, source hash, neighbors).
+    pub fn get_chunk_metadata(
+        &self,
+        chunk_x: i32,
+        chunk_y: i32,
+        lod_level: u32,
+    ) -> Result<Option<ChunkMetaRecord>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT chunk_x, chunk_y, lod_level, sha256_checksum, source_hash,
+                        neighbor_n, neighbor_s, neighbor_e, neighbor_w
+                 FROM chunk_metadata
+                 WHERE chunk_x = ?1 AND chunk_y = ?2 AND lod_level = ?3",
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!(
+                    "SQLite prepare chunk metadata query error: {}",
+                    e
+                ))
+            })?;
+
+        let mut rows = stmt
+            .query_map(params![chunk_x, chunk_y, lod_level], |row| {
+                Ok(ChunkMetaRecord {
+                    chunk_x: row.get(0)?,
+                    chunk_y: row.get(1)?,
+                    lod_level: row.get(2)?,
+                    sha256_checksum: row.get(3)?,
+                    source_hash: row.get(4)?,
+                    neighbor_n: row.get(5)?,
+                    neighbor_s: row.get(6)?,
+                    neighbor_e: row.get(7)?,
+                    neighbor_w: row.get(8)?,
+                })
+            })
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite query chunk metadata error: {}", e))
+            })?;
+
+        if let Some(r) = rows.next() {
+            let meta =
+                r.map_err(|e| RealEarthError::Compilation(format!("SQLite row error: {}", e)))?;
+            Ok(Some(meta))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Verifies the cryptographic integrity of a chunk on disk against recorded checksum in the manifest.
+    pub fn verify_chunk_integrity(
+        &self,
+        chunk_x: i32,
+        chunk_y: i32,
+        lod_level: u32,
+        file_path: &Path,
+    ) -> Result<bool> {
+        let meta = match self.get_chunk_metadata(chunk_x, chunk_y, lod_level)? {
+            Some(m) => m,
+            None => return Ok(false),
+        };
+
+        if !file_path.exists() {
+            return Ok(false);
+        }
+
+        let bytes = std::fs::read(file_path)?;
+        let computed_checksum = realearth_ingestion::acquisition::compute_sha256(&bytes);
+        Ok(computed_checksum.eq_ignore_ascii_case(&meta.sha256_checksum))
+    }
+
+    /// Invalidates and removes a chunk from both spatial index and metadata registry.
+    pub fn invalidate_chunk(&self, chunk_x: i32, chunk_y: i32, lod_level: u32) -> Result<()> {
+        self.conn
+            .execute(
+                "DELETE FROM chunks WHERE chunk_x = ?1 AND chunk_y = ?2 AND lod_level = ?3",
+                params![chunk_x, chunk_y, lod_level],
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite invalidate chunk error: {}", e))
+            })?;
+
+        self.conn
+            .execute(
+                "DELETE FROM chunk_metadata WHERE chunk_x = ?1 AND chunk_y = ?2 AND lod_level = ?3",
+                params![chunk_x, chunk_y, lod_level],
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!(
+                    "SQLite invalidate chunk_metadata error: {}",
+                    e
+                ))
+            })?;
+
+        Ok(())
     }
 }

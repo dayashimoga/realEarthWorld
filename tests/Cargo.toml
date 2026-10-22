@@ -58,3 +58,7 @@ path = "tests/multiplayer_networking.rs"
 name = "planetary_infrastructure"
 path = "tests/planetary_infrastructure.rs"
 
+[[test]]
+name = "gis_validation_compiler"
+path = "tests/gis_validation_compiler.rs"
+

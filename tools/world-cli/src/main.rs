@@ -198,6 +198,7 @@ fn main() -> anyhow::Result<()> {
             let options = CompilerOptions {
                 chunk_size_meters: chunk_size,
                 terrain_grid_resolution: 16,
+                ..Default::default()
             };
 
             println!(

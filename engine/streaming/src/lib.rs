@@ -147,6 +147,7 @@ mod tests {
         let opts = CompilerOptions {
             chunk_size_meters: 1000.0,
             terrain_grid_resolution: 8,
+            ..Default::default()
         };
         compile_world_package(&val, &dem, &world_dir, &opts).expect("Compilation failed");
 
@@ -199,6 +200,7 @@ mod tests {
         let opts = CompilerOptions {
             chunk_size_meters: 1000.0,
             terrain_grid_resolution: 8,
+            ..Default::default()
         };
         compile_world_package(&dataset_a, &dem_a, &dir_a, &opts).unwrap();
 

@@ -16,6 +16,28 @@ pub fn validate_road_network(
 
     // 1. Feature-level geometric hygiene and attribute semantics
     for road in roads {
+        // Check for non-finite or out-of-range coordinates
+        let has_invalid_coords = road.geometry.iter().any(|pt| {
+            pt.lat.is_nan()
+                || pt.lon.is_nan()
+                || pt.lat.is_infinite()
+                || pt.lon.is_infinite()
+                || pt.lat.abs() > 90.0
+                || pt.lon.abs() > 180.0
+        });
+
+        if has_invalid_coords {
+            repair_engine.record_quarantine(
+                road.way_id,
+                "Road",
+                "RULE_COORDINATE_OUT_OF_BOUNDS",
+                "Road geometry contains non-finite or out-of-range geodetic coordinates",
+                DiagnosticSeverity::Blocker,
+                road.geometry.first().copied(),
+            );
+            continue;
+        }
+
         if road.geometry.len() < 2 {
             repair_engine.record_quarantine(
                 road.way_id,

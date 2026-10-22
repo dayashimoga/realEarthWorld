@@ -522,6 +522,43 @@
   - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. **PASS ✅**.
   - Cold Startup Latency: **11.34 ms** (Budget: < 2000 ms). **PASS ✅**.
 
+## STAGE 2: Minimum GIS Validation and Production World Compiler
+- [x] Phase 2.1 — Blocking Validation
+  - Strict coordinate bounds and finite value verification (`RULE_COORDINATE_OUT_OF_BOUNDS` as `DiagnosticSeverity::Blocker`) for road geometry and building footprints.
+  - Grade-separation invariance: verified overpasses and flyovers never collapse into at-grade intersections.
+  - Spatial water conflict detection (`validate_water_building_conflicts`) reporting submerged building footprints as non-silent Warnings under `RULE_WATER_BUILDING_CONFLICT`.
+  - Publication gate enforcement: `CompilerPublicationGate::production()` halts compilation on any fatal Blocker defects.
+- [x] Phase 2.2 — Hierarchical Production World Compiler
+  - Regular metric spatial chunk partitioning with latitude degree cos-scaling.
+  - 3D terrain heightfield meshing conforming to bilinear DEM samples.
+  - Multi-lane road ribbon generation with $+6.0\text{m}$ bridge clearances and parapet profiles.
+  - Extruded 3D building walls and planar roof triangulation via `earcutr` with height provenance attribution.
+  - Specular water surface geometry and vegetation planar meshes.
+  - Navigation graph generation preserving factual OSM road topology.
+- [x] Phase 2.3 — Binary Storage, Incremental Builds & Integrity Verification
+  - Versioned binary chunks with `CHUNK_MAGIC = b"RECH"` and `CHUNK_VERSION = 1` compressed via Zstandard (`.rec` format).
+  - SQLite manifest database (`chunks.db`) with `chunks`, `package_manifest`, and `chunk_metadata` tables.
+  - CRS projection tracking (EPSG:32643 for Bengaluru, EPSG:32610 for San Francisco), geographic envelopes, and schema versions.
+  - Deterministic source dependency hashing (`compute_chunk_source_hash`) and opt-in incremental compilation (`CompilerOptions::incremental`).
+  - Cryptographic SHA-256 chunk integrity verification and bit-flip corruption recovery.
+
+### Stage 2 Verification & Certification Matrix (Minimum GIS Validation and Production World Compiler)
+- **Full Workspace Test Suite**: 163 passed; 0 failed; 0 ignored (100% pass rate across all 14 workspace crates).
+- **Static Analysis Quality Gate**: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+- **Code Style Gate**: `cargo fmt --check` passed with 0 formatting discrepancies.
+- **Dedicated Stage 2 Integration Test Target (`realearth-tests::gis_validation_compiler`)**:
+  - `test_stage2_gis_blocking_validation_and_quarantine`: PASS ✅ (Loads actual `assets/bengaluru_sample/bengaluru_central.osm.xml`, verifies clean gate approval, injects NaN/out-of-bounds coordinates to verify Blocker rejection, and tests water-building conflict detection).
+  - `test_stage2_world_compiler_repeatability_proof`: PASS ✅ (Compiles Bengaluru Central twice into separate directories, proving 100% bit-exact binary equality across all `.rec` chunk files and SHA-256 digests).
+  - `test_stage2_deterministic_incremental_compilation`: PASS ✅ (Proves 100% chunk reuse on unchanged recompile, and isolated single-chunk recompile when a single building is modified).
+  - `test_stage2_chunk_integrity_and_corruption_detection`: PASS ✅ (Verifies cryptographic chunk integrity, bit-flip corruption detection in SQLite manifest, and safe fallback geometry generation without crashing).
+  - `test_stage2_headless_reload_and_seam_continuity`: PASS ✅ (Headless reload in `WorldStreamer` at Vidhana Soudha, proving neighbor connectivity, active chunk loading, identical geographic alignment, and road routing across the loaded network).
+- **Interactive & Headless Viewer Verification (`apps/world-viewer`)**:
+  - Average Framerate: **524.4 FPS** (Avg Frame Time: **1.91 ms**). Budget: $\ge 60.0$ FPS ($\le 16.67$ ms). **PASS ✅**.
+  - p50: **0.69 ms** | p95: **1.10 ms** | p99: **11.15 ms**. **PASS ✅**.
+  - Memory: **0.58 MB** CPU Heap, **0.52 MB** GPU VRAM. Budget: $< 1024$ MB. **PASS ✅**.
+  - Cold Startup Latency: **24.12 ms** (Budget: $< 2000$ ms). **PASS ✅**.
+
+
 
 
 

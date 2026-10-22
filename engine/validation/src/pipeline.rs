@@ -9,7 +9,9 @@ use crate::railway_validator::validate_railway_network;
 use crate::repair_engine::RepairEngine;
 use crate::report::{QuarantineLog, RepairLog, RepairType, ValidationReport};
 use crate::road_network_validator::validate_road_network;
-use crate::terrain_water_validator::{validate_dem_continuity, validate_water_bodies};
+use crate::terrain_water_validator::{
+    validate_dem_continuity, validate_water_bodies, validate_water_building_conflicts,
+};
 use realearth_ingestion::osm_types::{
     IngestedDataset, OsmAerowayFeature, OsmLandCoverFeature, OsmPortFeature, OsmRailwayFeature,
     OsmRoadFeature, OsmWaterFeature,
@@ -61,6 +63,9 @@ pub fn validate_dataset_with_tolerances(
 
     // 5. Water bodies
     let valid_water = validate_water_bodies(&dataset.water_bodies, &mut repair_engine, tolerance);
+
+    // 5b. Water / Building conflicts
+    validate_water_building_conflicts(&valid_buildings, &valid_water, &mut repair_engine);
 
     // 6. Aeroways
     let valid_aeroways = validate_aeroways(&dataset.aeroways, &mut repair_engine, tolerance);

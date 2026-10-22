@@ -45,6 +45,7 @@ fn test_full_bengaluru_end_to_end_vertical_slice() {
     let options = CompilerOptions {
         chunk_size_meters: 1000.0,
         terrain_grid_resolution: 16,
+        ..Default::default()
     };
     let stats = compile_world_package(&validated, &dem, temp_pkg_dir.path(), &options)
         .expect("Compilation failed");
@@ -261,6 +262,7 @@ fn test_full_san_francisco_end_to_end_gis_vertical_slice() {
     let options = CompilerOptions {
         chunk_size_meters: 500.0,
         terrain_grid_resolution: 16,
+        ..Default::default()
     };
     let stats = compile_world_package(&validated, &dem, temp_pkg_dir.path(), &options)
         .expect("San Francisco world compilation failed");
