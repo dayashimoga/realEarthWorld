@@ -525,6 +525,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Expanded `tests/tests/defect_remediation_regression.rs` to 13 tests (all passing in 0.15s).
   - Validated 218 passing tests across workspace with zero failures and zero clippy warnings.
 
-
-
-
+## [0.6.0] - 2026-10-22
+### Added
+- **Multi-Platform Native Packaging Scripts**:
+  - `scripts/package_windows.ps1` & `scripts/package_windows.sh`: Packages Windows release binaries, launcher scripts, assets, and documentation into `dist/windows/realearth-windows-x64.zip`.
+  - `scripts/package_linux.ps1` & `scripts/package_linux.sh`: Packages Linux x86_64 binaries into `dist/linux/RealEarth-x86_64.AppImage` and `dist/linux/realearth-linux-x64.tar.gz`.
+  - `scripts/package_macos.ps1` & `scripts/package_macos.sh`: Assembles Apple bundle `RealEarth.app` into `dist/macos/RealEarth-macOS.dmg` and `dist/macos/realearth-macos-universal.tar.gz`.
+  - `scripts/package_android.ps1` & `scripts/package_android.sh`: Packages Android ARM64 native JNI library into `dist/android/realearth-arm64.apk` and `dist/android/realearth-release.aab`.
+  - `scripts/package_ios.ps1` & `scripts/package_ios.sh`: Bundles iOS Metal UIKit application into `dist/ios/realearth-ios-device.ipa` and `dist/ios/realearth-ios-simulator.zip`.
+  - `scripts/package_all_platforms.ps1` & `scripts/package_all_platforms.sh`: Master packaging script automating end-to-end packaging across all 5 operating systems with SHA-256 integrity digests.
+- **Android Application Implementation (`android/app`)**:
+  - `MainActivity.java`: Complete native surface lifecycle with `SurfaceHolder.Callback`, touch steering seekbar, throttle/brake touch buttons, and region selection spinner.
+  - Thermal management via `PowerManager.OnThermalStatusChangedListener` actively throttling framerate across Nominal (60 FPS), Moderate (45 FPS), Severe (30 FPS), and Emergency (20 FPS) states.
+  - Low-memory management hooking into `onTrimMemory` and `onLowMemory` to prune distant chunk caches.
+  - Complete Android resources: layout XML, colors, styles, and manifest.
+- **iOS Application Implementation (`ios/RealEarth`)**:
+  - Native UIKit Metal app with `AppDelegate` and `ViewController` hosting an `MTKView`.
+  - 60Hz display synchronization via `CADisplayLink`.
+  - Safe area insets dynamically adapting to iPhone Dynamic Island, top notch, and home bar.
+  - Low-memory handling via `didReceiveMemoryWarning`.
+- **Packaging Metadata & Launchers**:
+  - `packaging/linux/realearth.desktop`: Compliant XDG desktop entry specification.
+  - `packaging/linux/AppRun`: Linux runtime launcher configuring `WGPU_BACKEND="vulkan,gl"`.
+  - `packaging/macos/Info.plist`: macOS bundle configuration with Metal and `NSHighResolutionCapable`.
+- **Architectural Decision Record**:
+  - `docs/adr/0022-stage-f-five-platform-application-completeness.md`: Comprehensive ADR documenting 5-platform architecture, mobile surface lifecycle, thermal regulation, and cross-platform parity.
+- **Forensic Stage F Report**:
+  - `docs/reports/StageF_Five_Platform_Report.md`: Full multi-platform packaging report, deliverables matrix, checksums, and execution evidence.
+- **Five-Platform Parity Test Harness (`tests/tests/five_platform_application_parity.rs`)**:
+  - 6 comprehensive tests validating Windows desktop, Linux AppImage/tarball, macOS bundle/Retina scaling, Android JNI/thermal throttling, iOS UIKit/safe areas, and bit-exact vehicle dynamics across platforms.

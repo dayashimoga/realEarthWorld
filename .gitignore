@@ -8,3 +8,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+dist/**/*.AppDir/
+dist/**/RealEarth.app/

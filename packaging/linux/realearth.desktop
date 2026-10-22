@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Real Earth
+Comment=High-performance planetary simulation and open-world GIS platform
+Exec=realearth-viewer %U
+Icon=realearth
+Terminal=false
+Type=Application
+Categories=Game;Simulation;Geoscience;
+Keywords=GIS;Earth;Simulation;3D;OpenWorld;
+StartupWMClass=realearth-viewer

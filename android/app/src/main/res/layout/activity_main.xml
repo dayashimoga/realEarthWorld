@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A">
+
+    <!-- Native Rendering Surface -->
+    <SurfaceView
+        android:id="@+id/surface_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top Status Bar & Region Selector -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#80000000"
+        android:layout_alignParentTop="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Real Earth"
+            android:textColor="#38BDF8"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_marginEnd="16dp"
+            android:layout_gravity="center_vertical" />
+
+        <Spinner
+            android:id="@+id/spinner_region"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#334155"
+            android:layout_gravity="center_vertical" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tv_thermal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thermal: Nominal (60 FPS)"
+            android:textColor="#4ADE80"
+            android:textSize="12sp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:id="@+id/tv_coordinates"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GPS: 37.7749 N, -122.4194 W"
+            android:textColor="#E2E8F0"
+            android:textSize="12sp"
+            android:layout_gravity="center_vertical" />
+    </LinearLayout>
+
+    <!-- Telemetry HUD Overlay (Top-Left) -->
+    <LinearLayout
+        android:id="@+id/hud_overlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#80000000"
+        android:layout_below="@id/top_bar"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:id="@+id/tv_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Speed: 0.0 km/h"
+            android:textColor="#F8FAFC"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_gear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gear: D (1)"
+            android:textColor="#94A3B8"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_rpm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RPM: 800"
+            android:textColor="#94A3B8"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Bottom Controls: Virtual Steering Slider & Pedals -->
+    <RelativeLayout
+        android:id="@+id/bottom_controls"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_alignParentBottom="true"
+        android:padding="16dp">
+
+        <!-- Steering Slider (Bottom-Left) -->
+        <LinearLayout
+            android:layout_width="260dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="◄ STEERING ►"
+                android:textColor="#CBD5E1"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="4dp" />
+
+            <SeekBar
+                android:id="@+id/seek_steer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Pedals: Brake & Throttle (Bottom-Right) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true">
+
+            <Button
+                android:id="@+id/btn_brake"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
+                android:text="BRAKE"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="#EF4444"
+                android:layout_marginEnd="16dp" />
+
+            <Button
+                android:id="@+id/btn_throttle"
+                android:layout_width="80dp"
+                android:layout_height="70dp"
+                android:text="GAS"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="#22C55E" />
+        </LinearLayout>
+    </RelativeLayout>
+
+</RelativeLayout>

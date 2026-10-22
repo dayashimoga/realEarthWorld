@@ -17,11 +17,16 @@ realearth-vehicles = { path = "../engine/vehicles" }
 realearth-rendering = { path = "../engine/rendering" }
 realearth-gameplay = { path = "../engine/gameplay" }
 realearth-networking = { path = "../engine/networking" }
+realearth_mobile = { path = "../bindings/mobile", package = "realearth-mobile" }
 wgpu.workspace = true
 glam.workspace = true
 tempfile = "3.17"
 tokio.workspace = true
 zstd = "0.13"
+
+[[test]]
+name = "five_platform_application_parity"
+path = "tests/five_platform_application_parity.rs"
 
 [[test]]
 name = "end_to_end_pipeline"

@@ -2543,6 +2543,7 @@ dependencies = [
  "realearth-gameplay",
  "realearth-geospatial",
  "realearth-ingestion",
+ "realearth-mobile",
  "realearth-navigation",
  "realearth-networking",
  "realearth-rendering",

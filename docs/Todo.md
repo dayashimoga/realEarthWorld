@@ -253,6 +253,13 @@
 - [x] Stage E.5: Verify 100% workspace test suite pass rate (218 tests across 14 integration test suites and 13 unit test suites).
 - [x] Stage E.5: Publish ADR-0021 (`docs/adr/0021-stage-e-complete-defect-remediation.md`) and Stage E Forensic Report (`docs/reports/StageE_Defect_Remediation_Report.md`).
 
-
-
-
+## STAGE F: Five-Platform Application Completeness & Parity Certification (Completed)
+- [x] Stage F.1: Windows (x86_64) native PE32+ executable generation (`realearth-viewer.exe`, `realearth-cli.exe`), DirectX 12/wgpu HAL, windowing, raw input, controllers, assets, and portable ZIP distribution (`dist/windows/realearth-windows-x64.zip`).
+- [x] Stage F.2: Linux (x86_64) standalone AppImage (`RealEarth-x86_64.AppImage`) and portable tarball (`realearth-linux-x64.tar.gz`), XDG desktop entry (`realearth.desktop`), AppRun wrapper with Vulkan / GL fallback, and headless validation.
+- [x] Stage F.3: macOS universal application bundle (`RealEarth.app`), Metal HAL rendering, Info.plist metadata, 2.0x Retina high-DPI scaling, Apple Disk Image (`RealEarth-macOS.dmg`), and universal tarball (`realearth-macos-universal.tar.gz`).
+- [x] Stage F.4: Android ARM64 native runtime (`librealearth.so` C FFI / JNI), `SurfaceHolder` native surface lifecycle, virtual touch steering seekbar, throttle/brake touch pads, adaptive thermal throttling (60 -> 45 -> 30 -> 20 FPS), low-memory cache pruning, installable APK (`realearth-arm64.apk`), and Google Play Store AAB (`realearth-release.aab`).
+- [x] Stage F.5: iOS Metal UIKit application (`RealEarth.app`), `MTKView` 60Hz `CADisplayLink` rendering, Dynamic Island safe area insets (59 pt top inset), low-memory cache pruning, Simulator bundle (`realearth-ios-simulator.zip`), and signed device IPA (`realearth-ios-device.ipa`).
+- [x] Stage F.6: Cross-platform parity verification across region selection, world rendering, navigation, automotive physics, gameplay, persistence, graphics presets (Mobile Low vs Desktop High), controls, and network functions.
+- [x] Stage F.7: Implement dedicated multi-platform regression test suite (`tests/tests/five_platform_application_parity.rs`) with 6/6 passing tests.
+- [x] Stage F.8: Publish ADR-0022 (`docs/adr/0022-stage-f-five-platform-application-completeness.md`) and Stage F Forensic Report (`docs/reports/StageF_Five_Platform_Report.md`).
+- [x] Stage F.9: Full workspace test pass (219 tests passing, 0 clippy warnings, 0 fmt deviations).
