@@ -1,10 +1,14 @@
 //! High-performance asynchronous spatial world streaming and memory management.
 
 pub mod async_loader;
+pub mod certification;
 pub mod config;
+pub mod diagnostics;
 pub mod lod;
 pub mod lru_cache;
 pub mod multi_region;
+pub mod package_delivery;
+pub mod planetary_streamer;
 pub mod prefetch;
 pub mod streamer;
 
@@ -12,10 +16,20 @@ pub use async_loader::{
     generate_fallback_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest,
     LoadedChunkResult,
 };
+pub use certification::{CertificationResult, WorldPackageCertifier};
 pub use config::StreamingConfig;
+pub use diagnostics::{
+    FallbackBasemapProvider, MissingDataCategory, MissingDataDiagnostics, MissingDataRecord,
+    MissingDataReport,
+};
 pub use lod::{select_lod, select_lod_with_hysteresis};
 pub use lru_cache::{CachedChunk, ChunkKey, LruChunkCache};
 pub use multi_region::{MountedRegion, MultiRegionStreamer, MultiRegionTelemetry};
+pub use package_delivery::{
+    ChunkTransferState, CountryPackageManifest, InstalledPackageRecord,
+    ResumableAcquisitionSession, StorageQuotaManager,
+};
+pub use planetary_streamer::{PlanetaryLodLevel, PlanetaryOriginCoordinator, RelevanceBudget};
 pub use prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkPriority};
 pub use streamer::{StreamingTelemetry, WorldStreamer};
 

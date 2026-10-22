@@ -53,3 +53,8 @@ path = "tests/multi_transport_simulation.rs"
 [[test]]
 name = "multiplayer_networking"
 path = "tests/multiplayer_networking.rs"
+
+[[test]]
+name = "planetary_infrastructure"
+path = "tests/planetary_infrastructure.rs"
+

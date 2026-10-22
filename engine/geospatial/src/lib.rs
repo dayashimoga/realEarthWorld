@@ -1,13 +1,25 @@
 //! High-precision Geodetic, ECEF, ENU, and UTM transformations for Real Earth.
 
+pub mod crs;
 pub mod datum;
 pub mod ellipsoid;
+pub mod geodesic;
+pub mod manifest;
+pub mod planetary_grid;
 pub mod tiles;
 pub mod transforms;
 pub mod utm;
 
+pub use crs::{CrsDefinition, CrsKind, CrsRegistry, StandardVerticalDatum};
 pub use datum::{VerticalDatum, VerticalDatumMetadata};
 pub use ellipsoid::Wgs84Ellipsoid;
+pub use geodesic::{
+    antimeridian_distance_lon, geodesic_distance_vincenty, haversine_distance,
+    interpolate_across_antimeridian, is_antimeridian_crossing, normalize_longitude,
+    should_reanchor, EARTH_MEAN_RADIUS_METERS,
+};
+pub use manifest::{DataSourceProvider, GlobalDataSourceManifest, LicenseTerms, QualityProfile};
+pub use planetary_grid::{GlobalCellKey, PlanetarySpatialIndex, MAX_PLANETARY_LEVEL};
 pub use tiles::TileCoord;
 pub use transforms::{ecef_to_wgs84, wgs84_to_ecef, EnuConverter};
 pub use utm::{utm_central_meridian, utm_zone, wgs84_to_utm, UtmCoord};
