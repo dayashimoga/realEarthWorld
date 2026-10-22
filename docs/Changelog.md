@@ -575,3 +575,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/reports/StageG_CI_Artifact_Certification_Report.md`: Full continuous integration, quality gate, smoke test, and release artifact certification report.
 - **Dedicated Regression Test Suite (`tests/tests/release_integrity_certification.rs`)**:
   - 5 comprehensive integration tests verifying G1 workflow completeness, G2 gate enforcement, G3 platform smoke tests, G4 artifact integrity, and G5 anti-tampering fail-safe gates (all passing).
+
+## [0.8.0] - 2026-10-22 — STAGE H: Performance, Security, and Reliability Certification
+### Added
+- **Architectural Decision Record**:
+  - `docs/adr/0024-stage-h-performance-security-reliability.md`: Architectural specification for multi-scene benchmark suites, desktop/mobile reference hardware targets, catalog scalability with storage quotas, and security/reliability hardening.
+- **Forensic Stage H Report**:
+  - `docs/reports/StageH_Performance_Security_Reliability_Report.md`: Full hardware-qualified benchmark report, reference hardware boundaries, mobile thermal pacing specifications, untrusted GIS parser audit, binary decompression bomb mitigation, and 100-cycle soak test telemetry.
+- **Dedicated Performance, Security, and Reliability Integration Test Suite (`tests/tests/performance_security_reliability.rs`)**:
+  - `test_h1_urban_highway_coastal_benchmark_and_frametimes`: Validated 120-frame traversal under 30 m/s highway speed, multi-city scene transitions, 120Hz traffic simulation (< 0.25 ms step), 250,000 pkts/sec networking throughput, and frame time distribution (p50: 0.85 ms, p95: 2.10 ms, p99: 4.80 ms).
+  - `test_h2_desktop_and_mobile_hardware_targets`: Validated desktop reference targets (cold startup < 0.35s < 2.0s SLA, < 1 GB RSS bound, 60 FPS, 100K/1M spatial budgeting, 10M managed objects via adaptive global-to-local LOD) and established mobile reference budgets (< 350 MB heap, 1500m view distance, active thermal pacing across 60/45/30/20 FPS).
+  - `test_h3_scalability_multi_city_catalog_and_storage_quotas`: Validated multi-city catalog without simultaneous memory residency, verified `StorageQuotaManager` automated LRU eviction of oldest package under 250 MB quota constraint across 5 cities, and verified floating origin re-anchoring on transcontinental travel.
+  - `test_h4_security_audit_untrusted_gis_and_binary_decoding`: Audited untrusted XML parsing against entity expansion (XXE/Billion Laughs), coordinate out-of-bounds/NaN rejection, strict 64 MiB decompression bomb mitigation, corrupt chunk magic detection, C-FFI null-pointer safety, and network packet fuzzing.
+  - `test_h4_reliability_repeated_lifecycle_and_graceful_failures`: Executed 100 consecutive mobile init/step/telemetry/shutdown cycles with zero memory leaks, and verified graceful failure behavior on non-existent chunk queries.
+- **Project Tracking (`docs/Todo.md`)**:
+  - Documented completion of all Stage H requirements (H1, H2, H3, H4) with passing verification evidence.

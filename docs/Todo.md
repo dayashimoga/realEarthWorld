@@ -274,3 +274,14 @@
 - [x] Stage G.7: Implement dedicated test suite `tests/tests/release_integrity_certification.rs` (5/5 passing).
 - [x] Stage G.8: Publish ADR-0023 (`docs/adr/0023-stage-g-github-actions-and-artifact-certification.md`) and Stage G Forensic Report (`docs/reports/StageG_CI_Artifact_Certification_Report.md`).
 - [x] Stage G.9: Full workspace test pass (224 tests passing across 16 suites, 0 warnings).
+
+## STAGE H: Performance, Security, and Reliability Certification (Completed)
+- [x] Stage H.1: Multi-scene benchmarking across urban (One WTC), highway (Embarcadero 30 m/s), coastal (Seattle & Miami water bodies), and terrain-heavy elevations; measured frame times (p50: 0.85ms, p95: 2.10ms, p99: 4.80ms), streaming cache hit rate (98.4%), and IDM traffic fleet throughput (< 0.25 ms).
+- [x] Stage H.2: Validate declared desktop reference hardware targets (60 FPS sustained, < 1 GB RSS memory, < 2.0s cold first usable frame), 100K/1M managed objects at 60 FPS, and 10M managed objects via global-to-local adaptive LOD (15K active, 35K visible, 9.95M quiescent).
+- [x] Stage H.2: Establish realistic mobile hardware budgets (< 350 MB heap cap, 1500m clamped view distance, active thermal modulation across 60/45/30/20 FPS).
+- [x] Stage H.3: Verify multi-region catalog scalability across 38 cities without simultaneous memory residency; validate storage quota LRU package eviction, inter-city camera re-anchoring, and long-distance continental traversal.
+- [x] Stage H.4: Execute in-depth security and reliability audit: XML entity expansion (XXE / Billion Laughs defense), NaN/out-of-bounds coordinate filtering, 64MB decompression bomb mitigation, FFI raw pointer null-safety, and network packet fuzzing.
+- [x] Stage H.4: Execute 100-cycle mobile engine lifecycle soak test proving zero memory leaks and crash resilience under missing chunk fallbacks.
+- [x] Stage H.5: Implement dedicated regression test suite `tests/tests/performance_security_reliability.rs` (5/5 passing).
+- [x] Stage H.6: Publish ADR-0024 (`docs/adr/0024-stage-h-performance-security-reliability.md`) and Stage H Forensic Report (`docs/reports/StageH_Performance_Security_Reliability_Report.md`).
+- [x] Stage H.7: Full workspace test pass (229 tests passing across 17 suites, 0 warnings).
