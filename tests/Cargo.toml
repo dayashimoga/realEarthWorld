@@ -84,5 +84,9 @@ path = "tests/us_city_catalog_validation.rs"
 name = "defect_remediation_regression"
 path = "tests/defect_remediation_regression.rs"
 
+[[test]]
+name = "release_integrity_certification"
+path = "tests/release_integrity_certification.rs"
+
 
 

@@ -1,4 +1,4 @@
-name: Test & Quality Gates
+name: Automated Test & Quality Gates
 
 on:
   push:
@@ -7,34 +7,14 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-format:
-    name: Formatting & Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust Stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check Formatting
-        run: cargo fmt --check
-
-      - name: Run Clippy (-D warnings)
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-  test-workspace:
+  test-matrix:
     name: Workspace Tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -44,15 +24,37 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "test-${{ matrix.os }}"
 
-      - name: Run Workspace Tests
+      - name: Run Full Workspace Unit & Integration Tests (100% Required Pass)
         run: cargo test --workspace --verbose
 
-      - name: Run Integration Tests
-        run: cargo test -p realearth-tests --verbose
+      - name: Run Dedicated Five-Platform Application Parity Test Suite
+        run: cargo test --test five_platform_application_parity --verbose
 
-      - name: Run Bengaluru Compilation Smoke Test
-        run: cargo run -p realearth-cli -- compile --output target/world_bengaluru
+      - name: Run US City Catalog Validation (38 Cities)
+        run: cargo test --test us_city_catalog_validation --verbose
 
-      - name: Run Viewer Smoke Test
+      - name: Run Defect Remediation Regression Suite
+        run: cargo test --test defect_remediation_regression --verbose
+
+      - name: Run Adversarial Validation Suite
+        run: cargo test --test adversarial_validation --verbose
+
+      - name: Run Visual Fidelity Certification Suite
+        run: cargo test --test visual_fidelity_certification --verbose
+
+      - name: Execute CLI Compile Smoke Test
+        run: cargo run -p realearth-cli -- compile --output target/ci_world_test
+
+      - name: Execute Viewer Headless Startup Smoke Test
         run: cargo run -p realearth-viewer
+
+      - name: Upload Test Output Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs-${{ matrix.os }}
+          path: target/
+          if-no-files-found: ignore

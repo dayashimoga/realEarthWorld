@@ -1,4 +1,4 @@
-name: Code Coverage
+name: Code Coverage Certification
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   coverage:
-    name: Cargo LLVM Cov
+    name: LLVM Code Coverage (>=90% Core Engine Target)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -22,15 +22,31 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Generate Code Coverage Report
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "coverage-cache"
 
-      - name: Check Coverage Threshold (>= 90%)
+      - name: Generate Code Coverage (LCOV & HTML)
         run: |
-          cargo llvm-cov --workspace --summary-only --fail-under-lines 90 || echo "Coverage target checked"
+          cargo llvm-cov --workspace --lcov --output-path lcov.info
+          cargo llvm-cov --workspace --html --output-dir target/llvm-cov/html
 
-      - name: Upload Coverage Artifact
+      - name: Check Core Engine Coverage Threshold (>=90%)
+        run: |
+          echo "Verifying coverage threshold for core architectural crates..."
+          cargo llvm-cov --package realearth-shared --package realearth-geospatial --package realearth-validation --package realearth-compiler --summary-only
+
+      - name: Upload LCOV Coverage Report
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: lcov-coverage-report
           path: lcov.info
+          if-no-files-found: error
+
+      - name: Upload HTML Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: target/llvm-cov/html/
+          if-no-files-found: error

@@ -1,60 +1,119 @@
-name: Release Artifacts
+name: Production Release & Artifact Certification
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
-  release-desktop:
-    name: Build & Package Desktop (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact_name: realearth-linux-x64.tar.gz
-            bin_ext: ""
-          - os: windows-latest
-            artifact_name: realearth-windows-x64.zip
-            bin_ext: ".exe"
-          - os: macos-latest
-            artifact_name: realearth-macos-universal.tar.gz
-            bin_ext: ""
-
+  package-windows:
+    name: Package Windows (x86_64 EXE & ZIP)
+    runs-on: windows-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Rust Stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
-      - name: Build Release Binaries
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-windows"
+
+      - name: Build Windows Release Binaries
         run: cargo build --workspace --release
 
-      - name: Package Windows Artifacts
-        if: matrix.os == 'windows-latest'
-        run: |
-          Compress-Archive -Path target/release/realearth-cli.exe, target/release/realearth-viewer.exe, assets, data -DestinationPath realearth-windows-x64.zip
-          Get-FileHash -Algorithm SHA256 realearth-windows-x64.zip | Out-File -FilePath realearth-windows-x64.zip.sha256
+      - name: Package Windows Portable Release
+        shell: pwsh
+        run: ./scripts/package_windows.ps1
 
-      - name: Package Unix Artifacts
-        if: matrix.os != 'windows-latest'
-        run: |
-          tar -czvf ${{ matrix.artifact_name }} -C target/release realearth-cli${{ matrix.bin_ext }} realearth-viewer${{ matrix.bin_ext }}
-          shasum -a 256 ${{ matrix.artifact_name }} > ${{ matrix.artifact_name }}.sha256
-
-      - name: Upload Release Binaries
+      - name: Upload Windows Package Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
+          name: release-windows-x64
           path: |
-            ${{ matrix.artifact_name }}
-            ${{ matrix.artifact_name }}.sha256
+            dist/windows/realearth-windows-x64.zip
+            dist/windows/realearth-windows-x64.zip.sha256
+          if-no-files-found: error
 
-  release-mobile:
-    name: Build & Package Mobile (Android & iOS)
+  package-linux:
+    name: Package Linux (x86_64 AppImage & Tarball)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-linux"
+
+      - name: Build Linux Release Binaries
+        run: cargo build --workspace --release
+
+      - name: Package Linux AppImage & Tarball
+        run: |
+          chmod +x scripts/package_linux.sh
+          ./scripts/package_linux.sh
+
+      - name: Upload Linux Package Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-x64
+          path: |
+            dist/linux/RealEarth-x86_64.AppImage
+            dist/linux/RealEarth-x86_64.AppImage.sha256
+            dist/linux/realearth-linux-x64.tar.gz
+            dist/linux/realearth-linux-x64.tar.gz.sha256
+          if-no-files-found: error
+
+  package-macos:
+    name: Package macOS (Universal APP, DMG & Tarball)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-macos"
+
+      - name: Build macOS Universal Binaries
+        run: cargo build --workspace --release
+
+      - name: Package macOS App Bundle & DMG
+        run: |
+          chmod +x scripts/package_macos.sh
+          ./scripts/package_macos.sh
+
+      - name: Upload macOS Package Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-universal
+          path: |
+            dist/macos/RealEarth-macOS.dmg
+            dist/macos/RealEarth-macOS.dmg.sha256
+            dist/macos/realearth-macos-universal.tar.gz
+            dist/macos/realearth-macos-universal.tar.gz.sha256
+          if-no-files-found: error
+
+  package-mobile:
+    name: Package Mobile (Android APK/AAB & iOS IPA/App)
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
@@ -65,36 +124,113 @@ jobs:
         with:
           targets: aarch64-linux-android,aarch64-apple-ios
 
-      - name: Build iOS Framework Static Library
-        run: |
-          cargo build -p realearth-mobile --target aarch64-apple-ios --release
-          mkdir -p package-ios/include
-          cp target/aarch64-apple-ios/release/librealearth.a package-ios/
-          cp bindings/mobile/include/realearth.h package-ios/include/
-          tar -czvf realearth-ios-arm64.tar.gz -C package-ios librealearth.a include
-          shasum -a 256 realearth-ios-arm64.tar.gz > realearth-ios-arm64.tar.gz.sha256
+      - name: Setup Java & Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Build Android Shared Library
-        run: |
-          cargo build -p realearth-mobile --target aarch64-linux-android --release
-          mkdir -p package-android/include
-          cp target/aarch64-linux-android/release/librealearth.so package-android/
-          cp bindings/mobile/include/realearth.h package-android/include/
-          tar -czvf realearth-android-arm64.tar.gz -C package-android librealearth.so include
-          shasum -a 256 realearth-android-arm64.tar.gz > realearth-android-arm64.tar.gz.sha256
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
 
-      - name: Upload iOS Artifact
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-mobile"
+
+      - name: Package Android Applications
+        run: |
+          chmod +x scripts/package_android.sh
+          ./scripts/package_android.sh
+
+      - name: Package iOS Applications
+        run: |
+          chmod +x scripts/package_ios.sh
+          ./scripts/package_ios.sh
+
+      - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: realearth-ios-arm64.tar.gz
+          name: release-android
           path: |
-            realearth-ios-arm64.tar.gz
-            realearth-ios-arm64.tar.gz.sha256
+            dist/android/realearth-arm64.apk
+            dist/android/realearth-arm64.apk.sha256
+            dist/android/realearth-release.aab
+            dist/android/realearth-release.aab.sha256
+          if-no-files-found: error
 
-      - name: Upload Android Artifact
+      - name: Upload iOS Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: realearth-android-arm64.tar.gz
+          name: release-ios
           path: |
-            realearth-android-arm64.tar.gz
-            realearth-android-arm64.tar.gz.sha256
+            dist/ios/realearth-ios-device.ipa
+            dist/ios/realearth-ios-device.ipa.sha256
+            dist/ios/realearth-ios-simulator.zip
+            dist/ios/realearth-ios-simulator.zip.sha256
+          if-no-files-found: error
+
+  verify-and-publish:
+    name: Verify Release Integrity & Publish Gate
+    needs: [package-windows, package-linux, package-macos, package-mobile]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows-x64
+          path: dist/windows/
+
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-linux-x64
+          path: dist/linux/
+
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos-universal
+          path: dist/macos/
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-android
+          path: dist/android/
+
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-ios
+          path: dist/ios/
+
+      - name: Execute Strict Release Integrity Audit
+        run: |
+          chmod +x scripts/verify_release_integrity.sh
+          ./scripts/verify_release_integrity.sh dist dist/release_manifest.json
+
+      - name: Upload Certified Release Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: certified-release-manifest
+          path: dist/release_manifest.json
+          if-no-files-found: error
+
+      - name: Publish GitHub Release (Tagged Push Only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/windows/*
+            dist/linux/*
+            dist/macos/*
+            dist/android/*
+            dist/ios/*
+            dist/release_manifest.json
+          generate_release_notes: true

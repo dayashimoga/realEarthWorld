@@ -1,4 +1,4 @@
-name: Build Matrix
+name: Cross-Platform Matrix Build
 
 on:
   push:
@@ -8,19 +8,28 @@ on:
 
 jobs:
   build-desktop:
-    name: Desktop Build (${{ matrix.os }})
+    name: Desktop Build & Packaging (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            package_script: scripts/package_windows.ps1
+            artifact_name: realearth-windows-x64
+            artifact_path: dist/windows/
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            package_script: scripts/package_linux.sh
+            artifact_name: realearth-linux-x64
+            artifact_path: dist/linux/
           - os: macos-latest
             target: aarch64-apple-darwin
+            package_script: scripts/package_macos.sh
+            artifact_name: realearth-macos-universal
+            artifact_path: dist/macos/
 
     steps:
       - name: Checkout Repository
@@ -33,15 +42,38 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-${{ matrix.os }}"
 
       - name: Build Workspace (Release)
         run: cargo build --workspace --release
 
-      - name: Run Tests (Headless)
-        run: cargo test --workspace
-
       - name: Verify CLI Binary
         run: cargo run --release -p realearth-cli -- --help
+
+      - name: Package Desktop Distribution (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./scripts/package_windows.ps1
+
+      - name: Package Desktop Distribution (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          chmod +x scripts/package_linux.sh
+          ./scripts/package_linux.sh
+
+      - name: Package Desktop Distribution (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          chmod +x scripts/package_macos.sh
+          ./scripts/package_macos.sh
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
 
   build-mobile:
     name: Mobile Targets (Android & iOS)
@@ -55,11 +87,44 @@ jobs:
         with:
           targets: aarch64-linux-android,aarch64-apple-ios
 
+      - name: Setup Java & Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-mobile"
 
-      - name: Check iOS Mobile Library
-        run: cargo check -p realearth-mobile --target aarch64-apple-ios --release
+      - name: Build iOS Framework Static Library
+        run: cargo build -p realearth-mobile --target aarch64-apple-ios --release
 
-      - name: Check Android Mobile Library
-        run: cargo check -p realearth-mobile --target aarch64-linux-android --release
+      - name: Build Android JNI Shared Library
+        run: cargo build -p realearth-mobile --target aarch64-linux-android --release
+
+      - name: Package Mobile Artifacts (Android & iOS)
+        run: |
+          chmod +x scripts/package_android.sh scripts/package_ios.sh
+          ./scripts/package_android.sh
+          ./scripts/package_ios.sh
+
+      - name: Upload Android Distribution Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-android-arm64
+          path: dist/android/
+          if-no-files-found: error
+
+      - name: Upload iOS Distribution Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-ios-device
+          path: dist/ios/
+          if-no-files-found: error

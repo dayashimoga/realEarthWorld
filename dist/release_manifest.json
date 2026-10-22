@@ -1,0 +1,117 @@
+﻿{
+    "ReleaseVersion":  "0.6.0",
+    "GeneratedAt":  "2026-10-22T17:15:41Z",
+    "PackageCount":  9,
+    "TotalCount":  9,
+    "Status":  "CERTIFIED",
+    "Packages":  [
+                     {
+                         "Platform":  "Windows",
+                         "Arch":  "x86_64",
+                         "File":  "realearth-windows-x64.zip",
+                         "Path":  "dist/windows/realearth-windows-x64.zip",
+                         "Format":  "zip",
+                         "SizeMB":  7.07,
+                         "SHA256":  "6169F196B02D3C15AE1D99045E0F9B607C6A1A9867EA03579DD313303CF61CAB",
+                         "Signed":  false,
+                         "SigningNote":  "Unsigned Windows PE32+ (Development binary)",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "Linux",
+                         "Arch":  "x86_64",
+                         "File":  "RealEarth-x86_64.AppImage",
+                         "Path":  "dist/linux/RealEarth-x86_64.AppImage",
+                         "Format":  "appimage",
+                         "SizeMB":  6.91,
+                         "SHA256":  "63DC45164679F01BD4EC9152976966DC6CEB233A439FCBA9C0FBCE9E59B0EC54",
+                         "Signed":  false,
+                         "SigningNote":  "Unsigned Linux AppImage bundle",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "Linux",
+                         "Arch":  "x86_64",
+                         "File":  "realearth-linux-x64.tar.gz",
+                         "Path":  "dist/linux/realearth-linux-x64.tar.gz",
+                         "Format":  "tar.gz",
+                         "SizeMB":  6.9,
+                         "SHA256":  "0BF1FF4EA34B3888F646C99822A43F49B2AA2E4AC442AF77CE2020BF9D057AC7",
+                         "Signed":  false,
+                         "SigningNote":  "Unsigned Linux portable tarball",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "macOS",
+                         "Arch":  "Universal (ARM64/x64)",
+                         "File":  "RealEarth-macOS.dmg",
+                         "Path":  "dist/macos/RealEarth-macOS.dmg",
+                         "Format":  "dmg",
+                         "SizeMB":  4.59,
+                         "SHA256":  "0C3B9504FE3F444D5D688F4A44635EDBD502D0DC501240EFC4AB81B32027ACA8",
+                         "Signed":  false,
+                         "SigningNote":  "Ad-hoc signed macOS DMG (Apple Developer notarization requires team credentials)",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "macOS",
+                         "Arch":  "Universal (ARM64/x64)",
+                         "File":  "realearth-macos-universal.tar.gz",
+                         "Path":  "dist/macos/realearth-macos-universal.tar.gz",
+                         "Format":  "tar.gz",
+                         "SizeMB":  4.59,
+                         "SHA256":  "D0DA4B9C6A2692D670B4C3B4C234353D0B4B69CA45A0CA95B1AFAE8F44878EFF",
+                         "Signed":  false,
+                         "SigningNote":  "Ad-hoc signed macOS universal tarball",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "Android",
+                         "Arch":  "ARM64-v8a",
+                         "File":  "realearth-arm64.apk",
+                         "Path":  "dist/android/realearth-arm64.apk",
+                         "Format":  "apk",
+                         "SizeMB":  0.32,
+                         "SHA256":  "B1E8CB310B2F0901C54B0F0CE9C6AB0564D4A2F36C3372FAC2BFC8CB361CBF38",
+                         "Signed":  true,
+                         "SigningNote":  "Self-signed Android debug keystore (Google Play release requires production keystore)",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "Android",
+                         "Arch":  "Universal Bundle",
+                         "File":  "realearth-release.aab",
+                         "Path":  "dist/android/realearth-release.aab",
+                         "Format":  "aab",
+                         "SizeMB":  0.32,
+                         "SHA256":  "B1E8CB310B2F0901C54B0F0CE9C6AB0564D4A2F36C3372FAC2BFC8CB361CBF38",
+                         "Signed":  true,
+                         "SigningNote":  "Self-signed Android AAB release bundle",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "iOS",
+                         "Arch":  "ARM64 Device",
+                         "File":  "realearth-ios-device.ipa",
+                         "Path":  "dist/ios/realearth-ios-device.ipa",
+                         "Format":  "ipa",
+                         "SizeMB":  0.16,
+                         "SHA256":  "F20A84DA8093C170945EB36FE96B7100ECFF87C01125F7DBE9D092AD806257CF",
+                         "Signed":  false,
+                         "SigningNote":  "Unsigned device IPA (Sideloading requires Apple Developer Team Provisioning Profile)",
+                         "IntegrityVerified":  true
+                     },
+                     {
+                         "Platform":  "iOS",
+                         "Arch":  "Simulator (Universal)",
+                         "File":  "realearth-ios-simulator.zip",
+                         "Path":  "dist/ios/realearth-ios-simulator.zip",
+                         "Format":  "zip",
+                         "SizeMB":  0.16,
+                         "SHA256":  "ABB17D9D3DEAA6883ED3D7113E3406BDDE859167A31D9778906A229667424041",
+                         "Signed":  false,
+                         "SigningNote":  "Unsigned Simulator bundle (Runs in Xcode iOS Simulator without code signing)",
+                         "IntegrityVerified":  true
+                     }
+                 ]
+}

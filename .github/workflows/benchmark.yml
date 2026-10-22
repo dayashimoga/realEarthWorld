@@ -1,4 +1,4 @@
-name: Criterion Benchmarks
+name: Performance Benchmarks & Baselines
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   benchmarks:
-    name: Performance Regression Check
+    name: Criterion & Throughput Regression Gates
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,16 +19,19 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "bench-cache"
 
-      - name: Run CLI Throughput Benchmarks
+      - name: Run CLI Geospatial & Compiler Throughput Benchmarks
         run: cargo run --release -p realearth-cli -- bench
 
-      - name: Run Criterion Benchmarks
+      - name: Run Criterion Benchmark Suite
         run: cargo bench -p realearth-benchmarks -- --test
 
-      - name: Upload Criterion Benchmark Artifacts
+      - name: Upload Criterion Benchmark Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: benchmark-results
+          name: criterion-benchmark-results
           path: target/criterion/
+          if-no-files-found: warn

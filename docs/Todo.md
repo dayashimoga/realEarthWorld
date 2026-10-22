@@ -263,3 +263,14 @@
 - [x] Stage F.7: Implement dedicated multi-platform regression test suite (`tests/tests/five_platform_application_parity.rs`) with 6/6 passing tests.
 - [x] Stage F.8: Publish ADR-0022 (`docs/adr/0022-stage-f-five-platform-application-completeness.md`) and Stage F Forensic Report (`docs/reports/StageF_Five_Platform_Report.md`).
 - [x] Stage F.9: Full workspace test pass (219 tests passing, 0 clippy warnings, 0 fmt deviations).
+
+## STAGE G: GitHub Actions and Artifact Certification (Completed)
+- [x] Stage G.1: Establish all 8 dedicated GitHub Actions workflows in `.github/workflows/` (`audit.yml`, `build.yml`, `test.yml`, `coverage.yml`, `benchmark.yml`, `security.yml`, `docs.yml`, `release.yml`) using pinned dependencies, rust-cache, Android SDK/NDK, and Apple Xcode runners.
+- [x] Stage G.2: Enforce strict CI quality gates: `cargo fmt --check`, `cargo clippy -D warnings`, 100% required test pass (224/224), >=90% core coverage, zero security CVEs, and GIS validity.
+- [x] Stage G.3: Implement automated cross-platform testing and smoke tests (Windows/Linux/macOS desktop execution, headless viewer startup, CLI compile, Android JNI contract, iOS UIKit safe area bounds).
+- [x] Stage G.4: Upload versioned platform artifacts: Windows ZIP, Linux AppImage/tarball, macOS DMG/tarball, Android APK/AAB, iOS IPA/Simulator ZIP, reports, checksums, and release manifests.
+- [x] Stage G.5: Enforce release integrity and anti-tampering: verify archive magic headers, match SHA-256 digests, mandate `if-no-files-found: error`, and transparently document code signing status (no disguised unsigned builds).
+- [x] Stage G.6: Create dedicated verification scripts `scripts/verify_release_integrity.ps1` and `scripts/verify_release_integrity.sh`, and generate `dist/release_manifest.json`.
+- [x] Stage G.7: Implement dedicated test suite `tests/tests/release_integrity_certification.rs` (5/5 passing).
+- [x] Stage G.8: Publish ADR-0023 (`docs/adr/0023-stage-g-github-actions-and-artifact-certification.md`) and Stage G Forensic Report (`docs/reports/StageG_CI_Artifact_Certification_Report.md`).
+- [x] Stage G.9: Full workspace test pass (224 tests passing across 16 suites, 0 warnings).

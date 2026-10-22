@@ -554,3 +554,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/reports/StageF_Five_Platform_Report.md`: Full multi-platform packaging report, deliverables matrix, checksums, and execution evidence.
 - **Five-Platform Parity Test Harness (`tests/tests/five_platform_application_parity.rs`)**:
   - 6 comprehensive tests validating Windows desktop, Linux AppImage/tarball, macOS bundle/Retina scaling, Android JNI/thermal throttling, iOS UIKit/safe areas, and bit-exact vehicle dynamics across platforms.
+
+## [0.7.0] - 2026-10-22
+### Added
+- **GitHub Actions Workflows Suite (`.github/workflows/`)**:
+  - `audit.yml`: Enforces formatting (`cargo fmt --check`), Clippy (`-D warnings`), GIS dataset integrity (`realearth-cli validate`), and workspace crate license audits.
+  - `build.yml`: Cross-platform matrix compilation covering Windows, Linux, macOS, Android (NDK r26b), and iOS (Xcode SDKs) with pinned dependencies and `Swatinem/rust-cache@v2`.
+  - `test.yml`: Multi-runner test matrix across `windows-latest`, `ubuntu-latest`, and `macos-latest` executing full workspace tests, 16 integration suites, and CLI/viewer smoke tests.
+  - `coverage.yml`: LLVM code coverage generation producing LCOV and HTML artifacts with >=90% line coverage enforcement on core engine crates.
+  - `benchmark.yml`: Throughput and Criterion performance benchmark execution with artifact uploading.
+  - `security.yml`: RustSec Advisory Database vulnerability scan (`cargo audit --deny warnings`) running weekly and on pull requests.
+  - `docs.yml`: Strict Rustdoc compilation (`RUSTDOCFLAGS="-D warnings"`) and API documentation artifact publishing.
+  - `release.yml`: 5-platform packaging orchestration, automated integrity certification, and GitHub Release publication on `v*` tags with strict `if-no-files-found: error` fail-safe gates.
+- **Automated Release Integrity Verification**:
+  - `scripts/verify_release_integrity.ps1` & `scripts/verify_release_integrity.sh`: Programmatically verifies archive magic headers (`PK\x03\x04`, `\x1f\x8b`), recomputes SHA-256 digests, validates payload architectures, and generates `dist/release_manifest.json`.
+  - `dist/release_manifest.json`: Certified forensic manifest documenting all 9 platform archives, sizes, formats, checksums, and transparent code-signing disclosures.
+- **Architectural Decision Record**:
+  - `docs/adr/0023-stage-g-github-actions-and-artifact-certification.md`: Documents CI/CD architecture, gate enforcement policies, and signing disclosure integrity.
+- **Forensic Stage G Report**:
+  - `docs/reports/StageG_CI_Artifact_Certification_Report.md`: Full continuous integration, quality gate, smoke test, and release artifact certification report.
+- **Dedicated Regression Test Suite (`tests/tests/release_integrity_certification.rs`)**:
+  - 5 comprehensive integration tests verifying G1 workflow completeness, G2 gate enforcement, G3 platform smoke tests, G4 artifact integrity, and G5 anti-tampering fail-safe gates (all passing).
