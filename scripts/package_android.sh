@@ -53,7 +53,8 @@ fi
 
 if ([ -n "${ANDROID_HOME:-}" ] || [ -n "${ANDROID_SDK_ROOT:-}" ]) && [ -n "$GRADLE_CMD" ]; then
     echo "[BUILD] Building authentic APK and AAB with Gradle..."
-    (cd "$ROOT_DIR/android" && $GRADLE_CMD assembleRelease bundleRelease)
+    (cd "$ROOT_DIR/android" && $GRADLE_CMD assembleRelease)
+    (cd "$ROOT_DIR/android" && $GRADLE_CMD bundleRelease)
 
     APK_SRC="$ROOT_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
     if [ ! -f "$APK_SRC" ] && [ -f "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" ]; then

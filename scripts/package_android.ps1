@@ -46,7 +46,8 @@ if ($HasAndroidHome -and $GradleCmd) {
     Write-Host "[BUILD] Invoking real Gradle / AAPT2 / D8 / R8 packaging..." -ForegroundColor Yellow
     Push-Location "android"
     try {
-        & $GradleCmd assembleRelease bundleRelease
+        & $GradleCmd assembleRelease
+        & $GradleCmd bundleRelease
     } finally {
         Pop-Location
     }

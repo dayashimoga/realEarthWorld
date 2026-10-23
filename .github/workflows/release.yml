@@ -121,6 +121,11 @@ jobs:
         with:
           ndk-version: r26b
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.4'
+
       - name: Install cargo-ndk
         uses: taiki-e/install-action@v2
         with:
