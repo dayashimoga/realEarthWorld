@@ -61,14 +61,10 @@ if (Test-Path $ZipPath) {
 }
 
 Write-Host "[PACKAGE] Creating standalone portable zip: $ZipPath..." -ForegroundColor Yellow
-if (Get-Command tar -ErrorAction SilentlyContinue) {
-    tar -a -cf $ZipPath -C $StagingDir .
-} else {
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $FullStaging = [System.IO.Path]::GetFullPath($StagingDir)
-    $FullZip = [System.IO.Path]::GetFullPath($ZipPath)
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($FullStaging, $FullZip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
-}
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$FullStaging = [System.IO.Path]::GetFullPath($StagingDir)
+$FullZip = [System.IO.Path]::GetFullPath($ZipPath)
+[System.IO.Compression.ZipFile]::CreateFromDirectory($FullStaging, $FullZip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 Remove-Item -Path $StagingDir -Recurse -Force
 
 # 6. Generate SHA256 Checksum
@@ -105,5 +101,8 @@ if (-not (Test-Path "$TestExtractDir/realearth-viewer.exe")) {
 if (-not (Test-Path "$TestExtractDir/data/world_san_francisco/chunks.db")) {
     throw "Standalone test failed: bundled pilot world missing from extracted zip"
 }
+
+# Clean up verification directory so dist/windows only contains release artifacts
+Remove-Item -Path $TestExtractDir -Recurse -Force
 
 Write-Host "[OK] Windows standalone package verified successfully with zero external dependencies." -ForegroundColor Green

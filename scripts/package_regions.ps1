@@ -46,14 +46,10 @@ $Readme | Out-File -FilePath "$StagingDir/README.md" -Encoding UTF8
 # 1. Create ZIP package
 $ZipPath = "$DistDir/realearth-region-san-francisco.zip"
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
-if (Get-Command tar -ErrorAction SilentlyContinue) {
-    tar -a -cf $ZipPath -C $StagingDir .
-} else {
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $FullStaging = [System.IO.Path]::GetFullPath($StagingDir)
-    $FullZip = [System.IO.Path]::GetFullPath($ZipPath)
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($FullStaging, $FullZip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
-}
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$FullStaging = [System.IO.Path]::GetFullPath($StagingDir)
+$FullZip = [System.IO.Path]::GetFullPath($ZipPath)
+[System.IO.Compression.ZipFile]::CreateFromDirectory($FullStaging, $FullZip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
 $ZipHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
 $ZipHash | Out-File -FilePath "$ZipPath.sha256" -Encoding ASCII
