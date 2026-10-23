@@ -19,7 +19,9 @@ use crate::sample_seattle::create_seattle_dataset;
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::us_catalog::UsCityDefinition;
 
-/// Generates an authentic, geographically surveyed dataset for any defined US city.
+/// Static test fixture: generates surveyed dataset for defined US cities.
+/// Retained strictly for unit test fixtures; production pipeline uses `load_authentic_city`.
+#[doc(hidden)]
 pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
     // 1. Initialize from specialized deep datasets if available
     let mut dataset = match city.id {

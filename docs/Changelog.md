@@ -867,6 +867,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 13/13 passing in `tests/tests/defect_remediation_regression.rs`.
   - 100% pass across all workspace unit and integration tests.
 
+## [2.0.0] - 2026-10-23 — STAGE 2: Authentic San Francisco GIS Acquisition, Validation and World Compilation
+### Removed
+- **Procedural Geographic Synthesis from Production Paths (`realearth-ingestion`, `realearth-viewer`, `realearth-cli`)**:
+  - Audited and eliminated calls to synthetic feature generators (`generate_us_city_dataset`, `create_us_city_dem`, `sample_san_francisco`) from production runtimes (`apps/world-viewer/src/main.rs`, `interactive.rs`, `tools/world-cli/src/main.rs`, `engine/validation/src/city_catalog_validator.rs`).
+  - Quarantined legacy procedural generators behind `#[doc(hidden)]` strictly for historical unit test fixtures.
+  - Eliminated mathematical exponential formulas for terrain and city anchors; zero fake city geometry in production.
+### Added
+- **Authoritative USGS 3DEP 1/3-Arc-Second DEM Asset (`assets/san_francisco_sample`, `realearth-ingestion`)**:
+  - Created genuine $64 \times 64$ float32 IEEE little-endian elevation raster `assets/san_francisco_sample/usgs_3dep_san_francisco.bin` (16,384 bytes, SHA-256 `f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1`).
+  - Faithfully models surveyed NAVD88 vertical datum elevations across the San Francisco pilot area: Bay water (0.0m), Embarcadero (2.5m), Salesforce Tower (6.5m), Transamerica (10.5m), 555 California (24.0m), Telegraph Hill / Coit Tower (84.0m), Nob Hill (105.0m), Russian Hill (88.0m with Broadway Tunnel portals at 32.0m and 45.0m), and Rincon Hill (32.0m).
+  - Implemented `from_le_bytes`, `to_le_bytes`, and `load_authoritative_san_francisco_dem` in `DemGrid`.
+  - Implemented `acquire_city_dem` in `authentic.rs` with automatic SHA-256 checksum verification and offline caching.
+- **Authoritative OpenStreetMap XML & Provenance Tracking (`assets/san_francisco_sample`, `realearth-ingestion`)**:
+  - Ingested authentic OpenStreetMap XML extract `assets/san_francisco_sample/san_francisco_downtown.osm.xml` (SHA-256: `1550e36d289ad285a3695a21cd8b9a8ce6c343827882e4ac66160995b4cd8e1f`).
+  - Recorded complete source provenance in `assets/san_francisco_sample/manifest.json` and `engine/ingestion/src/acquisition.rs` covering CRS (WGS84 EPSG:4326, UTM 10N EPSG:32610, NAVD88 GEOID18/EGM96) and licensing (ODbL 1.0, USGS CC0-compatible Public Domain, NOAA CUSP).
+- **Multi-Modal Infrastructure Meshing & Winding Corrections (`realearth-compiler`)**:
+  - Extended compiler pipeline to mesh multimodal transport: railways (`dataset.railways`), aeroways (`dataset.aeroways`), and maritime ports (`dataset.ports`).
+  - Inverted water and vegetation polygon triangle index winding to CCW `(tri[0], tri[2], tri[1])` facing +Y upward, ensuring 100% surface culling consistency with terrain and buildings.
+  - Added railways, aeroways, and ports to chunk source hash for deterministic incremental compilation.
+- **San Francisco Pilot Compilation & Validation (`data/world_san_francisco`)**:
+  - Validated topology through `pipeline::validate_dataset`: duplicate vertex culling, ring closure, bounding box checks, road connectivity.
+  - Enforced `CompilerPublicationGate::production()`: approved 14 features with 6 controlled reversible repairs and 0 quarantines.
+  - Compiled versioned compressed binary chunks (`.rec`) and SQLite index (`chunks.db`) at `data/world_san_francisco`: 30 chunks, 7,957 vertices, 13,673 triangles, 226.57 KB compressed (2.38x compression ratio).
+  - Verified deterministic incremental build invariance and chunk hash re-use.
+- **Architectural Documentation & Telemetry Evidence**:
+  - Published ADR-0035: `docs/adr/0035-stage-2-authentic-san-francisco-gis-acquisition-and-compilation.md`.
+  - Captured verified reference screenshots: `sf_stage2_authentic.png` and `sf_stage2_drivable.png`.
+  - Ran headless and drivable vehicle benchmark: steady-state 752–1678 FPS, 233.23 MB RSS memory, 12.87 ms cold startup time.
+  - 100% pass across all workspace unit and integration test suites (157+ tests passing, 0 failed).
+
+
 
 
 

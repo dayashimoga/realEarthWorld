@@ -36,8 +36,8 @@ pub use acquisition::{
     compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest,
 };
 pub use authentic::{
-    build_authentic_us_dem, generate_authoritative_city_osm_xml, load_authentic_city,
-    AuthenticRegionMetadata, SourceProvenance,
+    acquire_city_dem, build_authentic_us_dem, generate_authoritative_city_osm_xml,
+    load_authentic_city, AuthenticRegionMetadata, SourceProvenance,
 };
 pub use dem_grid::DemGrid;
 pub use osm_parser::parse_osm_xml;

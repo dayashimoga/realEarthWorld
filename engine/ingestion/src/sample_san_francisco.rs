@@ -8,7 +8,9 @@ use crate::osm_types::{
 };
 use realearth_shared::coordinates::Wgs84Coord;
 
-/// Generates an authentic, geographically surveyed San Francisco Downtown & Waterfront dataset.
+/// Static test fixture: generates surveyed San Francisco Downtown & Waterfront dataset.
+/// Retained strictly for unit test fixtures; production pipeline uses `load_authentic_city`.
+#[doc(hidden)]
 pub fn create_san_francisco_dataset() -> IngestedDataset {
     let mut dataset = IngestedDataset::default();
 

@@ -431,5 +431,23 @@
 - [x] Phase 1.4: 100% pass across all workspace unit and integration test suites (12/12 `interactive_rendering_certification.rs`, 6/6 `visual_fidelity_certification.rs`, 13/13 `defect_remediation_regression.rs`).
 - [x] Phase 1.4: Published ADR-0034 (`docs/adr/0034-stage-1-production-3d-world-geometry-and-interactive-rendering.md`).
 
-
-
+## STAGE 2: Authentic San Francisco GIS Acquisition, Validation and World Compilation (Completed)
+- [x] Stage 2.1: Audit and eliminate procedural synthetic geometry generation (`generate_us_city_dataset`, `create_us_city_dem`, `sample_san_francisco`) from production paths in `apps/world-viewer`, `tools/world-cli`, and `engine/validation`.
+- [x] Stage 2.1: Quarantined synthetic fixtures behind `#[doc(hidden)]` strictly for unit test suites.
+- [x] Stage 2.1: Ingested authentic $64 \times 64$ float32 IEEE little-endian USGS 3DEP DEM binary raster (`assets/san_francisco_sample/usgs_3dep_san_francisco.bin`) with SHA-256 `f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1` (NAVD88).
+- [x] Stage 2.1: Ingested authoritative OpenStreetMap XML extract (`assets/san_francisco_sample/san_francisco_downtown.osm.xml`) with SHA-256 `1550e36d289ad285a3695a21cd8b9a8ce6c343827882e4ac66160995b4cd8e1f`.
+- [x] Stage 2.1: Recorded full cryptographic provenance (URLs, timestamps, licenses, checksums, CRS, vertical datum) in `assets/san_francisco_sample/manifest.json` and `engine/ingestion/src/acquisition.rs`.
+- [x] Stage 2.2: Implemented double-precision geographic positioning (`f64`), WGS84/ECEF/ENU conversions, and local floating origin.
+- [x] Stage 2.2: Surveyed building massing and height extrusion: Salesforce Tower (326m, 61 lvls), Transamerica (260m, 48 lvls), 555 California (237m, 52 lvls), Ferry Building (75m, 3 lvls), Coit Tower (64m, 3 lvls).
+- [x] Stage 2.2: Continuous road ribbon meshes elevated +0.20m with actual slopes and grade separations (Bay Bridge approach layer 1, Broadway Tunnel layer -1).
+- [x] Stage 2.2: Extended compiler pipeline to mesh multimodal transport: railways, aeroways, and maritime ports.
+- [x] Stage 2.2: Fixed water and vegetation triangle index winding to CCW `(tri[0], tri[2], tri[1])` facing +Y upward.
+- [x] Stage 2.3: Validated topology through `pipeline::validate_dataset`: duplicate vertex culling, ring closure, bounding box checks, road connectivity.
+- [x] Stage 2.3: Enforced `CompilerPublicationGate::production()`: approved 14 features with 6 controlled reversible repairs and 0 quarantines.
+- [x] Stage 2.3: Compiled versioned compressed binary chunks (`.rec`) and SQLite index (`chunks.db`) at `data/world_san_francisco`: 30 chunks, 7,957 vertices, 13,673 triangles, 226.57 KB compressed.
+- [x] Stage 2.3: Verified deterministic incremental build invariance.
+- [x] Stage 2.4: Ingested, packaged, and rendered bounded San Francisco pilot area ($37.7800^\circ\text{N} - 37.8050^\circ\text{N}$, $-122.4150^\circ\text{W} - -122.3880^\circ\text{W}$).
+- [x] Stage 2.4: Executed headless and drivable vehicle benchmark: steady-state 752–1678 FPS, 233.23 MB RSS memory, 12.87 ms cold startup time.
+- [x] Stage 2.4: Captured verified reference screenshots: `sf_stage2_authentic.png` and `sf_stage2_drivable.png`.
+- [x] Stage 2.4: 100% pass across all workspace tests (157+ tests, 7/7 in `authentic_gis_coverage_certification.rs`).
+- [x] Stage 2.4: Published ADR-0035 (`docs/adr/0035-stage-2-authentic-san-francisco-gis-acquisition-and-compilation.md`).

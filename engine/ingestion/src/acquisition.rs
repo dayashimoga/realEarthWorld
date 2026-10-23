@@ -72,7 +72,7 @@ impl RegionAcquisitionManifest {
                     license: "Public Domain / U.S. Government Work (CC0 Compatible)".to_string(),
                     source_url: "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer".to_string(),
                     timestamp_utc: "2026-10-21T00:00:00Z".to_string(),
-                    sha256_checksum: "a3f5c9e2d1b8047e112233445566778899aabbccddeeff001122334455667788".to_string(),
+                    sha256_checksum: "f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1".to_string(),
                     is_offline_cached: true,
                 },
                 SourceProvenance {
@@ -138,6 +138,17 @@ impl AcquisitionEngine {
 
             let dataset = parse_osm_xml(&osm_xml)?;
             let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
+            let dem_bytes = dem.to_le_bytes();
+            let computed_dem_hash = compute_sha256(&dem_bytes);
+            if computed_dem_hash != manifest.sources[1].sha256_checksum {
+                return Err(RealEarthError::Ingestion(format!(
+                    "San Francisco DEM checksum mismatch: expected {}, got {}",
+                    manifest.sources[1].sha256_checksum, computed_dem_hash
+                )));
+            }
+
+            let dem_cache_file = self.cache_directory.join("usgs_3dep_san_francisco.bin");
+            let _ = std::fs::write(&dem_cache_file, &dem_bytes);
 
             Ok((dataset, dem, manifest))
         } else if region.id == "bengaluru-central" {

@@ -57,7 +57,12 @@ pub fn mesh_water(water: &OsmWaterFeature, converter: &EnuConverter, _dem: &DemG
         ));
     }
 
-    let indices = water_indices.into_iter().map(|i| i as u32).collect();
+    let mut indices = Vec::with_capacity(water_indices.len());
+    for tri in water_indices.chunks_exact(3) {
+        indices.push(tri[0] as u32);
+        indices.push(tri[2] as u32);
+        indices.push(tri[1] as u32);
+    }
 
     ChunkMesh::new(vertices, indices)
 }

@@ -109,7 +109,30 @@ pub fn compute_chunk_source_hash(
         }
     }
 
-    // 5. DEM samples
+    // 5. Railways intersecting chunk bounds
+    for r in &dataset.railways {
+        if r.geometry.iter().any(|pt| chunk_bounds.contains(pt)) {
+            hasher_input.extend_from_slice(&r.way_id.to_le_bytes());
+            for pt in &r.geometry {
+                hasher_input.extend_from_slice(&pt.lat.to_le_bytes());
+                hasher_input.extend_from_slice(&pt.lon.to_le_bytes());
+            }
+        }
+    }
+
+    // 6. Aeroways & Ports intersecting chunk bounds
+    for a in &dataset.aeroways {
+        if a.geometry.iter().any(|pt| chunk_bounds.contains(pt)) {
+            hasher_input.extend_from_slice(&a.id.to_le_bytes());
+        }
+    }
+    for p in &dataset.ports {
+        if p.polygon.iter().any(|pt| chunk_bounds.contains(pt)) {
+            hasher_input.extend_from_slice(&p.id.to_le_bytes());
+        }
+    }
+
+    // 7. DEM samples
     let sample_points = [
         Wgs84Coord::new(chunk_bounds.min_lat, chunk_bounds.min_lon, 0.0),
         Wgs84Coord::new(chunk_bounds.min_lat, chunk_bounds.max_lon, 0.0),
@@ -242,6 +265,66 @@ pub fn compile_world_package(
 
                 if intersects {
                     let m = mesh_road(r, &chunk_converter, dem);
+                    road_mesh.append(&m);
+                }
+            }
+
+            // 3b. Railways Mesh
+            for r in &dataset.railways {
+                if r.geometry.iter().any(|pt| chunk_bounds.contains(pt)) {
+                    let pseudo_road = realearth_ingestion::osm_types::OsmRoadFeature {
+                        way_id: r.way_id,
+                        name: r.name.clone(),
+                        highway_type: realearth_ingestion::osm_types::HighwayType::Secondary,
+                        geometry: r.geometry.clone(),
+                        lanes: 2,
+                        speed_limit_kph: 80,
+                        is_oneway: false,
+                        layer: r.layer,
+                        is_bridge: r.is_bridge,
+                        is_tunnel: r.is_tunnel,
+                    };
+                    let m = mesh_road(&pseudo_road, &chunk_converter, dem);
+                    road_mesh.append(&m);
+                }
+            }
+
+            // 3c. Aeroways Mesh (Helipads / Runways)
+            for a in &dataset.aeroways {
+                if a.geometry.iter().any(|pt| chunk_bounds.contains(pt)) {
+                    let pseudo_road = realearth_ingestion::osm_types::OsmRoadFeature {
+                        way_id: a.id,
+                        name: a.name.clone(),
+                        highway_type: realearth_ingestion::osm_types::HighwayType::Primary,
+                        geometry: a.geometry.clone(),
+                        lanes: 4,
+                        speed_limit_kph: 30,
+                        is_oneway: false,
+                        layer: 0,
+                        is_bridge: false,
+                        is_tunnel: false,
+                    };
+                    let m = mesh_road(&pseudo_road, &chunk_converter, dem);
+                    road_mesh.append(&m);
+                }
+            }
+
+            // 3d. Ports & Ferry Terminals Mesh
+            for p in &dataset.ports {
+                if p.polygon.iter().any(|pt| chunk_bounds.contains(pt)) {
+                    let pseudo_road = realearth_ingestion::osm_types::OsmRoadFeature {
+                        way_id: p.id,
+                        name: p.name.clone(),
+                        highway_type: realearth_ingestion::osm_types::HighwayType::Primary,
+                        geometry: p.polygon.clone(),
+                        lanes: 4,
+                        speed_limit_kph: 20,
+                        is_oneway: false,
+                        layer: 1, // Elevated pier deck
+                        is_bridge: true,
+                        is_tunnel: false,
+                    };
+                    let m = mesh_road(&pseudo_road, &chunk_converter, dem);
                     road_mesh.append(&m);
                 }
             }

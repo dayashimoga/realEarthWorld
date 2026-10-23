@@ -32,7 +32,11 @@
       "name": "USGS 3DEP 1/3 Arc-Second Coastal Elevation Model",
       "provider": "USGS",
       "license": "Public Domain / CC0 Compatible",
-      "elevation_range_msl": [0.0, 115.0]
+      "filename": "usgs_3dep_san_francisco.bin",
+      "sha256": "f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1",
+      "elevation_range_msl": [0.0, 115.0],
+      "vertical_datum": "NAVD88",
+      "grid_dimensions": [64, 64]
     },
     {
       "name": "USGS National Land Cover Database (NLCD)",

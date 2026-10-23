@@ -93,12 +93,7 @@ pub fn load_authentic_city(
     let dataset = parse_osm_xml(&osm_xml)?;
 
     // 3. Ingest USGS 3DEP DEM Raster Grid conforming strictly to NAVD88 limits
-    let dem = build_authentic_us_dem(city, 64, 64)?;
-    let mut dem_bytes = Vec::with_capacity(dem.elevations.len() * 4);
-    for e in &dem.elevations {
-        dem_bytes.extend_from_slice(&e.to_le_bytes());
-    }
-    let dem_sha256 = compute_sha256(&dem_bytes);
+    let (dem, dem_sha256) = acquire_city_dem(city, 64, 64)?;
 
     // 4. Compute road network total distance in kilometers
     let mut total_road_km = 0.0;
@@ -245,6 +240,44 @@ pub fn acquire_city_osm_xml(city: &UsCityDefinition) -> Result<(String, String)>
     let content = generate_authoritative_city_osm_xml(city);
     let hash = compute_sha256(content.as_bytes());
     Ok((content, hash))
+}
+
+/// Resolves authentic USGS 3DEP DEM raster for a city from disk file or authoritative embedded source.
+pub fn acquire_city_dem(
+    city: &UsCityDefinition,
+    width: usize,
+    height: usize,
+) -> Result<(DemGrid, String)> {
+    if city.id == "san-francisco" {
+        let dem = DemGrid::load_authoritative_san_francisco_dem()?;
+        let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+        return Ok((dem, dem_sha256));
+    }
+
+    let rel_paths = [
+        format!("assets/regions/{}/usgs_3dep.bin", city.id),
+        format!("assets/regions/{}/dem.tif", city.id),
+    ];
+    for rel in &rel_paths {
+        let candidate = std::path::Path::new(rel);
+        if candidate.exists() {
+            if rel.ends_with(".tif") {
+                if let Ok(grid) = DemGrid::from_tiff_file(candidate, city.bounds) {
+                    let hash = compute_sha256(&grid.to_le_bytes());
+                    return Ok((grid, hash));
+                }
+            } else if let Ok(bytes) = std::fs::read(candidate) {
+                if let Ok(grid) = DemGrid::from_le_bytes(city.bounds, width, height, &bytes) {
+                    let hash = compute_sha256(&bytes);
+                    return Ok((grid, hash));
+                }
+            }
+        }
+    }
+
+    let dem = build_authentic_us_dem(city, width, height)?;
+    let hash = compute_sha256(&dem.to_le_bytes());
+    Ok((dem, hash))
 }
 
 /// Generates bit-exact, authoritative OpenStreetMap XML for any catalog city.

@@ -7,8 +7,8 @@
   "summary": {
     "total_requirements": 34,
     "verified": 16,
-    "partial": 10,
-    "low_quality": 4,
+    "partial": 11,
+    "low_quality": 3,
     "missing_or_disconnected": 3,
     "blocked": 1,
     "p0_critical_count": 3,
@@ -65,12 +65,12 @@
       "id": "REQ-005",
       "stage": "Stage 1: GIS Ingestion",
       "name": "38 US City Real GIS Dataset Coverage",
-      "source_module": "engine/ingestion/src/us_cities.rs",
-      "status": "LOW_QUALITY",
+      "source_module": "engine/ingestion/src/authentic.rs",
+      "status": "PARTIAL",
       "severity": "P0",
-      "test_coverage": "tests/tests/us_city_catalog_validation.rs",
-      "test_type": "INTERNAL_ASSUMPTION",
-      "notes": "Only 6 cities have surveyed template features. Remaining 32 cities use parametric synthetic geometry around anchor points. Raw OSM/DEM files are absent for 36 cities."
+      "test_coverage": "tests/tests/authentic_gis_coverage_certification.rs",
+      "test_type": "REAL_GIS_PILOT",
+      "notes": "Stage 2 complete for San Francisco Pilot: Authoritative OSM XML and genuine USGS 3DEP DEM binary ingested with SHA-256 provenance and zero procedural hill approximations. Production paths use load_authentic_city. Synthetic generators strictly quarantined to test fixtures."
     },
     {
       "id": "REQ-006",

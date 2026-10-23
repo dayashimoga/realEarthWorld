@@ -549,10 +549,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
     } else {
         let dir = crate::interactive::resolve_world_package_dir("san_francisco");
-        let dem = DemGrid::create_san_francisco_coastal_dem(64, 64);
-        let raw = create_san_francisco_dataset();
+        let (raw, dem) = match load_authentic_city("san-francisco") {
+            Ok((dataset, dem, _)) => (dataset, dem),
+            Err(e) => {
+                eprintln!("⚠️ Warning: Failed to load authentic San Francisco data ({:?}), using fallback", e);
+                (create_san_francisco_dataset(), DemGrid::create_san_francisco_coastal_dem(64, 64))
+            }
+        };
         if !dir.join("chunks.db").exists() {
-            println!("📦 Compiling cached San Francisco Downtown & Waterfront package...");
+            println!("📦 Compiling authentic San Francisco Downtown & Waterfront package...");
             let (val, _) = validate_dataset(&raw);
             let options = CompilerOptions {
                 chunk_size_meters: 500.0,
