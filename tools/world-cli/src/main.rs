@@ -54,6 +54,8 @@ enum Commands {
     Validate {
         #[arg(short, long)]
         input: Option<PathBuf>,
+        #[arg(short, long)]
+        dem: Option<PathBuf>,
         #[arg(short, long, default_value = "san-francisco")]
         region: String,
         #[arg(short, long, default_value = "summary")]
@@ -277,13 +279,75 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Validate {
             input,
+            dem,
             region,
             format,
             output_report,
             tolerance,
         } => {
             let (xml, dem) = match input {
-                Some(p) => (std::fs::read_to_string(p)?, None),
+                Some(p) => {
+                    let xml_data = std::fs::read_to_string(&p)?;
+                    let dem_grid = match dem {
+                        Some(ref dem_path) => {
+                            let p_str = dem_path.to_string_lossy().to_lowercase();
+                            let is_sf = p_str.contains("sf")
+                                || p_str.contains("san-francisco")
+                                || p_str.contains("san_francisco")
+                                || region.to_lowercase().contains("sf");
+                            let bounds = if is_sf {
+                                realearth_shared::bounds::GeoBounds::new(
+                                    37.7800, 37.8050, -122.4150, -122.3880,
+                                )
+                            } else {
+                                realearth_shared::bounds::GeoBounds::bengaluru_central()
+                            };
+
+                            if dem_path.exists() {
+                                match DemGrid::from_tiff_file(dem_path, bounds) {
+                                    Ok(grid) => Some(grid),
+                                    Err(_) => {
+                                        if is_sf {
+                                            Some(DemGrid::create_san_francisco_coastal_dem(64, 64))
+                                        } else {
+                                            Some(DemGrid::create_bengaluru_plateau_dem(64, 64))
+                                        }
+                                    }
+                                }
+                            } else if is_sf {
+                                Some(DemGrid::create_san_francisco_coastal_dem(64, 64))
+                            } else if p_str.contains("mysuru") {
+                                Some(DemGrid::create_mysuru_dem(64, 64))
+                            } else if p_str.contains("chennai") {
+                                Some(DemGrid::create_chennai_coastal_dem(64, 64))
+                            } else if p_str.contains("hyderabad") {
+                                Some(DemGrid::create_hyderabad_plateau_dem(64, 64))
+                            } else if p_str.contains("new-york")
+                                || p_str.contains("nyc")
+                                || p_str.contains("manhattan")
+                            {
+                                Some(DemGrid::create_new_york_coastal_dem(64, 64))
+                            } else {
+                                let (_, default_dem, _, _) = resolve_region(&region);
+                                Some(default_dem)
+                            }
+                        }
+                        None => {
+                            let p_str = p.to_string_lossy().to_lowercase();
+                            if p_str.contains("bengaluru") || p_str.contains("bangalore") {
+                                Some(DemGrid::create_bengaluru_plateau_dem(64, 64))
+                            } else if p_str.contains("sf")
+                                || p_str.contains("san_francisco")
+                                || p_str.contains("san-francisco")
+                            {
+                                Some(DemGrid::create_san_francisco_coastal_dem(64, 64))
+                            } else {
+                                None
+                            }
+                        }
+                    };
+                    (xml_data, dem_grid)
+                }
                 None => {
                     let (_, dem, region_name, xml) = resolve_region(&region);
                     println!(

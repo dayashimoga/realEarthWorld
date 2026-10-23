@@ -526,4 +526,197 @@ impl DemGrid {
 
         top * (1.0 - fy) + bottom * fy
     }
+
+    /// Exports elevation grid as an uncompressed 32-bit floating-point TIFF raster file.
+    pub fn export_tiff(&self, path: &std::path::Path) -> std::io::Result<()> {
+        let width = self.width as u32;
+        let height = self.height as u32;
+        let num_pixels = (width * height) as usize;
+        let strip_bytes = (num_pixels * 4) as u32;
+
+        let mut buf = Vec::with_capacity(128 + strip_bytes as usize);
+        // TIFF Header: little-endian 'II', magic 42, offset to IFD = 8
+        buf.extend_from_slice(b"II\x2A\x00\x08\x00\x00\x00");
+
+        // IFD0: 9 directory tags
+        let num_tags: u16 = 9;
+        buf.extend_from_slice(&num_tags.to_le_bytes());
+
+        // Helper closure to write a 12-byte tag entry:
+        let write_tag = |b: &mut Vec<u8>, tag: u16, tag_type: u16, count: u32, val: u32| {
+            b.extend_from_slice(&tag.to_le_bytes());
+            b.extend_from_slice(&tag_type.to_le_bytes());
+            b.extend_from_slice(&count.to_le_bytes());
+            if tag_type == 3 && count == 1 {
+                b.extend_from_slice(&(val as u16).to_le_bytes());
+                b.extend_from_slice(&[0u8, 0u8]);
+            } else {
+                b.extend_from_slice(&val.to_le_bytes());
+            }
+        };
+
+        let data_offset: u32 = 128; // Data aligned to 128 bytes
+        write_tag(&mut buf, 256, 4, 1, width); // ImageWidth (LONG)
+        write_tag(&mut buf, 257, 4, 1, height); // ImageLength (LONG)
+        write_tag(&mut buf, 258, 3, 1, 32); // BitsPerSample = 32 (SHORT)
+        write_tag(&mut buf, 259, 3, 1, 1); // Compression = 1 (None)
+        write_tag(&mut buf, 262, 3, 1, 1); // PhotometricInterpretation = 1 (BlackIsZero)
+        write_tag(&mut buf, 273, 4, 1, data_offset); // StripOffsets = 128 (LONG)
+        write_tag(&mut buf, 278, 4, 1, height); // RowsPerStrip = height (LONG)
+        write_tag(&mut buf, 279, 4, 1, strip_bytes); // StripByteCounts (LONG)
+        write_tag(&mut buf, 339, 3, 1, 3); // SampleFormat = 3 (IEEE float)
+
+        // Next IFD offset: 0
+        buf.extend_from_slice(&0u32.to_le_bytes());
+
+        // Pad to 128 bytes
+        while buf.len() < data_offset as usize {
+            buf.push(0);
+        }
+
+        // Elevations in IEEE little-endian float32
+        for elev in &self.elevations {
+            buf.extend_from_slice(&elev.to_le_bytes());
+        }
+
+        std::fs::write(path, buf)
+    }
+
+    /// Parses an uncompressed 32-bit float or 16-bit integer TIFF raster file into a DemGrid.
+    pub fn from_tiff_file(path: &std::path::Path, bounds: GeoBounds) -> Result<Self> {
+        let bytes = std::fs::read(path).map_err(|e| {
+            RealEarthError::Ingestion(format!("Failed to read DEM TIFF at {:?}: {}", path, e))
+        })?;
+        Self::from_tiff_bytes(&bytes, bounds)
+    }
+
+    /// Parses TIFF raster bytes into a DemGrid.
+    pub fn from_tiff_bytes(bytes: &[u8], bounds: GeoBounds) -> Result<Self> {
+        if bytes.len() < 128 || &bytes[0..4] != b"II*\0" {
+            return Err(RealEarthError::Ingestion(
+                "Invalid TIFF header or unsupported byte order (expected little-endian II*)"
+                    .to_string(),
+            ));
+        }
+        let ifd_offset = u32::from_le_bytes(
+            bytes[4..8]
+                .try_into()
+                .map_err(|_| RealEarthError::Ingestion("Invalid IFD offset".to_string()))?,
+        ) as usize;
+        if ifd_offset + 2 > bytes.len() {
+            return Err(RealEarthError::Ingestion(
+                "IFD offset outside file boundaries".to_string(),
+            ));
+        }
+        let num_tags = u16::from_le_bytes(
+            bytes[ifd_offset..ifd_offset + 2]
+                .try_into()
+                .map_err(|_| RealEarthError::Ingestion("Invalid tag count".to_string()))?,
+        ) as usize;
+
+        let mut width = 0usize;
+        let mut height = 0usize;
+        let mut strip_offset = 0usize;
+        let mut strip_bytes = 0usize;
+        let mut sample_format = 1u16;
+
+        let mut cursor = ifd_offset + 2;
+        for _ in 0..num_tags {
+            if cursor + 12 > bytes.len() {
+                break;
+            }
+            let tag = u16::from_le_bytes(bytes[cursor..cursor + 2].try_into().unwrap_or([0, 0]));
+            let tag_type =
+                u16::from_le_bytes(bytes[cursor + 2..cursor + 4].try_into().unwrap_or([0, 0]));
+            let val = if tag_type == 3 {
+                u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap_or([0, 0]))
+                    as u32
+            } else {
+                u32::from_le_bytes(
+                    bytes[cursor + 8..cursor + 12]
+                        .try_into()
+                        .unwrap_or([0, 0, 0, 0]),
+                )
+            };
+            match tag {
+                256 => width = val as usize,
+                257 => height = val as usize,
+                273 => strip_offset = val as usize,
+                279 => strip_bytes = val as usize,
+                339 => sample_format = val as u16,
+                _ => {}
+            }
+            cursor += 12;
+        }
+
+        if width == 0 || height == 0 || strip_offset == 0 || strip_bytes == 0 {
+            return Err(RealEarthError::Ingestion(
+                "TIFF missing essential geometry or strip tags".to_string(),
+            ));
+        }
+        if strip_offset + strip_bytes > bytes.len() {
+            return Err(RealEarthError::Ingestion(
+                "TIFF strip offset exceeds file buffer length".to_string(),
+            ));
+        }
+
+        let raw_elevations = &bytes[strip_offset..strip_offset + strip_bytes];
+        let mut elevations = Vec::with_capacity(width * height);
+        if sample_format == 3 && raw_elevations.len() >= width * height * 4 {
+            let (chunks_4, _) = raw_elevations.as_chunks::<4>();
+            for chunk in chunks_4.iter().take(width * height) {
+                let f = f32::from_le_bytes(*chunk);
+                elevations.push(f);
+            }
+        } else if raw_elevations.len() >= width * height * 2 {
+            let (chunks_2, _) = raw_elevations.as_chunks::<2>();
+            for chunk in chunks_2.iter().take(width * height) {
+                let i = i16::from_le_bytes(*chunk);
+                elevations.push(i as f32);
+            }
+        } else {
+            return Err(RealEarthError::Ingestion(
+                "TIFF data buffer too small for declared dimensions".to_string(),
+            ));
+        }
+
+        DemGrid::new(bounds, width, height, elevations)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dem_grid_tiff_roundtrip() {
+        let dem = DemGrid::create_bengaluru_plateau_dem(16, 16);
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let tif_path = temp_dir.path().join("test_elev.tif");
+
+        dem.export_tiff(&tif_path).expect("export_tiff failed");
+        assert!(tif_path.exists());
+
+        let imported =
+            DemGrid::from_tiff_file(&tif_path, dem.bounds).expect("from_tiff_file failed");
+        assert_eq!(imported.width, 16);
+        assert_eq!(imported.height, 16);
+        assert_eq!(imported.elevations.len(), 256);
+
+        for (a, b) in dem.elevations.iter().zip(imported.elevations.iter()) {
+            assert!((a - b).abs() < 1e-4);
+        }
+    }
+
+    #[test]
+    fn test_generate_bengaluru_sample_tiff() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .expect("workspace root");
+        let sample_tif = root.join("assets/bengaluru_sample/bengaluru_elevation.tif");
+        let dem = DemGrid::create_bengaluru_plateau_dem(64, 64);
+        dem.export_tiff(&sample_tif).expect("export_tiff failed");
+        assert!(sample_tif.exists());
+    }
 }
