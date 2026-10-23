@@ -817,4 +817,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Production Release Authorization**:
   - Ratified final production deployment readiness for Real Earth World Platform Version 1.0.0 ✅.
 
+## [1.8.0] - 2026-10-23 — PHASE 0: Forensic Inventory, Correctness Audit, and Non-Production-Ready Determination
+### Changed
+- **Production Readiness Re-assessment**:
+  - Revoked premature "100% production ready" declaration in `docs/ProductionReadiness.md`. Formally declared the platform **NOT PRODUCTION READY** pending remediation of critical P0/P1 deficiencies.
+- **Traceability and Quality Matrix**:
+  - Published `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json` mapping all 34 requirements across Stages 0–11 to source code, runtime behavior, test coverage, and audit classification.
+  - Classified 16 features as VERIFIED, 10 as PARTIAL, 4 as LOW-QUALITY, 3 as MISSING/DISCONNECTED, and 1 as BLOCKED.
+- **Forensic Gap Ledger**:
+  - Published `docs/GapAnalysis.md` identifying root causes, regression risks, and remediation roadmaps for:
+    - GAP-01: Synthetic/parametric geography in 32 catalog cities (`us_cities.rs`).
+    - GAP-02: Android JNI surface rendering stub (`*attached = true`) and `FlatGround` reliance in `bindings/mobile/`.
+    - GAP-03: Premature production-readiness ratification.
+    - GAP-04: Disconnected `realearth-networking` multiplayer crate from `world-viewer`.
+    - GAP-05: Headless benchmark metrics (>3000 FPS) unrepresentative of VSync-locked (60 FPS) windowed interactive display.
+    - GAP-06: Test suite internal assumption bias (asserting on stub return codes rather than real behavioral outcomes).
+- **Engineering Governance**:
+  - Authored ADR-0033: `docs/adr/0033-phase-0-forensic-inventory-and-correctness-audit.md`.
+  - Updated `docs/ExecutionContract.md` with Section 10 formalizing anti-fabrication rules, behavioral testing mandates, and classification requirements.
+
+
 

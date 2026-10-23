@@ -68,3 +68,21 @@ j:/rustRealEarth/
    `LRU Cache` $\to$ `realearth-rendering` $\to$ Vertex Buffers (rebased to `FloatingOrigin`) $\to$ wgpu draw calls + HUD $\to$ Surface Presentation.
 5. **Simulation, Navigation & Gameplay**:
    Road network $\to$ `realearth-navigation` $\to$ A* waypoints $\to$ `realearth-vehicles` $\to$ Rapier ground physics $\to$ `realearth-gameplay` contracts $\to$ HUD Telemetry.
+
+---
+
+## 3. Forensic Code Reality (Phase 0 Audit Findings)
+
+1. **Geographic Ingestion Reality**:
+   - `assets/` contains raw OSM XML and GeoTIFF elevation rasters only for San Francisco and Bengaluru.
+   - For 32 of 38 catalog cities, `engine/ingestion/src/us_cities.rs` falls back to synthetic procedural geometry.
+2. **Mobile Binding Reality**:
+   - `bindings/mobile/src/lib.rs` provides full JNI/C ABI signatures, but `nativeSurfaceCreated` sets a boolean flag rather than creating an `ANativeWindow` or initializing a WGPU surface.
+   - Mobile engine simulation uses `FlatGround` rather than loading DEM tiles.
+3. **Networking Reality**:
+   - `engine/networking/` implements authoritative server logic, UDP transport, and client prediction, but has zero integration with `apps/world-viewer` (viewer is offline single-player).
+4. **Multi-Modal Vehicles Reality**:
+   - Aviation, Marine, and Rail physics exist in `engine/vehicles/src/multimodal/`, but are not wired to interactive viewer input or cameras.
+5. **Production Readiness**:
+   - Officially classified as **NOT PRODUCTION READY** in `docs/ProductionReadiness.md` and `docs/FeatureQualityMatrix.md`.
+

@@ -33,3 +33,20 @@ In strict compliance with Section 7 of the contract:
 
 ### 2.5 Microbenchmarks & Performance Regression Tests
 - Criterion benchmarks in `benchmarks/` tracking throughput, latency, and memory allocation.
+
+---
+
+## 3. Behavioral vs Internal Assumption Testing Mandate (Phase 0 Audit)
+
+Following the Phase 0 forensic audit, the following testing anti-patterns are explicitly prohibited:
+
+1. **Anti-Pattern: Stub Return Code Assertion**:
+   - *Prohibited*: Asserting `assert_eq!(stub_fn(), 0)` when the function is a no-op that always returns `0`.
+   - *Requirement*: Tests must assert on actual observable side effects (e.g. allocated vertex buffers, initialized GPU swapchains, real physics velocity changes).
+2. **Anti-Pattern: Self-Validating Synthetic Generation**:
+   - *Prohibited*: Asserting `dataset.buildings.len() > 0` on a generator that manufactures synthetic bounding boxes when authentic raw GIS files are missing.
+   - *Requirement*: Validate physical disk existence of authentic raw OSM PBF/XML and GeoTIFF elevation files.
+3. **Anti-Pattern: Conflating Offscreen Pipeline Throughput with Display Framerate**:
+   - *Prohibited*: Reporting unthrottled headless render loop throughput (>3000 FPS) as proof of interactive 60 FPS gameplay.
+   - *Requirement*: Isolate raw GPU pipeline latency from presented windowed swapchain pacing.
+

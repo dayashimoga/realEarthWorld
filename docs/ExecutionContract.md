@@ -117,3 +117,13 @@ For EACH stage:
 **Never claim implementation, execution, or production certification without verifiable evidence. Never move to the next stage with unresolved blocking acceptance criteria.**
 
 **Priorities:** Geographic Accuracy → Data Integrity → Functional Correctness → Stability → Memory → Streaming → FPS → Visual Fidelity → Features → Multiplayer → Planetary Scale.
+
+---
+
+## 10. Forensic Audit & Anti-Fabrication Invariants (Phase 0 Mandate)
+
+1. **No False Production Readiness:** The platform must NEVER be declared production-ready while major capabilities (e.g. mobile GPU presentation, real 38-city GIS ingestion, live multiplayer networking) remain stubs, synthetic fallbacks, or disconnected components.
+2. **Behavioral vs Internal Assumption Testing:** Tests must never assert solely on internal stub return codes (e.g. asserting `stub_call() == 0`). Tests must validate genuine physical, numerical, graphical, or network outcomes.
+3. **Traceability Ledger:** Every feature must be cataloged in `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json` with an explicit status (`VERIFIED`, `LOW-QUALITY`, `PARTIAL`, `BROKEN`, `MISSING`, `BLOCKED`, `UNTESTED`) and severity (`P0`–`P3`).
+4. **Append-Only History:** All changes to `ImplementationPlan.md`, `Todo.md`, and `Changelog.md` must be strictly append-only, preserving historical context and forensic accountability.
+
