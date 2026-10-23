@@ -49,6 +49,68 @@ int32_t realearth_step(float delta_time, float throttle, float steer, float brak
 int32_t realearth_get_telemetry(RealEarthTelemetry* out_telem);
 
 /**
+ * Pauses simulation execution.
+ * @return 0 on success.
+ */
+int32_t realearth_pause(void);
+
+/**
+ * Resumes simulation execution.
+ * @return 0 on success.
+ */
+int32_t realearth_resume(void);
+
+/**
+ * Applies camera orbit gesture rotation deltas in radians.
+ */
+int32_t realearth_touch_orbit(float delta_yaw, float delta_pitch);
+
+/**
+ * Applies camera pinch-to-zoom distance delta in meters.
+ */
+int32_t realearth_touch_zoom(float delta_dist);
+
+/**
+ * Sets touch driving controls.
+ */
+int32_t realearth_set_touch_inputs(float steer, float throttle, float brake, int32_t handbrake);
+
+/**
+ * Evaluates surveyed ground elevation at local Cartesian coordinate (x, z).
+ */
+float realearth_get_ground_elevation(float x, float z);
+
+/**
+ * Attaches native surface window handle (ANativeWindow or MTKView).
+ */
+int32_t realearth_set_surface(uintptr_t surface_handle, int32_t width, int32_t height);
+
+/**
+ * Updates surface viewport dimensions.
+ */
+int32_t realearth_resize_surface(int32_t width, int32_t height);
+
+/**
+ * Detaches native surface window handle.
+ */
+int32_t realearth_destroy_surface(void);
+
+/**
+ * Ticks one render pass on the attached surface.
+ */
+int32_t realearth_render_frame(void);
+
+/**
+ * Evicts quiescent caches under low-memory OS pressure.
+ */
+int32_t realearth_trim_memory(int32_t level);
+
+/**
+ * Clamps target frame rate and interval to manage device thermals.
+ */
+int32_t realearth_set_thermal_throttle(float target_fps);
+
+/**
  * Shuts down the engine and releases allocated resources.
  * @return 0 on success, non-zero on error.
  */

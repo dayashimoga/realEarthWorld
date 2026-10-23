@@ -112,6 +112,41 @@ pub struct Airport {
     pub runways: Vec<AirportRunway>,
 }
 
+impl Airport {
+    /// Creates the authentic San Francisco International Airport (SFO / KSFO)
+    /// with primary parallel runways 28L and 28R with ILS approaches.
+    pub fn create_san_francisco_airport() -> Self {
+        let rwy_28l = AirportRunway {
+            identifier: "28L".to_string(),
+            threshold: Wgs84Coord::new(37.6135, -122.3572, 4.0),
+            reciprocal_threshold: Wgs84Coord::new(37.6253, -122.3887, 4.0),
+            true_heading_deg: 284.0,
+            length_meters: 3450.0,
+            width_meters: 60.0,
+            glideslope_angle_deg: 3.0,
+            ils_frequency_mhz: Some(108.9),
+        };
+        let rwy_28r = AirportRunway {
+            identifier: "28R".to_string(),
+            threshold: Wgs84Coord::new(37.6155, -122.3582, 4.0),
+            reciprocal_threshold: Wgs84Coord::new(37.6273, -122.3897, 4.0),
+            true_heading_deg: 284.0,
+            length_meters: 3618.0,
+            width_meters: 60.0,
+            glideslope_angle_deg: 3.0,
+            ils_frequency_mhz: Some(111.7),
+        };
+
+        Self {
+            icao_code: "KSFO".to_string(),
+            name: "San Francisco International Airport".to_string(),
+            reference_coord: Wgs84Coord::new(37.6188, -122.3754, 4.0),
+            elevation_msl_meters: 4.0,
+            runways: vec![rwy_28l, rwy_28r],
+        }
+    }
+}
+
 /// Airway navigation corridor for high-altitude en-route flight.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AirCorridorSegment {

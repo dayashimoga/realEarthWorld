@@ -84,6 +84,27 @@ jobs:
       - name: Run Dedicated Five-Platform Application Parity Test Suite
         run: cargo test --test five_platform_application_parity --verbose
 
+      - name: Run Dedicated Five-Platform Packaging Certification Test Suite
+        run: cargo test --test five_platform_packaging_certification --verbose
+
+      - name: Run Stage 5 Traffic & Road Navigation Certification Suite
+        run: cargo test --test stage5_traffic_navigation_certification --verbose
+
+      - name: Run Stage 6 User Experience & Gameplay Certification Suite
+        run: cargo test --test stage6_user_experience_gameplay_certification --verbose
+
+      - name: Run Stage 7 Multimodal Transportation Certification Suite
+        run: cargo test --test stage7_multimodal_transport_certification --verbose
+
+      - name: Run Stage 8 Regional Catalog & Interstate Corridors Certification Suite
+        run: cargo test --test stage8_regional_catalog_and_corridors_certification --verbose
+
+      - name: Run Stage 9 Authoritative Multiplayer Networking Certification Suite
+        run: cargo test --test stage9_authoritative_multiplayer_certification --verbose
+
+      - name: Run Final Production Certification Test Suite (Stages 0-11)
+        run: cargo test --test final_production_certification --verbose
+
       - name: Run US City Catalog Validation (38 Cities)
         run: cargo test --test us_city_catalog_validation --verbose
 

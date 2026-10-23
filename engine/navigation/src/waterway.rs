@@ -2,6 +2,7 @@
 //!
 //! Maintains independent water semantics strictly decoupled from road and rail networks.
 
+use realearth_geospatial::EnuConverter;
 use realearth_shared::coordinates::Wgs84Coord;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -54,6 +55,57 @@ pub struct ShippingChannel {
     pub speed_limit_knots: f32,
     pub category: WaterwayCategory,
     pub length_meters: f64,
+    #[serde(default)]
+    pub geometry: Vec<Wgs84Coord>,
+}
+
+impl ShippingChannel {
+    /// Samples local ENU 3D position (X=East, Y=Up, Z=North) and heading (radians from north)
+    /// at arclength `s_meters` along this fairway channel relative to an anchor.
+    pub fn sample_position_enu(&self, s_meters: f64, anchor: Wgs84Coord) -> (glam::Vec3, f32) {
+        if self.geometry.is_empty() {
+            return (glam::Vec3::ZERO, 0.0);
+        }
+        let transforms = EnuConverter::new(anchor);
+        let pts: Vec<glam::Vec3> = self
+            .geometry
+            .iter()
+            .map(|c| transforms.wgs84_to_enu(*c).to_vec3())
+            .collect();
+
+        if pts.len() == 1 {
+            return (pts[0], 0.0);
+        }
+
+        let mut cum_dist = Vec::with_capacity(pts.len());
+        cum_dist.push(0.0);
+        let mut total = 0.0;
+        for i in 0..pts.len() - 1 {
+            let seg_len = pts[i].distance(pts[i + 1]) as f64;
+            total += seg_len;
+            cum_dist.push(total);
+        }
+
+        if total <= 1e-6 {
+            return (pts[0], 0.0);
+        }
+
+        let s = s_meters.clamp(0.0, total);
+        for i in 0..pts.len() - 1 {
+            let d0 = cum_dist[i];
+            let d1 = cum_dist[i + 1];
+            if s <= d1 || i == pts.len() - 2 {
+                let seg_d = (d1 - d0).max(1e-6);
+                let t = ((s - d0) / seg_d).clamp(0.0, 1.0) as f32;
+                let pos = pts[i].lerp(pts[i + 1], t);
+                let diff = pts[i + 1] - pts[i];
+                let heading = diff.x.atan2(diff.z);
+                return (pos, heading);
+            }
+        }
+
+        (pts[pts.len() - 1], 0.0)
+    }
 }
 
 /// Marine port facility with berths, docks, and cargo terminals.
@@ -134,6 +186,142 @@ impl WaterwayGraph {
         }
         None
     }
+
+    /// Creates the authentic San Francisco Bay maritime fairway network connecting the Golden Gate Strait,
+    /// Alcatraz deep-water channel, San Francisco Ferry Terminal, and the Port of Oakland Outer Harbor.
+    pub fn create_san_francisco_bay_waterway() -> Self {
+        let mut waterway = Self::new();
+
+        let n1 = WaterwayNode {
+            id: "SF_GOLDEN_GATE_WEST".to_string(),
+            coord: Wgs84Coord::new(37.8199, -122.4783, 0.0),
+            water_depth_meters: 95.0,
+            aid_marker: Some(NavigationAids::SafeWater),
+        };
+        let n2 = WaterwayNode {
+            id: "SF_ALCATRAZ_CHANNEL".to_string(),
+            coord: Wgs84Coord::new(37.8270, -122.4230, 0.0),
+            water_depth_meters: 40.0,
+            aid_marker: Some(NavigationAids::PortLateral),
+        };
+        let n3 = WaterwayNode {
+            id: "SF_FERRY_BUILDING_BASIN".to_string(),
+            coord: Wgs84Coord::new(37.7955, -122.3937, 0.0),
+            water_depth_meters: 14.0,
+            aid_marker: Some(NavigationAids::StarboardLateral),
+        };
+        let n4 = WaterwayNode {
+            id: "OAKLAND_BAR_CHANNEL".to_string(),
+            coord: Wgs84Coord::new(37.7980, -122.3400, 0.0),
+            water_depth_meters: 18.0,
+            aid_marker: Some(NavigationAids::PortLateral),
+        };
+
+        waterway.add_node(n1);
+        waterway.add_node(n2);
+        waterway.add_node(n3);
+        waterway.add_node(n4);
+
+        waterway.add_channel(ShippingChannel {
+            id: "CH_GOLDEN_GATE_APPROACH".to_string(),
+            from_node: "SF_GOLDEN_GATE_WEST".to_string(),
+            to_node: "SF_ALCATRAZ_CHANNEL".to_string(),
+            channel_width_meters: 1200.0,
+            minimum_depth_meters: 40.0,
+            speed_limit_knots: 15.0,
+            category: WaterwayCategory::OpenSea,
+            length_meters: 5200.0,
+            geometry: vec![
+                Wgs84Coord::new(37.8199, -122.4783, 0.0),
+                Wgs84Coord::new(37.8240, -122.4500, 0.0),
+                Wgs84Coord::new(37.8270, -122.4230, 0.0),
+            ],
+        });
+
+        waterway.add_channel(ShippingChannel {
+            id: "CH_CENTRAL_BAY_FAIRWAY".to_string(),
+            from_node: "SF_ALCATRAZ_CHANNEL".to_string(),
+            to_node: "SF_FERRY_BUILDING_BASIN".to_string(),
+            channel_width_meters: 600.0,
+            minimum_depth_meters: 14.0,
+            speed_limit_knots: 12.0,
+            category: WaterwayCategory::DredgedChannel,
+            length_meters: 4400.0,
+            geometry: vec![
+                Wgs84Coord::new(37.8270, -122.4230, 0.0),
+                Wgs84Coord::new(37.8100, -122.4050, 0.0),
+                Wgs84Coord::new(37.7955, -122.3937, 0.0),
+            ],
+        });
+
+        waterway.add_channel(ShippingChannel {
+            id: "CH_OAKLAND_HARBOR".to_string(),
+            from_node: "SF_ALCATRAZ_CHANNEL".to_string(),
+            to_node: "OAKLAND_BAR_CHANNEL".to_string(),
+            channel_width_meters: 400.0,
+            minimum_depth_meters: 16.5,
+            speed_limit_knots: 10.0,
+            category: WaterwayCategory::DredgedChannel,
+            length_meters: 7600.0,
+            geometry: vec![
+                Wgs84Coord::new(37.8270, -122.4230, 0.0),
+                Wgs84Coord::new(37.8120, -122.3800, 0.0),
+                Wgs84Coord::new(37.7980, -122.3400, 0.0),
+            ],
+        });
+
+        waterway.add_port(MarinePort {
+            id: "PORT_SF_FERRY".to_string(),
+            name: "San Francisco Ferry Terminal".to_string(),
+            basin_coord: Wgs84Coord::new(37.7955, -122.3937, 0.0),
+            max_draft_meters: 8.5,
+            berth_count: 3,
+            berths: vec![
+                PortBerth {
+                    berth_id: "BERTH_GATE_B".to_string(),
+                    length_meters: 95.0,
+                    depth_meters: 9.0,
+                    is_occupied: false,
+                },
+                PortBerth {
+                    berth_id: "BERTH_GATE_C".to_string(),
+                    length_meters: 95.0,
+                    depth_meters: 9.0,
+                    is_occupied: false,
+                },
+                PortBerth {
+                    berth_id: "BERTH_GATE_E".to_string(),
+                    length_meters: 110.0,
+                    depth_meters: 10.0,
+                    is_occupied: false,
+                },
+            ],
+        });
+
+        waterway.add_port(MarinePort {
+            id: "PORT_OAKLAND_CONTAINER".to_string(),
+            name: "Port of Oakland Outer Harbor".to_string(),
+            basin_coord: Wgs84Coord::new(37.7980, -122.3400, 0.0),
+            max_draft_meters: 16.0,
+            berth_count: 2,
+            berths: vec![
+                PortBerth {
+                    berth_id: "BERTH_20".to_string(),
+                    length_meters: 380.0,
+                    depth_meters: 16.5,
+                    is_occupied: false,
+                },
+                PortBerth {
+                    berth_id: "BERTH_22".to_string(),
+                    length_meters: 420.0,
+                    depth_meters: 17.0,
+                    is_occupied: false,
+                },
+            ],
+        });
+
+        waterway
+    }
 }
 
 #[cfg(test)]
@@ -176,6 +364,10 @@ mod tests {
             speed_limit_knots: 12.0,
             category: WaterwayCategory::DredgedChannel,
             length_meters: 2100.0,
+            geometry: vec![
+                Wgs84Coord::new(13.0850, 80.3200, 0.0),
+                Wgs84Coord::new(13.0845, 80.3000, 0.0),
+            ],
         };
 
         let ch2 = ShippingChannel {
@@ -187,6 +379,10 @@ mod tests {
             speed_limit_knots: 6.0,
             category: WaterwayCategory::HarborBasin,
             length_meters: 850.0,
+            geometry: vec![
+                Wgs84Coord::new(13.0845, 80.3000, 0.0),
+                Wgs84Coord::new(13.0840, 80.2940, 0.0),
+            ],
         };
 
         waterway.add_channel(ch1);

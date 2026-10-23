@@ -30,4 +30,7 @@ pub use hud::{
 pub use jobs::{CargoOrPassenger, Job, JobCompletionResult, JobDifficulty, JobLocation, JobState};
 pub use profile::PlayerProfile;
 pub use recovery::{RecoveryDispatcher, RecoveryError, RecoveryOutcome};
-pub use save::{GameSettings, SaveData, SaveError, SaveManager, SaveMigrationEngine};
+pub use save::{
+    GameSettings, SaveData, SaveError, SaveManager, SaveMigrationEngine,
+    CURRENT_SAVE_SCHEMA_VERSION,
+};

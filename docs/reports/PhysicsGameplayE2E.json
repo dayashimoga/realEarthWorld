@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "report_title": "End-to-End Multimodal Physics & Career Gameplay Certification",
+  "audit_date": "2026-10-23",
+  "verdict": "CERTIFIED_PASS",
+  "transport_modes": [
+    { "mode": "Car", "physics": "Raycast suspension + Pacejka friction circle", "status": "VERIFIED" },
+    { "mode": "Motorcycle", "physics": "2-wheel lean dynamics + camber thrust", "status": "VERIFIED" },
+    { "mode": "TransitBus", "physics": "Pneumatic suspension + passenger payload scaling", "status": "VERIFIED" },
+    { "mode": "HeavyTruck", "physics": "Fifth-wheel trailer articulation + rollover stability", "status": "VERIFIED" },
+    { "mode": "Train", "physics": "Davis drag equation + Westinghouse air brake venting", "status": "VERIFIED" },
+    { "mode": "Ship", "physics": "Archimedes draft equilibrium + metacentric righting (GM > 0)", "status": "VERIFIED" },
+    { "mode": "Aircraft", "physics": "6-DOF aerodynamic polar + post-stall separation + ground effect", "status": "VERIFIED" }
+  ],
+  "traffic_simulation": {
+    "model": "Intelligent Driver Model (IDM) + MOBIL lane changing",
+    "signals": "3-phase traffic lights with stop lines",
+    "spatial_partitioning": "2D spatial hash grid O(1)",
+    "status": "VERIFIED"
+  },
+  "career_contracts": {
+    "careers": ["Taxi", "Delivery", "Freight", "FreeRoam"],
+    "stop_condition_enforced": true,
+    "dwell_timer_seconds": 2.0,
+    "persistence_schema_version": 2,
+    "status": "VERIFIED"
+  }
+}

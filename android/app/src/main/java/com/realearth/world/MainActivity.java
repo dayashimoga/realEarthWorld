@@ -80,6 +80,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         btnBrake = findViewById(R.id.btn_brake);
 
         surfaceView.getHolder().addCallback(this);
+        setupSurfaceGestures();
 
         setupRegionSpinner();
         setupDrivingControls();
@@ -88,6 +89,51 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         // Initialize Rust simulation engine with default region
         int initResult = RealEarthEngine.nativeInit("san-francisco");
         Log.i(TAG, "Real Earth Engine initialized: " + initResult);
+    }
+
+    private float lastTouchX = 0f;
+    private float lastTouchY = 0f;
+    private float initialPinchDist = 0f;
+
+    private void setupSurfaceGestures() {
+        surfaceView.setOnTouchListener((v, event) -> {
+            int pointerCount = event.getPointerCount();
+            if (pointerCount == 1) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        lastTouchX = event.getX();
+                        lastTouchY = event.getY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = event.getX() - lastTouchX;
+                        float dy = event.getY() - lastTouchY;
+                        lastTouchX = event.getX();
+                        lastTouchY = event.getY();
+                        // Drag to orbit camera around vehicle
+                        RealEarthEngine.nativeTouchOrbit(dx * 0.005f, -dy * 0.005f);
+                        return true;
+                }
+            } else if (pointerCount == 2) {
+                switch (event.getAction() & MotionEvent.ACTION_MASK) {
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                        float px = event.getX(0) - event.getX(1);
+                        float py = event.getY(0) - event.getY(1);
+                        initialPinchDist = (float) Math.sqrt(px * px + py * py);
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float mx = event.getX(0) - event.getX(1);
+                        float my = event.getY(0) - event.getY(1);
+                        float currentDist = (float) Math.sqrt(mx * mx + my * my);
+                        if (initialPinchDist > 10.0f) {
+                            float delta = (currentDist - initialPinchDist) * 0.02f;
+                            RealEarthEngine.nativeTouchZoom(delta);
+                            initialPinchDist = currentDist;
+                        }
+                        return true;
+                }
+            }
+            return false;
+        });
     }
 
     private void setupRegionSpinner() {
@@ -271,11 +317,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     protected void onPause() {
         super.onPause();
         stopSimulationLoop();
+        RealEarthEngine.nativePause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        RealEarthEngine.nativeResume();
         if (surfaceView.getHolder().getSurface().isValid()) {
             startSimulationLoop();
         }

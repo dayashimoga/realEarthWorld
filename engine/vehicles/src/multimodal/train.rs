@@ -1,6 +1,7 @@
 //! Railway train consist physics, tractive effort curves, Davis resistance,
 //! steel wheel-on-rail adhesion limits, and Westinghouse pneumatic air brake simulation.
 
+use crate::multimodal::MultimodalAudioEvent;
 use realearth_navigation::rail_graph::SignalAspect;
 use serde::{Deserialize, Serialize};
 
@@ -133,6 +134,8 @@ pub struct TrainConsist {
     pub current_track_id: Option<String>,
     /// Last observed signal aspect.
     pub current_signal: SignalAspect,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl TrainConsist {
@@ -168,6 +171,7 @@ impl TrainConsist {
             emergency_brake: false,
             current_track_id: None,
             current_signal: SignalAspect::Clear,
+            audio_events: Vec::new(),
         }
     }
 
@@ -206,6 +210,17 @@ impl TrainConsist {
         self.emergency_brake = true;
         self.brake_state = TrainBrakeState::Emergency;
         self.throttle = 0.0;
+        self.audio_events.push(MultimodalAudioEvent::TrainHorn);
+    }
+
+    /// Sounds the train horn/whistle.
+    pub fn sound_horn(&mut self) {
+        self.audio_events.push(MultimodalAudioEvent::TrainHorn);
+    }
+
+    /// Drains all pending audio events emitted by the train consist.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 
     /// Resets emergency brake after train comes to complete stop.
@@ -345,6 +360,13 @@ impl TrainConsist {
 
         self.speed_kph = self.velocity_mps.abs() * 3.6;
         self.position_s += (self.velocity_mps as f64) * (dt as f64);
+
+        if self.speed_kph > 35.0 && self.speed_kph < 38.0 {
+            self.audio_events
+                .push(MultimodalAudioEvent::TrainFlangeSqueal {
+                    speed_kph: self.speed_kph,
+                });
+        }
 
         // 5. Automatic Train Protection (ATP) Signal Compliance
         if self.current_signal == SignalAspect::Stop && self.velocity_mps.abs() > 0.1 {

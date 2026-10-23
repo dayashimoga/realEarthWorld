@@ -225,6 +225,2518 @@ impl HudMesh {
         // Accent top bar
         self.add_rect(x, y, w, 2.5, accent_color);
     }
+
+    /// Adds a turn-by-turn navigation guidance overlay banner to the top-center of the screen.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_navigation_guidance(
+        &mut self,
+        screen_w: f32,
+        _screen_h: f32,
+        maneuver_icon: &str,
+        distance_meters: f64,
+        instruction_text: &str,
+        street_name: Option<&str>,
+        speed_limit_kph: u32,
+        is_wrong_way: bool,
+    ) {
+        let banner_w = 460.0;
+        let banner_h = 66.0;
+        let x = (screen_w - banner_w) * 0.5;
+        let y = 16.0;
+
+        let accent_color = if is_wrong_way {
+            [1.0, 0.1, 0.1, 1.0] // Flashing red
+        } else {
+            [0.1, 0.85, 0.45, 1.0] // Clean Emerald Green
+        };
+
+        self.add_panel(x, y, banner_w, banner_h, accent_color);
+
+        if is_wrong_way {
+            self.add_rect(
+                x + 8.0,
+                y + 8.0,
+                banner_w - 16.0,
+                banner_h - 16.0,
+                [0.85, 0.05, 0.05, 0.95],
+            );
+            self.add_text(
+                x + 40.0,
+                y + 24.0,
+                2.2,
+                "! WRONG WAY - TURN AROUND !",
+                [1.0, 1.0, 1.0, 1.0],
+            );
+            return;
+        }
+
+        // Maneuver icon / glyph
+        self.add_text(x + 16.0, y + 20.0, 2.8, maneuver_icon, [0.2, 0.9, 0.5, 1.0]);
+
+        // Distance text
+        let dist_str = if distance_meters >= 1000.0 {
+            format!("In {:.1} km", distance_meters / 1000.0)
+        } else {
+            format!("In {:.0} m", distance_meters)
+        };
+        self.add_text(x + 65.0, y + 14.0, 1.5, &dist_str, [1.0, 0.85, 0.2, 1.0]);
+
+        // Street name / instruction
+        let display_street = street_name.unwrap_or(instruction_text);
+        self.add_text(
+            x + 65.0,
+            y + 36.0,
+            1.8,
+            display_street,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+
+        // Speed limit badge (Right side)
+        let badge_x = x + banner_w - 65.0;
+        let badge_y = y + 10.0;
+        self.add_rect(badge_x, badge_y, 48.0, 48.0, [0.95, 0.95, 0.95, 1.0]);
+        self.add_rect_outline(badge_x, badge_y, 48.0, 48.0, 2.0, [0.85, 0.1, 0.1, 1.0]);
+        self.add_text(
+            badge_x + 8.0,
+            badge_y + 6.0,
+            1.0,
+            "LIMIT",
+            [0.1, 0.1, 0.1, 1.0],
+        );
+        let limit_str = format!("{}", speed_limit_kph);
+        self.add_text(
+            badge_x + 12.0,
+            badge_y + 22.0,
+            2.0,
+            &limit_str,
+            [0.1, 0.1, 0.1, 1.0],
+        );
+    }
+
+    /// Adds an interactive button with selectable / hover state and optional shortcut key badge.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_button(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        label: &str,
+        shortcut: Option<&str>,
+        is_selected: bool,
+    ) {
+        let (bg, border, text_col, accent) = if is_selected {
+            (
+                [0.15, 0.28, 0.45, 0.95],
+                [0.3, 0.75, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [0.0, 0.8, 1.0, 1.0],
+            )
+        } else {
+            (
+                [0.08, 0.10, 0.15, 0.85],
+                [0.25, 0.30, 0.40, 0.6],
+                [0.80, 0.85, 0.90, 1.0],
+                [0.2, 0.3, 0.4, 0.0],
+            )
+        };
+
+        // Background & border
+        self.add_rect(x, y, w, h, bg);
+        self.add_rect_outline(x, y, w, h, if is_selected { 2.0 } else { 1.0 }, border);
+
+        // Accent indicator on left if selected
+        if is_selected {
+            self.add_rect(x, y, 4.0, h, accent);
+        }
+
+        // Label text (vertically centered)
+        let text_y = y + (h - 14.0) * 0.5;
+        self.add_text(x + 16.0, text_y, 1.5, label, text_col);
+
+        // Shortcut badge on right if present
+        if let Some(sc) = shortcut {
+            let sc_w = (sc.len() as f32 * 6.0 * 1.1) + 12.0;
+            let sc_x = x + w - sc_w - 12.0;
+            let sc_y = y + (h - 18.0) * 0.5;
+            self.add_rect(sc_x, sc_y, sc_w, 18.0, [0.04, 0.06, 0.08, 0.9]);
+            self.add_rect_outline(sc_x, sc_y, sc_w, 18.0, 1.0, [0.35, 0.45, 0.60, 0.6]);
+            self.add_text(sc_x + 6.0, sc_y + 3.0, 1.1, sc, [0.4, 0.9, 1.0, 1.0]);
+        }
+    }
+
+    /// Adds a centered modal dialog window with backdrop dimming.
+    pub fn add_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        w: f32,
+        h: f32,
+        title: &str,
+        accent_color: [f32; 4],
+    ) -> (f32, f32) {
+        // Fullscreen backdrop dimming
+        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.0, 0.0, 0.0, 0.70]);
+
+        // Centered window
+        let x = (screen_w - w) * 0.5;
+        let y = (screen_h - h) * 0.5;
+
+        // Dark glass window body
+        self.add_rect(x, y, w, h, [0.07, 0.09, 0.14, 0.95]);
+        self.add_rect_outline(x, y, w, h, 2.0, [0.3, 0.45, 0.65, 0.8]);
+
+        // Top title bar with accent line
+        self.add_rect(x, y, w, 44.0, [0.10, 0.13, 0.20, 0.98]);
+        self.add_rect(x, y, w, 3.0, accent_color);
+        self.add_text(x + 18.0, y + 14.0, 1.8, title, [1.0, 1.0, 1.0, 1.0]);
+
+        (x, y)
+    }
+
+    /// Adds an interactive city catalog browser modal window with list navigation.
+    pub fn add_city_catalog_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        cities: &[(&str, &str, &str, &str, f32, bool, &str)],
+    ) {
+        let modal_w = (screen_w - 40.0).min(780.0);
+        let modal_h = (screen_h - 40.0).min(520.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "UNITED STATES GEOGRAPHY CATALOG — 38 AUDITED METROPOLITAN REGIONS",
+            [0.2, 0.65, 1.0, 1.0],
+        );
+
+        // Subtitle / Column Headers
+        let header_y = my + 52.0;
+        self.add_rect(
+            mx + 10.0,
+            header_y,
+            modal_w - 20.0,
+            24.0,
+            [0.12, 0.16, 0.24, 0.9],
+        );
+        self.add_text(
+            mx + 20.0,
+            header_y + 6.0,
+            1.1,
+            "STATE / CITY NAME",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 260.0,
+            header_y + 6.0,
+            1.1,
+            "SURVEYED ANCHOR LANDMARK",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 540.0,
+            header_y + 6.0,
+            1.1,
+            "MAX ELEV",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 630.0,
+            header_y + 6.0,
+            1.1,
+            "PORT",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 690.0,
+            header_y + 6.0,
+            1.1,
+            "TIER",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+
+        // List viewport: show up to 10 cities centered around selected_idx
+        let list_y = header_y + 28.0;
+        let item_h = 36.0;
+        let max_visible = 10;
+        let start_idx = if selected_idx >= max_visible / 2 {
+            (selected_idx + 1)
+                .saturating_sub(max_visible)
+                .min(cities.len().saturating_sub(max_visible))
+        } else {
+            0
+        };
+        let visible_cities = &cities[start_idx..cities.len().min(start_idx + max_visible)];
+
+        for (i, &(_id, name, state, landmark, elev_max, has_port, priority_str)) in
+            visible_cities.iter().enumerate()
+        {
+            let actual_idx = start_idx + i;
+            let is_sel = actual_idx == selected_idx;
+            let iy = list_y + i as f32 * (item_h + 2.0);
+
+            let (row_bg, border_col) = if is_sel {
+                ([0.18, 0.32, 0.52, 0.95], [0.35, 0.8, 1.0, 1.0])
+            } else {
+                ([0.08, 0.11, 0.16, 0.80], [0.20, 0.25, 0.35, 0.4])
+            };
+
+            self.add_rect(mx + 10.0, iy, modal_w - 20.0, item_h, row_bg);
+            self.add_rect_outline(
+                mx + 10.0,
+                iy,
+                modal_w - 20.0,
+                item_h,
+                if is_sel { 1.5 } else { 0.5 },
+                border_col,
+            );
+
+            // Selection indicator
+            if is_sel {
+                self.add_rect(mx + 10.0, iy, 4.0, item_h, [0.0, 0.85, 1.0, 1.0]);
+            }
+
+            // State badge
+            let state_badge = format!("[{}]", state);
+            self.add_text(
+                mx + 20.0,
+                iy + 10.0,
+                1.1,
+                &state_badge,
+                [0.4, 0.85, 1.0, 1.0],
+            );
+
+            // City Name
+            self.add_text(
+                mx + 55.0,
+                iy + 10.0,
+                1.2,
+                name,
+                if is_sel {
+                    [1.0, 1.0, 1.0, 1.0]
+                } else {
+                    [0.85, 0.9, 0.95, 1.0]
+                },
+            );
+
+            // Landmark
+            let truncated_landmark = if landmark.len() > 32 {
+                &landmark[..32]
+            } else {
+                landmark
+            };
+            self.add_text(
+                mx + 260.0,
+                iy + 10.0,
+                1.1,
+                truncated_landmark,
+                [0.75, 0.80, 0.85, 0.9],
+            );
+
+            // Elev
+            let elev_str = format!("{:.0}m", elev_max);
+            self.add_text(mx + 540.0, iy + 10.0, 1.1, &elev_str, [0.7, 0.85, 0.7, 1.0]);
+
+            // Port
+            let port_str = if has_port { "⚓ Yes" } else { "—" };
+            self.add_text(
+                mx + 630.0,
+                iy + 10.0,
+                1.1,
+                port_str,
+                if has_port {
+                    [0.3, 0.8, 1.0, 1.0]
+                } else {
+                    [0.5, 0.5, 0.5, 0.6]
+                },
+            );
+
+            // Priority Tier
+            self.add_text(
+                mx + 690.0,
+                iy + 10.0,
+                1.0,
+                priority_str,
+                [0.95, 0.75, 0.2, 1.0],
+            );
+        }
+
+        // Footer Navigation Controls Banner
+        let footer_y = my + modal_h - 36.0;
+        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 20.0,
+            footer_y + 11.0,
+            1.1,
+            "NAVIGATE: [↑/↓] or [W/S]  |  LOAD & WARP: [Enter]  |  CLOSE: [U] or [Esc]  |  38 US CITIES ACTIVE",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+    }
+
+    /// Adds a compact glassmorphic multiplayer status chip in the top right.
+    pub fn add_multiplayer_chip(
+        &mut self,
+        screen_w: f32,
+        is_connected: bool,
+        is_reconnecting: bool,
+        ping_ms: f32,
+        remote_player_count: usize,
+    ) {
+        let chip_w = 280.0;
+        let chip_h = 32.0;
+        let x = screen_w - chip_w - 20.0;
+        let y = 16.0;
+
+        let (bg_color, border_color, status_text) = if is_connected {
+            (
+                [0.05, 0.12, 0.08, 0.85],
+                [0.15, 0.85, 0.35, 0.9],
+                format!(
+                    "NET: CONNECTED | {:.0}ms | {} Online",
+                    ping_ms,
+                    remote_player_count + 1
+                ),
+            )
+        } else if is_reconnecting {
+            (
+                [0.14, 0.10, 0.04, 0.85],
+                [0.95, 0.65, 0.10, 0.9],
+                "NET: RECONNECTING... [N]".to_string(),
+            )
+        } else {
+            (
+                [0.08, 0.09, 0.12, 0.75],
+                [0.35, 0.45, 0.55, 0.5],
+                "NET: OFFLINE | Press [N] for Multiplayer".to_string(),
+            )
+        };
+
+        self.add_rect(x, y, chip_w, chip_h, bg_color);
+        self.add_rect_outline(x, y, chip_w, chip_h, 1.5, border_color);
+        self.add_text(
+            x + 12.0,
+            y + 9.0,
+            1.05,
+            &status_text,
+            if is_connected {
+                [0.4, 1.0, 0.6, 1.0]
+            } else if is_reconnecting {
+                [1.0, 0.8, 0.2, 1.0]
+            } else {
+                [0.7, 0.75, 0.85, 0.8]
+            },
+        );
+    }
+
+    /// Adds an interactive authoritative multiplayer lobby and session management modal.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_multiplayer_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        is_connected: bool,
+        is_hosting: bool,
+        server_addr: &str,
+        ping_ms: f32,
+        player_name: &str,
+        selected_action: usize,
+        players_roster: &[(&str, &str, f32)],
+    ) {
+        let modal_w = (screen_w - 40.0).min(760.0);
+        let modal_h = (screen_h - 40.0).min(500.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "AUTHORITATIVE MULTIPLAYER NETWORK — SESSION & LOBBY",
+            [0.2, 0.75, 1.0, 1.0],
+        );
+
+        // Section 1: Session & Server Info Banner
+        let info_y = my + 52.0;
+        self.add_rect(
+            mx + 16.0,
+            info_y,
+            modal_w - 32.0,
+            68.0,
+            [0.10, 0.13, 0.18, 0.9],
+        );
+        self.add_rect_outline(
+            mx + 16.0,
+            info_y,
+            modal_w - 32.0,
+            68.0,
+            1.0,
+            [0.25, 0.35, 0.5, 0.6],
+        );
+
+        let status_label = if is_hosting {
+            "● HOSTING (Dedicated Server on Local Thread)"
+        } else if is_connected {
+            "● CONNECTED (Authoritative Client Session)"
+        } else {
+            "○ OFFLINE (Single-Player Mode Active)"
+        };
+        let status_color = if is_hosting || is_connected {
+            [0.2, 1.0, 0.5, 1.0]
+        } else {
+            [0.6, 0.65, 0.75, 1.0]
+        };
+
+        self.add_text(mx + 28.0, info_y + 12.0, 1.25, status_label, status_color);
+
+        let details = format!(
+            "Server: {}   |   Latency: {:.1} ms   |   Driver Name: {}   |   Protocol: v{}",
+            server_addr, ping_ms, player_name, 1
+        );
+        self.add_text(
+            mx + 28.0,
+            info_y + 38.0,
+            1.1,
+            &details,
+            [0.75, 0.85, 0.95, 0.9],
+        );
+
+        // Section 2: Action Menu Buttons
+        let actions_y = info_y + 80.0;
+        let actions = [
+            (
+                "1. HOST LOCAL SERVER",
+                "Host headless authoritative server on port 7777 and join automatically",
+            ),
+            (
+                "2. JOIN DEDICATED SERVER",
+                "Connect non-blockingly to authoritative server at configured address",
+            ),
+            (
+                "3. DISCONNECT / LEAVE SESSION",
+                "Cleanly leave session and return to zero-overhead single-player mode",
+            ),
+            (
+                "4. RESUME SIMULATION",
+                "Close multiplayer modal and return to driver cockpit",
+            ),
+        ];
+
+        for (i, &(title, desc)) in actions.iter().enumerate() {
+            let is_sel = i == selected_action;
+            let by = actions_y + i as f32 * 46.0;
+            let bg = if is_sel {
+                [0.18, 0.32, 0.52, 0.95]
+            } else {
+                [0.10, 0.12, 0.17, 0.8]
+            };
+            let border = if is_sel {
+                [0.35, 0.75, 1.0, 1.0]
+            } else {
+                [0.2, 0.25, 0.35, 0.5]
+            };
+
+            self.add_rect(mx + 16.0, by, modal_w - 32.0, 42.0, bg);
+            self.add_rect_outline(
+                mx + 16.0,
+                by,
+                modal_w - 32.0,
+                42.0,
+                if is_sel { 1.5 } else { 1.0 },
+                border,
+            );
+
+            self.add_text(
+                mx + 30.0,
+                by + 8.0,
+                1.2,
+                title,
+                if is_sel {
+                    [1.0, 1.0, 1.0, 1.0]
+                } else {
+                    [0.85, 0.9, 0.95, 0.9]
+                },
+            );
+            self.add_text(
+                mx + 30.0,
+                by + 24.0,
+                0.95,
+                desc,
+                if is_sel {
+                    [0.7, 0.85, 1.0, 1.0]
+                } else {
+                    [0.55, 0.6, 0.7, 0.7]
+                },
+            );
+        }
+
+        // Section 3: Live Connected Players Roster Table
+        let roster_y = actions_y + actions.len() as f32 * 46.0 + 8.0;
+        self.add_rect(
+            mx + 16.0,
+            roster_y,
+            modal_w - 32.0,
+            22.0,
+            [0.12, 0.16, 0.22, 0.9],
+        );
+        self.add_text(
+            mx + 28.0,
+            roster_y + 5.0,
+            1.0,
+            "CONNECTED PARTICIPANT",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 340.0,
+            roster_y + 5.0,
+            1.0,
+            "VEHICLE CLASS",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 580.0,
+            roster_y + 5.0,
+            1.0,
+            "PING / RTT",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+
+        if players_roster.is_empty() {
+            let row_y = roster_y + 26.0;
+            self.add_rect(
+                mx + 16.0,
+                row_y,
+                modal_w - 32.0,
+                28.0,
+                [0.08, 0.10, 0.14, 0.7],
+            );
+            self.add_text(
+                mx + 28.0,
+                row_y + 7.0,
+                1.05,
+                "No remote peers connected. Host or join a session above.",
+                [0.6, 0.65, 0.75, 0.8],
+            );
+        } else {
+            for (idx, &(pname, vtype, prtt)) in players_roster.iter().take(3).enumerate() {
+                let row_y = roster_y + 24.0 + idx as f32 * 26.0;
+                self.add_rect(
+                    mx + 16.0,
+                    row_y,
+                    modal_w - 32.0,
+                    24.0,
+                    [0.08, 0.10, 0.14, 0.8],
+                );
+                self.add_text(mx + 28.0, row_y + 6.0, 1.05, pname, [0.9, 0.95, 1.0, 1.0]);
+                self.add_text(
+                    mx + 340.0,
+                    row_y + 6.0,
+                    1.05,
+                    vtype,
+                    [0.75, 0.85, 0.75, 1.0],
+                );
+                let rtt_str = format!("{:.0} ms", prtt);
+                self.add_text(
+                    mx + 580.0,
+                    row_y + 6.0,
+                    1.05,
+                    &rtt_str,
+                    [0.4, 0.9, 0.5, 1.0],
+                );
+            }
+        }
+
+        // Footer Banner
+        let footer_y = my + modal_h - 36.0;
+        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 20.0,
+            footer_y + 11.0,
+            1.1,
+            "NAVIGATE: [↑/↓] or [W/S]  |  EXECUTE: [Enter]  |  DISMISS: [N] or [Esc]  |  ZERO-OVERHEAD OFFLINE PRESERVED",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+    }
+
+    /// Adds a polished, responsive start / home screen interface.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_start_screen(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_opt: usize,
+        options: &[(&str, &str)],
+        player_name: &str,
+        player_wallet: f64,
+        completed_jobs: u32,
+    ) {
+        // Fullscreen dark gradient backdrop
+        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.03, 0.04, 0.07, 0.94]);
+
+        // Decorative background geometry accent stripes
+        self.add_line(
+            0.0,
+            screen_h * 0.18,
+            screen_w,
+            screen_h * 0.18,
+            1.5,
+            [0.15, 0.40, 0.70, 0.3],
+        );
+        self.add_line(
+            0.0,
+            screen_h * 0.88,
+            screen_w,
+            screen_h * 0.88,
+            1.0,
+            [0.15, 0.40, 0.70, 0.2],
+        );
+
+        // Left decorative accent bar
+        self.add_rect(
+            40.0,
+            screen_h * 0.22,
+            4.0,
+            screen_h * 0.60,
+            [0.0, 0.85, 1.0, 0.8],
+        );
+
+        // Title Header
+        let title_x = 60.0;
+        let title_y = screen_h * 0.08;
+        self.add_text(
+            title_x,
+            title_y,
+            3.2,
+            "REAL EARTH WORLD",
+            [1.0, 1.0, 1.0, 1.0],
+        );
+        self.add_text(
+            title_x,
+            title_y + 34.0,
+            1.25,
+            "HIGH-FIDELITY PLANETARY SIMULATION & COMPLETE GAMEPLAY PLATFORM",
+            [0.2, 0.85, 1.0, 0.9],
+        );
+
+        // Player Profile Badge (Top Right)
+        let profile_w = 340.0;
+        let profile_x = screen_w - profile_w - 40.0;
+        let profile_y = title_y;
+        self.add_panel(profile_x, profile_y, profile_w, 56.0, [0.2, 0.9, 0.5, 1.0]);
+        self.add_text(
+            profile_x + 14.0,
+            profile_y + 10.0,
+            1.15,
+            player_name,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+        let stats_str = format!("WALLET: ${:.2}  |  JOBS: {}", player_wallet, completed_jobs);
+        self.add_text(
+            profile_x + 14.0,
+            profile_y + 30.0,
+            1.0,
+            &stats_str,
+            [1.0, 0.85, 0.2, 1.0],
+        );
+
+        // Menu Card
+        let menu_x = 60.0;
+        let menu_y = screen_h * 0.22;
+        let menu_w = (screen_w * 0.45).clamp(380.0, 520.0);
+        let item_h = 44.0;
+        let spacing = 8.0;
+
+        for (i, &(label, sub)) in options.iter().enumerate() {
+            let iy = menu_y + (i as f32) * (item_h + spacing);
+            let is_sel = i == selected_opt;
+
+            let (bg, border, text_col, sub_col) = if is_sel {
+                (
+                    [0.15, 0.32, 0.55, 0.98],
+                    [0.3, 0.85, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                    [0.8, 0.95, 1.0, 1.0],
+                )
+            } else {
+                (
+                    [0.07, 0.09, 0.14, 0.85],
+                    [0.20, 0.28, 0.40, 0.5],
+                    [0.85, 0.90, 0.95, 0.9],
+                    [0.55, 0.65, 0.75, 0.7],
+                )
+            };
+
+            self.add_rect(menu_x, iy, menu_w, item_h, bg);
+            self.add_rect_outline(
+                menu_x,
+                iy,
+                menu_w,
+                item_h,
+                if is_sel { 2.0 } else { 1.0 },
+                border,
+            );
+
+            if is_sel {
+                self.add_rect(menu_x, iy, 5.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+                self.add_text(
+                    menu_x + menu_w - 24.0,
+                    iy + 14.0,
+                    1.4,
+                    ">",
+                    [0.0, 0.9, 1.0, 1.0],
+                );
+            }
+
+            self.add_text(menu_x + 20.0, iy + 12.0, 1.4, label, text_col);
+            if !sub.is_empty() {
+                self.add_text(menu_x + 20.0, iy + 28.0, 0.95, sub, sub_col);
+            }
+        }
+
+        // Right Info Card / Feature Highlights
+        let info_x = menu_x + menu_w + 40.0;
+        let info_w = (screen_w - info_x - 40.0).max(300.0);
+        let info_h = (item_h + spacing) * options.len() as f32 - spacing;
+        if info_w >= 280.0 {
+            self.add_panel(info_x, menu_y, info_w, info_h, [0.15, 0.55, 0.95, 1.0]);
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 16.0,
+                1.3,
+                "SAN FRANCISCO PILOT & 38 US CITIES",
+                [1.0, 1.0, 1.0, 1.0],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 38.0,
+                1.0,
+                "• Real surveyed USGS 3DEP topography & OSM road networks",
+                [0.8, 0.88, 0.95, 0.9],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 56.0,
+                1.0,
+                "• Taxi, courier, heavy freight & free-roam careers",
+                [0.8, 0.88, 0.95, 0.9],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 74.0,
+                1.0,
+                "• 10 multimodal vehicles: Cars, Bus, Truck, Train, Plane, Boat",
+                [0.8, 0.88, 0.95, 0.9],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 92.0,
+                1.0,
+                "• IDM autonomous traffic simulation & traffic signals",
+                [0.8, 0.88, 0.95, 0.9],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 110.0,
+                1.0,
+                "• Full garage upgrades, earnings, achievements & quicksave",
+                [0.8, 0.88, 0.95, 0.9],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 135.0,
+                1.0,
+                "Active City: San Francisco Bay Area (CA)",
+                [0.2, 0.9, 0.5, 1.0],
+            );
+            self.add_text(
+                info_x + 18.0,
+                menu_y + 152.0,
+                1.0,
+                "Surveyed Anchor: Transamerica Pyramid (37.7952 N, 122.4028 W)",
+                [0.65, 0.75, 0.85, 0.8],
+            );
+        }
+
+        // Footer Bar
+        let footer_y = screen_h - 48.0;
+        self.add_rect(0.0, footer_y, screen_w, 48.0, [0.05, 0.07, 0.11, 0.98]);
+        self.add_line(
+            0.0,
+            footer_y,
+            screen_w,
+            footer_y,
+            1.0,
+            [0.20, 0.30, 0.45, 0.6],
+        );
+        self.add_text(
+            40.0,
+            footer_y + 16.0,
+            1.15,
+            "CONTROLS: [W/S] or [↑/↓] Select  |  [Enter] Confirm  |  [Esc] Quick Exit  |  [F3] Toggle Dev Overlay",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+        let ver_str = "v1.0.0-STAGE6-CERTIFIED";
+        let ver_w = ver_str.len() as f32 * 6.0 * 1.05;
+        self.add_text(
+            screen_w - ver_w - 40.0,
+            footer_y + 16.0,
+            1.05,
+            ver_str,
+            [0.6, 0.7, 0.8, 0.7],
+        );
+    }
+
+    /// Adds a modern centered pause menu window with responsive backdrop.
+    pub fn add_pause_menu(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_opt: usize,
+        options: &[&str],
+        city_name: &str,
+    ) {
+        let modal_w = (screen_w - 40.0).min(520.0);
+        let modal_h = (screen_h - 40.0).min(500.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "SIMULATION PAUSED — CONTROL CENTER",
+            [0.2, 0.7, 1.0, 1.0],
+        );
+
+        // Subtitle with active location
+        self.add_text(
+            mx + 18.0,
+            my + 50.0,
+            1.05,
+            &format!("ACTIVE REGION: {}  |  PRESS [ESC] TO RESUME", city_name),
+            [0.4, 0.85, 1.0, 0.9],
+        );
+
+        let list_y = my + 72.0;
+        let item_h = 34.0;
+        let spacing = 6.0;
+
+        for (i, &opt) in options.iter().enumerate() {
+            let iy = list_y + (i as f32) * (item_h + spacing);
+            let is_sel = i == selected_opt;
+
+            let (bg, border, text_col) = if is_sel {
+                (
+                    [0.18, 0.35, 0.58, 0.98],
+                    [0.35, 0.85, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                )
+            } else {
+                (
+                    [0.08, 0.11, 0.17, 0.85],
+                    [0.22, 0.28, 0.38, 0.5],
+                    [0.85, 0.90, 0.95, 0.9],
+                )
+            };
+
+            self.add_rect(mx + 16.0, iy, modal_w - 32.0, item_h, bg);
+            self.add_rect_outline(
+                mx + 16.0,
+                iy,
+                modal_w - 32.0,
+                item_h,
+                if is_sel { 1.5 } else { 0.5 },
+                border,
+            );
+
+            if is_sel {
+                self.add_rect(mx + 16.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+            }
+
+            self.add_text(mx + 28.0, iy + 10.0, 1.25, opt, text_col);
+        }
+
+        // Footer
+        let footer_y = my + modal_h - 34.0;
+        self.add_rect(mx, footer_y, modal_w, 34.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 18.0,
+            footer_y + 10.0,
+            1.05,
+            "[↑/↓] Navigate  |  [Enter] Select  |  [Esc] Resume Simulation",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+    }
+
+    /// Adds a modern dispatch and career contract browser modal.
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    pub fn add_job_browser_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        jobs: &[(&str, &str, &str, &str, f64, f64, u32, &str, bool)],
+        active_job_id: Option<&str>,
+    ) {
+        let modal_w = (screen_w - 40.0).min(820.0);
+        let modal_h = (screen_h - 40.0).min(540.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "REGIONAL DISPATCH & CAREER CONTRACTS",
+            [0.2, 0.9, 0.5, 1.0],
+        );
+
+        // Column Headers
+        let header_y = my + 50.0;
+        self.add_rect(
+            mx + 12.0,
+            header_y,
+            modal_w - 24.0,
+            24.0,
+            [0.12, 0.16, 0.24, 0.9],
+        );
+        self.add_text(
+            mx + 20.0,
+            header_y + 6.0,
+            1.05,
+            "CAREER",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 140.0,
+            header_y + 6.0,
+            1.05,
+            "CONTRACT MISSION TITLE",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 460.0,
+            header_y + 6.0,
+            1.05,
+            "DISTANCE",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 560.0,
+            header_y + 6.0,
+            1.05,
+            "PAYOUT",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 660.0,
+            header_y + 6.0,
+            1.05,
+            "XP / TIER",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 740.0,
+            header_y + 6.0,
+            1.05,
+            "STATUS",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+
+        // Job list viewport (up to 8 items visible)
+        let list_y = header_y + 28.0;
+        let item_h = 38.0;
+        let max_visible = 8;
+        let start_idx = if selected_idx >= max_visible / 2 {
+            (selected_idx + 1)
+                .saturating_sub(max_visible)
+                .min(jobs.len().saturating_sub(max_visible))
+        } else {
+            0
+        };
+        let visible_jobs = &jobs[start_idx..jobs.len().min(start_idx + max_visible)];
+
+        for (i, &(id, career, title, _route, dist_km, payout, xp, _diff, can_accept)) in
+            visible_jobs.iter().enumerate()
+        {
+            let actual_idx = start_idx + i;
+            let is_sel = actual_idx == selected_idx;
+            let is_active = active_job_id == Some(id);
+            let iy = list_y + i as f32 * (item_h + 3.0);
+
+            let (bg, border) = if is_sel {
+                ([0.18, 0.35, 0.55, 0.98], [0.35, 0.85, 1.0, 1.0])
+            } else if is_active {
+                ([0.10, 0.28, 0.20, 0.90], [0.2, 0.85, 0.5, 0.8])
+            } else {
+                ([0.08, 0.11, 0.17, 0.85], [0.20, 0.25, 0.35, 0.4])
+            };
+
+            self.add_rect(mx + 12.0, iy, modal_w - 24.0, item_h, bg);
+            self.add_rect_outline(
+                mx + 12.0,
+                iy,
+                modal_w - 24.0,
+                item_h,
+                if is_sel { 1.5 } else { 0.5 },
+                border,
+            );
+
+            if is_sel {
+                self.add_rect(mx + 12.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+            }
+
+            let short_career = if career.contains("Taxi") {
+                "TAXI"
+            } else if career.contains("Courier")
+                || career.contains("Package")
+                || career.contains("Delivery")
+            {
+                "COURIER"
+            } else if career.contains("Freight") {
+                "FREIGHT"
+            } else {
+                "EXPLORE"
+            };
+            self.add_text(
+                mx + 20.0,
+                iy + 11.0,
+                1.1,
+                short_career,
+                [0.3, 0.85, 1.0, 1.0],
+            );
+
+            let trunc_title = if title.len() > 36 {
+                &title[..36]
+            } else {
+                title
+            };
+            self.add_text(
+                mx + 130.0,
+                iy + 11.0,
+                1.15,
+                trunc_title,
+                [1.0, 1.0, 1.0, 1.0],
+            );
+            self.add_text(
+                mx + 460.0,
+                iy + 11.0,
+                1.1,
+                &format!("{:.1} km", dist_km),
+                [0.8, 0.85, 0.9, 1.0],
+            );
+            self.add_text(
+                mx + 560.0,
+                iy + 11.0,
+                1.15,
+                &format!("${:.0}", payout),
+                [1.0, 0.85, 0.2, 1.0],
+            );
+            self.add_text(
+                mx + 660.0,
+                iy + 11.0,
+                1.0,
+                &format!("+{} XP", xp),
+                [0.3, 0.9, 0.6, 1.0],
+            );
+
+            let (stat_str, stat_col) = if is_active {
+                ("ACTIVE", [0.2, 0.95, 0.5, 1.0])
+            } else if can_accept {
+                ("READY", [0.95, 0.85, 0.3, 1.0])
+            } else {
+                ("LOCKED", [0.6, 0.6, 0.6, 0.8])
+            };
+            self.add_text(mx + 740.0, iy + 11.0, 1.05, stat_str, stat_col);
+        }
+
+        // Briefing Preview Card for selected job
+        if selected_idx < jobs.len() {
+            let (_id, career, title, route, dist_km, payout, xp, diff, _can_accept) =
+                jobs[selected_idx];
+            let prev_y = list_y + max_visible as f32 * (item_h + 3.0) + 6.0;
+            let prev_h = modal_h - (prev_y - my) - 42.0;
+            if prev_h >= 50.0 {
+                self.add_rect(
+                    mx + 12.0,
+                    prev_y,
+                    modal_w - 24.0,
+                    prev_h,
+                    [0.06, 0.08, 0.12, 0.95],
+                );
+                self.add_rect_outline(
+                    mx + 12.0,
+                    prev_y,
+                    modal_w - 24.0,
+                    prev_h,
+                    1.0,
+                    [0.25, 0.35, 0.50, 0.5],
+                );
+                self.add_text(
+                    mx + 22.0,
+                    prev_y + 10.0,
+                    1.15,
+                    &format!("CONTRACT: {}  [{}]", title, career),
+                    [1.0, 1.0, 1.0, 1.0],
+                );
+                self.add_text(
+                    mx + 22.0,
+                    prev_y + 28.0,
+                    1.0,
+                    &format!("ROUTE: {}  |  DIFFICULTY: {}", route, diff),
+                    [0.75, 0.85, 0.95, 0.9],
+                );
+                self.add_text(
+                    mx + 22.0,
+                    prev_y + 44.0,
+                    1.0,
+                    &format!(
+                        "ESTIMATED DISTANCE: {:.2} km  |  REWARD: ${:.2}  |  +{} XP",
+                        dist_km, payout, xp
+                    ),
+                    [1.0, 0.85, 0.2, 1.0],
+                );
+            }
+        }
+
+        // Footer
+        let footer_y = my + modal_h - 36.0;
+        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 20.0,
+            footer_y + 11.0,
+            1.1,
+            "NAVIGATE: [↑/↓] or [W/S]  |  ACCEPT CONTRACT: [Enter]  |  CLOSE: [J], [Tab], or [Esc]",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+    }
+
+    /// Adds a modern interactive vehicle garage and fleet inspection modal.
+    pub fn add_garage_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        vehicles: &[(&str, &str, &str, f32, f32, f32, bool)],
+    ) {
+        let modal_w = (screen_w - 40.0).min(780.0);
+        let modal_h = (screen_h - 40.0).min(520.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "VEHICLE GARAGE & MULTIMODAL FLEET",
+            [1.0, 0.45, 0.1, 1.0],
+        );
+
+        // Headers
+        let header_y = my + 50.0;
+        self.add_rect(
+            mx + 12.0,
+            header_y,
+            modal_w - 24.0,
+            24.0,
+            [0.12, 0.16, 0.24, 0.9],
+        );
+        self.add_text(
+            mx + 20.0,
+            header_y + 6.0,
+            1.05,
+            "VEHICLE MODEL",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 240.0,
+            header_y + 6.0,
+            1.05,
+            "CLASS / CATEGORY",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 420.0,
+            header_y + 6.0,
+            1.05,
+            "DRIVETRAIN",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 540.0,
+            header_y + 6.0,
+            1.05,
+            "CURB MASS",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 640.0,
+            header_y + 6.0,
+            1.05,
+            "TOP SPEED",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+        self.add_text(
+            mx + 720.0,
+            header_y + 6.0,
+            1.05,
+            "STATUS",
+            [0.6, 0.75, 0.9, 1.0],
+        );
+
+        let list_y = header_y + 28.0;
+        let item_h = 36.0;
+
+        for (i, &(name, cat, drive, mass, _hp, top_speed, is_active)) in vehicles.iter().enumerate()
+        {
+            let is_sel = i == selected_idx;
+            let iy = list_y + i as f32 * (item_h + 3.0);
+
+            let (bg, border) = if is_sel {
+                ([0.22, 0.32, 0.50, 0.98], [0.4, 0.85, 1.0, 1.0])
+            } else if is_active {
+                ([0.15, 0.25, 0.35, 0.90], [0.3, 0.75, 0.9, 0.7])
+            } else {
+                ([0.08, 0.11, 0.16, 0.85], [0.20, 0.25, 0.35, 0.4])
+            };
+
+            self.add_rect(mx + 12.0, iy, modal_w - 24.0, item_h, bg);
+            self.add_rect_outline(
+                mx + 12.0,
+                iy,
+                modal_w - 24.0,
+                item_h,
+                if is_sel { 1.5 } else { 0.5 },
+                border,
+            );
+
+            if is_sel {
+                self.add_rect(mx + 12.0, iy, 4.0, item_h, [1.0, 0.5, 0.1, 1.0]);
+            }
+
+            self.add_text(mx + 20.0, iy + 10.0, 1.2, name, [1.0, 1.0, 1.0, 1.0]);
+            self.add_text(mx + 240.0, iy + 10.0, 1.1, cat, [0.8, 0.85, 0.9, 1.0]);
+            self.add_text(mx + 420.0, iy + 10.0, 1.05, drive, [0.3, 0.85, 1.0, 1.0]);
+            self.add_text(
+                mx + 540.0,
+                iy + 10.0,
+                1.05,
+                &format!("{:.0} kg", mass),
+                [0.85, 0.85, 0.88, 1.0],
+            );
+            self.add_text(
+                mx + 640.0,
+                iy + 10.0,
+                1.05,
+                &format!("{:.0} km/h", top_speed),
+                [1.0, 0.85, 0.2, 1.0],
+            );
+
+            let (stat_str, stat_col) = if is_active {
+                ("ACTIVE", [0.2, 0.95, 0.5, 1.0])
+            } else {
+                ("SELECT", [0.6, 0.7, 0.8, 0.7])
+            };
+            self.add_text(mx + 720.0, iy + 10.0, 1.0, stat_str, stat_col);
+        }
+
+        // Footer
+        let footer_y = my + modal_h - 36.0;
+        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 20.0,
+            footer_y + 11.0,
+            1.1,
+            "NAVIGATE: [↑/↓] or [W/S]  |  SELECT & SPAWN: [Enter]  |  CLOSE: [G] or [Esc]",
+            [1.0, 0.65, 0.2, 1.0],
+        );
+    }
+
+    /// Adds a modern settings and user preferences modal.
+    pub fn add_settings_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        settings: &[(&str, &str, &str)],
+    ) {
+        let modal_w = (screen_w - 40.0).min(680.0);
+        let modal_h = (screen_h - 40.0).min(460.0);
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "SETTINGS & SIMULATION PREFERENCES",
+            [0.4, 0.6, 1.0, 1.0],
+        );
+
+        let list_y = my + 56.0;
+        let item_h = 42.0;
+
+        for (i, &(name, val, desc)) in settings.iter().enumerate() {
+            let is_sel = i == selected_idx;
+            let iy = list_y + i as f32 * (item_h + 4.0);
+
+            let (bg, border) = if is_sel {
+                ([0.18, 0.32, 0.52, 0.98], [0.35, 0.85, 1.0, 1.0])
+            } else {
+                ([0.08, 0.11, 0.16, 0.85], [0.20, 0.25, 0.35, 0.4])
+            };
+
+            self.add_rect(mx + 16.0, iy, modal_w - 32.0, item_h, bg);
+            self.add_rect_outline(
+                mx + 16.0,
+                iy,
+                modal_w - 32.0,
+                item_h,
+                if is_sel { 1.5 } else { 0.5 },
+                border,
+            );
+
+            if is_sel {
+                self.add_rect(mx + 16.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+            }
+
+            self.add_text(mx + 26.0, iy + 8.0, 1.25, name, [1.0, 1.0, 1.0, 1.0]);
+            self.add_text(mx + 26.0, iy + 24.0, 0.95, desc, [0.65, 0.75, 0.85, 0.8]);
+
+            // Value badge on right
+            let val_w = (val.len() as f32 * 6.0 * 1.2) + 16.0;
+            let val_x = mx + modal_w - 32.0 - val_w - 12.0;
+            self.add_rect(val_x, iy + 8.0, val_w, 24.0, [0.12, 0.18, 0.28, 0.9]);
+            self.add_rect_outline(
+                val_x,
+                iy + 8.0,
+                val_w,
+                24.0,
+                1.0,
+                if is_sel {
+                    [0.35, 0.85, 1.0, 1.0]
+                } else {
+                    [0.3, 0.4, 0.5, 0.5]
+                },
+            );
+            self.add_text(val_x + 8.0, iy + 14.0, 1.15, val, [0.2, 0.9, 1.0, 1.0]);
+        }
+
+        // Footer
+        let footer_y = my + modal_h - 36.0;
+        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+        self.add_text(
+            mx + 20.0,
+            footer_y + 11.0,
+            1.1,
+            "NAVIGATE: [↑/↓] or [W/S]  |  CYCLE VALUE: [Enter]  |  CLOSE: [O] or [Esc]",
+            [0.35, 0.85, 1.0, 1.0],
+        );
+    }
+
+    /// Adds an interactive boarding/loading dwell progress card when vehicle is stopped at objective.
+    pub fn add_dwell_progress(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        progress: f32,
+        operation_text: &str,
+        is_stopped: bool,
+    ) {
+        let card_w = 420.0;
+        let card_h = 76.0;
+        let x = (screen_w - card_w) * 0.5;
+        let y = screen_h * 0.68;
+
+        let accent = if is_stopped {
+            [0.1, 0.9, 0.4, 1.0]
+        } else {
+            [1.0, 0.2, 0.2, 1.0]
+        };
+        self.add_panel(x, y, card_w, card_h, accent);
+
+        let status_title = if is_stopped {
+            format!("{} ({:.0}%)", operation_text, progress * 100.0)
+        } else {
+            "STOP VEHICLE TO INTERACT!".to_string()
+        };
+        self.add_text(
+            x + 16.0,
+            y + 12.0,
+            1.25,
+            &status_title,
+            if is_stopped {
+                [1.0, 1.0, 1.0, 1.0]
+            } else {
+                [1.0, 0.3, 0.3, 1.0]
+            },
+        );
+
+        let fill_col = if is_stopped {
+            [0.1, 0.9, 0.4, 1.0]
+        } else {
+            [0.9, 0.3, 0.1, 1.0]
+        };
+        self.add_bar(
+            x + 16.0,
+            y + 34.0,
+            card_w - 32.0,
+            14.0,
+            progress,
+            fill_col,
+            [0.12, 0.15, 0.22, 1.0],
+        );
+
+        let prompt = if is_stopped {
+            "HOLD BRAKES AT COMPLETE STOP WHILE LOADING"
+        } else {
+            "APPLY BRAKES [S / Down] TO BRING SPEED TO 0"
+        };
+        self.add_text(x + 16.0, y + 54.0, 0.95, prompt, [0.75, 0.85, 0.95, 0.9]);
+    }
+
+    /// Adds a mission debrief summary modal when a contract is completed.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_debrief_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        title: &str,
+        career: &str,
+        base_pay: f64,
+        tip_bonus: f64,
+        speed_bonus: f64,
+        net_pay: f64,
+        xp_gained: u32,
+        comfort_stars: f32,
+    ) {
+        let modal_w = 480.0;
+        let modal_h = 320.0;
+        let (mx, my) = self.add_modal(
+            screen_w,
+            screen_h,
+            modal_w,
+            modal_h,
+            "CONTRACT MISSION COMPLETED!",
+            [0.2, 0.95, 0.45, 1.0],
+        );
+
+        self.add_text(mx + 20.0, my + 54.0, 1.35, title, [1.0, 1.0, 1.0, 1.0]);
+        self.add_text(
+            mx + 20.0,
+            my + 74.0,
+            1.05,
+            &format!("CAREER: {}", career),
+            [0.35, 0.9, 1.0, 1.0],
+        );
+
+        self.add_line(
+            mx + 20.0,
+            my + 94.0,
+            mx + modal_w - 20.0,
+            my + 94.0,
+            1.0,
+            [0.25, 0.35, 0.50, 0.5],
+        );
+
+        self.add_text(
+            mx + 20.0,
+            my + 106.0,
+            1.1,
+            &format!("BASE CONTRACT PAYOUT:    ${:.2}", base_pay),
+            [0.85, 0.88, 0.92, 1.0],
+        );
+        self.add_text(
+            mx + 20.0,
+            my + 126.0,
+            1.1,
+            &format!(
+                "PASSENGER TIP BONUS:     +${:.2} ({:.1} Stars)",
+                tip_bonus, comfort_stars
+            ),
+            [0.3, 0.9, 0.5, 1.0],
+        );
+        self.add_text(
+            mx + 20.0,
+            my + 146.0,
+            1.1,
+            &format!("ON-TIME SPEED BONUS:     +${:.2}", speed_bonus),
+            [1.0, 0.85, 0.2, 1.0],
+        );
+        self.add_text(
+            mx + 20.0,
+            my + 166.0,
+            1.1,
+            &format!("XP REWARD:               +{} XP", xp_gained),
+            [0.4, 0.9, 1.0, 1.0],
+        );
+
+        self.add_line(
+            mx + 20.0,
+            my + 188.0,
+            mx + modal_w - 20.0,
+            my + 188.0,
+            1.5,
+            [0.3, 0.85, 1.0, 0.8],
+        );
+
+        self.add_text(
+            mx + 20.0,
+            my + 200.0,
+            1.45,
+            &format!("TOTAL NET EARNINGS:  ${:.2}", net_pay),
+            [1.0, 0.95, 0.2, 1.0],
+        );
+
+        // Footer button
+        let btn_y = my + modal_h - 44.0;
+        self.add_rect(
+            mx + 20.0,
+            btn_y,
+            modal_w - 40.0,
+            32.0,
+            [0.15, 0.35, 0.55, 0.95],
+        );
+        self.add_rect_outline(
+            mx + 20.0,
+            btn_y,
+            modal_w - 40.0,
+            32.0,
+            1.5,
+            [0.35, 0.85, 1.0, 1.0],
+        );
+        self.add_text(
+            mx + (modal_w - 40.0) * 0.5 - 60.0,
+            btn_y + 9.0,
+            1.2,
+            "CONTINUE [ENTER]",
+            [1.0, 1.0, 1.0, 1.0],
+        );
+    }
+
+    /// Adds a modern automotive instrument cluster (Speedometer, RPM tachometer, gear badge, steer angle).
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_speedometer_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        gear_str: &str,
+        rpm: f32,
+        max_rpm: f32,
+        steer_deg: f32,
+        metric_units: bool,
+        vehicle_model: &str,
+    ) {
+        let cluster_w = 340.0;
+        let cluster_h = 130.0;
+
+        self.add_panel(x, y, cluster_w, cluster_h, [1.0, 0.45, 0.10, 1.0]);
+
+        // Display speed (KM/H or MPH)
+        let (speed_val, unit_str) = if metric_units {
+            (speed_kph.abs(), "KM/H")
+        } else {
+            (speed_kph.abs() * 0.621371, "MPH")
+        };
+
+        // Large Speed Readout
+        let speed_str = format!("{:>3.0}", speed_val);
+        self.add_text(x + 16.0, y + 16.0, 3.8, &speed_str, [1.0, 1.0, 1.0, 1.0]);
+        self.add_text(x + 120.0, y + 36.0, 1.4, unit_str, [0.95, 0.55, 0.20, 1.0]);
+
+        // Transmission Gear Badge (High-contrast pill)
+        let gear_x = x + cluster_w - 75.0;
+        let gear_y = y + 16.0;
+        let is_reverse = gear_str == "R";
+        let gear_bg = if is_reverse {
+            [0.85, 0.15, 0.15, 0.95]
+        } else if gear_str == "P" || gear_str == "N" {
+            [0.25, 0.30, 0.40, 0.95]
+        } else {
+            [0.10, 0.70, 0.95, 0.95]
+        };
+        self.add_rect(gear_x, gear_y, 55.0, 36.0, gear_bg);
+        self.add_rect_outline(gear_x, gear_y, 55.0, 36.0, 1.5, [1.0, 1.0, 1.0, 0.6]);
+        self.add_text(
+            gear_x + 12.0,
+            gear_y + 8.0,
+            2.2,
+            gear_str,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+
+        // Tachometer RPM Gauge Bar
+        let rpm_frac = (rpm / max_rpm.max(1000.0)).clamp(0.0, 1.0);
+        let rpm_color = if rpm_frac > 0.85 {
+            [0.95, 0.20, 0.20, 1.0] // Redline
+        } else if rpm_frac > 0.65 {
+            [0.95, 0.75, 0.15, 1.0] // Warning
+        } else {
+            [0.15, 0.85, 0.45, 1.0] // Cruising
+        };
+        self.add_text(
+            x + 16.0,
+            y + 62.0,
+            1.0,
+            &format!("{:.0} RPM", rpm),
+            [0.8, 0.85, 0.9, 0.9],
+        );
+        self.add_bar(
+            x + 16.0,
+            y + 74.0,
+            cluster_w - 32.0,
+            10.0,
+            rpm_frac,
+            rpm_color,
+            [0.12, 0.15, 0.20, 1.0],
+        );
+
+        // Steer angle & Vehicle model subtitle
+        let steer_str = format!("STEER: {:>+3.0} deg", steer_deg);
+        self.add_text(x + 16.0, y + 96.0, 1.0, &steer_str, [0.5, 0.8, 1.0, 0.9]);
+        self.add_text(
+            x + 150.0,
+            y + 96.0,
+            1.0,
+            vehicle_model,
+            [0.75, 0.75, 0.75, 0.8],
+        );
+    }
+
+    /// Adds a tactical GPS circular radar minimap widget showing vehicle orientation, heading, and waypoints.
+    pub fn add_gps_minimap(
+        &mut self,
+        cx: f32,
+        cy: f32,
+        radius: f32,
+        player_yaw: f32,
+        relative_target: Option<(f32, f32)>,
+        is_pickup: bool,
+    ) {
+        // Dark glass background circle
+        self.add_panel(
+            cx - radius - 6.0,
+            cy - radius - 6.0,
+            (radius + 6.0) * 2.0,
+            (radius + 6.0) * 2.0,
+            [0.1, 0.6, 1.0, 1.0],
+        );
+
+        // Radial range rings (e.g. 50m and 100m)
+        self.add_circle_outline(cx, cy, radius * 0.5, 1.0, 16, [0.25, 0.40, 0.55, 0.4]);
+        self.add_circle_outline(cx, cy, radius * 0.95, 1.5, 24, [0.30, 0.50, 0.75, 0.7]);
+
+        // Crosshairs
+        self.add_line(
+            cx - radius * 0.9,
+            cy,
+            cx + radius * 0.9,
+            cy,
+            1.0,
+            [0.25, 0.35, 0.45, 0.3],
+        );
+        self.add_line(
+            cx,
+            cy - radius * 0.9,
+            cx,
+            cy + radius * 0.9,
+            1.0,
+            [0.25, 0.35, 0.45, 0.3],
+        );
+
+        // North arrow on radar ring
+        let north_angle = -player_yaw - std::f32::consts::FRAC_PI_2;
+        let nx = cx + north_angle.cos() * (radius * 0.82);
+        let ny = cy + north_angle.sin() * (radius * 0.82);
+        self.add_text(nx - 3.0, ny - 4.0, 1.2, "N", [0.95, 0.3, 0.3, 1.0]);
+
+        // Player vehicle chevron (Center, always pointing UP)
+        self.add_line(cx, cy - 8.0, cx - 6.0, cy + 6.0, 2.0, [0.2, 0.95, 0.4, 1.0]);
+        self.add_line(cx, cy - 8.0, cx + 6.0, cy + 6.0, 2.0, [0.2, 0.95, 0.4, 1.0]);
+        self.add_line(cx - 6.0, cy + 6.0, cx, cy + 3.0, 1.5, [0.2, 0.95, 0.4, 1.0]);
+        self.add_line(cx + 6.0, cy + 6.0, cx, cy + 3.0, 1.5, [0.2, 0.95, 0.4, 1.0]);
+
+        // Target waypoint beacon pin (Pickup or Dropoff)
+        if let Some((dx, dz)) = relative_target {
+            let scale_m_to_px = (radius * 0.85) / 250.0;
+            let pin_x_rel = dx * scale_m_to_px;
+            let pin_y_rel = -dz * scale_m_to_px;
+            let dist = (pin_x_rel * pin_x_rel + pin_y_rel * pin_y_rel).sqrt();
+            let (clamped_x, clamped_y) = if dist > radius * 0.85 {
+                let factor = (radius * 0.85) / dist;
+                (pin_x_rel * factor, pin_y_rel * factor)
+            } else {
+                (pin_x_rel, pin_y_rel)
+            };
+
+            let pin_cx = cx + clamped_x;
+            let pin_cy = cy + clamped_y;
+            let pin_col = if is_pickup {
+                [0.1, 0.95, 0.45, 1.0]
+            } else {
+                [1.0, 0.75, 0.15, 1.0]
+            };
+            self.add_rect(pin_cx - 4.0, pin_cy - 4.0, 8.0, 8.0, pin_col);
+            self.add_circle_outline(pin_cx, pin_cy, 7.0, 1.0, 8, pin_col);
+        }
+    }
+
+    /// Adds an active contract mission card to the top right of the HUD.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_mission_hud_card(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        career_title: &str,
+        mission_title: &str,
+        objective_step: &str,
+        distance_m: f64,
+        comfort_stars: f32,
+        cargo_integrity: f32,
+        payout_credits: f64,
+    ) {
+        self.add_panel(x, y, w, h, [0.25, 0.85, 0.50, 1.0]);
+
+        // Career title & potential payout
+        self.add_text(
+            x + 14.0,
+            y + 12.0,
+            1.1,
+            career_title,
+            [0.35, 0.95, 0.65, 1.0],
+        );
+        let pay_str = format!("REWARD: Rs.{:.0}", payout_credits);
+        let pay_w = pay_str.len() as f32 * 6.0 * 1.1;
+        self.add_text(
+            x + w - pay_w - 14.0,
+            y + 12.0,
+            1.1,
+            &pay_str,
+            [1.0, 0.85, 0.2, 1.0],
+        );
+
+        // Mission title
+        self.add_text(x + 14.0, y + 28.0, 1.4, mission_title, [1.0, 1.0, 1.0, 1.0]);
+
+        // Objective step description
+        self.add_text(
+            x + 14.0,
+            y + 48.0,
+            1.15,
+            objective_step,
+            [0.95, 0.95, 0.50, 1.0],
+        );
+
+        // Distance to active waypoint
+        let dist_str = if distance_m >= 1000.0 {
+            format!("Distance: {:.1} km", distance_m / 1000.0)
+        } else {
+            format!("Distance: {:.0} m", distance_m)
+        };
+        self.add_text(x + 14.0, y + 66.0, 1.0, &dist_str, [0.75, 0.85, 1.0, 0.9]);
+
+        // Quality / Health / Star rating
+        let rating_str = format!(
+            "Rating: {:.1} Stars | Cargo: {:.0}%",
+            comfort_stars,
+            cargo_integrity * 100.0
+        );
+        self.add_text(x + 14.0, y + 80.0, 0.95, &rating_str, [0.7, 0.9, 0.8, 0.85]);
+    }
+
+    /// Adds a compact developer debug telemetry overlay (toggled via F3).
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_debug_overlay(
+        &mut self,
+        x: f32,
+        y: f32,
+        fps: f64,
+        one_pct_low: f64,
+        avg_ms: f64,
+        preset: &str,
+        coord: &str,
+        active_chunks: usize,
+        culled_chunks: usize,
+        triangles: usize,
+        rss_mb: f64,
+        vram_mb: f64,
+    ) {
+        let w = 480.0;
+        let h = 95.0;
+        self.add_rect(x, y, w, h, [0.03, 0.04, 0.06, 0.80]);
+        self.add_rect_outline(x, y, w, h, 1.0, [0.25, 0.40, 0.60, 0.4]);
+
+        self.add_text(
+            x + 10.0,
+            y + 10.0,
+            1.05,
+            &format!(
+                "DEV DEBUG [F3 to hide] | FPS: {:>4.1} (1% Low: {:>4.1}) | {:.2}ms | Preset: {}",
+                fps, one_pct_low, avg_ms, preset
+            ),
+            [0.2, 0.95, 0.45, 1.0],
+        );
+        self.add_text(x + 10.0, y + 28.0, 0.95, coord, [0.75, 0.85, 0.95, 1.0]);
+        self.add_text(
+            x + 10.0,
+            y + 46.0,
+            0.95,
+            &format!(
+                "LOD Chunks: {} active ({} culled) | Triangles: {}",
+                active_chunks, culled_chunks, triangles
+            ),
+            [0.85, 0.75, 0.40, 1.0],
+        );
+        self.add_text(
+            x + 10.0,
+            y + 64.0,
+            0.95,
+            &format!(
+                "Memory: Working Set RSS {:.1} MB | GPU VRAM {:.1} MB",
+                rss_mb, vram_mb
+            ),
+            [0.95, 0.65, 0.30, 1.0],
+        );
+    }
+
+    /// Adds a dedicated motorcycle instrument cluster with dynamic lean angle gauge.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_motorcycle_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        lean_angle_deg: f32,
+        steer_deg: f32,
+        rpm: f32,
+        is_crashed: bool,
+    ) {
+        let w = 400.0;
+        let h = 125.0;
+        self.add_panel(x, y, w, h, [0.0, 0.85, 0.95, 1.0]);
+
+        // Speedometer
+        self.add_text(
+            x + 16.0,
+            y + 14.0,
+            1.35,
+            &format!("SPEED: {:>5.1} KM/H", speed_kph),
+            [1.0, 0.95, 0.2, 1.0],
+        );
+
+        // Lean Angle Indicator
+        let lean_dir = if lean_angle_deg >= 0.0 { "R" } else { "L" };
+        let lean_abs = lean_angle_deg.abs();
+        let (lean_col, status_text) = if is_crashed {
+            ([1.0, 0.15, 0.15, 1.0], "CRASHED - RESET ROAD")
+        } else if lean_abs > 42.0 {
+            ([1.0, 0.35, 0.15, 1.0], "FOOTPEG SCRAPE WARNING")
+        } else {
+            ([0.2, 0.95, 0.45, 1.0], "STABLE LEAN")
+        };
+
+        self.add_text(
+            x + 16.0,
+            y + 36.0,
+            1.1,
+            &format!(
+                "LEAN: {:>4.1}° {} | STEER: {:>+3.0}°",
+                lean_abs, lean_dir, steer_deg
+            ),
+            lean_col,
+        );
+
+        // Visual Lean Angle Meter Bar (-48° to +48°)
+        let meter_y = y + 54.0;
+        let meter_w = 360.0;
+        self.add_rect(x + 16.0, meter_y, meter_w, 8.0, [0.12, 0.15, 0.20, 1.0]);
+        // Center mark
+        self.add_rect(
+            x + 16.0 + meter_w * 0.5 - 1.0,
+            meter_y - 2.0,
+            2.0,
+            12.0,
+            [0.8, 0.8, 0.8, 0.8],
+        );
+        // Current lean needle
+        let norm_lean = (lean_angle_deg / 48.0).clamp(-1.0, 1.0);
+        let needle_x = x + 16.0 + (meter_w * 0.5) + (norm_lean * meter_w * 0.5);
+        self.add_rect(needle_x - 3.0, meter_y - 3.0, 6.0, 14.0, lean_col);
+
+        // Tachometer RPM
+        self.add_text(
+            x + 16.0,
+            y + 72.0,
+            0.95,
+            &format!("ENGINE: {:.0} RPM | STATUS: {}", rpm, status_text),
+            [0.85, 0.88, 0.92, 0.9],
+        );
+        self.add_bar(
+            x + 16.0,
+            y + 86.0,
+            meter_w,
+            6.0,
+            (rpm / 11500.0).clamp(0.0, 1.0),
+            [0.1, 0.85, 0.7, 1.0],
+            [0.15, 0.18, 0.22, 1.0],
+        );
+
+        self.add_text(
+            x + 16.0,
+            y + 102.0,
+            0.85,
+            "Controls: [W/S] Throttle/Brake | [A/D] Lean Steer | [M] Cycle Mode",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds a dedicated heavy truck instrument cluster with trailer articulation and rollover safety.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_heavy_truck_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        gear_str: &str,
+        trailer_deg: f32,
+        rollover_margin_g: f32,
+        air_brake_bar: f32,
+        is_rolled_over: bool,
+    ) {
+        let w = 420.0;
+        let h = 130.0;
+        self.add_panel(x, y, w, h, [0.95, 0.45, 0.10, 1.0]);
+
+        self.add_text(
+            x + 16.0,
+            y + 14.0,
+            1.35,
+            &format!("HEAVY HAUL: {:>5.1} KM/H | GEAR: {}", speed_kph, gear_str),
+            [1.0, 0.85, 0.2, 1.0],
+        );
+
+        // Trailer Articulation
+        let jackknife_warn = trailer_deg.abs() > 45.0;
+        let trailer_col = if jackknife_warn {
+            [1.0, 0.2, 0.2, 1.0]
+        } else {
+            [0.75, 0.85, 1.0, 1.0]
+        };
+        self.add_text(
+            x + 16.0,
+            y + 36.0,
+            1.05,
+            &format!("TRAILER ANGLE: {:>+4.1}° | KINGPIN HITCH", trailer_deg),
+            trailer_col,
+        );
+
+        // Rollover Safety Gauge
+        let (roll_col, roll_txt) = if is_rolled_over {
+            ([1.0, 0.1, 0.1, 1.0], "ROLLED OVER! [R to recover]")
+        } else if rollover_margin_g > 0.40 {
+            ([1.0, 0.4, 0.1, 1.0], "HIGH ROLLOVER RISK")
+        } else {
+            ([0.2, 0.95, 0.45, 1.0], "STABILITY MARGIN NORMAL")
+        };
+        self.add_text(
+            x + 16.0,
+            y + 54.0,
+            1.0,
+            &format!(
+                "LATERAL G: {:.2}G / 0.58G | {}",
+                rollover_margin_g, roll_txt
+            ),
+            roll_col,
+        );
+        self.add_bar(
+            x + 16.0,
+            y + 68.0,
+            380.0,
+            8.0,
+            (rollover_margin_g / 0.58).clamp(0.0, 1.0),
+            roll_col,
+            [0.15, 0.18, 0.22, 1.0],
+        );
+
+        // Pneumatic Air Brakes
+        self.add_text(
+            x + 16.0,
+            y + 84.0,
+            0.95,
+            &format!(
+                "PNEUMATIC BRAKE PRESSURE: {:.1} BAR (OPERATING)",
+                air_brake_bar
+            ),
+            [0.85, 0.88, 0.92, 0.9],
+        );
+        self.add_text(
+            x + 16.0,
+            y + 104.0,
+            0.85,
+            "Controls: [W/S] Power/S-Cam Air Brakes | [A/D] Steer | [R] Upright",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds a dedicated public transit bus instrument cluster with passenger count and ride comfort.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_transit_bus_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        passenger_count: u16,
+        total_mass_tons: f32,
+        comfort_rating: f32,
+        air_brake_bar: f32,
+    ) {
+        let w = 420.0;
+        let h = 130.0;
+        self.add_panel(x, y, w, h, [0.10, 0.75, 0.40, 1.0]);
+
+        self.add_text(
+            x + 16.0,
+            y + 14.0,
+            1.35,
+            &format!("TRANSIT BUS: {:>5.1} KM/H", speed_kph),
+            [0.35, 0.95, 0.65, 1.0],
+        );
+
+        // Passenger Payload & Swept Path
+        self.add_text(
+            x + 16.0,
+            y + 36.0,
+            1.05,
+            &format!(
+                "ONBOARD RIDERS: {} / 65 | GROSS MASS: {:.1} T",
+                passenger_count, total_mass_tons
+            ),
+            [1.0, 1.0, 1.0, 1.0],
+        );
+
+        // Passenger Comfort Rating
+        self.add_text(
+            x + 16.0,
+            y + 54.0,
+            1.0,
+            &format!("PASSENGER COMFORT: {:.1} / 5.0 STARS", comfort_rating),
+            [1.0, 0.85, 0.2, 1.0],
+        );
+        self.add_bar(
+            x + 16.0,
+            y + 68.0,
+            380.0,
+            8.0,
+            (comfort_rating / 5.0).clamp(0.0, 1.0),
+            [0.2, 0.9, 0.4, 1.0],
+            [0.15, 0.18, 0.22, 1.0],
+        );
+
+        // Air Brake Chamber
+        self.add_text(
+            x + 16.0,
+            y + 84.0,
+            0.95,
+            &format!(
+                "AIR BRAKE SYSTEM: {:.1} BAR | AIR SUSPENSION OK",
+                air_brake_bar
+            ),
+            [0.85, 0.88, 0.92, 0.9],
+        );
+        self.add_text(
+            x + 16.0,
+            y + 104.0,
+            0.85,
+            "Controls: [W/S] Throttle/Air Brakes | [A/D] Steer Wide (Rear Overhang)",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds a dedicated railway locomotive cab console.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_train_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        throttle_pct: f32,
+        brake_pipe_bar: f32,
+        brake_cyl_bar: f32,
+        tractive_kn: f32,
+        reverser: i8,
+        signal_aspect: &str,
+        wheel_slip: bool,
+    ) {
+        let w = 440.0;
+        let h = 140.0;
+        self.add_panel(x, y, w, h, [0.85, 0.65, 0.15, 1.0]);
+
+        let rev_str = match reverser {
+            1 => "FORWARD",
+            -1 => "REVERSE",
+            _ => "NEUTRAL",
+        };
+        self.add_text(
+            x + 16.0,
+            y + 14.0,
+            1.35,
+            &format!("LOCOMOTIVE: {:>5.1} KM/H | {}", speed_kph, rev_str),
+            [1.0, 0.95, 0.25, 1.0],
+        );
+
+        // Throttle Notch & Tractive Effort
+        let slip_str = if wheel_slip { " [WHEEL SLIP!]" } else { "" };
+        self.add_text(
+            x + 16.0,
+            y + 36.0,
+            1.05,
+            &format!(
+                "NOTCH: {:.0}% | TRACTIVE EFFORT: {:.0} kN{}",
+                throttle_pct * 100.0,
+                tractive_kn,
+                slip_str
+            ),
+            if wheel_slip {
+                [1.0, 0.2, 0.2, 1.0]
+            } else {
+                [0.3, 0.9, 0.6, 1.0]
+            },
+        );
+        self.add_bar(
+            x + 16.0,
+            y + 50.0,
+            400.0,
+            8.0,
+            throttle_pct.clamp(0.0, 1.0),
+            [0.2, 0.85, 0.5, 1.0],
+            [0.15, 0.18, 0.22, 1.0],
+        );
+
+        // Westinghouse Air Brakes
+        self.add_text(
+            x + 16.0,
+            y + 66.0,
+            1.0,
+            &format!(
+                "BRAKE PIPE: {:.2} BAR | CYLINDER: {:.2} BAR",
+                brake_pipe_bar, brake_cyl_bar
+            ),
+            [0.85, 0.85, 0.9, 1.0],
+        );
+
+        // Signal Aspect
+        let sig_col = match signal_aspect {
+            "Clear" => [0.2, 0.95, 0.4, 1.0],
+            "Approach" => [1.0, 0.85, 0.2, 1.0],
+            _ => [1.0, 0.15, 0.15, 1.0],
+        };
+        self.add_text(
+            x + 16.0,
+            y + 84.0,
+            1.05,
+            &format!("TRACK SIGNAL: {}", signal_aspect.to_uppercase()),
+            sig_col,
+        );
+
+        self.add_text(
+            x + 16.0,
+            y + 106.0,
+            0.85,
+            "Controls: [W/S] Throttle Notch / Air Brakes | [Space] Emergency Vent",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds a dedicated marine bridge & helm navigation console.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_marine_cluster(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_knots: f32,
+        throttle: f32,
+        rudder_deg: f32,
+        heading_deg: f32,
+        draft_m: f32,
+        gm_m: f32,
+    ) {
+        let w = 420.0;
+        let h = 130.0;
+        self.add_panel(x, y, w, h, [0.15, 0.55, 0.85, 1.0]);
+
+        self.add_text(
+            x + 16.0,
+            y + 14.0,
+            1.35,
+            &format!("VESSEL SPEED: {:>5.1} KNOTS", speed_knots),
+            [0.2, 0.9, 1.0, 1.0],
+        );
+
+        // Engine Order Telegraph
+        let teleg_str = if throttle > 0.75 {
+            "AHEAD FULL"
+        } else if throttle > 0.35 {
+            "AHEAD HALF"
+        } else if throttle > 0.05 {
+            "AHEAD SLOW"
+        } else if throttle < -0.05 {
+            "ASTERN ENGINE"
+        } else {
+            "STOP ENGINES"
+        };
+        self.add_text(
+            x + 16.0,
+            y + 36.0,
+            1.05,
+            &format!(
+                "TELEGRAPH: {} | HEADING: {:03.0}° T",
+                teleg_str, heading_deg
+            ),
+            [1.0, 1.0, 1.0, 1.0],
+        );
+
+        // Rudder Angle Indicator
+        let rud_dir = if rudder_deg >= 0.0 { "STBD" } else { "PORT" };
+        self.add_text(
+            x + 16.0,
+            y + 54.0,
+            1.0,
+            &format!(
+                "RUDDER: {:>3.0}° {} | HYDRO DRAFT: {:.1}M",
+                rudder_deg.abs(),
+                rud_dir,
+                draft_m
+            ),
+            [0.4, 0.95, 0.75, 1.0],
+        );
+        // Rudder bar (-35 to +35)
+        let rud_norm = (rudder_deg / 35.0).clamp(-1.0, 1.0);
+        let rud_bar_x = x + 16.0 + 190.0 + (rud_norm * 180.0);
+        self.add_rect(x + 16.0, y + 68.0, 380.0, 6.0, [0.12, 0.18, 0.25, 1.0]);
+        self.add_rect(rud_bar_x - 3.0, y + 66.0, 6.0, 10.0, [0.2, 0.85, 1.0, 1.0]);
+
+        // Metacentric Height
+        self.add_text(
+            x + 16.0,
+            y + 84.0,
+            0.95,
+            &format!(
+                "METACENTRIC HEIGHT GM: {:.2}M [POSITIVE RIGHTING STABILITY]",
+                gm_m
+            ),
+            [0.85, 0.88, 0.92, 0.9],
+        );
+        self.add_text(
+            x + 16.0,
+            y + 104.0,
+            0.85,
+            "Controls: [W/S] Telegraph Propulsion | [A/D] Rudder Helm | [M] Cycle",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds a Primary Flight Display (PFD) aviation cockpit instrument HUD.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_aviation_pfd(
+        &mut self,
+        x: f32,
+        y: f32,
+        ias_knots: f32,
+        alt_m: f32,
+        climb_rate_mps: f32,
+        pitch_deg: f32,
+        roll_deg: f32,
+        flaps: f32,
+        gear_down: bool,
+        is_stalled: bool,
+    ) {
+        let w = 340.0;
+        let h = 220.0;
+        self.add_rect(x, y, w, h, [0.03, 0.04, 0.06, 0.85]);
+        self.add_rect_outline(x, y, w, h, 1.5, [0.25, 0.65, 0.95, 0.8]);
+
+        // Center Artificial Horizon Window (Width 160, Height 140)
+        let horizon_x = x + 90.0;
+        let horizon_y = y + 20.0;
+        let horizon_w = 160.0;
+        let horizon_h = 130.0;
+        let horizon_cy = horizon_y + horizon_h * 0.5;
+
+        // Sky (Blue top half) and Ground (Brown bottom half)
+        let pitch_px = (pitch_deg * 2.0).clamp(-horizon_h * 0.45, horizon_h * 0.45);
+        let divide_y = horizon_cy - pitch_px;
+        let sky_h = (divide_y - horizon_y).clamp(0.0, horizon_h);
+        self.add_rect(
+            horizon_x,
+            horizon_y,
+            horizon_w,
+            sky_h,
+            [0.15, 0.42, 0.82, 0.95],
+        ); // Sky blue
+        self.add_rect(
+            horizon_x,
+            horizon_y + sky_h,
+            horizon_w,
+            horizon_h - sky_h,
+            [0.42, 0.28, 0.15, 0.95],
+        ); // Earth brown
+        self.add_rect_outline(
+            horizon_x,
+            horizon_y,
+            horizon_w,
+            horizon_h,
+            1.0,
+            [0.7, 0.8, 0.9, 0.6],
+        );
+
+        // Artificial Horizon Crosshairs / Airplane Symbol
+        self.add_line(
+            horizon_x + 30.0,
+            horizon_cy,
+            horizon_x + 65.0,
+            horizon_cy,
+            2.5,
+            [1.0, 0.9, 0.1, 1.0],
+        );
+        self.add_line(
+            horizon_x + horizon_w - 65.0,
+            horizon_cy,
+            horizon_x + horizon_w - 30.0,
+            horizon_cy,
+            2.5,
+            [1.0, 0.9, 0.1, 1.0],
+        );
+        self.add_rect(
+            horizon_x + horizon_w * 0.5 - 2.0,
+            horizon_cy - 2.0,
+            4.0,
+            4.0,
+            [1.0, 0.9, 0.1, 1.0],
+        );
+
+        // Left Airspeed Tape
+        self.add_rect(x + 10.0, y + 20.0, 70.0, horizon_h, [0.08, 0.10, 0.14, 0.9]);
+        self.add_rect_outline(
+            x + 10.0,
+            y + 20.0,
+            70.0,
+            horizon_h,
+            1.0,
+            [0.3, 0.4, 0.5, 0.6],
+        );
+        self.add_text(x + 16.0, y + 26.0, 0.95, "AIRSPEED", [0.7, 0.8, 0.9, 0.9]);
+        self.add_text(
+            x + 14.0,
+            horizon_cy - 8.0,
+            1.35,
+            &format!("{:>3.0}", ias_knots),
+            [0.2, 0.95, 0.4, 1.0],
+        );
+        self.add_text(
+            x + 24.0,
+            horizon_cy + 10.0,
+            0.9,
+            "KTS",
+            [0.7, 0.8, 0.9, 0.8],
+        );
+
+        // Right Altitude Tape
+        self.add_rect(
+            x + w - 80.0,
+            y + 20.0,
+            70.0,
+            horizon_h,
+            [0.08, 0.10, 0.14, 0.9],
+        );
+        self.add_rect_outline(
+            x + w - 80.0,
+            y + 20.0,
+            70.0,
+            horizon_h,
+            1.0,
+            [0.3, 0.4, 0.5, 0.6],
+        );
+        self.add_text(
+            x + w - 74.0,
+            y + 26.0,
+            0.95,
+            "ALT MSL",
+            [0.7, 0.8, 0.9, 0.9],
+        );
+        self.add_text(
+            x + w - 76.0,
+            horizon_cy - 8.0,
+            1.30,
+            &format!("{:>4.0}", alt_m),
+            [0.3, 0.9, 1.0, 1.0],
+        );
+        self.add_text(
+            x + w - 66.0,
+            horizon_cy + 10.0,
+            0.9,
+            "METERS",
+            [0.7, 0.8, 0.9, 0.8],
+        );
+
+        // Vertical Speed Readout
+        let vsi_dir = if climb_rate_mps >= 0.0 { "+" } else { "" };
+        self.add_text(
+            x + w - 76.0,
+            y + horizon_h - 10.0,
+            0.85,
+            &format!("VSI {}{:.1}", vsi_dir, climb_rate_mps),
+            [0.85, 0.88, 0.92, 0.8],
+        );
+
+        // Stall Warning Banner (Flashing red when in stall condition)
+        if is_stalled {
+            self.add_rect(x + 30.0, y + 60.0, w - 60.0, 32.0, [0.95, 0.05, 0.05, 0.95]);
+            self.add_text(
+                x + 52.0,
+                y + 68.0,
+                1.3,
+                "STALL! PITCH DOWN!",
+                [1.0, 1.0, 1.0, 1.0],
+            );
+        }
+
+        // Lower Status Strip: Flaps, Gear, Pitch/Roll degrees
+        let gear_str = if gear_down {
+            "DOWN [LOCK]"
+        } else {
+            "UP [RETRACT]"
+        };
+        let gear_col = if gear_down {
+            [0.2, 0.95, 0.4, 1.0]
+        } else {
+            [0.7, 0.7, 0.7, 0.8]
+        };
+        self.add_text(
+            x + 16.0,
+            y + 160.0,
+            0.95,
+            &format!("FLAPS: {:>2.0}% | GEAR: {}", flaps * 100.0, gear_str),
+            gear_col,
+        );
+        self.add_text(
+            x + 16.0,
+            y + 176.0,
+            0.90,
+            &format!(
+                "PITCH: {:>+4.1}° | ROLL: {:>+4.1}° | 6-DOF AERODYNAMICS",
+                pitch_deg, roll_deg
+            ),
+            [0.8, 0.85, 0.9, 0.85],
+        );
+        self.add_text(
+            x + 16.0,
+            y + 196.0,
+            0.85,
+            "Controls: [W/S] Pitch | [A/D] Roll | [Space] Thrust | [M] Cycle",
+            [0.65, 0.75, 0.85, 0.8],
+        );
+    }
 }
 
 /// 5x7 bitmap font table for printable ASCII (32 ' ' through 126 '~').

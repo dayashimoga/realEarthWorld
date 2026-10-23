@@ -1034,12 +1034,17 @@ pub fn find_city_by_id(id: &str) -> Option<&'static UsCityDefinition> {
     US_CITY_CATALOG.iter().find(|c| {
         c.id == lower
             || c.id.replace('-', "") == lower.replace(['-', '_', ' '], "")
+            || c.primary_airport_iata.to_lowercase() == lower
             || (c.id == "new-york" && (lower == "nyc" || lower == "manhattan"))
             || (c.id == "san-francisco" && (lower == "sf" || lower == "bay-area"))
             || (c.id == "los-angeles" && lower == "la")
             || (c.id == "washington-dc" && (lower == "dc" || lower == "washington"))
             || (c.id == "dallas" && (lower == "dfw" || lower == "dallas-fort-worth"))
             || (c.id == "minneapolis" && (lower == "twin-cities" || lower == "msp"))
+            || (c.id == "phoenix" && lower == "phx")
+            || (c.id == "chicago" && lower == "chi")
+            || (c.id == "seattle" && lower == "sea")
+            || (c.id == "miami" && lower == "mia")
     })
 }
 

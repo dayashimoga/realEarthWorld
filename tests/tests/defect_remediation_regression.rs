@@ -304,7 +304,7 @@ fn test_e2_navigation_western_negative_longitudes_and_layer_isolation() {
     network.add_road(&mission_road);
 
     // Prior to remediation, negative longitudes were cast to u64 and collapsed to 0.
-    // With signed i64 coordinates, Market St and Mission St remain distinct (5 unique nodes total).
+    // With signed i64 coordinates, Market St and Mission St remain distinct and bridge abutment connects (5 unique nodes total).
     assert_eq!(
         network.graph.node_count(),
         5,

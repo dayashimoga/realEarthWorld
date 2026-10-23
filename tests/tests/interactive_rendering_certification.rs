@@ -618,6 +618,7 @@ fn test_stage1_vehicle_mesh_generation_and_rendering() {
         headlights_on: true,
         brake_lights_on: true,
         reverse_lights_on: false,
+        trailer_angle: 0.0,
     };
 
     let mesh = generate_vehicle_mesh(&params);

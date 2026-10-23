@@ -31,6 +31,34 @@
     };
 }
 
++ (void)pause {
+    realearth_pause();
+}
+
++ (void)resume {
+    realearth_resume();
+}
+
++ (void)renderFrame {
+    realearth_render_frame();
+}
+
++ (void)trimMemory:(int)level {
+    realearth_trim_memory(level);
+}
+
++ (void)touchOrbitWithDeltaYaw:(float)deltaYaw deltaPitch:(float)deltaPitch {
+    realearth_touch_orbit(deltaYaw, deltaPitch);
+}
+
++ (void)touchZoomWithDeltaDistance:(float)deltaDist {
+    realearth_touch_zoom(deltaDist);
+}
+
++ (float)groundElevationAtX:(float)x z:(float)z {
+    return realearth_get_ground_elevation(x, z);
+}
+
 + (void)shutdown {
     realearth_shutdown();
 }

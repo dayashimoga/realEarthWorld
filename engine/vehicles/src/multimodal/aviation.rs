@@ -4,6 +4,7 @@
 //!
 //! Maintains independent flight mechanics strictly decoupled from road friction models.
 
+use crate::multimodal::MultimodalAudioEvent;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 
@@ -86,6 +87,8 @@ pub struct AircraftFlight {
     pub in_ground_effect: bool,
     pub is_airborne: bool,
     pub gear_compression_meters: f32,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl AircraftFlight {
@@ -124,6 +127,7 @@ impl AircraftFlight {
             in_ground_effect: true,
             is_airborne: false,
             gear_compression_meters: 0.0,
+            audio_events: Vec::new(),
         }
     }
 
@@ -162,6 +166,7 @@ impl AircraftFlight {
             in_ground_effect: true,
             is_airborne: false,
             gear_compression_meters: 0.0,
+            audio_events: Vec::new(),
         }
     }
 
@@ -219,6 +224,10 @@ impl AircraftFlight {
             self.cl_zero + self.cl_alpha * self.angle_of_attack_rad + flap_lift_bonus
         } else {
             // Post-stall flow separation: lift drops precipitously
+            if !self.is_stalled {
+                self.audio_events
+                    .push(MultimodalAudioEvent::AircraftStallWarning);
+            }
             self.is_stalled = true;
             let stall_sign = self.angle_of_attack_rad.signum();
             let max_cl = self.cl_zero + self.cl_alpha * effective_stall_angle + flap_lift_bonus;
@@ -281,8 +290,15 @@ impl AircraftFlight {
         let static_gear_height = 2.4; // Landing gear neutral height below aircraft CG
 
         let dist_to_ground = self.position.y - ground_elevation;
+        let was_airborne = self.is_airborne;
         if dist_to_ground <= static_gear_height && inputs.gear_down {
             self.is_airborne = false;
+            if was_airborne && self.linear_velocity.y < -0.5 {
+                self.audio_events
+                    .push(MultimodalAudioEvent::AircraftGearTouchdown {
+                        descent_mps: -self.linear_velocity.y,
+                    });
+            }
             let penetration = static_gear_height - dist_to_ground;
             self.gear_compression_meters = penetration.clamp(0.0, 0.8);
 
@@ -365,6 +381,32 @@ impl AircraftFlight {
                 + forward_dir * (self.angular_velocity.z * dt),
         );
         self.orientation = (rot_delta * self.orientation).normalize();
+    }
+
+    /// Computes instrument approach guidance (localizer lateral deviation in meters and glideslope vertical deviation in meters)
+    /// towards a runway threshold with a 3.0-degree glidepath.
+    pub fn compute_approach_guidance(
+        &self,
+        threshold_pos: Vec3,
+        runway_heading_rad: f32,
+    ) -> (f32, f32) {
+        let delta = self.position - threshold_pos;
+        let rwy_forward = Vec3::new(runway_heading_rad.sin(), 0.0, runway_heading_rad.cos());
+        let rwy_right = Vec3::new(runway_heading_rad.cos(), 0.0, -runway_heading_rad.sin());
+
+        let dist_along_centerline = -delta.dot(rwy_forward);
+        let localizer_dev_meters = delta.dot(rwy_right);
+
+        let glidepath_angle_rad = 3.0_f32.to_radians();
+        let target_altitude = dist_along_centerline.max(0.0) * glidepath_angle_rad.tan();
+        let glideslope_dev_meters = self.position.y - (threshold_pos.y + target_altitude);
+
+        (localizer_dev_meters, glideslope_dev_meters)
+    }
+
+    /// Drains all pending audio events emitted during simulation.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 }
 

@@ -230,6 +230,51 @@ impl SurveyedDestinations {
         )
     }
 
+    pub fn sf_caltrain_4th_king() -> JobLocation {
+        JobLocation::new(
+            "San Francisco 4th & King Caltrain Station",
+            Wgs84Coord::new(37.7764, -122.3942, 5.0),
+            "san-francisco",
+            40.0,
+        )
+    }
+
+    pub fn sf_millbrae_intermodal() -> JobLocation {
+        JobLocation::new(
+            "Millbrae SFO Intermodal Station",
+            Wgs84Coord::new(37.5998, -122.3867, 3.0),
+            "san-francisco",
+            45.0,
+        )
+    }
+
+    pub fn sf_oakland_port() -> JobLocation {
+        JobLocation::new(
+            "Port of Oakland Outer Harbor Terminal",
+            Wgs84Coord::new(37.7980, -122.3400, 0.0),
+            "san-francisco",
+            60.0,
+        )
+    }
+
+    pub fn sf_sfo_runway_approach() -> JobLocation {
+        JobLocation::new(
+            "SFO North Bay Air Corridor Entry Fix",
+            Wgs84Coord::new(37.7850, -122.3600, 800.0),
+            "san-francisco",
+            100.0,
+        )
+    }
+
+    pub fn sf_sfo_cargo_terminal() -> JobLocation {
+        JobLocation::new(
+            "SFO Air Cargo Terminal 1",
+            Wgs84Coord::new(37.6188, -122.3754, 4.0),
+            "san-francisco",
+            80.0,
+        )
+    }
+
     // --- New York ---
     pub fn nyc_one_wtc() -> JobLocation {
         JobLocation::new(
@@ -548,6 +593,170 @@ impl JobCatalogGenerator {
             JobDifficulty::Standard,
         ));
 
+        // 8b. San Francisco Delivery Contract: Salesforce Tower -> Transamerica Pyramid
+        jobs.push(Job::new(
+            "del-sf-01",
+            CareerType::PackageDelivery,
+            "Silicon Valley High-Priority Express",
+            "Dispatch encrypted edge server hardware units from Salesforce Transit Center to Transamerica Pyramid.",
+            SurveyedDestinations::sf_salesforce_tower(),
+            SurveyedDestinations::sf_transamerica(),
+            1100.0,
+            Some(220.0),
+            160.0,
+            130,
+            ReputationTier::Novice,
+            CargoOrPassenger::Package {
+                item_name: "Encrypted Edge Server Rack".to_string(),
+                weight_kg: 32.0,
+                fragile: true,
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 8c. San Francisco Freight Contract: Ferry Building Port -> Fisherman's Wharf Pier 39
+        jobs.push(Job::new(
+            "freight-sf-01",
+            CareerType::HeavyFreight,
+            "Embarcadero Maritime Cargo Haul",
+            "Transport 22 metric tons of industrial marine generator equipment from the Ferry Building berths to Pier 39.",
+            SurveyedDestinations::sf_ferry_building(),
+            SurveyedDestinations::sf_fishermans_wharf(),
+            2600.0,
+            Some(450.0),
+            420.0,
+            260,
+            ReputationTier::Novice,
+            CargoOrPassenger::Freight {
+                cargo_type: "Marine Diesel Generator Components".to_string(),
+                tonnage: 22.0,
+                hazardous: false,
+            },
+            JobDifficulty::Challenging,
+        ));
+
+        // 8d. San Francisco Free Roam Exploration: Transamerica Pyramid -> Pier 39
+        jobs.push(Job::new(
+            "roam-sf-01",
+            CareerType::FreeRoam,
+            "Golden Gate Bay Exploration",
+            "Freely cruise through the Financial District toward the historic North Beach and Fisherman's Wharf waterfront.",
+            SurveyedDestinations::sf_transamerica(),
+            SurveyedDestinations::sf_fishermans_wharf(),
+            2200.0,
+            None,
+            180.0,
+            120,
+            ReputationTier::Novice,
+            CargoOrPassenger::Exploration,
+            JobDifficulty::Relaxed,
+        ));
+
+        // 8e. Multimodal Motorcycle Express: Transamerica Pyramid -> Salesforce Center
+        jobs.push(Job::new(
+            "moto-sf-01",
+            CareerType::PackageDelivery,
+            "Downtown San Francisco Rapid Motorcycle Courier",
+            "High-priority urgent medical courier delivery through congested Financial District traffic on an agile sports motorcycle.",
+            SurveyedDestinations::sf_transamerica(),
+            SurveyedDestinations::sf_salesforce_tower(),
+            1100.0,
+            Some(180.0),
+            195.0,
+            140,
+            ReputationTier::Novice,
+            CargoOrPassenger::Package {
+                item_name: "Emergency Organ Transplant Transport".to_string(),
+                weight_kg: 5.2,
+                fragile: true,
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 8f. Multimodal Transit Bus: Fisherman's Wharf -> Salesforce Transit Center
+        jobs.push(Job::new(
+            "transit-sf-01",
+            CareerType::TaxiPassenger,
+            "Muni Waterfront Transit Bus Route",
+            "Operate a scheduled transit bus along the Embarcadero corridor boarding 42 passengers with smooth acceleration and zero hard braking.",
+            SurveyedDestinations::sf_fishermans_wharf(),
+            SurveyedDestinations::sf_salesforce_tower(),
+            2600.0,
+            Some(480.0),
+            380.0,
+            240,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Muni Waterfront Commuters".to_string(),
+                party_size: 42,
+                destination_note: "Salesforce Transit Bus Deck".to_string(),
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 8g. Multimodal Commuter Rail: 4th & King -> Millbrae SFO Intermodal
+        jobs.push(Job::new(
+            "rail-sf-01",
+            CareerType::TaxiPassenger,
+            "Caltrain Peninsula Passenger Express",
+            "Drive bi-level commuter train consist along the electrified mainline from San Francisco 4th & King to Millbrae SFO Intermodal, obeying track block signals.",
+            SurveyedDestinations::sf_caltrain_4th_king(),
+            SurveyedDestinations::sf_millbrae_intermodal(),
+            20100.0,
+            Some(900.0),
+            850.0,
+            500,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Peninsula Caltrain Commuters".to_string(),
+                party_size: 220,
+                destination_note: "Millbrae Station Platform 2".to_string(),
+            },
+            JobDifficulty::Challenging,
+        ));
+
+        // 8h. Multimodal Maritime Ferry: Ferry Building Gate B -> Port of Oakland
+        jobs.push(Job::new(
+            "ferry-sf-01",
+            CareerType::TaxiPassenger,
+            "San Francisco Bay Passenger Ferry Route",
+            "Navigate a passenger ferry across the central Bay shipping fairway from Ferry Building Gate B to the Port of Oakland Terminal.",
+            SurveyedDestinations::sf_ferry_building(),
+            SurveyedDestinations::sf_oakland_port(),
+            5800.0,
+            Some(600.0),
+            520.0,
+            320,
+            ReputationTier::Novice,
+            CargoOrPassenger::Passenger {
+                name: "Transbay Ferry Commuters".to_string(),
+                party_size: 110,
+                destination_note: "Oakland Ferry Concourse".to_string(),
+            },
+            JobDifficulty::Standard,
+        ));
+
+        // 8i. Multimodal Aviation Cargo Approach: SFO Runway 28L ILS Approach
+        jobs.push(Job::new(
+            "air-sf-01",
+            CareerType::HeavyFreight,
+            "SFO Runway 28L Air Cargo Approach",
+            "Execute precision instrument landing approach on Runway 28L at KSFO delivering 18 metric tons of high-priority air cargo.",
+            SurveyedDestinations::sf_sfo_runway_approach(),
+            SurveyedDestinations::sf_sfo_cargo_terminal(),
+            19500.0,
+            Some(420.0),
+            1200.0,
+            650,
+            ReputationTier::Novice,
+            CargoOrPassenger::Freight {
+                cargo_type: "Express Air Freight Cargo Containers".to_string(),
+                tonnage: 18.0,
+                hazardous: false,
+            },
+            JobDifficulty::Extreme,
+        ));
+
         // 9. Free Roam Exploration: Mysuru Heritage Circuit
         jobs.push(Job::new(
             "roam-mys-01",
@@ -677,7 +886,7 @@ impl JobCatalogGenerator {
     pub fn jobs_for_region(region_id: &str) -> Vec<Job> {
         let catalog = Self::generate_default_catalog();
         let r = region_id.to_lowercase();
-        catalog
+        let filtered: Vec<Job> = catalog
             .into_iter()
             .filter(|j| {
                 let p = &j.pickup.region_id;
@@ -701,7 +910,74 @@ impl JobCatalogGenerator {
                         && (p == "hyderabad-central" || d == "hyderabad-central"))
                     || r == "corridors"
             })
-            .collect()
+            .collect();
+
+        if !filtered.is_empty() {
+            filtered
+        } else if let Some(city) = realearth_shared::us_catalog::find_city_by_id(region_id) {
+            vec![
+                Job::new(
+                    format!("roam-{}-01", city.id),
+                    CareerType::FreeRoam,
+                    format!("{} Metropolitan Tour", city.name),
+                    format!(
+                        "Freely cruise and explore {} centered around {}.",
+                        city.name, city.anchor_landmark_name
+                    ),
+                    JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 30.0),
+                    JobLocation::new(
+                        format!("{} Civic Plaza", city.name),
+                        Wgs84Coord::new(
+                            city.anchor.lat + 0.008,
+                            city.anchor.lon + 0.008,
+                            city.anchor.alt,
+                        ),
+                        city.id,
+                        30.0,
+                    ),
+                    2500.0,
+                    None,
+                    150.0,
+                    100,
+                    ReputationTier::Novice,
+                    CargoOrPassenger::Exploration,
+                    JobDifficulty::Relaxed,
+                ),
+                Job::new(
+                    format!("taxi-{}-01", city.id),
+                    CareerType::TaxiPassenger,
+                    format!("{} Executive Commute", city.name),
+                    format!(
+                        "Chauffeur passengers to and from {}.",
+                        city.anchor_landmark_name
+                    ),
+                    JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0),
+                    JobLocation::new(
+                        format!("{} Commercial District", city.name),
+                        Wgs84Coord::new(
+                            city.anchor.lat - 0.007,
+                            city.anchor.lon - 0.007,
+                            city.anchor.alt,
+                        ),
+                        city.id,
+                        25.0,
+                    ),
+                    1800.0,
+                    Some(300.0),
+                    160.0,
+                    120,
+                    ReputationTier::Novice,
+                    CargoOrPassenger::Passenger {
+                        name: "Civic Planner".to_string(),
+                        party_size: 1,
+                        destination_note: format!("Downtown {}", city.name),
+                    },
+                    JobDifficulty::Standard,
+                ),
+            ]
+        } else {
+            Vec::new()
+        }
     }
 }
 

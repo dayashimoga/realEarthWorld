@@ -1,4 +1,5 @@
 //! Interactive desktop windowing, live wgpu surface presentation, and navigation loop.
+#![allow(clippy::needless_return, clippy::type_complexity)]
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -14,8 +15,8 @@ use crate::camera_controller::{CameraController, CameraMode, Landmark};
 use crate::screenshot::capture_texture_to_ppm;
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_gameplay::{
-    save::CURRENT_SAVE_SCHEMA_VERSION, CareerType, GameSettings, GameplayEventBus,
-    GameplayHudModel, Job, JobCatalogGenerator, PlayerProfile, SaveData, SaveManager,
+    save::CURRENT_SAVE_SCHEMA_VERSION, CareerType, GameSettings, GameplayEventBus, Job,
+    JobCatalogGenerator, PlayerProfile, SaveData, SaveManager,
 };
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::load_authentic_city;
@@ -30,20 +31,28 @@ use realearth_ingestion::sample_mysuru::create_mysuru_dataset;
 use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
 use realearth_ingestion::sample_seattle::create_seattle_dataset;
-use realearth_navigation::{RoadNetworkGraph, RuleOfTheRoad};
+use realearth_navigation::{
+    find_route, generate_turn_by_turn, ManeuverType, NavigationRoute, NavigationUpdate,
+    RoadNetworkGraph, RouteTracker, RoutingPreference, RuleOfTheRoad,
+};
 use realearth_rendering::{
+    generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
     generate_vehicle_mesh, FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, HudMesh,
-    RealEarthRenderer, VehicleMeshParams, VehicleVisualType,
+    RealEarthRenderer, RoadSignType, TrafficSignalVisualState, VehicleMeshParams,
+    VehicleVisualType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::metrics::get_current_process_memory;
-use realearth_shared::us_catalog::find_city_by_id;
+use realearth_shared::us_catalog::{all_us_cities, find_city_by_id, CityPriorityTier};
 use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
 use realearth_vehicles::{
-    DynamicVehicle, GroundQuery, TrafficSimulation, TransmissionMode, VehicleCameraController,
-    VehicleCameraPerspective, VehicleConfig, VehicleInputs,
+    AircraftFlight, DynamicVehicle, FlightInputs, GroundQuery, HeavyTruckModel,
+    IntersectionStopLine, LocomotiveType, MarineInputs, MarineVessel, MotorcycleModel,
+    PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainCar, TrainConsist,
+    TransitBusModel, TransmissionMode, VehicleCameraController, VehicleCameraPerspective,
+    VehicleConfig, VehicleInputs,
 };
 
 /// Ground elevation query backed by geographic DEM bilinear interpolation.
@@ -105,18 +114,60 @@ impl GroundQuery for DemGroundQuery {
     }
 }
 
+/// Playable multimodal transportation mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum ActiveTransportMode {
+    Car,
+    Motorcycle,
+    TransitBus,
+    HeavyTruck,
+    Train,
+    Marine,
+    Aviation,
+}
+
+impl ActiveTransportMode {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Car => "Automobile (Ackermann/Pacejka)",
+            Self::Motorcycle => "Motorcycle (2-Wheel Lean Dynamics)",
+            Self::TransitBus => "Transit Bus (Pneumatic Air Brakes)",
+            Self::HeavyTruck => "Heavy Haul Truck (Trailer Articulation)",
+            Self::Train => "Railway Train Consist (Davis / Westinghouse)",
+            Self::Marine => "Marine Vessel (Archimedes / Metacentric)",
+            Self::Aviation => "Aviation Aircraft (6-DOF Aerodynamic Polar)",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::Car => "🏎️",
+            Self::Motorcycle => "🏍️",
+            Self::TransitBus => "🚌",
+            Self::HeavyTruck => "🚛",
+            Self::Train => "🚆",
+            Self::Marine => "🚢",
+            Self::Aviation => "✈️",
+        }
+    }
+}
+
 /// Configuration options passed when launching the interactive viewer.
 #[derive(Debug, Clone)]
 pub struct ViewerLaunchConfig {
     pub region_id: String,
     pub initial_mode: CameraMode,
     pub is_drive: bool,
+    pub active_mode: ActiveTransportMode,
     pub preset_level: GraphicsPresetLevel,
     pub traffic_count: usize,
     pub vehicle_cam_perspective: VehicleCameraPerspective,
     pub career_arg: Option<String>,
     pub job_id_arg: Option<String>,
     pub target_location: Option<String>,
+    pub multiplayer_server: Option<String>,
+    pub host_server_port: Option<u16>,
+    pub player_name: String,
 }
 
 impl Default for ViewerLaunchConfig {
@@ -125,12 +176,16 @@ impl Default for ViewerLaunchConfig {
             region_id: "san-francisco".to_string(),
             initial_mode: CameraMode::Fly,
             is_drive: false,
+            active_mode: ActiveTransportMode::Car,
             preset_level: GraphicsPresetLevel::High,
             traffic_count: 8,
             vehicle_cam_perspective: VehicleCameraPerspective::Chase,
             career_arg: None,
             job_id_arg: None,
             target_location: None,
+            multiplayer_server: None,
+            host_server_port: None,
+            player_name: "PilotAlpha".to_string(),
         }
     }
 }
@@ -143,6 +198,33 @@ struct RegionResources {
     dem: DemGrid,
     _raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
     streamer: WorldStreamer,
+}
+
+/// Stage 6 high-level user interface and gameplay navigation states.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppUiState {
+    StartScreen,
+    InGame,
+    PauseMenu,
+    JobBrowser,
+    GarageSelect,
+    SettingsMenu,
+    CatalogModal,
+    DebriefModal,
+    MultiplayerModal,
+}
+
+/// Settlement debrief details emitted when a mission contract completes.
+#[derive(Debug, Clone)]
+pub struct ActiveDebrief {
+    pub title: String,
+    pub career: String,
+    pub base_payout: f64,
+    pub tip_bonus: f64,
+    pub speed_bonus: f64,
+    pub net_payout: f64,
+    pub xp_reward: u32,
+    pub comfort_stars: f32,
 }
 
 /// Persistent winit + wgpu interactive surface viewer application.
@@ -171,6 +253,21 @@ pub struct InteractiveViewerApp {
     gameplay_bus: GameplayEventBus,
     player_profile: PlayerProfile,
     active_job: Option<Job>,
+    route_tracker: Option<RouteTracker>,
+    active_nav_update: Option<NavigationUpdate>,
+
+    // Multimodal transportation state
+    active_transport_mode: ActiveTransportMode,
+    motorcycle: MotorcycleModel,
+    transit_bus: TransitBusModel,
+    heavy_truck: HeavyTruckModel,
+    train_consist: TrainConsist,
+    train_position: glam::Vec3,
+    train_yaw: f32,
+    marine_vessel: MarineVessel,
+    marine_elapsed_time: f32,
+    aircraft: AircraftFlight,
+    aircraft_throttle: f32,
 
     // Interactive inputs & metrics
     pressed_keys: HashSet<KeyCode>,
@@ -185,31 +282,68 @@ pub struct InteractiveViewerApp {
     status_notification: Option<(String, Instant)>,
     region_cycle: Vec<&'static str>,
     region_cycle_idx: usize,
+    catalog_selected_idx: usize,
+
+    // Stage 6 Modern UI/UX state machine
+    pub ui_state: AppUiState,
+    pub start_menu_selected_idx: usize,
+    pub pause_menu_selected_idx: usize,
+    pub job_browser_selected_idx: usize,
+    pub garage_selected_idx: usize,
+    pub settings_selected_idx: usize,
+    pub show_debug_overlay: bool,
+    pub use_metric_units: bool,
+    pub active_debrief: Option<ActiveDebrief>,
+
+    // Stage 9 Authoritative Multiplayer state
+    pub multiplayer_client: Option<realearth_networking::MultiplayerClient>,
+    pub multiplayer_server_handle: Option<(
+        std::sync::Arc<std::sync::atomic::AtomicBool>,
+        std::thread::JoinHandle<()>,
+    )>,
+    pub multiplayer_selected_action: usize,
+    pub multiplayer_server_addr_input: String,
 }
 
 /// Resolves the storage location for compiled region chunks, supporting bundled packages,
 /// standalone deployment directories, developer builds, and persistent user caches.
 pub fn resolve_world_package_dir(slug: &str) -> PathBuf {
-    // 1. Check if bundled in data/world_<slug> (distribution package)
+    // 1. Check if bundled in data/world_<slug> (distribution package in current working directory)
     let bundled = PathBuf::from(format!("data/world_{}", slug));
     if bundled.join("chunks.db").exists() {
         return bundled;
     }
-    // 2. Check next to executable: <exe_dir>/data/world_<slug>
+    // 2. Check next to executable: <exe_dir>/data/world_<slug> and bundle layouts
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
+            // Windows & portable layout: <exe_dir>/data/world_<slug>
             let exe_bundled = exe_dir.join(format!("data/world_{}", slug));
             if exe_bundled.join("chunks.db").exists() {
                 return exe_bundled;
             }
+            // macOS App Bundle: <exe_dir>/../Resources/data/world_<slug>
+            let mac_res = exe_dir.join(format!("../Resources/data/world_{}", slug));
+            if mac_res.join("chunks.db").exists() {
+                return mac_res;
+            }
+            // Linux AppDir / FHS: <exe_dir>/../share/realearth/data/world_<slug>
+            let linux_share = exe_dir.join(format!("../share/realearth/data/world_{}", slug));
+            if linux_share.join("chunks.db").exists() {
+                return linux_share;
+            }
         }
     }
-    // 3. If developer repository target/ exists, use target/world_<slug>
+    // 3. Default runtime cache directory in data/cache/world_<slug>
+    let local_cache = PathBuf::from(format!("data/cache/world_{}", slug));
+    if local_cache.join("chunks.db").exists() {
+        return local_cache;
+    }
+    // 4. If developer repository target/ exists, use target/world_<slug>
     if std::path::Path::new("target").exists() {
         return PathBuf::from(format!("target/world_{}", slug));
     }
-    // 4. Default runtime cache directory in data/cache/world_<slug>
-    PathBuf::from(format!("data/cache/world_{}", slug))
+    // 5. Default runtime target directory in data/cache/world_<slug>
+    local_cache
 }
 
 impl InteractiveViewerApp {
@@ -232,26 +366,61 @@ impl InteractiveViewerApp {
         let mut player_profile = PlayerProfile::new("driver-01", "Planetary Transporter");
         player_profile.add_reputation(CareerType::HeavyFreight, 500);
 
-        let region_cycle = vec![
-            "san-francisco",
-            "new-york",
-            "los-angeles",
-            "chicago",
-            "seattle",
-            "miami",
+        let motorcycle =
+            MotorcycleModel::new(glam::Vec3::new(3.0, 10.0, 0.0), initial_landmark.yaw);
+        let transit_bus =
+            TransitBusModel::new(glam::Vec3::new(-5.0, 10.0, 0.0), initial_landmark.yaw);
+        let heavy_truck =
+            HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), initial_landmark.yaw);
+
+        let mut train_consist = TrainConsist::new_locomotive(
+            "WAP-7 / Pacific Electric",
+            LocomotiveType::Electric,
+            4_500_000.0,
+            450_000.0,
+            123_000.0,
+            20.5,
+        );
+        train_consist.add_wagon(TrainCar::new_wagon("Coach-A", 42_000.0, 3_000.0, 24.0));
+        train_consist.add_wagon(TrainCar::new_wagon("Coach-B", 42_000.0, 3_000.0, 24.0));
+        let train_position = glam::Vec3::new(0.0, 10.0, 20.0);
+        let train_yaw = initial_landmark.yaw;
+
+        let marine_vessel = MarineVessel::new_ferry(
+            "Golden Gate Passenger Ferry",
+            glam::Vec3::new(250.0, 0.0, -100.0),
+            initial_landmark.yaw,
+        );
+        let marine_elapsed_time = 0.0;
+
+        let mut aircraft = AircraftFlight::new_airliner(
+            "EarthAir B737-800",
+            glam::Vec3::new(0.0, 350.0, -500.0),
+            initial_landmark.yaw,
+        );
+        aircraft.linear_velocity =
+            glam::Quat::from_rotation_y(initial_landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+        let aircraft_throttle = 0.75;
+        let active_transport_mode = config.active_mode;
+
+        let mut region_cycle: Vec<&'static str> = all_us_cities().iter().map(|c| c.id).collect();
+        region_cycle.extend_from_slice(&[
             "bengaluru",
             "mysuru",
             "chennai",
             "hyderabad",
-        ];
+            "corridors",
+        ]);
 
         let region_cycle_idx = region_cycle
             .iter()
             .position(|r| *r == config.region_id)
             .unwrap_or(0);
 
-        Self {
-            config,
+        let is_drive = config.is_drive;
+
+        let mut app = Self {
+            config: config.clone(),
             window: None,
             surface: None,
             surface_config: None,
@@ -273,6 +442,20 @@ impl InteractiveViewerApp {
             gameplay_bus,
             player_profile,
             active_job: None,
+            route_tracker: None,
+            active_nav_update: None,
+
+            active_transport_mode,
+            motorcycle,
+            transit_bus,
+            heavy_truck,
+            train_consist,
+            train_position,
+            train_yaw,
+            marine_vessel,
+            marine_elapsed_time,
+            aircraft,
+            aircraft_throttle,
 
             pressed_keys: HashSet::new(),
             mouse_drag_active: false,
@@ -284,12 +467,342 @@ impl InteractiveViewerApp {
             last_culled_triangles: 0,
             show_hud: true,
             status_notification: Some((
-                "Welcome to Real Earth World! Press [H] for HUD, [V] for Drivable Car".to_string(),
+                "Welcome to Real Earth World! Press [H] for HUD, [Esc] for Pause Menu, [F3] for Debug".to_string(),
                 Instant::now(),
             )),
             region_cycle,
             region_cycle_idx,
+            catalog_selected_idx: 0,
+
+            ui_state: if is_drive {
+                AppUiState::InGame
+            } else {
+                AppUiState::StartScreen
+            },
+            start_menu_selected_idx: 0,
+            pause_menu_selected_idx: 0,
+            job_browser_selected_idx: 0,
+            garage_selected_idx: 0,
+            settings_selected_idx: 0,
+            show_debug_overlay: false,
+            use_metric_units: true,
+            active_debrief: None,
+
+            multiplayer_client: None,
+            multiplayer_server_handle: None,
+            multiplayer_selected_action: 0,
+            multiplayer_server_addr_input: config.multiplayer_server.clone().unwrap_or_else(|| "127.0.0.1:7777".to_string()),
+        };
+
+        if let Some(port) = app.config.host_server_port {
+            app.host_and_join_local_server(port);
+        } else if let Some(ref addr_str) = app.config.multiplayer_server.clone() {
+            app.join_multiplayer_server(addr_str);
         }
+
+        app
+    }
+
+    /// Hosts a dedicated headless authoritative server on a background thread and connects local client.
+    pub fn host_and_join_local_server(&mut self, port: u16) {
+        self.disconnect_multiplayer();
+        let bind_addr = format!("127.0.0.1:{}", port);
+        match realearth_networking::HeadlessAuthoritativeServer::spawn_in_background(
+            &bind_addr, 60, 16,
+        ) {
+            Ok((bound_addr, running, handle)) => {
+                println!(
+                    "🌐 Dedicated authoritative server spawned on {}",
+                    bound_addr
+                );
+                self.multiplayer_server_handle = Some((running, handle));
+                self.multiplayer_server_addr_input = bound_addr.to_string();
+
+                match realearth_networking::MultiplayerClient::new(
+                    &self.config.player_name,
+                    bound_addr,
+                ) {
+                    Ok(mut client) => {
+                        let _ = client.connect();
+                        self.multiplayer_client = Some(client);
+                        self.status_notification = Some((
+                            format!("Hosting and joined local server on {}", bound_addr),
+                            Instant::now(),
+                        ));
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to connect local client: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to host local server on {}: {}", bind_addr, e);
+                self.status_notification =
+                    Some((format!("Failed to host server: {}", e), Instant::now()));
+            }
+        }
+    }
+
+    /// Connects to a remote or local authoritative multiplayer server.
+    pub fn join_multiplayer_server(&mut self, addr_str: &str) {
+        self.disconnect_multiplayer();
+        let target_addr: std::net::SocketAddr = match addr_str.parse() {
+            Ok(addr) => addr,
+            Err(_) => {
+                let fallback = "127.0.0.1:7777".parse().unwrap();
+                println!(
+                    "Invalid address '{}', falling back to {}",
+                    addr_str, fallback
+                );
+                fallback
+            }
+        };
+
+        match realearth_networking::MultiplayerClient::new(&self.config.player_name, target_addr) {
+            Ok(mut client) => {
+                let _ = client.connect();
+                self.multiplayer_client = Some(client);
+                self.multiplayer_server_addr_input = target_addr.to_string();
+                self.status_notification = Some((
+                    format!("Connecting to server at {}...", target_addr),
+                    Instant::now(),
+                ));
+            }
+            Err(e) => {
+                eprintln!("Failed to connect to server at {}: {}", target_addr, e);
+                self.status_notification =
+                    Some((format!("Connection failed: {}", e), Instant::now()));
+            }
+        }
+    }
+
+    /// Cleanly disconnects multiplayer client and shuts down local server if hosting.
+    pub fn disconnect_multiplayer(&mut self) {
+        if let Some(mut client) = self.multiplayer_client.take() {
+            client.disconnect("User disconnected");
+            println!("Disconnected multiplayer client.");
+        }
+        if let Some((running, handle)) = self.multiplayer_server_handle.take() {
+            running.store(false, std::sync::atomic::Ordering::Relaxed);
+            let _ = handle.join();
+            println!("Stopped local authoritative server thread.");
+        }
+        self.status_notification = Some((
+            "Disconnected from multiplayer. Single-player mode active.".to_string(),
+            Instant::now(),
+        ));
+    }
+
+    /// Performs an atomic quicksave of current profile, active job, and vehicle coordinates.
+    pub fn perform_quicksave(&mut self) {
+        let save_dir = if std::path::Path::new("target").exists() {
+            PathBuf::from("target/saves")
+        } else {
+            PathBuf::from("saves")
+        };
+        let _ = std::fs::create_dir_all(&save_dir);
+        let save_path = save_dir.join("quicksave.json");
+
+        let veh_coord = if let Some(ref res) = self.region_resources {
+            let meters_per_deg_lat = 111_320.0;
+            let meters_per_deg_lon =
+                111_320.0 * res.landmark.coord.lat.to_radians().cos().abs().max(0.01);
+            Wgs84Coord::new(
+                res.landmark.coord.lat + (self.vehicle.position.z as f64 / meters_per_deg_lat),
+                res.landmark.coord.lon + (self.vehicle.position.x as f64 / meters_per_deg_lon),
+                self.vehicle.position.y as f64,
+            )
+        } else {
+            self.camera_ctrl.coord
+        };
+
+        let save_data = SaveData {
+            schema_version: CURRENT_SAVE_SCHEMA_VERSION,
+            timestamp_unix: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0),
+            profile: self.player_profile.clone(),
+            active_job: self.active_job.clone(),
+            active_region_id: self.config.region_id.clone(),
+            vehicle_position: veh_coord,
+            settings: GameSettings::default(),
+        };
+
+        match SaveManager::save_to_file(&save_path, &save_data) {
+            Ok(_) => {
+                let msg = format!(
+                    "💾 Quicksave saved (Wallet: ${:.2}, Completed: {})",
+                    self.player_profile.wallet.balance(),
+                    self.player_profile.completed_jobs
+                );
+                println!("{}", msg);
+                self.status_notification = Some((msg, Instant::now()));
+            }
+            Err(e) => {
+                let msg = format!("⚠️ Quicksave failed: {}", e);
+                eprintln!("{}", msg);
+                self.status_notification = Some((msg, Instant::now()));
+            }
+        }
+    }
+
+    /// Performs quickload restoring player profile, career progress, and active jobs.
+    pub fn perform_quickload(&mut self) -> bool {
+        let save_path = if PathBuf::from("target/saves/quicksave.json").exists() {
+            PathBuf::from("target/saves/quicksave.json")
+        } else {
+            PathBuf::from("saves/quicksave.json")
+        };
+        if save_path.exists() {
+            match SaveManager::load_from_file(&save_path) {
+                Ok(loaded) => {
+                    self.player_profile = loaded.profile;
+                    self.active_job = loaded.active_job;
+                    if loaded.active_region_id != self.config.region_id {
+                        let _ = self.load_region(&loaded.active_region_id);
+                    }
+                    let msg = format!(
+                        "📂 Quickload restored (Wallet: ${:.2}, Jobs: {})",
+                        self.player_profile.wallet.balance(),
+                        self.player_profile.completed_jobs
+                    );
+                    println!("{}", msg);
+                    self.status_notification = Some((msg, Instant::now()));
+                    true
+                }
+                Err(e) => {
+                    let msg = format!("⚠️ Quickload failed: {}", e);
+                    eprintln!("{}", msg);
+                    self.status_notification = Some((msg, Instant::now()));
+                    false
+                }
+            }
+        } else {
+            let msg = "⚠️ No quicksave file found (checked target/saves and saves)".to_string();
+            println!("{}", msg);
+            self.status_notification = Some((msg, Instant::now()));
+            false
+        }
+    }
+
+    /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
+    pub fn perform_roadside_recovery(&mut self) {
+        let ground_y = if let Some(ref gq) = self.ground_query {
+            match self.active_transport_mode {
+                ActiveTransportMode::Car => {
+                    gq.elevation(self.vehicle.position.x, self.vehicle.position.z)
+                }
+                ActiveTransportMode::Motorcycle => {
+                    gq.elevation(self.motorcycle.position.x, self.motorcycle.position.z)
+                }
+                ActiveTransportMode::TransitBus => {
+                    gq.elevation(self.transit_bus.position.x, self.transit_bus.position.z)
+                }
+                ActiveTransportMode::HeavyTruck => gq.elevation(
+                    self.heavy_truck.tractor_position.x,
+                    self.heavy_truck.tractor_position.z,
+                ),
+                ActiveTransportMode::Train => {
+                    gq.elevation(self.train_position.x, self.train_position.z)
+                }
+                ActiveTransportMode::Marine => 0.0,
+                ActiveTransportMode::Aviation => {
+                    gq.elevation(self.aircraft.position.x, self.aircraft.position.z)
+                }
+            }
+        } else {
+            0.0
+        };
+        match self.active_transport_mode {
+            ActiveTransportMode::Car => self.vehicle.recover_on_surface(ground_y),
+            ActiveTransportMode::Motorcycle => self.motorcycle.recover_upright(),
+            ActiveTransportMode::TransitBus => {
+                self.transit_bus.position.y = ground_y + 0.95;
+                self.transit_bus.linear_velocity = glam::Vec3::ZERO;
+                self.transit_bus.speed_kph = 0.0;
+            }
+            ActiveTransportMode::HeavyTruck => {
+                self.heavy_truck.is_rolled_over = false;
+                self.heavy_truck.tractor_position.y = ground_y + 1.2;
+                self.heavy_truck.linear_velocity = glam::Vec3::ZERO;
+                self.heavy_truck.speed_kph = 0.0;
+                self.heavy_truck.trailer_articulation_angle = 0.0;
+            }
+            ActiveTransportMode::Train => {
+                self.train_consist.reset_emergency_brake();
+                self.train_consist.velocity_mps = 0.0;
+                self.train_consist.throttle = 0.0;
+            }
+            ActiveTransportMode::Marine => {
+                self.marine_vessel.position.y = 0.0;
+                self.marine_vessel.linear_velocity = glam::Vec3::ZERO;
+                self.marine_vessel.roll_angle = 0.0;
+                self.marine_vessel.pitch_angle = 0.0;
+            }
+            ActiveTransportMode::Aviation => {
+                self.aircraft.position.y = ground_y + 350.0;
+                let yaw = self.aircraft.orientation.to_euler(glam::EulerRot::YXZ).0;
+                self.aircraft.linear_velocity =
+                    glam::Quat::from_rotation_y(yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+                self.aircraft.is_stalled = false;
+            }
+        }
+        let label = format!(
+            "🛠️ {} Safely Recovered to Surface",
+            self.active_transport_mode.display_name()
+        );
+        println!("{}", label);
+        self.status_notification = Some((label, Instant::now()));
+    }
+
+    /// Selects and spawns a vehicle from the fleet garage.
+    pub fn apply_garage_selection(&mut self, idx: usize) {
+        match idx {
+            0 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
+                self.vehicle.config = VehicleConfig::sports_coupe();
+            }
+            1 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Sedan;
+                self.vehicle.config = VehicleConfig::sedan();
+            }
+            2 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Suv;
+                self.vehicle.config = VehicleConfig::suv();
+            }
+            3 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Taxi;
+                self.vehicle.config = VehicleConfig::taxi();
+            }
+            4 => {
+                self.active_transport_mode = ActiveTransportMode::TransitBus;
+            }
+            5 => {
+                self.active_transport_mode = ActiveTransportMode::HeavyTruck;
+            }
+            6 => {
+                self.active_transport_mode = ActiveTransportMode::Motorcycle;
+            }
+            7 => {
+                self.active_transport_mode = ActiveTransportMode::Train;
+            }
+            8 => {
+                self.active_transport_mode = ActiveTransportMode::Marine;
+            }
+            9 => {
+                self.active_transport_mode = ActiveTransportMode::Aviation;
+            }
+            _ => {}
+        }
+        self.config.is_drive = true;
+        let label = format!("🏎️ Selected: {}", self.active_transport_mode.display_name());
+        println!("{}", label);
+        self.status_notification = Some((label, Instant::now()));
     }
 
     /// Loads or hot-reloads region geographic assets, DEM, and streaming database.
@@ -610,7 +1123,7 @@ impl InteractiveViewerApp {
             );
         }
 
-        // Initialize vehicle at ground surface
+        // Initialize vehicle and multimodal fleet at ground surface
         let initial_elevation = ground_query.elevation(0.0, 0.0);
         self.vehicle = DynamicVehicle::new(
             VehicleConfig::default(),
@@ -619,25 +1132,159 @@ impl InteractiveViewerApp {
         );
         self.vehicle.recover_on_surface(initial_elevation);
 
-        // Populate traffic fleet
+        self.motorcycle =
+            MotorcycleModel::new(glam::Vec3::new(3.0, initial_elevation, 0.0), landmark.yaw);
+        self.transit_bus =
+            TransitBusModel::new(glam::Vec3::new(-5.0, initial_elevation, 0.0), landmark.yaw);
+        self.heavy_truck =
+            HeavyTruckModel::new(glam::Vec3::new(8.0, initial_elevation, 0.0), landmark.yaw);
+        self.train_position = glam::Vec3::new(0.0, initial_elevation + 0.6, 20.0);
+        self.train_yaw = landmark.yaw;
+        self.marine_vessel = MarineVessel::new_ferry(
+            "Harbor Passenger Ferry",
+            glam::Vec3::new(250.0, 0.0, -100.0),
+            landmark.yaw,
+        );
+        self.aircraft = AircraftFlight::new_airliner(
+            "Commercial Airliner",
+            glam::Vec3::new(0.0, initial_elevation + 350.0, -500.0),
+            landmark.yaw,
+        );
+        self.aircraft.linear_velocity =
+            glam::Quat::from_rotation_y(landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+
+        // Populate traffic fleet, signals, and pedestrians
         self.traffic_sim = TrafficSimulation::new();
-        if self.config.traffic_count > 0 && !raw_roads.is_empty() {
-            let is_left_hand = matches!(
-                region_id,
-                "bengaluru" | "mysuru" | "chennai" | "hyderabad" | "corridors" | "in"
-            );
-            let rule = if is_left_hand {
-                RuleOfTheRoad::DriveOnLeft
-            } else {
-                RuleOfTheRoad::DriveOnRight
-            };
+        let is_left_hand = matches!(
+            region_id,
+            "bengaluru" | "mysuru" | "chennai" | "hyderabad" | "corridors" | "in"
+        );
+        let rule = if is_left_hand {
+            RuleOfTheRoad::DriveOnLeft
+        } else {
+            RuleOfTheRoad::DriveOnRight
+        };
+
+        if !raw_roads.is_empty() {
             let road_graph = RoadNetworkGraph::from_roads(&raw_roads);
-            self.traffic_sim.populate_from_road_network(
-                &road_graph,
-                self.config.traffic_count,
-                rule,
+            if self.config.traffic_count > 0 {
+                self.traffic_sim.populate_from_road_network(
+                    &road_graph,
+                    self.config.traffic_count,
+                    rule,
+                );
+            }
+
+            // Populate Navigation Route from Landmark
+            let start_coord = landmark.coord;
+            let dest_coord = Wgs84Coord::new(
+                landmark.coord.lat + 0.005,
+                landmark.coord.lon + 0.004,
+                landmark.coord.alt,
             );
+            if let Ok(route) = find_route(
+                &road_graph,
+                start_coord,
+                dest_coord,
+                RoutingPreference::FastestTime,
+            ) {
+                let guidance = generate_turn_by_turn(&route, &road_graph);
+                self.route_tracker = Some(RouteTracker::new(route, guidance));
+            } else {
+                let p0 = landmark.coord;
+                let p1 = Wgs84Coord::new(
+                    landmark.coord.lat + 0.002,
+                    landmark.coord.lon,
+                    landmark.coord.alt,
+                );
+                let p2 = Wgs84Coord::new(
+                    landmark.coord.lat + 0.004,
+                    landmark.coord.lon + 0.003,
+                    landmark.coord.alt,
+                );
+                let p3 = Wgs84Coord::new(
+                    landmark.coord.lat + 0.007,
+                    landmark.coord.lon + 0.003,
+                    landmark.coord.alt,
+                );
+                let route = NavigationRoute {
+                    waypoints: vec![p0, p1, p2, p3],
+                    total_distance_meters: 850.0,
+                    estimated_duration_seconds: 65.0,
+                    edge_way_ids: vec![1001, 1002, 1003],
+                    road_names: vec![
+                        "Market St".to_string(),
+                        "Montgomery St".to_string(),
+                        "Columbus Ave".to_string(),
+                    ],
+                };
+                let guidance = generate_turn_by_turn(&route, &road_graph);
+                self.route_tracker = Some(RouteTracker::new(route, guidance));
+            }
+        } else {
+            let empty_graph = RoadNetworkGraph::new();
+            let p0 = landmark.coord;
+            let p1 = Wgs84Coord::new(
+                landmark.coord.lat + 0.002,
+                landmark.coord.lon,
+                landmark.coord.alt,
+            );
+            let p2 = Wgs84Coord::new(
+                landmark.coord.lat + 0.004,
+                landmark.coord.lon + 0.003,
+                landmark.coord.alt,
+            );
+            let p3 = Wgs84Coord::new(
+                landmark.coord.lat + 0.007,
+                landmark.coord.lon + 0.003,
+                landmark.coord.alt,
+            );
+            let route = NavigationRoute {
+                waypoints: vec![p0, p1, p2, p3],
+                total_distance_meters: 850.0,
+                estimated_duration_seconds: 65.0,
+                edge_way_ids: vec![1001, 1002, 1003],
+                road_names: vec![
+                    "Market St".to_string(),
+                    "Montgomery St".to_string(),
+                    "Columbus Ave".to_string(),
+                ],
+            };
+            let guidance = generate_turn_by_turn(&route, &empty_graph);
+            self.route_tracker = Some(RouteTracker::new(route, guidance));
         }
+
+        // Add intersection traffic lights, stop lines, and procedural pedestrians
+        let tl_pos = glam::Vec3::new(6.0, initial_elevation, 60.0);
+        let tl = TrafficLight::new(101, tl_pos);
+        self.traffic_sim.add_traffic_light(tl);
+        self.traffic_sim.add_stop_line(IntersectionStopLine {
+            id: 201,
+            traffic_light_id: 101,
+            position: glam::Vec3::new(0.0, initial_elevation, 45.0),
+            is_ns_direction: true,
+        });
+
+        // Procedural pedestrians walking across crosswalks and along sidewalks
+        let ped1 = PedestrianAgent::new(
+            501,
+            vec![
+                glam::Vec3::new(-7.0, initial_elevation, 55.0),
+                glam::Vec3::new(7.0, initial_elevation, 55.0),
+            ],
+            1.2,
+        );
+        let mut ped2 = PedestrianAgent::new(
+            502,
+            vec![
+                glam::Vec3::new(7.5, initial_elevation, 25.0),
+                glam::Vec3::new(7.5, initial_elevation, 85.0),
+            ],
+            1.35,
+        );
+        ped2.walk_cycle_phase = 1.5;
+        self.traffic_sim.add_pedestrian(ped1);
+        self.traffic_sim.add_pedestrian(ped2);
 
         // Accept career job if configured
         let regional_jobs = JobCatalogGenerator::jobs_for_region(region_id);
@@ -1023,418 +1670,700 @@ impl ApplicationHandler for InteractiveViewerApp {
             } => match state {
                 ElementState::Pressed => {
                     self.pressed_keys.insert(key);
-                    match key {
-                        KeyCode::Escape => {
-                            println!("Escape key pressed: exiting Real Earth viewer.");
-                            event_loop.exit();
-                        }
 
-                        // Cycle Camera Mode (Fly -> Walk -> Orbit -> Free -> Chase -> Fly)
-                        KeyCode::Tab => {
-                            let new_mode = self.camera_ctrl.cycle_mode();
-                            let label = format!("Camera Navigation Mode: {:?}", new_mode);
-                            println!("🎥 {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
-
-                        // Instant Camera Reset to Anchor Landmark (Home key)
-                        KeyCode::Home => {
-                            self.camera_ctrl.reset_to_default();
-                            let label = "Camera Reset to Anchor Landmark".to_string();
-                            println!("🎯 {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
-
-                        // Increase Camera Movement Speed ([ / PageUp / Equal)
-                        KeyCode::BracketRight | KeyCode::Equal | KeyCode::PageUp => {
-                            let spd = self.camera_ctrl.increase_speed();
-                            let label = format!(
-                                "Camera Speed: {:.1} m/s ({:.1}x)",
-                                spd, self.camera_ctrl.speed_multiplier
-                            );
-                            println!("⏩ {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
-
-                        // Decrease Camera Movement Speed (] / PageDown / Minus)
-                        KeyCode::BracketLeft | KeyCode::Minus | KeyCode::PageDown => {
-                            let spd = self.camera_ctrl.decrease_speed();
-                            let label = format!(
-                                "Camera Speed: {:.1} m/s ({:.1}x)",
-                                spd, self.camera_ctrl.speed_multiplier
-                            );
-                            println!("⏪ {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
-
-                        // Toggle Drivable Car Simulation
-                        KeyCode::KeyV => {
-                            self.config.is_drive = !self.config.is_drive;
-                            let label = if self.config.is_drive {
-                                "Simulation Mode: Complete Drivable Vehicle Dynamics"
-                            } else {
-                                "Simulation Mode: Free Camera Exploration"
-                            };
-                            println!("🏎️ {}", label);
-                            self.status_notification = Some((label.to_string(), Instant::now()));
-                        }
-
-                        // Cycle Vehicle Camera Perspective (Chase -> Hood -> Cockpit -> Bumper)
-                        KeyCode::KeyC => {
-                            if self.config.is_drive {
-                                self.vehicle_cam.cycle_perspective();
-                                let label =
-                                    format!("Vehicle Camera: {:?}", self.vehicle_cam.perspective);
-                                println!("📷 {}", label);
-                                self.status_notification = Some((label, Instant::now()));
+                    match self.ui_state {
+                        AppUiState::StartScreen => {
+                            let total_options = 7;
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.start_menu_selected_idx =
+                                        self.start_menu_selected_idx.saturating_sub(1);
+                                    return;
+                                }
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.start_menu_selected_idx =
+                                        (self.start_menu_selected_idx + 1).min(total_options - 1);
+                                    return;
+                                }
+                                KeyCode::Enter | KeyCode::Space => {
+                                    match self.start_menu_selected_idx {
+                                        0 => {
+                                            // Continue Career
+                                            let _ = self.perform_quickload();
+                                            self.config.is_drive = true;
+                                            self.ui_state = AppUiState::InGame;
+                                        }
+                                        1 => {
+                                            // Free Roam Simulation
+                                            self.config.is_drive = true;
+                                            self.ui_state = AppUiState::InGame;
+                                        }
+                                        2 => {
+                                            // Career Contracts
+                                            self.ui_state = AppUiState::JobBrowser;
+                                        }
+                                        3 => {
+                                            // Regional Geography
+                                            self.ui_state = AppUiState::CatalogModal;
+                                        }
+                                        4 => {
+                                            // Vehicle Fleet Garage
+                                            self.ui_state = AppUiState::GarageSelect;
+                                        }
+                                        5 => {
+                                            // Settings & Preferences
+                                            self.ui_state = AppUiState::SettingsMenu;
+                                        }
+                                        6 => {
+                                            // Exit to Desktop
+                                            println!("Exit selected from Start Screen.");
+                                            event_loop.exit();
+                                        }
+                                        _ => {}
+                                    }
+                                    return;
+                                }
+                                KeyCode::Escape => {
+                                    println!("Escape pressed on Start Screen: exiting Real Earth.");
+                                    event_loop.exit();
+                                    return;
+                                }
+                                _ => {}
                             }
                         }
 
-                        // Cycle Graphics Preset (Low -> Medium -> High -> Adaptive)
-                        KeyCode::KeyP => {
-                            let next_preset = match self.config.preset_level {
-                                GraphicsPresetLevel::Low => GraphicsPresetLevel::Medium,
-                                GraphicsPresetLevel::Medium => GraphicsPresetLevel::High,
-                                GraphicsPresetLevel::High => GraphicsPresetLevel::Adaptive,
-                                GraphicsPresetLevel::Adaptive => GraphicsPresetLevel::Low,
-                            };
-                            self.config.preset_level = next_preset;
-                            if let Some(ref mut renderer) = self.renderer {
-                                renderer.settings = GraphicsSettings::from_preset(next_preset);
+                        AppUiState::PauseMenu => {
+                            let total_options = 10;
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.pause_menu_selected_idx =
+                                        self.pause_menu_selected_idx.saturating_sub(1);
+                                    return;
+                                }
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.pause_menu_selected_idx =
+                                        (self.pause_menu_selected_idx + 1).min(total_options - 1);
+                                    return;
+                                }
+                                KeyCode::Escape => {
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                KeyCode::Enter | KeyCode::Space => {
+                                    match self.pause_menu_selected_idx {
+                                        0 => self.ui_state = AppUiState::InGame,
+                                        1 => self.ui_state = AppUiState::JobBrowser,
+                                        2 => self.ui_state = AppUiState::GarageSelect,
+                                        3 => self.ui_state = AppUiState::CatalogModal,
+                                        4 => {
+                                            self.perform_roadside_recovery();
+                                            self.ui_state = AppUiState::InGame;
+                                        }
+                                        5 => self.perform_quicksave(),
+                                        6 => {
+                                            let _ = self.perform_quickload();
+                                        }
+                                        7 => self.ui_state = AppUiState::SettingsMenu,
+                                        8 => self.ui_state = AppUiState::StartScreen,
+                                        9 => {
+                                            println!("Exit selected from Pause Menu.");
+                                            event_loop.exit();
+                                        }
+                                        _ => {}
+                                    }
+                                    return;
+                                }
+                                _ => {}
                             }
-                            let label = format!("Graphics Quality Preset: {:?}", next_preset);
-                            println!("⚙️ {}", label);
-                            self.status_notification = Some((label, Instant::now()));
                         }
 
-                        // Safe Vehicle Reset on Road (Drive mode) or Cycle Geographic Regions (Fly mode)
-                        KeyCode::KeyR => {
-                            if self.config.is_drive {
-                                let ground_y = if let Some(ref gq) = self.ground_query {
-                                    gq.elevation(self.vehicle.position.x, self.vehicle.position.z)
-                                } else {
-                                    0.0
-                                };
-                                self.vehicle.recover_on_surface(ground_y);
-                                let label =
-                                    "🏎️ Vehicle Safely Reset Upright on Road Surface".to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.region_cycle_idx =
-                                    (self.region_cycle_idx + 1) % self.region_cycle.len();
-                                let next_reg = self.region_cycle[self.region_cycle_idx];
-                                self.config.region_id = next_reg.to_string();
-                                let _ = self.load_region(next_reg);
-                            }
-                        }
-
-                        // Cycle Garage / Vehicle Mode with authentic physics presets
-                        KeyCode::KeyT | KeyCode::KeyG => {
-                            self.vehicle_visual_type = match self.vehicle_visual_type {
-                                VehicleVisualType::SportsCoupe => VehicleVisualType::Sedan,
-                                VehicleVisualType::Sedan => VehicleVisualType::Suv,
-                                VehicleVisualType::Suv => VehicleVisualType::Taxi,
-                                VehicleVisualType::Taxi => VehicleVisualType::TransitBus,
-                                VehicleVisualType::TransitBus => VehicleVisualType::HeavyTruck,
-                                VehicleVisualType::HeavyTruck => VehicleVisualType::SportsCoupe,
-                            };
-                            self.vehicle.config = match self.vehicle_visual_type {
-                                VehicleVisualType::SportsCoupe => VehicleConfig::sports_coupe(),
-                                VehicleVisualType::Sedan => VehicleConfig::sedan(),
-                                VehicleVisualType::Suv => VehicleConfig::suv(),
-                                VehicleVisualType::Taxi => VehicleConfig::taxi(),
-                                VehicleVisualType::TransitBus => VehicleConfig::transit_bus(),
-                                VehicleVisualType::HeavyTruck => VehicleConfig::heavy_truck(),
-                            };
-                            let label = format!(
-                                "Garage Selected: {:?} (Mass: {:.0} kg, Max Torque: {:.0} N)",
-                                self.vehicle_visual_type,
-                                self.vehicle.config.mass_kg,
-                                self.vehicle.config.peak_engine_force
-                            );
-                            println!("🚗 {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
-
-                        // Cycle / Accept Regional Contracts
-                        KeyCode::KeyJ => {
+                        AppUiState::JobBrowser => {
                             let available =
                                 JobCatalogGenerator::jobs_for_region(&self.config.region_id);
-                            if !available.is_empty() {
-                                let next_job = if let Some(ref current) = self.active_job {
-                                    let idx = available
-                                        .iter()
-                                        .position(|j| j.id == current.id)
-                                        .unwrap_or(0);
-                                    available[(idx + 1) % available.len()].clone()
-                                } else {
-                                    available[0].clone()
-                                };
-                                let mut j = next_job;
-                                let _ = j.accept(&self.player_profile, &self.gameplay_bus);
-                                let label = format!(
-                                    "📋 Accepted Contract: {} (Payout: ₹{:.2})",
-                                    j.title, j.base_payout
-                                );
-                                println!("{}", label);
-                                self.active_job = Some(j);
-                                self.status_notification = Some((label, Instant::now()));
+                            let total = available.len().max(1);
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.job_browser_selected_idx =
+                                        self.job_browser_selected_idx.saturating_sub(1);
+                                    return;
+                                }
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.job_browser_selected_idx = (self.job_browser_selected_idx
+                                        + 1)
+                                    .min(total.saturating_sub(1));
+                                    return;
+                                }
+                                KeyCode::Enter => {
+                                    if self.job_browser_selected_idx < available.len() {
+                                        let job = available[self.job_browser_selected_idx].clone();
+                                        let can_accept =
+                                            self.player_profile.career_tier(job.career)
+                                                >= job.required_tier;
+                                        if can_accept {
+                                            let mut accepted = job;
+                                            let _ = accepted
+                                                .accept(&self.player_profile, &self.gameplay_bus);
+                                            let label = format!(
+                                                "📋 Accepted Contract: {} (Payout: ${:.2})",
+                                                accepted.title, accepted.base_payout
+                                            );
+                                            println!("{}", label);
+                                            self.active_job = Some(accepted);
+                                            self.status_notification =
+                                                Some((label, Instant::now()));
+                                            self.config.is_drive = true;
+                                            self.ui_state = AppUiState::InGame;
+                                        } else {
+                                            let msg = format!(
+                                                "🔒 Career Tier Locked: Requires {:?}",
+                                                job.required_tier
+                                            );
+                                            println!("{}", msg);
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                    }
+                                    return;
+                                }
+                                KeyCode::Escape | KeyCode::KeyJ | KeyCode::Tab => {
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                _ => {}
                             }
                         }
 
-                        // F5 Quicksave
-                        KeyCode::F5 => {
-                            let save_dir = if std::path::Path::new("target").exists() {
-                                PathBuf::from("target/saves")
-                            } else {
-                                PathBuf::from("saves")
-                            };
-                            let _ = std::fs::create_dir_all(&save_dir);
-                            let save_path = save_dir.join("quicksave.json");
-
-                            let veh_coord = if let Some(ref res) = self.region_resources {
-                                let meters_per_deg_lat = 111_320.0;
-                                let meters_per_deg_lon = 111_320.0
-                                    * res.landmark.coord.lat.to_radians().cos().abs().max(0.01);
-                                Wgs84Coord::new(
-                                    res.landmark.coord.lat
-                                        + (self.vehicle.position.z as f64 / meters_per_deg_lat),
-                                    res.landmark.coord.lon
-                                        + (self.vehicle.position.x as f64 / meters_per_deg_lon),
-                                    self.vehicle.position.y as f64,
-                                )
-                            } else {
-                                self.camera_ctrl.coord
-                            };
-
-                            let save_data = SaveData {
-                                schema_version: CURRENT_SAVE_SCHEMA_VERSION,
-                                timestamp_unix: std::time::SystemTime::now()
-                                    .duration_since(std::time::UNIX_EPOCH)
-                                    .map(|d| d.as_secs())
-                                    .unwrap_or(0),
-                                profile: self.player_profile.clone(),
-                                active_job: self.active_job.clone(),
-                                active_region_id: self.config.region_id.clone(),
-                                vehicle_position: veh_coord,
-                                settings: GameSettings::default(),
-                            };
-
-                            match SaveManager::save_to_file(&save_path, &save_data) {
-                                Ok(_) => {
-                                    let msg = format!(
-                                        "💾 Quicksave saved (Wallet: ₹{:.2})",
-                                        self.player_profile.wallet.balance()
-                                    );
-                                    println!("{}", msg);
-                                    self.status_notification = Some((msg, Instant::now()));
+                        AppUiState::GarageSelect => {
+                            let total_vehicles = 10;
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.garage_selected_idx =
+                                        self.garage_selected_idx.saturating_sub(1);
+                                    return;
                                 }
-                                Err(e) => {
-                                    let msg = format!("⚠️ Quicksave failed: {}", e);
-                                    eprintln!("{}", msg);
-                                    self.status_notification = Some((msg, Instant::now()));
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.garage_selected_idx =
+                                        (self.garage_selected_idx + 1).min(total_vehicles - 1);
+                                    return;
                                 }
+                                KeyCode::Enter => {
+                                    self.apply_garage_selection(self.garage_selected_idx);
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                KeyCode::Escape | KeyCode::KeyG => {
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                _ => {}
                             }
                         }
 
-                        // F9 Quickload
-                        KeyCode::F9 => {
-                            let save_path = if PathBuf::from("target/saves/quicksave.json").exists()
-                            {
-                                PathBuf::from("target/saves/quicksave.json")
-                            } else {
-                                PathBuf::from("saves/quicksave.json")
-                            };
-                            if save_path.exists() {
-                                match SaveManager::load_from_file(&save_path) {
-                                    Ok(loaded) => {
-                                        self.player_profile = loaded.profile;
-                                        self.active_job = loaded.active_job;
+                        AppUiState::SettingsMenu => {
+                            let total_settings = 5;
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.settings_selected_idx =
+                                        self.settings_selected_idx.saturating_sub(1);
+                                    return;
+                                }
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.settings_selected_idx =
+                                        (self.settings_selected_idx + 1).min(total_settings - 1);
+                                    return;
+                                }
+                                KeyCode::Enter => {
+                                    match self.settings_selected_idx {
+                                        0 => {
+                                            self.use_metric_units = !self.use_metric_units;
+                                            let msg = format!(
+                                                "Speed Units: {}",
+                                                if self.use_metric_units {
+                                                    "KM/H (Metric)"
+                                                } else {
+                                                    "MPH (Imperial)"
+                                                }
+                                            );
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                        1 => {
+                                            let next_preset = match self.config.preset_level {
+                                                GraphicsPresetLevel::Low => {
+                                                    GraphicsPresetLevel::Medium
+                                                }
+                                                GraphicsPresetLevel::Medium => {
+                                                    GraphicsPresetLevel::High
+                                                }
+                                                GraphicsPresetLevel::High => {
+                                                    GraphicsPresetLevel::Adaptive
+                                                }
+                                                GraphicsPresetLevel::Adaptive => {
+                                                    GraphicsPresetLevel::Low
+                                                }
+                                            };
+                                            self.config.preset_level = next_preset;
+                                            if let Some(ref mut renderer) = self.renderer {
+                                                renderer.settings =
+                                                    GraphicsSettings::from_preset(next_preset);
+                                            }
+                                            let msg = format!("Graphics Preset: {:?}", next_preset);
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                        2 => {
+                                            self.vehicle_cam.cycle_perspective();
+                                            let msg = format!(
+                                                "Camera Perspective: {:?}",
+                                                self.vehicle_cam.perspective
+                                            );
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                        3 => {
+                                            self.show_debug_overlay = !self.show_debug_overlay;
+                                            let msg = format!(
+                                                "Developer Overlay: {}",
+                                                if self.show_debug_overlay { "ON" } else { "OFF" }
+                                            );
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                        4 => {
+                                            self.show_hud = !self.show_hud;
+                                            let msg = format!(
+                                                "HUD Display: {}",
+                                                if self.show_hud { "ON" } else { "OFF" }
+                                            );
+                                            self.status_notification = Some((msg, Instant::now()));
+                                        }
+                                        _ => {}
+                                    }
+                                    return;
+                                }
+                                KeyCode::Escape | KeyCode::KeyO => {
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        AppUiState::CatalogModal => {
+                            let total = all_us_cities().len();
+                            match key {
+                                KeyCode::ArrowUp | KeyCode::KeyW => {
+                                    self.catalog_selected_idx =
+                                        self.catalog_selected_idx.saturating_sub(1);
+                                    return;
+                                }
+                                KeyCode::ArrowDown | KeyCode::KeyS => {
+                                    self.catalog_selected_idx = (self.catalog_selected_idx + 1)
+                                        .min(total.saturating_sub(1));
+                                    return;
+                                }
+                                KeyCode::Enter => {
+                                    let cities = all_us_cities();
+                                    if self.catalog_selected_idx < cities.len() {
+                                        let city = &cities[self.catalog_selected_idx];
+                                        self.config.region_id = city.id.to_string();
+                                        let _ = self.load_region(city.id);
+                                        self.config.is_drive = true;
+                                        self.ui_state = AppUiState::InGame;
                                         let msg = format!(
-                                            "📂 Quickload restored (Wallet: ₹{:.2}, Jobs: {})",
-                                            self.player_profile.wallet.balance(),
-                                            self.player_profile.completed_jobs
+                                            "✈️ Warped to {} ({}) — Anchor: {}",
+                                            city.name, city.state, city.anchor_landmark_name
                                         );
                                         println!("{}", msg);
                                         self.status_notification = Some((msg, Instant::now()));
                                     }
-                                    Err(e) => {
-                                        let msg = format!("⚠️ Quickload failed: {}", e);
-                                        eprintln!("{}", msg);
-                                        self.status_notification = Some((msg, Instant::now()));
-                                    }
+                                    return;
                                 }
-                            } else {
-                                let msg =
-                                    "⚠️ No quicksave file found (checked target/saves and saves)"
-                                        .to_string();
-                                println!("{}", msg);
-                                self.status_notification = Some((msg, Instant::now()));
+                                KeyCode::Escape | KeyCode::KeyU | KeyCode::F2 => {
+                                    self.ui_state = AppUiState::InGame;
+                                    return;
+                                }
+                                _ => {}
                             }
                         }
 
-                        // Toggle HUD Overlay
-                        KeyCode::KeyH | KeyCode::F1 => {
-                            self.show_hud = !self.show_hud;
-                            let label = format!(
-                                "HUD Display: {}",
-                                if self.show_hud { "ON" } else { "OFF" }
-                            );
-                            println!("📊 {}", label);
-                            self.status_notification = Some((label, Instant::now()));
-                        }
+                        AppUiState::DebriefModal => match key {
+                            KeyCode::Enter | KeyCode::Escape | KeyCode::Space => {
+                                self.active_debrief = None;
+                                self.ui_state = AppUiState::InGame;
+                                return;
+                            }
+                            _ => {}
+                        },
 
-                        // High-Resolution Screenshot Capture
-                        KeyCode::F12 => {
-                            self.capture_screenshot();
-                        }
+                        AppUiState::MultiplayerModal => match key {
+                            KeyCode::ArrowUp | KeyCode::KeyW => {
+                                self.multiplayer_selected_action =
+                                    self.multiplayer_selected_action.saturating_sub(1);
+                                return;
+                            }
+                            KeyCode::ArrowDown | KeyCode::KeyS => {
+                                self.multiplayer_selected_action =
+                                    (self.multiplayer_selected_action + 1).min(3);
+                                return;
+                            }
+                            KeyCode::Escape => {
+                                self.ui_state = AppUiState::InGame;
+                                return;
+                            }
+                            KeyCode::Enter | KeyCode::Space => {
+                                match self.multiplayer_selected_action {
+                                    0 => {
+                                        self.host_and_join_local_server(7777);
+                                    }
+                                    1 => {
+                                        let addr = self.multiplayer_server_addr_input.clone();
+                                        self.join_multiplayer_server(&addr);
+                                    }
+                                    2 => {
+                                        self.disconnect_multiplayer();
+                                    }
+                                    3 => {
+                                        self.ui_state = AppUiState::InGame;
+                                    }
+                                    _ => {}
+                                }
+                                return;
+                            }
+                            _ => {}
+                        },
 
-                        // Vehicle Selection (Drive Mode) or Instant Landmark Bookmarks (Fly Mode)
-                        KeyCode::Digit1 | KeyCode::Numpad1 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::Sedan;
-                                self.vehicle.config = VehicleConfig::sedan();
-                                let label =
-                                    "🚗 Vehicle Selected: Sedan (1450 kg, Comfort Suspension)"
+                        AppUiState::InGame => match key {
+                            KeyCode::Escape => {
+                                self.ui_state = AppUiState::PauseMenu;
+                                return;
+                            }
+
+                            KeyCode::KeyN | KeyCode::F4 => {
+                                self.ui_state = AppUiState::MultiplayerModal;
+                                return;
+                            }
+
+                            KeyCode::F3 => {
+                                self.show_debug_overlay = !self.show_debug_overlay;
+                                let label = format!(
+                                    "Developer Debug Overlay: {}",
+                                    if self.show_debug_overlay { "ON" } else { "OFF" }
+                                );
+                                println!("🔧 {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::KeyJ | KeyCode::Tab => {
+                                self.ui_state = AppUiState::JobBrowser;
+                                return;
+                            }
+
+                            KeyCode::KeyG => {
+                                self.ui_state = AppUiState::GarageSelect;
+                                return;
+                            }
+
+                            KeyCode::KeyO => {
+                                self.ui_state = AppUiState::SettingsMenu;
+                                return;
+                            }
+
+                            KeyCode::KeyU | KeyCode::F2 => {
+                                self.ui_state = AppUiState::CatalogModal;
+                                return;
+                            }
+
+                            KeyCode::KeyH | KeyCode::F1 => {
+                                self.show_hud = !self.show_hud;
+                                let label = format!(
+                                    "HUD Display: {}",
+                                    if self.show_hud { "ON" } else { "OFF" }
+                                );
+                                println!("📊 {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::F5 => {
+                                self.perform_quicksave();
+                                return;
+                            }
+
+                            KeyCode::F9 => {
+                                self.perform_quickload();
+                                return;
+                            }
+
+                            KeyCode::F12 => {
+                                self.capture_screenshot();
+                                return;
+                            }
+
+                            KeyCode::KeyR => {
+                                if self.config.is_drive {
+                                    self.perform_roadside_recovery();
+                                } else {
+                                    self.region_cycle_idx =
+                                        (self.region_cycle_idx + 1) % self.region_cycle.len();
+                                    let next_reg = self.region_cycle[self.region_cycle_idx];
+                                    self.config.region_id = next_reg.to_string();
+                                    let _ = self.load_region(next_reg);
+                                }
+                                return;
+                            }
+
+                            KeyCode::Home => {
+                                self.camera_ctrl.reset_to_default();
+                                let label = "Camera Reset to Anchor Landmark".to_string();
+                                println!("🎯 {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::BracketRight | KeyCode::Equal | KeyCode::PageUp => {
+                                let spd = self.camera_ctrl.increase_speed();
+                                let label = format!(
+                                    "Camera Speed: {:.1} m/s ({:.1}x)",
+                                    spd, self.camera_ctrl.speed_multiplier
+                                );
+                                println!("⏩ {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::BracketLeft | KeyCode::Minus | KeyCode::PageDown => {
+                                let spd = self.camera_ctrl.decrease_speed();
+                                let label = format!(
+                                    "Camera Speed: {:.1} m/s ({:.1}x)",
+                                    spd, self.camera_ctrl.speed_multiplier
+                                );
+                                println!("⏪ {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::KeyV => {
+                                self.config.is_drive = !self.config.is_drive;
+                                let label = if self.config.is_drive {
+                                    "Simulation Mode: Complete Drivable Vehicle Dynamics"
+                                } else {
+                                    "Simulation Mode: Free Camera Exploration"
+                                };
+                                println!("🏎️ {}", label);
+                                self.status_notification =
+                                    Some((label.to_string(), Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::KeyM => {
+                                self.active_transport_mode = match self.active_transport_mode {
+                                    ActiveTransportMode::Car => ActiveTransportMode::Motorcycle,
+                                    ActiveTransportMode::Motorcycle => {
+                                        ActiveTransportMode::TransitBus
+                                    }
+                                    ActiveTransportMode::TransitBus => {
+                                        ActiveTransportMode::HeavyTruck
+                                    }
+                                    ActiveTransportMode::HeavyTruck => ActiveTransportMode::Train,
+                                    ActiveTransportMode::Train => ActiveTransportMode::Marine,
+                                    ActiveTransportMode::Marine => ActiveTransportMode::Aviation,
+                                    ActiveTransportMode::Aviation => ActiveTransportMode::Car,
+                                };
+                                self.config.is_drive = true;
+                                let label = format!(
+                                    "{} Transport Mode: {}",
+                                    self.active_transport_mode.icon(),
+                                    self.active_transport_mode.display_name()
+                                );
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::KeyC => {
+                                if self.config.is_drive {
+                                    self.vehicle_cam.cycle_perspective();
+                                    let label = format!(
+                                        "Vehicle Camera: {:?}",
+                                        self.vehicle_cam.perspective
+                                    );
+                                    println!("📷 {}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                }
+                                return;
+                            }
+
+                            KeyCode::KeyP => {
+                                let next_preset = match self.config.preset_level {
+                                    GraphicsPresetLevel::Low => GraphicsPresetLevel::Medium,
+                                    GraphicsPresetLevel::Medium => GraphicsPresetLevel::High,
+                                    GraphicsPresetLevel::High => GraphicsPresetLevel::Adaptive,
+                                    GraphicsPresetLevel::Adaptive => GraphicsPresetLevel::Low,
+                                };
+                                self.config.preset_level = next_preset;
+                                if let Some(ref mut renderer) = self.renderer {
+                                    renderer.settings = GraphicsSettings::from_preset(next_preset);
+                                }
+                                let label = format!("Graphics Quality Preset: {:?}", next_preset);
+                                println!("⚙️ {}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                                return;
+                            }
+
+                            KeyCode::Digit1 | KeyCode::Numpad1 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::Car;
+                                    self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
+                                    self.vehicle.config = VehicleConfig::sports_coupe();
+                                    let label =
+                                        "🏎️ Mode: Automobile (Sports Coupe / Ackermann-Pacejka)"
+                                            .to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::SAN_FRANCISCO_TRANSAMERICA);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::SAN_FRANCISCO_TRANSAMERICA.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
+                            }
+                            KeyCode::Digit2 | KeyCode::Numpad2 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::Motorcycle;
+                                    let label =
+                                        "🏍️ Mode: Motorcycle (2-Wheel Lean Dynamics)".to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::SAN_FRANCISCO_SALESFORCE.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
+                            }
+                            KeyCode::Digit3 | KeyCode::Numpad3 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::TransitBus;
+                                    let label =
+                                        "🚌 Mode: Transit Bus (Pneumatic Air Brakes)".to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::SAN_FRANCISCO_FERRY_BUILDING.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
+                            }
+                            KeyCode::Digit4 | KeyCode::Numpad4 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::HeavyTruck;
+                                    let label =
+                                        "🚛 Mode: Heavy Truck (Trailer Articulation)".to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::SAN_FRANCISCO_COIT_TOWER.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
+                            }
+                            KeyCode::Digit5 | KeyCode::Numpad5 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::Train;
+                                    let label = "🚆 Mode: Train Consist (Davis Drag & Air Brakes)"
                                         .to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::SAN_FRANCISCO_TRANSAMERICA);
-                                self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::SAN_FRANCISCO_TRANSAMERICA.name
-                                    ),
-                                    Instant::now(),
-                                ));
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::SAN_FRANCISCO_BAY_BRIDGE.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
                             }
-                        }
-                        KeyCode::Digit2 | KeyCode::Numpad2 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
-                                self.vehicle.config = VehicleConfig::sports_coupe();
-                                let label = "🏎️ Vehicle Selected: Sports Coupe (1250 kg, Stiff ARB & Spoiler)".to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
-                                self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::SAN_FRANCISCO_SALESFORCE.name
-                                    ),
-                                    Instant::now(),
-                                ));
+                            KeyCode::Digit6 | KeyCode::Numpad6 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::Marine;
+                                    let label =
+                                        "🚢 Mode: Marine Vessel (Archimedes Buoyancy)".to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl
+                                        .jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
+                                    self.status_notification = Some((
+                                        format!(
+                                            "📍 Jump to {}",
+                                            Landmark::BENGALURU_VIDHANA_SOUDHA.name
+                                        ),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
                             }
-                        }
-                        KeyCode::Digit3 | KeyCode::Numpad3 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::Suv;
-                                self.vehicle.config = VehicleConfig::suv();
-                                let label = "🚙 Vehicle Selected: SUV (1950 kg, High Clearance & Roof Racks)".to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
-                                self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::SAN_FRANCISCO_FERRY_BUILDING.name
-                                    ),
-                                    Instant::now(),
-                                ));
-                            }
-                        }
-                        KeyCode::Digit4 | KeyCode::Numpad4 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::Taxi;
-                                self.vehicle.config = VehicleConfig::taxi();
-                                let label =
-                                    "🚕 Vehicle Selected: Taxi (1400 kg, Illuminated Rooftop Sign)"
+                            KeyCode::Digit7 | KeyCode::Numpad7 => {
+                                if self.config.is_drive {
+                                    self.active_transport_mode = ActiveTransportMode::Aviation;
+                                    let label = "✈️ Mode: Aviation Aircraft (6-DOF Flight Polar)"
                                         .to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                } else {
+                                    self.camera_ctrl.jump_to(&Landmark::MYSURU_PALACE);
+                                    self.status_notification = Some((
+                                        format!("📍 Jump to {}", Landmark::MYSURU_PALACE.name),
+                                        Instant::now(),
+                                    ));
+                                }
+                                return;
+                            }
+                            KeyCode::Digit8 => {
+                                self.camera_ctrl.jump_to(&Landmark::CHENNAI_CENTRAL);
                                 self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::SAN_FRANCISCO_COIT_TOWER.name
-                                    ),
+                                    format!("📍 Jump to {}", Landmark::CHENNAI_CENTRAL.name),
                                     Instant::now(),
                                 ));
+                                return;
                             }
-                        }
-                        KeyCode::Digit5 | KeyCode::Numpad5 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::TransitBus;
-                                self.vehicle.config = VehicleConfig::transit_bus();
-                                let label =
-                                    "🚌 Vehicle Selected: Transit Bus (9500 kg, High Capacity)"
-                                        .to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
+                            KeyCode::Digit9 => {
+                                self.camera_ctrl.jump_to(&Landmark::HYDERABAD_CHARMINAR);
                                 self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::SAN_FRANCISCO_BAY_BRIDGE.name
-                                    ),
+                                    format!("📍 Jump to {}", Landmark::HYDERABAD_CHARMINAR.name),
                                     Instant::now(),
                                 ));
+                                return;
                             }
-                        }
-                        KeyCode::Digit6 | KeyCode::Numpad6 => {
-                            if self.config.is_drive {
-                                self.vehicle_visual_type = VehicleVisualType::HeavyTruck;
-                                self.vehicle.config = VehicleConfig::heavy_truck();
-                                let label =
-                                    "🚛 Vehicle Selected: Heavy Truck (14000 kg, Freight Hauler)"
-                                        .to_string();
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
-                            } else {
-                                self.camera_ctrl
-                                    .jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
-                                self.status_notification = Some((
-                                    format!(
-                                        "📍 Jump to {}",
-                                        Landmark::BENGALURU_VIDHANA_SOUDHA.name
-                                    ),
-                                    Instant::now(),
-                                ));
-                            }
-                        }
-                        KeyCode::Digit7 => {
-                            self.camera_ctrl.jump_to(&Landmark::MYSURU_PALACE);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::MYSURU_PALACE.name),
-                                Instant::now(),
-                            ));
-                        }
-                        KeyCode::Digit8 => {
-                            self.camera_ctrl.jump_to(&Landmark::CHENNAI_CENTRAL);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::CHENNAI_CENTRAL.name),
-                                Instant::now(),
-                            ));
-                        }
-                        KeyCode::Digit9 => {
-                            self.camera_ctrl.jump_to(&Landmark::HYDERABAD_CHARMINAR);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::HYDERABAD_CHARMINAR.name),
-                                Instant::now(),
-                            ));
-                        }
-                        _ => {}
+                            _ => {}
+                        },
                     }
                 }
                 ElementState::Released => {
@@ -1490,6 +2419,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                 let dt = (now - self.last_frame).as_secs_f64().clamp(0.001, 0.1);
                 self.last_frame = now;
 
+                let now_ms = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64;
+
+                if let Some(ref mut client) = self.multiplayer_client {
+                    let _ = client.poll_network(now_ms);
+                }
+
                 // 3. Fixed-timestep simulation & Camera / Vehicle updates
                 let anchor = res.landmark.coord;
                 let meters_per_deg_lat = 111_320.0;
@@ -1502,88 +2440,334 @@ impl ApplicationHandler for InteractiveViewerApp {
                     || self.pressed_keys.contains(&KeyCode::ArrowDown);
 
                 let velocity = if self.config.is_drive {
-                    // Update vehicle dynamics from inputs
-                    let mut inputs = VehicleInputs::default();
-
-                    let rot = glam::Mat3::from_quat(self.vehicle.orientation);
-                    let forward = rot.col(2);
-                    let forward_speed = self.vehicle.linear_velocity.dot(forward);
-
                     let is_forward_key = self.pressed_keys.contains(&KeyCode::KeyW)
                         || self.pressed_keys.contains(&KeyCode::ArrowUp);
                     let is_reverse_or_brake_key = self.pressed_keys.contains(&KeyCode::KeyS)
                         || self.pressed_keys.contains(&KeyCode::ArrowDown);
-
-                    // Automatic transmission and pedal arbitration:
-                    if is_forward_key {
-                        if forward_speed < -0.3 {
-                            // Moving backward: service brake stops vehicle
-                            inputs.brake = 0.95;
-                            inputs.gear_mode = TransmissionMode::Reverse;
-                        } else {
-                            // Moving forward or stationary: accelerate forward
-                            inputs.throttle = 1.0;
-                            inputs.gear_mode = TransmissionMode::Drive;
-                        }
-                    } else if is_reverse_or_brake_key {
-                        if forward_speed > 0.35 {
-                            // Moving forward: service brake slows vehicle
-                            inputs.brake = 0.95;
-                            inputs.gear_mode = TransmissionMode::Drive;
-                        } else {
-                            // Stopped or moving backwards: accelerate backwards in Reverse
-                            inputs.throttle = 0.85;
-                            inputs.gear_mode = TransmissionMode::Reverse;
-                        }
-                    }
-
-                    // Speed-sensitive steering response
                     let steer_left = self.pressed_keys.contains(&KeyCode::KeyA)
                         || self.pressed_keys.contains(&KeyCode::ArrowLeft);
                     let steer_right = self.pressed_keys.contains(&KeyCode::KeyD)
                         || self.pressed_keys.contains(&KeyCode::ArrowRight);
 
-                    let speed_kph = self.vehicle.speed_kph.abs();
+                    let speed_kph = match self.active_transport_mode {
+                        ActiveTransportMode::Car => self.vehicle.speed_kph.abs(),
+                        ActiveTransportMode::Motorcycle => self.motorcycle.speed_kph.abs(),
+                        ActiveTransportMode::TransitBus => self.transit_bus.speed_kph.abs(),
+                        ActiveTransportMode::HeavyTruck => self.heavy_truck.speed_kph.abs(),
+                        ActiveTransportMode::Train => self.train_consist.speed_kph.abs(),
+                        ActiveTransportMode::Marine => self.marine_vessel.speed_knots * 1.852,
+                        ActiveTransportMode::Aviation => self.aircraft.true_airspeed_mps * 3.6,
+                    };
                     let speed_factor = (1.0 - (speed_kph / 120.0).min(0.60)).clamp(0.40, 1.0);
+
+                    let mut road_inputs = VehicleInputs::default();
                     if steer_left {
-                        inputs.steer = -0.65 * speed_factor;
+                        road_inputs.steer = -0.65 * speed_factor;
                     } else if steer_right {
-                        inputs.steer = 0.65 * speed_factor;
-                    } else {
-                        inputs.steer = 0.0;
+                        road_inputs.steer = 0.65 * speed_factor;
                     }
-
                     if self.pressed_keys.contains(&KeyCode::Space) {
-                        inputs.handbrake = true;
+                        road_inputs.handbrake = true;
                     }
 
-                    self.vehicle.step(&inputs, gq, dt as f32);
+                    // Step physics for active multimodal mode
+                    match self.active_transport_mode {
+                        ActiveTransportMode::Car => {
+                            let rot = glam::Mat3::from_quat(self.vehicle.orientation);
+                            let forward = rot.col(2);
+                            let forward_speed = self.vehicle.linear_velocity.dot(forward);
 
-                    // Prevent sinking or tunneling through terrain
-                    let ground_y = gq.elevation(self.vehicle.position.x, self.vehicle.position.z);
-                    let min_allowed_y = ground_y + self.vehicle.config.wheel_radius;
-                    if self.vehicle.position.y < min_allowed_y {
-                        self.vehicle.position.y = min_allowed_y;
-                        if self.vehicle.linear_velocity.y < 0.0 {
-                            self.vehicle.linear_velocity.y = 0.0;
+                            if is_forward_key {
+                                if forward_speed < -0.3 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                } else {
+                                    road_inputs.throttle = 1.0;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                }
+                            } else if is_reverse_or_brake_key {
+                                if forward_speed > 0.35 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                } else {
+                                    road_inputs.throttle = 0.85;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                }
+                            }
+
+                            self.vehicle.step(&road_inputs, gq, dt as f32);
+
+                            let ground_y =
+                                gq.elevation(self.vehicle.position.x, self.vehicle.position.z);
+                            let min_allowed_y = ground_y + self.vehicle.config.wheel_radius;
+                            if self.vehicle.position.y < min_allowed_y {
+                                self.vehicle.position.y = min_allowed_y;
+                                if self.vehicle.linear_velocity.y < 0.0 {
+                                    self.vehicle.linear_velocity.y = 0.0;
+                                }
+                            }
+                        }
+                        ActiveTransportMode::Motorcycle => {
+                            let rot = glam::Mat3::from_quat(self.motorcycle.orientation);
+                            let forward = rot.col(2);
+                            let forward_speed = self.motorcycle.linear_velocity.dot(forward);
+
+                            if is_forward_key {
+                                if forward_speed < -0.3 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                } else {
+                                    road_inputs.throttle = 1.0;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                }
+                            } else if is_reverse_or_brake_key {
+                                if forward_speed > 0.35 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                } else {
+                                    road_inputs.throttle = 0.85;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                }
+                            }
+
+                            self.motorcycle.step(&road_inputs, gq, dt as f32);
+                        }
+                        ActiveTransportMode::TransitBus => {
+                            let rot = glam::Mat3::from_quat(self.transit_bus.orientation);
+                            let forward = rot.col(2);
+                            let forward_speed = self.transit_bus.linear_velocity.dot(forward);
+
+                            if is_forward_key {
+                                if forward_speed < -0.3 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                } else {
+                                    road_inputs.throttle = 1.0;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                }
+                            } else if is_reverse_or_brake_key {
+                                if forward_speed > 0.35 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                } else {
+                                    road_inputs.throttle = 0.85;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                }
+                            }
+
+                            self.transit_bus.step(&road_inputs, gq, dt as f32);
+                        }
+                        ActiveTransportMode::HeavyTruck => {
+                            let rot = glam::Mat3::from_quat(self.heavy_truck.tractor_orientation);
+                            let forward = rot.col(2);
+                            let forward_speed = self.heavy_truck.linear_velocity.dot(forward);
+
+                            if is_forward_key {
+                                if forward_speed < -0.3 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                } else {
+                                    road_inputs.throttle = 1.0;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                }
+                            } else if is_reverse_or_brake_key {
+                                if forward_speed > 0.35 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                } else {
+                                    road_inputs.throttle = 0.85;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                }
+                            }
+
+                            self.heavy_truck.step(&road_inputs, gq, dt as f32);
+                        }
+                        ActiveTransportMode::Train => {
+                            if is_forward_key {
+                                self.train_consist.throttle =
+                                    (self.train_consist.throttle + 0.35 * dt as f32).min(1.0);
+                                self.train_consist.apply_service_brake(0.0);
+                            } else if is_reverse_or_brake_key {
+                                if self.train_consist.velocity_mps.abs() < 0.15
+                                    && self.train_consist.throttle < 0.05
+                                {
+                                    self.train_consist.reverser = -self.train_consist.reverser;
+                                } else {
+                                    self.train_consist.apply_service_brake(0.85);
+                                    self.train_consist.throttle =
+                                        (self.train_consist.throttle - 0.6 * dt as f32).max(0.0);
+                                }
+                            } else {
+                                self.train_consist.apply_service_brake(0.0);
+                            }
+
+                            if self.pressed_keys.contains(&KeyCode::Space) {
+                                self.train_consist.trigger_emergency_brake();
+                            }
+
+                            self.train_consist.step(dt as f32);
+
+                            let forward =
+                                glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
+                            self.train_position +=
+                                forward * (self.train_consist.velocity_mps * dt as f32);
+                            let ground_y =
+                                gq.elevation(self.train_position.x, self.train_position.z);
+                            self.train_position.y = ground_y + 0.6;
+                        }
+                        ActiveTransportMode::Marine => {
+                            let mut marine_inputs = MarineInputs::default();
+                            if is_forward_key {
+                                marine_inputs.throttle = 1.0;
+                            } else if is_reverse_or_brake_key {
+                                marine_inputs.throttle = -0.6;
+                            }
+                            if steer_left {
+                                marine_inputs.rudder = -1.0;
+                            } else if steer_right {
+                                marine_inputs.rudder = 1.0;
+                            }
+
+                            self.marine_elapsed_time += dt as f32;
+                            self.marine_vessel.step(
+                                &marine_inputs,
+                                self.marine_elapsed_time,
+                                dt as f32,
+                            );
+                        }
+                        ActiveTransportMode::Aviation => {
+                            let mut flight_inputs = FlightInputs {
+                                gear_down: self.aircraft.altitude_msl_meters < 50.0
+                                    || !self.aircraft.is_airborne,
+                                flaps: 0.25,
+                                ..Default::default()
+                            };
+
+                            if is_forward_key {
+                                flight_inputs.elevator = -0.7; // Pitch down
+                            } else if is_reverse_or_brake_key {
+                                flight_inputs.elevator = 0.7; // Pitch up
+                            }
+
+                            if steer_left {
+                                flight_inputs.aileron = -0.7; // Roll left
+                            } else if steer_right {
+                                flight_inputs.aileron = 0.7; // Roll right
+                            }
+
+                            if self.pressed_keys.contains(&KeyCode::KeyQ) {
+                                flight_inputs.rudder = -0.5;
+                            } else if self.pressed_keys.contains(&KeyCode::KeyE) {
+                                flight_inputs.rudder = 0.5;
+                            }
+
+                            if self.pressed_keys.contains(&KeyCode::ShiftLeft)
+                                || self.pressed_keys.contains(&KeyCode::ShiftRight)
+                            {
+                                self.aircraft_throttle =
+                                    (self.aircraft_throttle + 0.3 * dt as f32).min(1.0);
+                            }
+                            if self.pressed_keys.contains(&KeyCode::ControlLeft)
+                                || self.pressed_keys.contains(&KeyCode::ControlRight)
+                            {
+                                self.aircraft_throttle =
+                                    (self.aircraft_throttle - 0.3 * dt as f32).max(0.0);
+                            }
+
+                            if self.pressed_keys.contains(&KeyCode::Space) {
+                                flight_inputs.wheel_brakes = 1.0;
+                            }
+
+                            flight_inputs.throttle = self.aircraft_throttle;
+                            let ground_y =
+                                gq.elevation(self.aircraft.position.x, self.aircraft.position.z);
+                            self.aircraft.step(&flight_inputs, ground_y, dt as f32);
+                        }
+                    }
+
+                    // Authoritative Multiplayer client input dispatch & prediction sync
+                    if let Some(ref mut client) = self.multiplayer_client {
+                        if client.state == realearth_networking::ConnectionState::Connected {
+                            let input_frame = realearth_networking::ClientInputFrame {
+                                tick: client.server_tick + 1,
+                                delta_time: dt as f32,
+                                throttle: road_inputs.throttle,
+                                steer: road_inputs.steer,
+                                brake: road_inputs.brake,
+                                handbrake: road_inputs.handbrake,
+                                client_timestamp_ms: now_ms,
+                            };
+                            let _ = client.send_input(&input_frame);
+
+                            if client.controlled_entity_id.is_some() {
+                                self.vehicle.position = client.predictor.position;
+                                self.vehicle.orientation = client.predictor.orientation;
+                                self.vehicle.linear_velocity = client.predictor.linear_velocity;
+                            }
                         }
                     }
 
                     self.traffic_sim.step(dt as f32, gq);
 
+                    let (active_pos, active_orient, active_speed_kph) =
+                        match self.active_transport_mode {
+                            ActiveTransportMode::Car => (
+                                self.vehicle.position,
+                                self.vehicle.orientation,
+                                self.vehicle.speed_kph,
+                            ),
+                            ActiveTransportMode::Motorcycle => (
+                                self.motorcycle.position,
+                                self.motorcycle.orientation,
+                                self.motorcycle.speed_kph,
+                            ),
+                            ActiveTransportMode::TransitBus => (
+                                self.transit_bus.position,
+                                self.transit_bus.orientation,
+                                self.transit_bus.speed_kph,
+                            ),
+                            ActiveTransportMode::HeavyTruck => (
+                                self.heavy_truck.tractor_position,
+                                self.heavy_truck.tractor_orientation,
+                                self.heavy_truck.speed_kph,
+                            ),
+                            ActiveTransportMode::Train => (
+                                self.train_position,
+                                glam::Quat::from_rotation_y(self.train_yaw),
+                                self.train_consist.speed_kph,
+                            ),
+                            ActiveTransportMode::Marine => (
+                                self.marine_vessel.position,
+                                self.marine_vessel.orientation,
+                                self.marine_vessel.speed_knots * 1.852,
+                            ),
+                            ActiveTransportMode::Aviation => (
+                                self.aircraft.position,
+                                self.aircraft.orientation,
+                                self.aircraft.true_airspeed_mps * 3.6,
+                            ),
+                        };
+
                     let veh_coord = Wgs84Coord::new(
-                        anchor.lat + (self.vehicle.position.z as f64 / meters_per_deg_lat),
-                        anchor.lon + (self.vehicle.position.x as f64 / meters_per_deg_lon),
-                        self.vehicle.position.y as f64,
+                        anchor.lat + (active_pos.z as f64 / meters_per_deg_lat),
+                        anchor.lon + (active_pos.x as f64 / meters_per_deg_lon),
+                        active_pos.y as f64,
                     );
 
+                    let rot_mat = glam::Mat3::from_quat(active_orient);
+                    let forward_vec = rot_mat.col(2);
+                    let heading_deg = (forward_vec.x.atan2(forward_vec.z) as f64)
+                        .to_degrees()
+                        .rem_euclid(360.0);
+
+                    if let Some(ref mut tracker) = self.route_tracker {
+                        self.active_nav_update = Some(tracker.update(veh_coord, heading_deg));
+                    }
+
                     if let Some(ref mut job) = self.active_job {
-                        if let Some(completion) = job.update(
-                            dt as f32,
-                            veh_coord,
-                            self.vehicle.speed_kph,
-                            &self.gameplay_bus,
-                        ) {
+                        if let Some(completion) =
+                            job.update(dt as f32, veh_coord, active_speed_kph, &self.gameplay_bus)
+                        {
                             let now_secs = std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
                                 .map(|d| d.as_secs())
@@ -1596,8 +2780,20 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 now_secs,
                             );
 
+                            self.active_debrief = Some(ActiveDebrief {
+                                title: job.title.clone(),
+                                career: job.career.display_name().to_string(),
+                                base_payout: completion.base_payout,
+                                tip_bonus: completion.tip_bonus,
+                                speed_bonus: completion.speed_bonus,
+                                net_payout: completion.final_payout,
+                                xp_reward: completion.xp_gained,
+                                comfort_stars: completion.rating_stars,
+                            });
+                            self.ui_state = AppUiState::DebriefModal;
+
                             let msg = format!(
-                                "🎉 CONTRACT COMPLETE! +₹{:.2} | Rating: {:.1} Stars | Balance: ₹{:.2}",
+                                "🎉 CONTRACT COMPLETE! +${:.2} | Rating: {:.1} Stars | Wallet: ${:.2}",
                                 completion.final_payout,
                                 completion.rating_stars,
                                 self.player_profile.wallet.balance()
@@ -1613,25 +2809,121 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 let mut j = next_job;
                                 let _ = j.accept(&self.player_profile, &self.gameplay_bus);
                                 self.active_job = Some(j);
+                            } else {
+                                self.active_job = None;
                             }
                         }
                     }
-                    let speed_mps = self.vehicle.speed_kph as f64 * (1000.0 / 3600.0);
+                    let speed_mps = active_speed_kph as f64 * (1000.0 / 3600.0);
                     self.player_profile
                         .record_distance((speed_mps * dt) / 1000.0);
 
-                    let (cam_pos, cam_yaw, cam_pitch) =
-                        self.vehicle_cam.update(&self.vehicle, dt as f32);
-                    let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
-                    let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
-                    self.camera_ctrl.coord = Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
-                    self.camera_ctrl.yaw = cam_yaw;
-                    self.camera_ctrl.pitch = cam_pitch;
+                    // Update camera based on active transport mode
+                    match self.active_transport_mode {
+                        ActiveTransportMode::Car => {
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update(&self.vehicle, dt as f32);
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::Motorcycle => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.motorcycle.position,
+                                self.motorcycle.orientation,
+                                4.2,
+                                1.6,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::TransitBus => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.transit_bus.position,
+                                self.transit_bus.orientation,
+                                16.0,
+                                4.5,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::HeavyTruck => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.heavy_truck.tractor_position,
+                                self.heavy_truck.tractor_orientation,
+                                18.5,
+                                4.8,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::Train => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.train_position,
+                                glam::Quat::from_rotation_y(self.train_yaw),
+                                28.0,
+                                6.2,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::Marine => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.marine_vessel.position,
+                                self.marine_vessel.orientation,
+                                90.0,
+                                24.0,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                        ActiveTransportMode::Aviation => {
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                self.aircraft.position,
+                                self.aircraft.orientation,
+                                48.0,
+                                12.5,
+                                dt as f32,
+                            );
+                            let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+                            let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+                            self.camera_ctrl.coord =
+                                Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+                            self.camera_ctrl.yaw = cam_yaw;
+                            self.camera_ctrl.pitch = cam_pitch;
+                        }
+                    }
                     self.camera_ctrl.update_camera(&mut self.camera);
 
-                    let rot = glam::Mat3::from_quat(self.vehicle.orientation);
-                    let forward = rot.col(2);
-                    forward * (self.vehicle.speed_kph * (1000.0 / 3600.0))
+                    forward_vec * (active_speed_kph * (1000.0 / 3600.0))
                 } else {
                     // Camera navigation in Fly, Walk, Orbit, Free, or Chase mode
                     let base_speed = match self.camera_ctrl.mode {
@@ -1730,32 +3022,143 @@ impl ApplicationHandler for InteractiveViewerApp {
                 );
                 self.last_culled_triangles = active.iter().map(|c| c.total_triangles()).sum();
 
-                // 7. Render 3D Vehicles (Player Car and AI Traffic)
+                // 7. Render 3D Vehicles (Player Multimodal Fleet and AI Traffic)
                 let mut fleet_mesh = realearth_compiler::mesh::ChunkMesh::default();
                 if self.config.is_drive {
-                    let rot_mat = glam::Mat3::from_quat(self.vehicle.orientation);
-                    let forward_vec = rot_mat.col(2);
-                    let is_in_reverse = self.vehicle.current_gear == -1
-                        || self.vehicle.linear_velocity.dot(forward_vec) < -0.05;
+                    match self.active_transport_mode {
+                        ActiveTransportMode::Car => {
+                            let rot_mat = glam::Mat3::from_quat(self.vehicle.orientation);
+                            let forward_vec = rot_mat.col(2);
+                            let is_in_reverse = self.vehicle.current_gear == -1
+                                || self.vehicle.linear_velocity.dot(forward_vec) < -0.05;
 
-                    let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
-                        position: self.vehicle.position,
-                        orientation: self.vehicle.orientation,
-                        color: match self.vehicle_visual_type {
-                            VehicleVisualType::SportsCoupe => [0.92, 0.12, 0.12, 1.0], // Cherry Red
-                            VehicleVisualType::Sedan => [0.15, 0.35, 0.85, 1.0], // Electric Blue
-                            VehicleVisualType::Suv => [0.20, 0.22, 0.25, 1.0],   // Graphite Gray
-                            VehicleVisualType::Taxi => [0.95, 0.80, 0.10, 1.0],  // Yellow Taxi
-                            VehicleVisualType::TransitBus => [0.10, 0.65, 0.40, 1.0], // City Green Transit
-                            VehicleVisualType::HeavyTruck => [0.85, 0.45, 0.10, 1.0], // Orange Hauler
-                        },
-                        vehicle_type: self.vehicle_visual_type,
-                        wheel_steer_angle: self.vehicle.wheels[0].steer_angle,
-                        headlights_on: true,
-                        brake_lights_on: is_braking,
-                        reverse_lights_on: is_in_reverse,
-                    });
-                    fleet_mesh.append(&player_mesh);
+                            let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.vehicle.position,
+                                orientation: self.vehicle.orientation,
+                                color: match self.vehicle_visual_type {
+                                    VehicleVisualType::SportsCoupe => [0.92, 0.12, 0.12, 1.0], // Cherry Red
+                                    VehicleVisualType::Sedan => [0.15, 0.35, 0.85, 1.0], // Electric Blue
+                                    VehicleVisualType::Suv => [0.20, 0.22, 0.25, 1.0], // Graphite Gray
+                                    VehicleVisualType::Taxi => [0.95, 0.80, 0.10, 1.0], // Yellow Taxi
+                                    VehicleVisualType::TransitBus => [0.10, 0.65, 0.40, 1.0], // City Green Transit
+                                    VehicleVisualType::HeavyTruck => [0.85, 0.45, 0.10, 1.0], // Orange Hauler
+                                    _ => [0.92, 0.12, 0.12, 1.0],
+                                },
+                                vehicle_type: self.vehicle_visual_type,
+                                wheel_steer_angle: self.vehicle.wheels[0].steer_angle,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: is_braking,
+                                reverse_lights_on: is_in_reverse,
+                            });
+                            fleet_mesh.append(&player_mesh);
+                        }
+                        ActiveTransportMode::Motorcycle => {
+                            let bike_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.motorcycle.position,
+                                orientation: self.motorcycle.orientation,
+                                color: [0.95, 0.42, 0.08, 1.0], // Racing Orange
+                                vehicle_type: VehicleVisualType::Motorcycle,
+                                wheel_steer_angle: self.motorcycle.steer_angle,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: is_braking,
+                                reverse_lights_on: false,
+                            });
+                            fleet_mesh.append(&bike_mesh);
+                        }
+                        ActiveTransportMode::TransitBus => {
+                            let bus_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.transit_bus.position,
+                                orientation: self.transit_bus.orientation,
+                                color: [0.10, 0.65, 0.40, 1.0], // City Green Transit
+                                vehicle_type: VehicleVisualType::TransitBus,
+                                wheel_steer_angle: self.transit_bus.steer_angle,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: is_braking,
+                                reverse_lights_on: false,
+                            });
+                            fleet_mesh.append(&bus_mesh);
+                        }
+                        ActiveTransportMode::HeavyTruck => {
+                            let truck_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.heavy_truck.tractor_position,
+                                orientation: self.heavy_truck.tractor_orientation,
+                                color: [0.85, 0.22, 0.15, 1.0], // Crimson Hauler
+                                vehicle_type: VehicleVisualType::HeavyTruck,
+                                wheel_steer_angle: self.heavy_truck.steer_angle,
+                                trailer_angle: self.heavy_truck.trailer_articulation_angle,
+                                headlights_on: true,
+                                brake_lights_on: is_braking,
+                                reverse_lights_on: false,
+                            });
+                            fleet_mesh.append(&truck_mesh);
+                        }
+                        ActiveTransportMode::Train => {
+                            let loco_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.train_position,
+                                orientation: glam::Quat::from_rotation_y(self.train_yaw),
+                                color: [0.15, 0.35, 0.85, 1.0], // Electric Locomotive Blue
+                                vehicle_type: VehicleVisualType::TrainLocomotive,
+                                wheel_steer_angle: 0.0,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
+                                    > 0.5,
+                                reverse_lights_on: self.train_consist.reverser == -1,
+                            });
+                            fleet_mesh.append(&loco_mesh);
+
+                            // Append 2 passenger coach wagons behind locomotive
+                            let back = -glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
+                            for i in 1..=2 {
+                                let wagon_pos = self.train_position
+                                    + back * (20.5 + (i as f32 - 1.0) * 24.0 + 12.0);
+                                let wagon_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                    position: wagon_pos,
+                                    orientation: glam::Quat::from_rotation_y(self.train_yaw),
+                                    color: [0.75, 0.78, 0.82, 1.0], // Stainless Steel Coach
+                                    vehicle_type: VehicleVisualType::TrainWagon,
+                                    wheel_steer_angle: 0.0,
+                                    trailer_angle: 0.0,
+                                    headlights_on: false,
+                                    brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
+                                        > 0.5,
+                                    reverse_lights_on: false,
+                                });
+                                fleet_mesh.append(&wagon_mesh);
+                            }
+                        }
+                        ActiveTransportMode::Marine => {
+                            let ship_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.marine_vessel.position,
+                                orientation: self.marine_vessel.orientation,
+                                color: [0.12, 0.22, 0.35, 1.0], // Maritime Navy Blue
+                                vehicle_type: VehicleVisualType::MarineVessel,
+                                wheel_steer_angle: self.marine_vessel.current_rudder_angle,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: false,
+                                reverse_lights_on: false,
+                            });
+                            fleet_mesh.append(&ship_mesh);
+                        }
+                        ActiveTransportMode::Aviation => {
+                            let plane_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                position: self.aircraft.position,
+                                orientation: self.aircraft.orientation,
+                                color: [0.95, 0.95, 0.98, 1.0], // Airliner White & Silver
+                                vehicle_type: VehicleVisualType::CommercialAirliner,
+                                wheel_steer_angle: 0.0,
+                                trailer_angle: 0.0,
+                                headlights_on: true,
+                                brake_lights_on: false,
+                                reverse_lights_on: false,
+                            });
+                            fleet_mesh.append(&plane_mesh);
+                        }
+                    }
                 }
 
                 // Append traffic vehicles
@@ -1781,6 +3184,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                         color: t_color,
                         vehicle_type: t_type,
                         wheel_steer_angle: 0.0,
+                        trailer_angle: 0.0,
                         headlights_on: true,
                         brake_lights_on: agent.speed_ms < 1.0,
                         reverse_lights_on: false,
@@ -1788,265 +3192,853 @@ impl ApplicationHandler for InteractiveViewerApp {
                     fleet_mesh.append(&t_mesh);
                 }
 
+                // Append 3D Traffic Signals
+                for light in &self.traffic_sim.traffic_lights {
+                    let visual_state = match light.state_for_direction(true) {
+                        TrafficLightState::Green => TrafficSignalVisualState::Green,
+                        TrafficLightState::Amber => TrafficSignalVisualState::Amber,
+                        TrafficLightState::Red => TrafficSignalVisualState::Red,
+                    };
+                    let sig_mesh = generate_traffic_signal_mesh(light.position, 0.0, visual_state);
+                    fleet_mesh.append(&sig_mesh);
+                }
+
+                // Append 3D Road Signs at Stop Lines
+                for stop_line in &self.traffic_sim.stop_lines {
+                    let sign_pos = stop_line.position + glam::Vec3::new(3.5, 0.0, 0.0);
+                    let sign_mesh = generate_road_sign_mesh(sign_pos, 0.0, RoadSignType::Stop);
+                    fleet_mesh.append(&sign_mesh);
+                }
+
+                // Append 3D Animated Pedestrians
+                let ped_colors = [
+                    [0.2, 0.5, 0.8, 1.0],
+                    [0.8, 0.2, 0.2, 1.0],
+                    [0.3, 0.7, 0.4, 1.0],
+                    [0.9, 0.6, 0.1, 1.0],
+                ];
+                for (idx, ped) in self.traffic_sim.pedestrians.iter().enumerate() {
+                    let ped_mesh = generate_pedestrian_mesh(
+                        ped.position,
+                        ped.yaw,
+                        ped.walk_cycle_phase,
+                        ped_colors[idx % ped_colors.len()],
+                    );
+                    fleet_mesh.append(&ped_mesh);
+                }
+
+                // Append remote multiplayer vehicles
+                if let Some(ref client) = self.multiplayer_client {
+                    let now_ms = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64;
+                    let remotes = client.get_remote_vehicles(now_ms);
+                    for remote in remotes {
+                        let v_type = match remote.vehicle_type.as_str() {
+                            "Motorcycle" => VehicleVisualType::Motorcycle,
+                            "TransitBus" => VehicleVisualType::TransitBus,
+                            "HeavyTruck" => VehicleVisualType::HeavyTruck,
+                            "TrainLocomotive" => VehicleVisualType::TrainLocomotive,
+                            "MarineVessel" => VehicleVisualType::MarineVessel,
+                            "CommercialAirliner" => VehicleVisualType::CommercialAirliner,
+                            _ => VehicleVisualType::SportsCoupe,
+                        };
+                        let r_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                            position: remote.position,
+                            orientation: remote.orientation,
+                            color: remote.color,
+                            vehicle_type: v_type,
+                            wheel_steer_angle: 0.0,
+                            trailer_angle: 0.0,
+                            headlights_on: true,
+                            brake_lights_on: remote.speed_kph < 2.0,
+                            reverse_lights_on: false,
+                        });
+                        fleet_mesh.append(&r_mesh);
+                    }
+                }
+
                 if !fleet_mesh.is_empty() {
                     renderer.render_mesh(&fleet_mesh, &color_view, depth_view, false);
                 }
 
-                // 8. Render Integrated 2D HUD and Telemetry
-                if self.show_hud {
+                // 8. Render Modern Stage 6 Glassmorphic UI & In-Game Telemetry
+                {
                     let mut hud = HudMesh::new();
                     let width_f = surface_config.width as f32;
                     let height_f = surface_config.height as f32;
 
-                    // Top Status Panel
-                    hud.add_panel(16.0, 16.0, 520.0, 118.0, [0.0, 0.75, 1.0, 1.0]);
-                    hud.add_text(
-                        26.0,
-                        26.0,
-                        1.4,
-                        &format!("REAL EARTH WORLD — {}", res.region_name),
-                        [1.0, 1.0, 1.0, 1.0],
-                    );
+                    match self.ui_state {
+                        AppUiState::StartScreen => {
+                            let options = [
+                                (
+                                    "CONTINUE CAREER",
+                                    "Resume last saved session or active profile",
+                                ),
+                                (
+                                    "FREE ROAM SIMULATION",
+                                    "Explore open surveyed terrain & landmarks",
+                                ),
+                                (
+                                    "CAREER CONTRACTS",
+                                    "Select taxi, cargo, and freight dispatch missions",
+                                ),
+                                (
+                                    "REGIONAL GEOGRAPHY",
+                                    "Browse 38 high-precision US surveyed cities",
+                                ),
+                                (
+                                    "VEHICLE FLEET GARAGE",
+                                    "Inspect and choose from 10 multimodal vehicles",
+                                ),
+                                (
+                                    "SETTINGS & PREFERENCES",
+                                    "Configure units, graphics, and camera settings",
+                                ),
+                                ("EXIT TO DESKTOP", "Quit the planetary simulation"),
+                            ];
+                            hud.add_start_screen(
+                                width_f,
+                                height_f,
+                                self.start_menu_selected_idx,
+                                &options,
+                                &self.player_profile.name,
+                                self.player_profile.wallet.balance(),
+                                self.player_profile.completed_jobs as u32,
+                            );
+                        }
 
-                    let avg_ms = if self.frame_durations_ms.is_empty() {
-                        16.6
-                    } else {
-                        self.frame_durations_ms.iter().sum::<f64>()
-                            / self.frame_durations_ms.len() as f64
-                    };
-                    let fps = (1000.0 / avg_ms).max(1.0);
+                        AppUiState::PauseMenu => {
+                            let options = [
+                                "RESUME SIMULATION",
+                                "REGIONAL DISPATCH & JOBS [J]",
+                                "VEHICLE FLEET GARAGE [G]",
+                                "WORLD REGION CATALOG (38 CITIES) [U]",
+                                "ROADSIDE RECOVERY & RESET [R]",
+                                "QUICKSAVE PROGRESS [F5]",
+                                "QUICKLOAD PROGRESS [F9]",
+                                "SETTINGS & PREFERENCES [O]",
+                                "RETURN TO TITLE SCREEN",
+                                "EXIT TO DESKTOP",
+                            ];
+                            hud.add_pause_menu(
+                                width_f,
+                                height_f,
+                                self.pause_menu_selected_idx,
+                                &options,
+                                res.region_name,
+                            );
+                        }
 
-                    // Compute 1% low FPS
-                    let one_pct_low_fps = if self.frame_durations_ms.len() >= 10 {
-                        let mut sorted = self.frame_durations_ms.clone();
-                        sorted
-                            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-                        let idx =
-                            ((sorted.len() as f64 * 0.99).floor() as usize).min(sorted.len() - 1);
-                        1000.0 / sorted[idx].max(0.1)
-                    } else {
-                        fps
-                    };
+                        AppUiState::JobBrowser => {
+                            let available =
+                                JobCatalogGenerator::jobs_for_region(&self.config.region_id);
+                            let jobs_tuples: Vec<(
+                                &str,
+                                &str,
+                                &str,
+                                &str,
+                                f64,
+                                f64,
+                                u32,
+                                &str,
+                                bool,
+                            )> = available
+                                .iter()
+                                .map(|j| {
+                                    let career_str = j.career.display_name();
+                                    let diff_str = match j.difficulty {
+                                        realearth_gameplay::JobDifficulty::Relaxed => "Relaxed",
+                                        realearth_gameplay::JobDifficulty::Standard => "Standard",
+                                        realearth_gameplay::JobDifficulty::Challenging => {
+                                            "Challenging"
+                                        }
+                                        realearth_gameplay::JobDifficulty::Extreme => "Extreme",
+                                    };
+                                    let can_accept = self.player_profile.career_tier(j.career)
+                                        >= j.required_tier;
+                                    (
+                                        j.id.as_str(),
+                                        career_str,
+                                        j.title.as_str(),
+                                        j.description.as_str(),
+                                        j.route_distance_m / 1000.0,
+                                        j.base_payout,
+                                        j.xp_reward,
+                                        diff_str,
+                                        can_accept,
+                                    )
+                                })
+                                .collect();
+                            hud.add_job_browser_modal(
+                                width_f,
+                                height_f,
+                                self.job_browser_selected_idx,
+                                &jobs_tuples,
+                                self.active_job.as_ref().map(|j| j.id.as_str()),
+                            );
+                        }
 
-                    hud.add_text(
-                        26.0,
-                        44.0,
-                        1.05,
-                        &format!(
-                            "FPS: {:>4.1} (1% Low: {:>4.1}) | {:.2}ms | Preset: {:?}",
-                            fps, one_pct_low_fps, avg_ms, renderer.settings.level
-                        ),
-                        [0.2, 0.95, 0.45, 1.0],
-                    );
-                    hud.add_text(
-                        26.0,
-                        62.0,
-                        0.95,
-                        &format!(
-                            "Coord: {:.4}N, {:.4}W, {:.1}m | Anchor: {}",
-                            self.camera_ctrl.coord.lat,
-                            self.camera_ctrl.coord.lon,
-                            self.camera_ctrl.coord.alt,
-                            res.landmark.name
-                        ),
-                        [0.75, 0.85, 0.95, 1.0],
-                    );
-                    hud.add_text(
-                        26.0,
-                        80.0,
-                        0.95,
-                        &format!(
-                            "LOD Chunks: {} active ({} culled) | Scene Tris: {}",
-                            active.len(),
-                            self.last_culled_chunks,
-                            self.last_culled_triangles
-                        ),
-                        [0.85, 0.75, 0.40, 1.0],
-                    );
-                    let proc_mem = get_current_process_memory();
-                    let vram_mb = renderer.gpu_memory_bytes() as f64 / (1024.0 * 1024.0);
-                    hud.add_text(
-                        26.0,
-                        98.0,
-                        0.95,
-                        &format!(
-                            "Memory: RSS {:.1}MB (Peak {:.1}MB) | VRAM: {:.1}MB",
-                            proc_mem.working_set_size_mb(),
-                            proc_mem.peak_working_set_size_mb(),
-                            vram_mb
-                        ),
-                        [0.95, 0.65, 0.30, 1.0],
-                    );
+                        AppUiState::GarageSelect => {
+                            let vehicles = [
+                                (
+                                    "Apex GT Sports Coupe",
+                                    "Sports Coupe",
+                                    "RWD 6-Speed",
+                                    1450.0,
+                                    380.0,
+                                    260.0,
+                                    self.active_transport_mode == ActiveTransportMode::Car
+                                        && self.vehicle_visual_type
+                                            == VehicleVisualType::SportsCoupe,
+                                ),
+                                (
+                                    "Executive Sedan",
+                                    "Sedan",
+                                    "AWD 8-Speed",
+                                    1750.0,
+                                    280.0,
+                                    220.0,
+                                    self.active_transport_mode == ActiveTransportMode::Car
+                                        && self.vehicle_visual_type == VehicleVisualType::Sedan,
+                                ),
+                                (
+                                    "Overland Explorer SUV",
+                                    "Full-Size SUV",
+                                    "4WD Low-Range",
+                                    2250.0,
+                                    320.0,
+                                    195.0,
+                                    self.active_transport_mode == ActiveTransportMode::Car
+                                        && self.vehicle_visual_type == VehicleVisualType::Suv,
+                                ),
+                                (
+                                    "Metro Yellow Cab",
+                                    "City Taxi",
+                                    "FWD Hybrid",
+                                    1600.0,
+                                    180.0,
+                                    175.0,
+                                    self.active_transport_mode == ActiveTransportMode::Car
+                                        && self.vehicle_visual_type == VehicleVisualType::Taxi,
+                                ),
+                                (
+                                    "CityLine Transit Bus",
+                                    "Transit Bus",
+                                    "Rear-Engine Air Brake",
+                                    11500.0,
+                                    350.0,
+                                    105.0,
+                                    self.active_transport_mode == ActiveTransportMode::TransitBus,
+                                ),
+                                (
+                                    "TransContinental Semi",
+                                    "Heavy Truck",
+                                    "6x4 Twin-Axle",
+                                    18500.0,
+                                    560.0,
+                                    120.0,
+                                    self.active_transport_mode == ActiveTransportMode::HeavyTruck,
+                                ),
+                                (
+                                    "HyperSport RR-1000",
+                                    "Motorcycle",
+                                    "Chain-Drive 6-Speed",
+                                    195.0,
+                                    205.0,
+                                    295.0,
+                                    self.active_transport_mode == ActiveTransportMode::Motorcycle,
+                                ),
+                                (
+                                    "Pacific Intercity Consist",
+                                    "Locomotive Consist",
+                                    "Dual-Cab Electric 25kV",
+                                    165000.0,
+                                    6000.0,
+                                    160.0,
+                                    self.active_transport_mode == ActiveTransportMode::Train,
+                                ),
+                                (
+                                    "Golden Gate Passenger Ferry",
+                                    "Marine Ferry",
+                                    "Twin Screw Diesel",
+                                    420000.0,
+                                    4800.0,
+                                    42.0,
+                                    self.active_transport_mode == ActiveTransportMode::Marine,
+                                ),
+                                (
+                                    "SkyCourier B737-800",
+                                    "Commercial Airliner",
+                                    "Twin Turbofan High-Bypass",
+                                    79000.0,
+                                    54000.0,
+                                    850.0,
+                                    self.active_transport_mode == ActiveTransportMode::Aviation,
+                                ),
+                            ];
+                            hud.add_garage_modal(
+                                width_f,
+                                height_f,
+                                self.garage_selected_idx,
+                                &vehicles,
+                            );
+                        }
 
-                    // Vehicle Cockpit & Speedometer Panel (when in Drive mode)
-                    if self.config.is_drive {
-                        let panel_y = height_f - 155.0;
-                        hud.add_panel(16.0, panel_y, 450.0, 138.0, [1.0, 0.4, 0.1, 1.0]);
+                        AppUiState::SettingsMenu => {
+                            let settings = [
+                                (
+                                    "SPEED UNITS",
+                                    if self.use_metric_units {
+                                        "KM/H (METRIC)"
+                                    } else {
+                                        "MPH (IMPERIAL)"
+                                    },
+                                    "Toggle vehicle speedometer readout units",
+                                ),
+                                (
+                                    "GRAPHICS QUALITY",
+                                    match self.config.preset_level {
+                                        GraphicsPresetLevel::Low => "LOW (1.5KM)",
+                                        GraphicsPresetLevel::Medium => "MEDIUM (2.5KM)",
+                                        GraphicsPresetLevel::High => "HIGH (5.0KM)",
+                                        GraphicsPresetLevel::Adaptive => "ADAPTIVE DYNAMIC",
+                                    },
+                                    "Visual fidelity and LOD chunk streaming distance",
+                                ),
+                                (
+                                    "CAMERA PERSPECTIVE",
+                                    match self.vehicle_cam.perspective {
+                                        VehicleCameraPerspective::Chase => "CHASE (THIRD PERSON)",
+                                        VehicleCameraPerspective::Hood => "HOOD MOUNT",
+                                        VehicleCameraPerspective::Cockpit => {
+                                            "COCKPIT (FIRST PERSON)"
+                                        }
+                                        VehicleCameraPerspective::Bumper => "BUMPER MOUNT",
+                                    },
+                                    "Active vehicle driving camera viewpoint",
+                                ),
+                                (
+                                    "DEVELOPER OVERLAY [F3]",
+                                    if self.show_debug_overlay {
+                                        "ENABLED (VISIBLE)"
+                                    } else {
+                                        "DISABLED (HIDDEN)"
+                                    },
+                                    "Toggle F3 diagnostic metrics HUD",
+                                ),
+                                (
+                                    "HUD DISPLAY [H]",
+                                    if self.show_hud {
+                                        "ENABLED (ON)"
+                                    } else {
+                                        "DISABLED (OFF)"
+                                    },
+                                    "Master heads-up display overlay",
+                                ),
+                            ];
+                            hud.add_settings_modal(
+                                width_f,
+                                height_f,
+                                self.settings_selected_idx,
+                                &settings,
+                            );
+                        }
 
-                        let gear_str = match self.vehicle.current_gear {
-                            -1 => "R",
-                            0 => "N",
-                            1 => "D1",
-                            2 => "D2",
-                            3 => "D3",
-                            4 => "D4",
-                            5 => "D5",
-                            _ => "D",
-                        };
-                        let speed_mps = self.vehicle.speed_kph.abs() * (1000.0 / 3600.0);
-                        let steer_deg = self.vehicle.wheels[0].steer_angle.to_degrees();
+                        AppUiState::CatalogModal => {
+                            let cities_data: Vec<(&str, &str, &str, &str, f32, bool, &str)> =
+                                all_us_cities()
+                                    .iter()
+                                    .map(|c| {
+                                        let tier_str = match c.priority {
+                                            CityPriorityTier::Priority1Primary => "P1-Primary",
+                                            CityPriorityTier::Priority2Major => "P2-Major",
+                                            CityPriorityTier::Priority3Extended => "P3-Extend",
+                                        };
+                                        (
+                                            c.id,
+                                            c.name,
+                                            c.state,
+                                            c.anchor_landmark_name,
+                                            c.elevation_max_m,
+                                            c.has_maritime_port,
+                                            tier_str,
+                                        )
+                                    })
+                                    .collect();
+                            hud.add_city_catalog_modal(
+                                width_f,
+                                height_f,
+                                self.catalog_selected_idx,
+                                &cities_data,
+                            );
+                        }
 
-                        hud.add_text(
-                            26.0,
-                            panel_y + 12.0,
-                            1.35,
-                            &format!(
-                                "SPEED: {:>5.1} KM/H ({:>4.1} M/S) | GEAR: {:<2} | STEER: {:>+3.0}°",
-                                self.vehicle.speed_kph, speed_mps, gear_str, steer_deg
-                            ),
-                            [1.0, 0.9, 0.2, 1.0],
-                        );
+                        AppUiState::DebriefModal => {
+                            if let Some(ref debrief) = self.active_debrief {
+                                hud.add_debrief_modal(
+                                    width_f,
+                                    height_f,
+                                    &debrief.title,
+                                    &debrief.career,
+                                    debrief.base_payout,
+                                    debrief.tip_bonus,
+                                    debrief.speed_bonus,
+                                    debrief.net_payout,
+                                    debrief.xp_reward,
+                                    debrief.comfort_stars,
+                                );
+                            }
+                        }
 
-                        // Speedometer Bar
-                        hud.add_bar(
-                            26.0,
-                            panel_y + 36.0,
-                            410.0,
-                            12.0,
-                            (self.vehicle.speed_kph.abs() / 180.0).clamp(0.0, 1.0),
-                            [0.95, 0.35, 0.10, 1.0],
-                            [0.15, 0.18, 0.22, 1.0],
-                        );
+                        AppUiState::MultiplayerModal => {
+                            let (is_connected, is_hosting, ping_ms) =
+                                if let Some(ref client) = self.multiplayer_client {
+                                    (
+                                        client.state
+                                            == realearth_networking::ConnectionState::Connected,
+                                        self.multiplayer_server_handle.is_some(),
+                                        client.ping_ms,
+                                    )
+                                } else {
+                                    (false, false, 0.0)
+                                };
+                            let roster =
+                                [(self.config.player_name.as_str(), "Local Driver", ping_ms)];
+                            hud.add_multiplayer_modal(
+                                width_f,
+                                height_f,
+                                is_connected,
+                                is_hosting,
+                                &self.multiplayer_server_addr_input,
+                                ping_ms,
+                                &self.config.player_name,
+                                self.multiplayer_selected_action,
+                                &roster,
+                            );
+                        }
 
-                        // Tachometer RPM Bar
-                        hud.add_text(
-                            26.0,
-                            panel_y + 58.0,
-                            1.1,
-                            &format!(
-                                "ENGINE: {:.0} RPM | Cam: {:?} | Model: {:?}",
-                                self.vehicle.engine_rpm,
-                                self.vehicle_cam.perspective,
-                                self.vehicle_visual_type
-                            ),
-                            [0.7, 0.85, 1.0, 1.0],
-                        );
-                        hud.add_bar(
-                            26.0,
-                            panel_y + 74.0,
-                            410.0,
-                            8.0,
-                            (self.vehicle.engine_rpm / 7500.0).clamp(0.0, 1.0),
-                            [0.10, 0.85, 0.70, 1.0],
-                            [0.15, 0.18, 0.22, 1.0],
-                        );
+                        AppUiState::InGame => {
+                            if self.show_hud {
+                                let veh_coord = Wgs84Coord::new(
+                                    anchor.lat
+                                        + (self.vehicle.position.z as f64 / meters_per_deg_lat),
+                                    anchor.lon
+                                        + (self.vehicle.position.x as f64 / meters_per_deg_lon),
+                                    self.vehicle.position.y as f64,
+                                );
+                                let current_speed_kph = match self.active_transport_mode {
+                                    ActiveTransportMode::Car => self.vehicle.speed_kph.abs(),
+                                    ActiveTransportMode::Motorcycle => {
+                                        self.motorcycle.speed_kph.abs()
+                                    }
+                                    ActiveTransportMode::TransitBus => {
+                                        self.transit_bus.speed_kph.abs()
+                                    }
+                                    ActiveTransportMode::HeavyTruck => {
+                                        self.heavy_truck.speed_kph.abs()
+                                    }
+                                    ActiveTransportMode::Train => {
+                                        self.train_consist.speed_kph.abs()
+                                    }
+                                    ActiveTransportMode::Marine => {
+                                        self.marine_vessel.speed_knots * 1.852
+                                    }
+                                    ActiveTransportMode::Aviation => {
+                                        self.aircraft.true_airspeed_mps * 3.6
+                                    }
+                                };
 
-                        // Suspension Compression Telemetry
-                        hud.add_text(
-                            26.0,
-                            panel_y + 92.0,
-                            0.95,
-                            &format!(
-                                "Wheels (m): FL={:.2} FR={:.2} RL={:.2} RR={:.2} | Traffic: {}",
-                                self.vehicle.wheels[0].compression,
-                                self.vehicle.wheels[1].compression,
-                                self.vehicle.wheels[2].compression,
-                                self.vehicle.wheels[3].compression,
-                                self.traffic_sim.agents.len()
-                            ),
-                            [0.85, 0.85, 0.88, 0.95],
-                        );
+                                // 1. Turn-by-Turn Navigation Guidance Overlay Banner
+                                if let Some(ref update) = self.active_nav_update {
+                                    let (icon, instruction, street_name) =
+                                        if let Some(ref inst) = update.current_instruction {
+                                            let icon_str = match inst.maneuver {
+                                                ManeuverType::Depart => "->",
+                                                ManeuverType::Continue => "^^",
+                                                ManeuverType::TurnLeft
+                                                | ManeuverType::SharpLeft
+                                                | ManeuverType::SlightLeft => "<-",
+                                                ManeuverType::TurnRight
+                                                | ManeuverType::SharpRight
+                                                | ManeuverType::SlightRight => "->",
+                                                ManeuverType::Uturn => "<>",
+                                                ManeuverType::EnterRoundabout
+                                                | ManeuverType::ExitRoundabout => "()",
+                                                ManeuverType::TakeRamp => "/>",
+                                                ManeuverType::Arrive => "**",
+                                            };
+                                            (
+                                                icon_str,
+                                                inst.instruction.as_str(),
+                                                inst.street_name.as_deref(),
+                                            )
+                                        } else {
+                                            ("^^", "Proceed along route", None)
+                                        };
 
-                        hud.add_text(
-                            26.0,
-                            panel_y + 110.0,
-                            0.85,
-                            "Controls: [W/S] Throttle/Brake/Rev | [A/D] Steer | [1-6] Vehicles | [R] Reset | [C] Cam",
-                            [0.65, 0.75, 0.85, 0.85],
-                        );
+                                    hud.add_navigation_guidance(
+                                        width_f,
+                                        height_f,
+                                        icon,
+                                        update.distance_to_next_maneuver_meters,
+                                        instruction,
+                                        street_name,
+                                        45,
+                                        update.is_wrong_way,
+                                    );
+                                }
+
+                                // 2. Instrument Cluster (Speedometer or Multimodal Specialized Clusters)
+                                if self.config.is_drive {
+                                    match self.active_transport_mode {
+                                        ActiveTransportMode::Car => {
+                                            let gear_str = match self.vehicle.current_gear {
+                                                -1 => "R",
+                                                0 => "N",
+                                                1 => "D1",
+                                                2 => "D2",
+                                                3 => "D3",
+                                                4 => "D4",
+                                                5 => "D5",
+                                                _ => "D",
+                                            };
+                                            let steer_deg =
+                                                self.vehicle.wheels[0].steer_angle.to_degrees();
+                                            hud.add_speedometer_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.vehicle.speed_kph,
+                                                gear_str,
+                                                self.vehicle.engine_rpm,
+                                                7500.0,
+                                                steer_deg,
+                                                self.use_metric_units,
+                                                self.vehicle_visual_type.display_name(),
+                                            );
+                                        }
+                                        ActiveTransportMode::Motorcycle => {
+                                            hud.add_motorcycle_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.motorcycle.speed_kph,
+                                                self.motorcycle.lean_angle,
+                                                self.motorcycle.steer_angle,
+                                                (self.motorcycle.speed_kph * 95.0 + 1200.0)
+                                                    .min(11500.0),
+                                                self.motorcycle.is_crashed,
+                                            );
+                                        }
+                                        ActiveTransportMode::TransitBus => {
+                                            hud.add_transit_bus_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.transit_bus.speed_kph,
+                                                self.transit_bus.passenger_count,
+                                                self.transit_bus.total_mass_kg,
+                                                self.transit_bus.passenger_comfort_rating,
+                                                self.transit_bus.air_brake_pressure_bar,
+                                            );
+                                        }
+                                        ActiveTransportMode::HeavyTruck => {
+                                            let speed_mps =
+                                                self.heavy_truck.speed_kph * (1000.0 / 3600.0);
+                                            let yaw_rate = speed_mps
+                                                * (self.heavy_truck.steer_angle
+                                                    / self.heavy_truck.tractor_wheelbase);
+                                            let lat_accel = speed_mps * yaw_rate;
+                                            let gear_str = if self.heavy_truck.linear_velocity.dot(
+                                                self.heavy_truck.tractor_orientation
+                                                    * glam::Vec3::Z,
+                                            ) < -0.1
+                                            {
+                                                "R"
+                                            } else {
+                                                "D4"
+                                            };
+                                            hud.add_heavy_truck_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.heavy_truck.speed_kph,
+                                                gear_str,
+                                                self.heavy_truck
+                                                    .trailer_articulation_angle
+                                                    .to_degrees(),
+                                                (lat_accel / 9.81).abs(),
+                                                8.2,
+                                                self.heavy_truck.is_rolled_over,
+                                            );
+                                        }
+                                        ActiveTransportMode::Train => {
+                                            hud.add_train_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.train_consist.speed_kph,
+                                                self.train_consist.throttle,
+                                                self.train_consist.brake_pipe_pressure_bar,
+                                                self.train_consist.brake_cylinder_pressure_bar,
+                                                self.train_consist.rated_power_watts / 1000.0,
+                                                self.train_consist.reverser,
+                                                match self.train_consist.current_signal {
+                                                    realearth_navigation::rail_graph::SignalAspect::Clear => "Clear",
+                                                    realearth_navigation::rail_graph::SignalAspect::Approach => "Approach",
+                                                    realearth_navigation::rail_graph::SignalAspect::Stop => "Stop",
+                                                },
+                                                self.train_consist.wheel_slip,
+                                            );
+                                        }
+                                        ActiveTransportMode::Marine => {
+                                            let marine_throttle = if self
+                                                .pressed_keys
+                                                .contains(&KeyCode::KeyW)
+                                                || self.pressed_keys.contains(&KeyCode::ArrowUp)
+                                            {
+                                                1.0
+                                            } else if self.pressed_keys.contains(&KeyCode::KeyS)
+                                                || self.pressed_keys.contains(&KeyCode::ArrowDown)
+                                            {
+                                                -0.6
+                                            } else {
+                                                0.0
+                                            };
+                                            hud.add_marine_cluster(
+                                                16.0,
+                                                height_f - 145.0,
+                                                self.marine_vessel.speed_knots,
+                                                marine_throttle,
+                                                self.marine_vessel
+                                                    .current_rudder_angle
+                                                    .to_degrees(),
+                                                self.marine_vessel
+                                                    .heading_radians
+                                                    .to_degrees()
+                                                    .rem_euclid(360.0),
+                                                self.marine_vessel.design_draft_meters,
+                                                self.marine_vessel.metacentric_height_gm,
+                                            );
+                                        }
+                                        ActiveTransportMode::Aviation => {
+                                            hud.add_aviation_pfd(
+                                                width_f - 390.0,
+                                                height_f - 240.0,
+                                                self.aircraft.indicated_airspeed_knots,
+                                                self.aircraft.altitude_msl_meters,
+                                                self.aircraft.climb_rate_mps,
+                                                self.aircraft
+                                                    .orientation
+                                                    .to_euler(glam::EulerRot::YXZ)
+                                                    .1,
+                                                self.aircraft
+                                                    .orientation
+                                                    .to_euler(glam::EulerRot::YXZ)
+                                                    .2,
+                                                0.25,
+                                                self.aircraft.is_stalled,
+                                                self.aircraft.altitude_msl_meters < 50.0
+                                                    || !self.aircraft.is_airborne,
+                                            );
+                                        }
+                                    }
+                                }
+
+                                // 3. Tactical GPS Minimap (Bottom Right)
+                                let (rel_target, is_pickup) = if let Some(ref job) = self.active_job
+                                {
+                                    let (target_coord, is_pick) = match job.state {
+                                        realearth_gameplay::JobState::EnRouteToPickup
+                                        | realearth_gameplay::JobState::AtPickup { .. } => {
+                                            (job.pickup.coord, true)
+                                        }
+                                        realearth_gameplay::JobState::EnRouteToDropoff
+                                        | realearth_gameplay::JobState::AtDropoff { .. } => {
+                                            (job.dropoff.coord, false)
+                                        }
+                                        _ => (job.pickup.coord, true),
+                                    };
+                                    let d_lat = (target_coord.lat - self.camera_ctrl.coord.lat)
+                                        * meters_per_deg_lat;
+                                    let d_lon = (target_coord.lon - self.camera_ctrl.coord.lon)
+                                        * meters_per_deg_lon;
+                                    let cos_yaw = (-self.camera_ctrl.yaw as f64).cos();
+                                    let sin_yaw = (-self.camera_ctrl.yaw as f64).sin();
+                                    let rx = (d_lon * cos_yaw - d_lat * sin_yaw) as f32;
+                                    let rz = (d_lon * sin_yaw + d_lat * cos_yaw) as f32;
+                                    (Some((rx, rz)), is_pick)
+                                } else {
+                                    (None, true)
+                                };
+                                hud.add_gps_minimap(
+                                    width_f - 85.0,
+                                    height_f - 85.0,
+                                    65.0,
+                                    self.camera_ctrl.yaw,
+                                    rel_target,
+                                    is_pickup,
+                                );
+
+                                // 4. Active Mission HUD Card (Top Right)
+                                if let Some(ref job) = self.active_job {
+                                    let (step_desc, dist_to_target) = match job.state {
+                                        realearth_gameplay::JobState::EnRouteToPickup => (
+                                            "Drive to pickup zone",
+                                            job.pickup.distance_to(veh_coord),
+                                        ),
+                                        realearth_gameplay::JobState::AtPickup { .. } => {
+                                            ("Stop vehicle to board / load", 0.0)
+                                        }
+                                        realearth_gameplay::JobState::EnRouteToDropoff => (
+                                            "Drive to delivery destination",
+                                            job.dropoff.distance_to(veh_coord),
+                                        ),
+                                        realearth_gameplay::JobState::AtDropoff { .. } => {
+                                            ("Stop vehicle to complete mission", 0.0)
+                                        }
+                                        realearth_gameplay::JobState::Completed { .. } => {
+                                            ("Contract completed!", 0.0)
+                                        }
+                                        realearth_gameplay::JobState::Failed { .. } => {
+                                            ("Contract failed", 0.0)
+                                        }
+                                        _ => ("En route", 0.0),
+                                    };
+                                    hud.add_mission_hud_card(
+                                        width_f - 420.0,
+                                        16.0,
+                                        404.0,
+                                        100.0,
+                                        job.career.display_name(),
+                                        &job.title,
+                                        step_desc,
+                                        dist_to_target,
+                                        job.comfort_score,
+                                        job.cargo_integrity,
+                                        job.base_payout,
+                                    );
+                                }
+
+                                // 5. Boarding / Loading Dwell Progress
+                                if let Some(ref job) = self.active_job {
+                                    match job.state {
+                                        realearth_gameplay::JobState::AtPickup {
+                                            dwell_timer,
+                                            required_dwell,
+                                        } => {
+                                            let progress =
+                                                (dwell_timer / required_dwell).clamp(0.0, 1.0);
+                                            hud.add_dwell_progress(
+                                                width_f,
+                                                height_f,
+                                                progress,
+                                                "PASSENGER BOARDING / CARGO LOADING",
+                                                current_speed_kph < 2.0,
+                                            );
+                                        }
+                                        realearth_gameplay::JobState::AtDropoff {
+                                            dwell_timer,
+                                            required_dwell,
+                                        } => {
+                                            let progress =
+                                                (dwell_timer / required_dwell).clamp(0.0, 1.0);
+                                            hud.add_dwell_progress(
+                                                width_f,
+                                                height_f,
+                                                progress,
+                                                "DISEMBARKING / UNLOADING CARGO",
+                                                current_speed_kph < 2.0,
+                                            );
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                // 6. Developer Telemetry Overlay (Top Left, [F3])
+                                if self.show_debug_overlay {
+                                    let avg_ms = if self.frame_durations_ms.is_empty() {
+                                        16.6
+                                    } else {
+                                        self.frame_durations_ms.iter().sum::<f64>()
+                                            / self.frame_durations_ms.len() as f64
+                                    };
+                                    let fps = (1000.0 / avg_ms).max(1.0);
+                                    let one_pct_low_fps = if self.frame_durations_ms.len() >= 10 {
+                                        let mut sorted = self.frame_durations_ms.clone();
+                                        sorted.sort_by(|a, b| {
+                                            a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                                        });
+                                        let idx = ((sorted.len() as f64 * 0.99).floor() as usize)
+                                            .min(sorted.len() - 1);
+                                        1000.0 / sorted[idx].max(0.1)
+                                    } else {
+                                        fps
+                                    };
+                                    let proc_mem = get_current_process_memory();
+                                    let vram_mb =
+                                        renderer.gpu_memory_bytes() as f64 / (1024.0 * 1024.0);
+                                    let coord_str = format!(
+                                        "{:.4}N, {:.4}W, {:.1}m | Anchor: {}",
+                                        self.camera_ctrl.coord.lat,
+                                        self.camera_ctrl.coord.lon,
+                                        self.camera_ctrl.coord.alt,
+                                        res.landmark.name
+                                    );
+                                    hud.add_debug_overlay(
+                                        16.0,
+                                        16.0,
+                                        fps,
+                                        one_pct_low_fps,
+                                        avg_ms,
+                                        &format!("{:?}", renderer.settings.level),
+                                        &coord_str,
+                                        active.len(),
+                                        self.last_culled_chunks,
+                                        self.last_culled_triangles,
+                                        proc_mem.working_set_size_mb(),
+                                        vram_mb,
+                                    );
+                                }
+
+                                // 7. Multiplayer Status Chip (Top Right)
+                                let (is_connected, is_reconnecting, ping_ms, remote_count) =
+                                    if let Some(ref client) = self.multiplayer_client {
+                                        (
+                                        client.state == realearth_networking::ConnectionState::Connected,
+                                        client.state == realearth_networking::ConnectionState::Reconnecting,
+                                        client.ping_ms,
+                                        client.get_remote_vehicles(0).len(),
+                                    )
+                                    } else {
+                                        (false, false, 0.0, 0)
+                                    };
+                                hud.add_multiplayer_chip(
+                                    width_f,
+                                    is_connected,
+                                    is_reconnecting,
+                                    ping_ms,
+                                    remote_count,
+                                );
+
+                                // 8. Clean Keyboard Hint Footer
+                                let hint_str = "[W/S/A/D] Drive  |  [Esc] Pause  |  [N] Multiplayer  |  [J] Jobs  |  [G] Garage  |  [U] World Cities  |  [F3] Debug";
+                                let hint_w = hint_str.len() as f32 * 6.0 * 1.0;
+                                let hint_x = (width_f - hint_w) * 0.5;
+                                hud.add_rect(
+                                    hint_x - 10.0,
+                                    height_f - 24.0,
+                                    hint_w + 20.0,
+                                    20.0,
+                                    [0.05, 0.07, 0.10, 0.75],
+                                );
+                                hud.add_text(
+                                    hint_x,
+                                    height_f - 18.0,
+                                    1.0,
+                                    hint_str,
+                                    [0.7, 0.8, 0.9, 0.8],
+                                );
+                            }
+                        }
                     }
-
-                    // Gameplay Career & Active Job Objective Panel (Top Right)
-                    if let Some(ref job) = self.active_job {
-                        let hud_model = GameplayHudModel::build_objective_hud(
-                            Some(job),
-                            self.camera_ctrl.coord,
-                            self.vehicle.speed_kph,
-                        );
-                        let earn_model =
-                            GameplayHudModel::build_earnings_hud(&self.player_profile, Some(job));
-
-                        let card_w = 400.0;
-                        let card_x = width_f - card_w - 16.0;
-                        hud.add_panel(card_x, 16.0, card_w, 110.0, [0.3, 0.9, 0.4, 1.0]);
-                        hud.add_text(
-                            card_x + 10.0,
-                            26.0,
-                            1.3,
-                            &format!("CAREER: {}", hud_model.career_title),
-                            [1.0, 1.0, 1.0, 1.0],
-                        );
-                        hud.add_text(
-                            card_x + 10.0,
-                            46.0,
-                            1.0,
-                            &format!("Target: {}", hud_model.target_location_name),
-                            [0.4, 0.95, 0.7, 1.0],
-                        );
-                        hud.add_text(
-                            card_x + 10.0,
-                            64.0,
-                            1.0,
-                            &format!(
-                                "Distance: {:.1}m | Comfort: {:.1} Stars | Wallet: ₹{:.2}",
-                                hud_model.distance_to_target_meters,
-                                hud_model.comfort_rating_stars,
-                                earn_model.balance
-                            ),
-                            [1.0, 0.9, 0.3, 1.0],
-                        );
-                        hud.add_text(
-                            card_x + 10.0,
-                            82.0,
-                            0.95,
-                            &format!("Objective: {}", hud_model.instruction_text),
-                            [0.8, 0.85, 0.9, 1.0],
-                        );
-                    }
-
-                    // Bottom Right Controls Guide
-                    let guide_w = 460.0;
-                    let guide_x = width_f - guide_w - 16.0;
-                    let guide_y = height_f - 95.0;
-                    hud.add_panel(guide_x, guide_y, guide_w, 82.0, [0.6, 0.6, 0.6, 0.8]);
-                    hud.add_text(
-                        guide_x + 10.0,
-                        guide_y + 10.0,
-                        0.92,
-                        "[W/S/A/D] Move/Drive | [Space/C] Handbrake/Down | [Mouse] Look",
-                        [0.9, 0.9, 0.9, 1.0],
-                    );
-                    hud.add_text(
-                        guide_x + 10.0,
-                        guide_y + 26.0,
-                        0.92,
-                        "[V] Drivable Car | [G] Garage Fleet | [J] Contracts | [C] Camera",
-                        [0.9, 0.9, 0.9, 1.0],
-                    );
-                    hud.add_text(
-                        guide_x + 10.0,
-                        guide_y + 42.0,
-                        0.92,
-                        "[R] Region Cycle | [P] Preset | [1-9] Landmarks | [H] HUD Toggle",
-                        [0.9, 0.9, 0.9, 1.0],
-                    );
-                    hud.add_text(
-                        guide_x + 10.0,
-                        guide_y + 58.0,
-                        0.92,
-                        "[F5] Quicksave | [F9] Quickload | [F12] Screenshot | [Esc] Exit",
-                        [0.9, 0.9, 0.9, 1.0],
-                    );
 
                     // Temporary Status / Notification Banner
                     if let Some((ref text, stamp)) = self.status_notification {
@@ -2055,14 +4047,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             let banner_x = (width_f - banner_w) * 0.5;
                             hud.add_panel(
                                 banner_x,
-                                height_f - 140.0,
+                                height_f - 60.0,
                                 banner_w,
-                                40.0,
+                                36.0,
                                 [0.1, 0.9, 0.6, 1.0],
                             );
                             hud.add_text(
                                 banner_x + 14.0,
-                                height_f - 128.0,
+                                height_f - 49.0,
                                 1.15,
                                 text,
                                 [1.0, 1.0, 1.0, 1.0],

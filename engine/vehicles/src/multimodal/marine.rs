@@ -4,7 +4,9 @@
 //!
 //! Maintains independent water semantics decoupled from road and rail networks.
 
+use crate::multimodal::MultimodalAudioEvent;
 use glam::{Quat, Vec3};
+use realearth_navigation::waterway::MarinePort;
 use serde::{Deserialize, Serialize};
 
 /// Classification of marine vessels.
@@ -69,6 +71,10 @@ pub struct MarineVessel {
     pub current_rudder_angle: f32,
     /// Water density kg/m^3 (1025.0 for seawater).
     pub water_density: f32,
+    /// Is vessel currently grounded on land/shoreline.
+    pub is_grounded: bool,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl MarineVessel {
@@ -96,6 +102,8 @@ impl MarineVessel {
             max_rudder_angle_rad: 35.0_f32.to_radians(),
             current_rudder_angle: 0.0,
             water_density: 1025.0,
+            is_grounded: false,
+            audio_events: Vec::new(),
         }
     }
 
@@ -123,6 +131,8 @@ impl MarineVessel {
             max_rudder_angle_rad: 35.0_f32.to_radians(),
             current_rudder_angle: 0.0,
             water_density: 1025.0,
+            is_grounded: false,
+            audio_events: Vec::new(),
         }
     }
 
@@ -252,6 +262,75 @@ impl MarineVessel {
             + self.linear_velocity.z * self.linear_velocity.z)
             .sqrt();
         self.speed_knots = horizontal_speed * 1.94384; // m/s to knots
+
+        if self.speed_knots > 8.0 && ((time * 10.0) as u32).is_multiple_of(80) {
+            self.audio_events
+                .push(MultimodalAudioEvent::ShipWaveSplash {
+                    speed_knots: self.speed_knots,
+                });
+        }
+    }
+
+    /// Checks if vessel has run aground onto terrain/shoreline above sea level.
+    pub fn check_shoreline_collision(&mut self, ground_elevation: f32) -> bool {
+        if ground_elevation > 0.5 {
+            self.is_grounded = true;
+            self.linear_velocity *= 0.05;
+            self.speed_knots = 0.0;
+            self.audio_events
+                .push(MultimodalAudioEvent::ShipWaveSplash { speed_knots: 0.0 });
+            true
+        } else {
+            self.is_grounded = false;
+            false
+        }
+    }
+
+    /// Docks the vessel at a designated port berth if within length and draft limits.
+    pub fn dock_at_berth(
+        &mut self,
+        port: &mut MarinePort,
+        berth_id: &str,
+    ) -> Result<String, String> {
+        let vessel_length = self.length_beam_meters;
+        let vessel_draft = self.design_draft_meters;
+        for berth in &mut port.berths {
+            if berth.berth_id == berth_id {
+                if berth.is_occupied {
+                    return Err(format!("Berth {} is already occupied", berth_id));
+                }
+                if berth.length_meters < vessel_length {
+                    return Err(format!(
+                        "Berth length ({:.1}m) insufficient for vessel length ({:.1}m)",
+                        berth.length_meters, vessel_length
+                    ));
+                }
+                if berth.depth_meters < vessel_draft + 0.8 {
+                    return Err(format!(
+                        "Berth depth ({:.1}m) insufficient for vessel draft ({:.1}m + 0.8m margin)",
+                        berth.depth_meters, vessel_draft
+                    ));
+                }
+                berth.is_occupied = true;
+                self.linear_velocity = Vec3::ZERO;
+                self.speed_knots = 0.0;
+                return Ok(format!("Successfully moored at {}", berth_id));
+            }
+        }
+        Err(format!(
+            "Berth {} not found in port {}",
+            berth_id, port.name
+        ))
+    }
+
+    /// Sounds the ship foghorn.
+    pub fn sound_foghorn(&mut self) {
+        self.audio_events.push(MultimodalAudioEvent::ShipFoghorn);
+    }
+
+    /// Drains all pending audio events.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 }
 

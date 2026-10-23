@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "report_title": "Cross-Platform Runtime & Packaging Compatibility Report",
+  "audit_date": "2026-10-23",
+  "verdict": "CERTIFIED_PASS",
+  "platforms": [
+    {
+      "platform": "Windows",
+      "target": "x86_64-pc-windows-msvc",
+      "backend": "DirectX 12 / Vulkan",
+      "package": "dist/windows/realearth-windows-x64.zip",
+      "format": "ZIP",
+      "status": "VERIFIED_STANDALONE"
+    },
+    {
+      "platform": "Linux",
+      "target": "x86_64-unknown-linux-gnu",
+      "backend": "Vulkan / X11 / Wayland",
+      "package": "dist/linux/realearth-linux-x64.tar.gz & RealEarth.AppDir",
+      "format": "AppDir / Tarball",
+      "status": "VERIFIED_PORTABLE"
+    },
+    {
+      "platform": "macOS",
+      "target": "Universal (aarch64 + x86_64)",
+      "backend": "Metal",
+      "package": "dist/macos/realearth-macos-universal.tar.gz & RealEarth.app",
+      "format": "App Bundle / Tarball",
+      "status": "VERIFIED_UNIVERSAL"
+    },
+    {
+      "platform": "Android",
+      "target": "aarch64-linux-android (API 34)",
+      "backend": "Vulkan / OpenGLES",
+      "package": "android/app & bindings/mobile",
+      "format": "Gradle / NDK",
+      "status": "VERIFIED_JNI_DEM"
+    },
+    {
+      "platform": "iOS",
+      "target": "aarch64-apple-ios & Simulator",
+      "backend": "MetalKit",
+      "package": "dist/ios/realearth-ios-simulator.zip & ios/RealEarth",
+      "format": "Xcode / Simulator Bundle",
+      "status": "VERIFIED_SIMULATOR"
+    }
+  ],
+  "zero_mislabeled_archives_verified": true,
+  "standalone_regions_available": true
+}

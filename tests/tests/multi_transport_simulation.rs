@@ -158,6 +158,7 @@ fn test_stage9_2_railway_track_network_and_train_consist() {
         is_electrified: true,
         switch_state: Some(SwitchState::Straight),
         signal_aspect: SignalAspect::Clear,
+        geometry: Vec::new(),
     };
     rail_net.add_segment(seg1);
 
@@ -253,6 +254,7 @@ fn test_stage9_2_marine_hydrodynamics_and_fairway_navigation() {
         speed_limit_knots: 10.0,
         category: WaterwayCategory::DredgedChannel,
         length_meters: 4200.0,
+        geometry: Vec::new(),
     });
 
     waterway.add_port(MarinePort {

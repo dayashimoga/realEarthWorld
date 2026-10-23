@@ -20,6 +20,7 @@ realearth-rendering = { path = "../../engine/rendering" }
 realearth-vehicles = { path = "../../engine/vehicles" }
 realearth-navigation = { path = "../../engine/navigation" }
 realearth-gameplay = { path = "../../engine/gameplay" }
+realearth-networking = { path = "../../engine/networking" }
 winit.workspace = true
 wgpu.workspace = true
 glam.workspace = true

@@ -131,6 +131,64 @@ impl VehicleCameraController {
             self.current_pitch,
         )
     }
+
+    /// Generic pose-based camera positioning supporting multimodal vehicles.
+    pub fn update_pose(
+        &mut self,
+        position: Vec3,
+        orientation: glam::Quat,
+        chase_distance: f32,
+        chase_height: f32,
+        dt: f32,
+    ) -> (Vec3, f32, f32) {
+        let rot_mat = Mat3::from_quat(orientation);
+        let forward = rot_mat.col(2);
+        let target_yaw = forward.x.atan2(forward.z);
+
+        match self.perspective {
+            VehicleCameraPerspective::Chase => {
+                let lookahead = forward * 2.0;
+                let target_cam =
+                    position - forward * chase_distance + Vec3::new(0.0, chase_height, 0.0);
+                if self.current_camera_pos == Vec3::ZERO {
+                    self.current_camera_pos = target_cam;
+                    self.current_yaw = target_yaw;
+                } else {
+                    let blend = (self.position_smoothing * dt).clamp(0.0, 1.0);
+                    self.current_camera_pos = self.current_camera_pos.lerp(target_cam, blend);
+                    let mut diff = target_yaw - self.current_yaw;
+                    while diff > std::f32::consts::PI {
+                        diff -= 2.0 * std::f32::consts::PI;
+                    }
+                    while diff < -std::f32::consts::PI {
+                        diff += 2.0 * std::f32::consts::PI;
+                    }
+                    self.current_yaw += diff * blend;
+                }
+                let to_target = (position + lookahead) - self.current_camera_pos;
+                let pitch = (to_target.y / to_target.length().max(0.1)).asin();
+                self.current_pitch = pitch.clamp(-0.4, 0.2);
+            }
+            VehicleCameraPerspective::Hood | VehicleCameraPerspective::Cockpit => {
+                let eye_h = (chase_height * 0.45).max(0.8);
+                self.current_camera_pos = position + forward * 0.5 + Vec3::new(0.0, eye_h, 0.0);
+                self.current_yaw = target_yaw;
+                self.current_pitch = -0.05;
+            }
+            VehicleCameraPerspective::Bumper => {
+                self.current_camera_pos =
+                    position + forward * (chase_distance * 0.25) + Vec3::new(0.0, 0.4, 0.0);
+                self.current_yaw = target_yaw;
+                self.current_pitch = 0.0;
+            }
+        }
+
+        (
+            self.current_camera_pos,
+            self.current_yaw,
+            self.current_pitch,
+        )
+    }
 }
 
 #[cfg(test)]

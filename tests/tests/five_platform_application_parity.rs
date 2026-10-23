@@ -207,7 +207,7 @@ fn test_f4_android_jni_contract_and_virtual_driving_controls() {
         );
     }
 
-    // 3. Verify telemetry structure populated across FFI boundary
+    // 3. Verify telemetry structure populated across FFI boundary with surveyed DEM elevation
     let mut telem = RealEarthTelemetry::default();
     assert_eq!(
         realearth_get_telemetry(&mut telem),
@@ -223,8 +223,32 @@ fn test_f4_android_jni_contract_and_virtual_driving_controls() {
         (telem.lat - 37.7952).abs() < 0.1,
         "Latitude must match anchor origin"
     );
+    assert!(
+        telem.alt > 0.0,
+        "Altitude must reflect authentic surveyed USGS 3DEP DEM terrain, not FlatGround"
+    );
 
-    // 4. Test thermal throttling frame-time progression
+    // 4. Test touch gestures, virtual controls, pause/resume, and surface presentation
+    use realearth_mobile::{
+        realearth_destroy_surface, realearth_get_ground_elevation, realearth_pause,
+        realearth_render_frame, realearth_resize_surface, realearth_resume, realearth_set_surface,
+        realearth_set_touch_inputs, realearth_touch_orbit, realearth_touch_zoom,
+        realearth_trim_memory,
+    };
+    let elev = realearth_get_ground_elevation(0.0, 0.0);
+    assert!(elev >= 0.0, "DEM elevation must be non-negative");
+    assert_eq!(realearth_touch_orbit(0.02, 0.01), 0);
+    assert_eq!(realearth_touch_zoom(1.5), 0);
+    assert_eq!(realearth_set_touch_inputs(0.2, 0.6, 0.0, 0), 0);
+    assert_eq!(realearth_set_surface(0xABCD, 1080, 2400), 0);
+    assert_eq!(realearth_resize_surface(1080, 2400), 0);
+    assert_eq!(realearth_render_frame(), 0);
+    assert_eq!(realearth_pause(), 0);
+    assert_eq!(realearth_resume(), 0);
+    assert_eq!(realearth_trim_memory(20), 0);
+    assert_eq!(realearth_destroy_surface(), 0);
+
+    // 5. Test thermal throttling frame-time progression
     let thermal_scenarios = [
         ("Nominal", 16.67f32, 60.0f32),
         ("Moderate", 22.22f32, 45.0f32),
@@ -236,7 +260,7 @@ fn test_f4_android_jni_contract_and_virtual_driving_controls() {
         assert!((calc_fps - expected_fps).abs() < 1.0);
     }
 
-    // 5. Verify Android Gradle project structure and build status
+    // 6. Verify Android Gradle project structure and build status
     let android_manifest = workspace_root().join("android/app/src/main/AndroidManifest.xml");
     assert!(
         android_manifest.exists(),
@@ -293,8 +317,11 @@ fn test_f5_ios_metal_bridge_contract_and_memory_lifecycle() {
     let usable_height = screen_h - safe_inset_top - safe_inset_bottom;
     assert_eq!(usable_height, 759.0f32);
 
-    // 3. Verify memory warning response (cache prune invariance)
-    // Low-memory notification triggers cache eviction without terminating simulation
+    // 3. Verify memory warning response (cache prune invariance) and DEM elevation
+    use realearth_mobile::{
+        realearth_destroy_surface, realearth_get_ground_elevation, realearth_render_frame,
+        realearth_set_surface, realearth_touch_orbit, realearth_touch_zoom, realearth_trim_memory,
+    };
     assert_eq!(realearth_step(1.0 / 60.0, 0.5, 0.0, 0.0), 0);
 
     let mut telem = RealEarthTelemetry::default();
@@ -304,6 +331,21 @@ fn test_f5_ios_metal_bridge_contract_and_memory_lifecycle() {
         (telem.lat - 40.7128).abs() < 0.05,
         "Latitude must match One WTC anchor"
     );
+    assert!(
+        telem.alt > 0.0,
+        "Altitude must reflect authentic surveyed DEM elevation in NYC"
+    );
+
+    // Verify iOS Metal surface hooks and touch gestures
+    assert_eq!(realearth_set_surface(0x1001, 1179, 2556), 0); // iPhone 15 Pro native resolution
+    assert_eq!(realearth_render_frame(), 0);
+    assert_eq!(realearth_touch_orbit(0.04, -0.02), 0);
+    assert_eq!(realearth_touch_zoom(0.8), 0);
+    assert_eq!(realearth_trim_memory(15), 0); // Low-memory cache trim
+    assert_eq!(realearth_destroy_surface(), 0);
+
+    let ny_elev = realearth_get_ground_elevation(0.0, 0.0);
+    assert!(ny_elev >= 0.0);
 
     // 4. Verify iOS Simulator package exists
     let sim_path = workspace_root().join("dist/ios/realearth-ios-simulator.zip");

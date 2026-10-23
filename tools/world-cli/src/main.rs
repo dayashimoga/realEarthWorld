@@ -24,6 +24,9 @@ use realearth_ingestion::sample_miami::{create_miami_dataset, generate_miami_osm
 use realearth_ingestion::sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 use realearth_ingestion::sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
 use realearth_ingestion::sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
+use realearth_shared::us_catalog::{
+    all_interstate_corridors, cities_by_priority, find_city_by_id, search_cities, CityPriorityTier,
+};
 use realearth_validation::pipeline::{validate_dataset, validate_dataset_with_tolerances};
 use realearth_validation::{CompilerPublicationGate, PublicationVerdict, ValidationTolerance};
 use std::path::PathBuf;
@@ -70,16 +73,26 @@ enum Commands {
         #[arg(short, long)]
         path: PathBuf,
     },
-    /// Manages the decentralized regional packages catalog (list, verify, install)
+    /// Manages the decentralized regional packages catalog (list, verify, install, remove, search)
     Catalog {
         #[arg(short, long, default_value = "target/packages")]
         catalog_dir: PathBuf,
         #[arg(long)]
         list: bool,
         #[arg(long)]
+        list_all: bool,
+        #[arg(long)]
+        search: Option<String>,
+        #[arg(long)]
+        install: Option<String>,
+        #[arg(long)]
+        remove: Option<String>,
+        #[arg(long)]
         verify: bool,
         #[arg(long)]
         install_manifest: Option<PathBuf>,
+        #[arg(long)]
+        corridors: bool,
     },
     /// Browse, inspect, and simulate gameplay contracts and careers
     Job {
@@ -94,6 +107,17 @@ enum Commands {
     },
     /// Runs performance benchmark on coordinate transformations and chunk loading
     Bench,
+    /// Runs a standalone dedicated headless authoritative multiplayer server
+    Server {
+        #[arg(short, long, default_value = "0.0.0.0:7777")]
+        addr: String,
+        #[arg(short, long, default_value_t = 60)]
+        tick_rate: u32,
+        #[arg(short, long, default_value_t = 32)]
+        max_players: usize,
+        #[arg(long, default_value_t = 1000.0)]
+        aoi_radius: f32,
+    },
 }
 
 fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, String) {
@@ -520,15 +544,143 @@ fn main() -> anyhow::Result<()> {
         Commands::Catalog {
             catalog_dir,
             list: _,
+            list_all,
+            search,
+            install,
+            remove,
             verify,
             install_manifest,
+            corridors,
         } => {
             let mut catalog = RegionalCatalog::open(&catalog_dir)?;
-            let count = catalog.list_installed().len();
-            println!(
-                "📚 Regional Catalog ({:?}) — {} packages discovered:",
-                catalog_dir, count
-            );
+
+            if corridors {
+                println!("==========================================================================================");
+                println!(
+                    "INTERSTATE HIGHWAY CORRIDORS (7 VERIFIED HIGH-SPEED CONNECTIVITY ROUTES)"
+                );
+                println!("==========================================================================================");
+                for corridor in all_interstate_corridors() {
+                    println!(
+                        "  [{:<5}] {:<32} | {:>6.0} km | Limit: {:>3} km/h | Links: {}",
+                        corridor.designation,
+                        corridor.name,
+                        corridor.length_km,
+                        corridor.speed_limit_kph,
+                        corridor.connected_cities.join(" <-> ")
+                    );
+                }
+                println!("==========================================================================================");
+                return Ok(());
+            }
+
+            if list_all {
+                println!("==========================================================================================");
+                println!("AUTHORITATIVE UNITED STATES GEOGRAPHY CATALOG (38 AUDITED METROPOLITAN REGIONS)");
+                println!("==========================================================================================");
+                for tier in [
+                    CityPriorityTier::Priority1Primary,
+                    CityPriorityTier::Priority2Major,
+                    CityPriorityTier::Priority3Extended,
+                ] {
+                    let label = match tier {
+                        CityPriorityTier::Priority1Primary => {
+                            "PRIORITY 1: PRIMARY METROPOLITAN REGIONS (10 CITIES)"
+                        }
+                        CityPriorityTier::Priority2Major => {
+                            "PRIORITY 2: ADDITIONAL MAJOR METROPOLITAN REGIONS (15 CITIES)"
+                        }
+                        CityPriorityTier::Priority3Extended => {
+                            "PRIORITY 3: EXTENDED US CITIES (13 CITIES)"
+                        }
+                    };
+                    println!("\n--- {} ---", label);
+                    for city in cities_by_priority(tier) {
+                        let is_inst = catalog.is_installed(city.id);
+                        println!(
+                            "  [{:<14}] {:<24} ({}) | Anchor: {:<32} | Elev: [{:>4.0}m..{:>4.0}m] | IATA: {:<3} | Status: {}",
+                            city.id,
+                            city.name,
+                            city.state,
+                            city.anchor_landmark_name,
+                            city.elevation_min_m,
+                            city.elevation_max_m,
+                            city.primary_airport_iata,
+                            if is_inst { "✅ INSTALLED" } else { "⚪ AVAILABLE" },
+                        );
+                    }
+                }
+                println!("==========================================================================================");
+                return Ok(());
+            }
+
+            if let Some(ref q) = search {
+                println!("🔍 Searching US Geography Catalog for '{}':", q);
+                let results = search_cities(q);
+                if results.is_empty() {
+                    println!("  No matching cities found in catalog.");
+                } else {
+                    for city in results {
+                        let is_inst = catalog.is_installed(city.id);
+                        println!(
+                            "  • [{:<14}] {} ({}) | Anchor: {} ({:.1}m) | Status: {}",
+                            city.id,
+                            city.name,
+                            city.state,
+                            city.anchor_landmark_name,
+                            city.anchor_height_m,
+                            if is_inst { "INSTALLED" } else { "AVAILABLE" },
+                        );
+                    }
+                }
+                return Ok(());
+            }
+
+            if let Some(ref city_id) = install {
+                let city = find_city_by_id(city_id).ok_or_else(|| {
+                    anyhow::anyhow!("City ID '{}' not found in US catalog", city_id)
+                })?;
+                println!(
+                    "📦 Ingesting authentic GIS for {} ({})...",
+                    city.name, city.state
+                );
+                let (raw, dem, meta) = realearth_ingestion::load_authentic_city(city.id)?;
+                let (val, report) = validate_dataset(&raw);
+                println!("  {}", report.summary());
+
+                let pkg_build_dir = catalog_dir.join(format!("build_{}", city.id));
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    package_name: format!("{}_package", city.id),
+                    ..Default::default()
+                };
+                let metrics = compile_world_package(&val, &dem, &pkg_build_dir, &options)?;
+
+                let manifest = PackageManifest::new(
+                    &city.to_region_profile(),
+                    "1.0.0",
+                    metrics.total_chunks_generated,
+                    metrics.total_uncompressed_bytes,
+                    metrics.total_compressed_bytes,
+                    meta.source_osm_sha256,
+                );
+                catalog.install_package(&pkg_build_dir, &manifest)?;
+                println!(
+                    "✅ Successfully compiled and installed package: {} ({} chunks, {:.2} MB)",
+                    city.id,
+                    manifest.total_chunks,
+                    manifest.compressed_bytes as f64 / (1024.0 * 1024.0)
+                );
+                let _ = std::fs::remove_dir_all(&pkg_build_dir);
+                return Ok(());
+            }
+
+            if let Some(ref city_id) = remove {
+                catalog.uninstall_package(city_id)?;
+                println!("🗑️ Successfully uninstalled package: {}", city_id);
+                return Ok(());
+            }
 
             if let Some(manifest_path) = install_manifest {
                 println!(
@@ -542,6 +694,12 @@ fn main() -> anyhow::Result<()> {
                 catalog.install_package(parent_dir, &manifest)?;
                 println!("✅ Successfully registered and installed package: {}", id);
             }
+
+            let count = catalog.list_installed().len();
+            println!(
+                "📚 Regional Catalog ({:?}) — {} packages discovered:",
+                catalog_dir, count
+            );
 
             for manifest in catalog.list_installed() {
                 println!(
@@ -800,6 +958,56 @@ fn main() -> anyhow::Result<()> {
             );
 
             println!("\n🎉 All benchmarks passed performance thresholds!");
+        }
+        Commands::Server {
+            addr,
+            tick_rate,
+            max_players,
+            aoi_radius,
+        } => {
+            println!("🌐 Initializing Real Earth Headless Authoritative Server...");
+            println!("  • Bind Address: {}", addr);
+            println!("  • Tick Rate:    {} Hz", tick_rate);
+            println!("  • Max Players:  {}", max_players);
+            println!("  • AoI Radius:   {:.1} meters", aoi_radius);
+
+            let mut server = realearth_networking::HeadlessAuthoritativeServer::bind(
+                &addr,
+                tick_rate,
+                max_players,
+                aoi_radius,
+            )?;
+
+            println!(
+                "🚀 Authoritative server listening on {}",
+                server.local_addr()
+            );
+            println!("Running simulation tick loop. Press Ctrl+C to stop.");
+
+            let tick_dur = std::time::Duration::from_secs_f32(1.0 / tick_rate as f32);
+            let mut last_log = Instant::now();
+
+            while server.running.load(std::sync::atomic::Ordering::Relaxed) {
+                let start = Instant::now();
+                let summary = server.step(tick_dur.as_secs_f32());
+
+                if last_log.elapsed().as_secs_f32() >= 2.0 {
+                    println!(
+                        "Tick #{:<6} | Pkts In: {:<4} | Pkts Out: {:<4} | Active Players: {}",
+                        summary.tick,
+                        summary.packets_received,
+                        summary.packets_sent,
+                        summary.active_players
+                    );
+                    last_log = Instant::now();
+                }
+
+                let elapsed = start.elapsed();
+                if elapsed < tick_dur {
+                    std::thread::sleep(tick_dur - elapsed);
+                }
+            }
+            println!("🛑 Server stopped cleanly.");
         }
     }
 

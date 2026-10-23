@@ -1,6 +1,7 @@
 //! Native wgpu rendering engine and floating-origin camera system for Real Earth.
 
 pub mod camera;
+pub mod city_interactions_mesh;
 pub mod culling;
 pub mod hud;
 pub mod preset;
@@ -10,6 +11,10 @@ pub mod uniforms;
 pub mod vehicle_mesh;
 
 pub use camera::FloatingOriginCamera;
+pub use city_interactions_mesh::{
+    generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh, RoadSignType,
+    TrafficSignalVisualState,
+};
 pub use culling::{Frustum, FrustumPlane};
 pub use hud::{HudMesh, HudVertex};
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};

@@ -116,5 +116,22 @@ path = "tests/performance_anti_fake_certification.rs"
 name = "stage4_driving_gameplay_certification"
 path = "tests/stage4_driving_gameplay_certification.rs"
 
+[[test]]
+name = "stage5_traffic_navigation_certification"
+path = "tests/stage5_traffic_navigation_certification.rs"
 
+[[test]]
+name = "stage6_user_experience_gameplay_certification"
+path = "tests/stage6_user_experience_gameplay_certification.rs"
 
+[[test]]
+name = "stage7_multimodal_transport_certification"
+path = "tests/stage7_multimodal_transport_certification.rs"
+
+[[test]]
+name = "stage8_regional_catalog_and_corridors_certification"
+path = "tests/stage8_regional_catalog_and_corridors_certification.rs"
+
+[[test]]
+name = "stage9_authoritative_multiplayer_certification"
+path = "tests/stage9_authoritative_multiplayer_certification.rs"

@@ -3,14 +3,17 @@
 //!
 //! Offline single-player mode operates completely independently with zero runtime overhead.
 
+pub mod client;
 pub mod harness;
 pub mod interest;
 pub mod protocol;
 pub mod replication;
 pub mod server;
+pub mod server_runner;
 pub mod session;
 pub mod transport;
 
+pub use client::{MultiplayerClient, MultiplayerStatus, RemoteVehicleRenderState};
 pub use harness::{NetworkImpairmentConfig, SimulatedNetworkLink};
 pub use interest::{InterestManager, SpatialCellId};
 pub use protocol::{
@@ -19,6 +22,7 @@ pub use protocol::{
 };
 pub use replication::{BufferedInput, ClientPredictor, RemoteEntityInterpolator, TimedSnapshot};
 pub use server::{AuthoritativeServer, ServerEntity};
+pub use server_runner::{HeadlessAuthoritativeServer, ServerStepSummary};
 pub use session::{ClientSession, ConnectionState, SessionManager, TokenBucket};
 pub use transport::{UdpSocketTransport, MAX_UDP_PACKET_SIZE};
 

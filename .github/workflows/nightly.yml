@@ -42,9 +42,21 @@ jobs:
 
       - name: Vehicle Physics, Aerodynamics & Multimodal Invariants
         run: cargo test --test vehicle_simulation --verbose
-        
-      - name: Multi-Transport Simulation Regression
-        run: cargo test --test multi_transport_simulation --verbose
+
+      - name: Stage 7 Multimodal Transportation Simulation Certification
+        run: cargo test --test stage7_multimodal_transport_certification --verbose
+
+      - name: Stage 8 Regional Catalog & Interstate Corridors Certification
+        run: cargo test --test stage8_regional_catalog_and_corridors_certification --verbose
+
+      - name: Stage 9 Authoritative Multiplayer Networking Certification
+        run: cargo test --test stage9_authoritative_multiplayer_certification --verbose
+
+      - name: Stage 10 Five-Platform Application Parity Certification
+        run: cargo test --test five_platform_application_parity --verbose
+
+      - name: Stage 11 Final Production Lifecycle Certification
+        run: cargo test --test final_production_certification --verbose
 
       - name: Criterion Performance Benchmark Baselines
         run: cargo bench -p realearth-benchmarks -- --test

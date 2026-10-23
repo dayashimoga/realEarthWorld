@@ -19,14 +19,17 @@ pub use kinematics::AckermannVehicle;
 pub use multimodal::{
     AircraftFlight, AviationCategory, DavisCoefficients, FlightInputs, HeavyTruckModel,
     LocomotiveType, MarineInputs, MarineVessel, MarineVesselType, MotorcycleModel,
-    RoadAccessRestriction, RoadVehicleCategory, TrainBrakeState, TrainCar, TrainConsist,
-    TransitBusModel,
+    MultimodalAudioEvent, RoadAccessRestriction, RoadVehicleCategory, TrainBrakeState, TrainCar,
+    TrainConsist, TransitBusModel,
 };
 pub use physics::{
     PhysicsWorld, GROUP_BUILDING, GROUP_OBSTACLE, GROUP_ROAD, GROUP_TERRAIN, GROUP_VEHICLE,
 };
 pub use rapier3d;
-pub use traffic::{IdmConfig, TrafficAgent, TrafficSimulation};
+pub use traffic::{
+    IdmConfig, IntersectionStopLine, PedestrianAgent, TrafficAgent, TrafficAudioEvent,
+    TrafficLight, TrafficLightState, TrafficSimulation, TrafficSpatialGrid,
+};
 pub use vehicle_agent::PurePursuitController;
 
 #[cfg(test)]

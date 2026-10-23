@@ -5,6 +5,7 @@
 
 use crate::dynamics::{TransmissionMode, VehicleInputs};
 use crate::ground::GroundQuery;
+use crate::multimodal::MultimodalAudioEvent;
 use glam::{Mat3, Quat, Vec3};
 use serde::{Deserialize, Serialize};
 
@@ -84,6 +85,8 @@ pub struct MotorcycleModel {
     pub is_crashed: bool,
     /// Are wheels in contact with road.
     pub is_grounded: bool,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl Default for MotorcycleModel {
@@ -109,6 +112,7 @@ impl MotorcycleModel {
             engine_force: 3200.0,
             is_crashed: false,
             is_grounded: true,
+            audio_events: Vec::new(),
         }
     }
 
@@ -179,6 +183,12 @@ impl MotorcycleModel {
         self.linear_velocity = forward * new_speed;
         self.position += self.linear_velocity * dt;
 
+        if inputs.throttle > 0.5 && self.speed_kph > 5.0 {
+            let rpm = (self.speed_kph * 95.0 + 1200.0).min(11500.0);
+            self.audio_events
+                .push(MultimodalAudioEvent::MotorcycleRev { rpm });
+        }
+
         // Ground clamping
         let ray_origin = self.position + Vec3::new(0.0, 1.0, 0.0);
         if let Some((hit_dist, _)) = ground.query_ground_contact(ray_origin, 3.0) {
@@ -198,6 +208,11 @@ impl MotorcycleModel {
         self.linear_velocity = Vec3::ZERO;
         let yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
         self.orientation = Quat::from_rotation_y(yaw);
+    }
+
+    /// Drains all pending audio events emitted by the motorcycle.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 }
 
@@ -233,6 +248,8 @@ pub struct TransitBusModel {
     pub max_brake_force: f32,
     /// Ride comfort lateral jerk accumulator.
     pub passenger_comfort_rating: f32,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl Default for TransitBusModel {
@@ -260,6 +277,7 @@ impl TransitBusModel {
             peak_engine_force: 28000.0, // High torque commercial turbodiesel
             max_brake_force: 42000.0,
             passenger_comfort_rating: 5.0,
+            audio_events: Vec::new(),
         }
     }
 
@@ -267,6 +285,18 @@ impl TransitBusModel {
     pub fn set_passenger_count(&mut self, passengers: u16) {
         self.passenger_count = passengers.min(75);
         self.total_mass_kg = self.unladen_mass_kg + (self.passenger_count as f32 * 75.0);
+    }
+
+    /// Boards passengers at a transit stop and emits a boarding chime.
+    pub fn board_passengers(&mut self, count: u32) {
+        self.set_passenger_count((self.passenger_count as u32 + count).min(75) as u16);
+        self.audio_events
+            .push(MultimodalAudioEvent::BusPassengerChime);
+    }
+
+    /// Drains pending audio events emitted by the transit bus.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 
     /// Calculates rear tail swept path displacement during a tight turn.
@@ -322,6 +352,12 @@ impl TransitBusModel {
         let brake_force = inputs.brake * self.max_brake_force * brake_effectiveness;
         if inputs.brake > 0.2 {
             self.air_brake_pressure_bar = (self.air_brake_pressure_bar - (0.15 * dt)).max(4.0);
+            if inputs.brake > 0.75 {
+                self.audio_events
+                    .push(MultimodalAudioEvent::BusAirBrakeRelease {
+                        pressure_bar: self.air_brake_pressure_bar,
+                    });
+            }
         } else {
             self.air_brake_pressure_bar = (self.air_brake_pressure_bar + (0.35 * dt)).min(9.5);
             // Compressor recharge
@@ -380,6 +416,8 @@ pub struct HeavyTruckModel {
     pub is_rolled_over: bool,
     /// Peak engine tractive effort (Newtons).
     pub peak_tractive_force: f32,
+    /// Pending audio events emitted during simulation.
+    pub audio_events: Vec<MultimodalAudioEvent>,
 }
 
 impl Default for HeavyTruckModel {
@@ -414,12 +452,18 @@ impl HeavyTruckModel {
             rollover_threshold_accel: rollover_crit,
             is_rolled_over: false,
             peak_tractive_force: 58000.0, // High-torque heavy hauler engine
+            audio_events: Vec::new(),
         }
     }
 
     /// Total gross vehicle mass in kilograms.
     pub fn gross_mass_kg(&self) -> f32 {
         self.tractor_mass_kg + self.trailer_mass_kg
+    }
+
+    /// Drains pending audio events emitted by the heavy truck.
+    pub fn drain_audio_events(&mut self) -> Vec<MultimodalAudioEvent> {
+        std::mem::take(&mut self.audio_events)
     }
 
     /// Evaluates trailer center position in world space based on articulation angle.
@@ -479,6 +523,10 @@ impl HeavyTruckModel {
         };
 
         let brake_force = inputs.brake * 65000.0; // Multi-axle S-cam drum brakes
+        if inputs.brake > 0.4 && self.speed_kph > 20.0 {
+            self.audio_events
+                .push(MultimodalAudioEvent::TruckJakeBrake { rpm: 2100.0 });
+        }
         let aero_drag = 0.5 * 1.225 * 0.85 * 9.5 * speed_mps * speed_mps;
         let rolling_resistance = total_mass * 9.81 * 0.014;
         let total_resistance = speed_mps.signum() * (brake_force + aero_drag + rolling_resistance);

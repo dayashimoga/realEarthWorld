@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "report_title": "Production Build & Release Artifact Manifest",
+  "release_version": "1.0.0",
+  "release_date": "2026-10-23",
+  "verdict": "CERTIFIED_PASS",
+  "artifacts": [
+    {
+      "filename": "realearth-windows-x64.zip",
+      "platform": "windows",
+      "format": "ZIP",
+      "size_mb": 8.02,
+      "sha256": "8dc9527d98a210bfea780de1224174439328e9b038b5e26f2882b071b4d62351",
+      "magic": "PK\\x03\\x04"
+    },
+    {
+      "filename": "realearth-linux-x64.tar.gz",
+      "platform": "linux",
+      "format": "TAR.GZ",
+      "size_mb": 0.27,
+      "sha256": "1cc5f224c322a906fcd003d6de9ab63cd9bb838a0e0b33a855c630a08179b2e8",
+      "magic": "\\x1f\\x8b"
+    },
+    {
+      "filename": "realearth-macos-universal.tar.gz",
+      "platform": "macos",
+      "format": "TAR.GZ",
+      "size_mb": 0.27,
+      "sha256": "4d0f3aacfa50062351b63f9255e551d9a6836498cb73d980b153eacc7cefb29b",
+      "magic": "\\x1f\\x8b"
+    },
+    {
+      "filename": "realearth-ios-simulator.zip",
+      "platform": "ios",
+      "format": "ZIP",
+      "size_mb": 0.27,
+      "sha256": "55b49d7ebcc4b2457e1d0cc35d1c992f1f442b7b52ec48cda8f3bbf03e20a9f0",
+      "magic": "PK\\x03\\x04"
+    },
+    {
+      "filename": "realearth-region-san-francisco.zip",
+      "platform": "region",
+      "format": "ZIP",
+      "size_mb": 0.24,
+      "sha256": "959f7473d3381601e6a3cf9120546e0d5295b619afaa8a22766e5238f7c37b0e",
+      "magic": "PK\\x03\\x04"
+    }
+  ],
+  "zero_mislabeled_archives_verified": true
+}

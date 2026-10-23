@@ -16,6 +16,7 @@ realearth-validation = { path = "../../engine/validation" }
 realearth-compiler = { path = "../../engine/compiler" }
 realearth-streaming = { path = "../../engine/streaming" }
 realearth-gameplay = { path = "../../engine/gameplay" }
+realearth-networking = { path = "../../engine/networking" }
 clap = { version = "4.5", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber.workspace = true

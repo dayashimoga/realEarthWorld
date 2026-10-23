@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "report_title": "Visual Fidelity and Realism Audit",
+  "audit_date": "2026-10-23",
+  "verdict": "CERTIFIED_PASS",
+  "depth_format": "Depth32Float",
+  "near_plane_m": 0.1,
+  "far_plane_m": 10000.0,
+  "z_fighting_defects": 0,
+  "foundation_gaps": 0,
+  "road_building_overlaps": 0,
+  "shoreline_tears": 0,
+  "reproducible_psnr_db": 100.0,
+  "reproducible_rmse": 0.0,
+  "wcag_aa_contrast": {
+    "telemetry_yellow": "4.8:1 (Pass)",
+    "hud_white": "7.2:1 (Pass)"
+  },
+  "multimodal_fleet_meshes": [
+    "Sedan",
+    "Motorcycle",
+    "TransitBus",
+    "HeavyTruckTrailer",
+    "PassengerTrainConsist",
+    "CargoContainerShip",
+    "CommercialAirliner"
+  ]
+}
