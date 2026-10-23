@@ -10,6 +10,15 @@ APP_BUNDLE="$TARGET_DIR/RealEarth.app"
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/assets" "$APP_BUNDLE/config" "$APP_BUNDLE/data/world_san_francisco" "$APP_BUNDLE/Frameworks"
 
+compute_sha256() {
+    local file="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" | awk '{print $1}'
+    else
+        shasum -a 256 "$file" | awk '{print $1}'
+    fi
+}
+
 # Stage native iOS static library if cross-compiled
 if [ -f "$ROOT_DIR/target/aarch64-apple-ios/release/librealearth.a" ]; then
     cp "$ROOT_DIR/target/aarch64-apple-ios/release/librealearth.a" "$APP_BUNDLE/Frameworks/"
@@ -25,7 +34,7 @@ printf "APPL????" > "$APP_BUNDLE/PkgInfo"
 SIM_ZIP="$TARGET_DIR/realearth-ios-simulator.zip"
 rm -f "$SIM_ZIP"
 (cd "$TARGET_DIR" && zip -r "$SIM_ZIP" RealEarth.app)
-sha256sum "$SIM_ZIP" | awk '{print $1}' > "$SIM_ZIP.sha256"
+compute_sha256 "$SIM_ZIP" > "$SIM_ZIP.sha256"
 
 echo "[SUCCESS] iOS Simulator Package generated at $SIM_ZIP"
 

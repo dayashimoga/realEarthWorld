@@ -9,32 +9,69 @@ mkdir -p "$TARGET_DIR"
 JNI_DIR="$ROOT_DIR/android/app/src/main/jniLibs"
 mkdir -p "$JNI_DIR/arm64-v8a" "$JNI_DIR/x86_64"
 
+compute_sha256() {
+    local file="$1"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" | awk '{print $1}'
+    else
+        shasum -a 256 "$file" | awk '{print $1}'
+    fi
+}
+
+# Determine installed Android targets to avoid attempting compilation on uninstalled triples
+TARGET_ARGS=""
+if rustup target list 2>/dev/null | grep -q "aarch64-linux-android (installed)"; then
+    TARGET_ARGS="$TARGET_ARGS -t arm64-v8a"
+fi
+if rustup target list 2>/dev/null | grep -q "x86_64-linux-android (installed)"; then
+    TARGET_ARGS="$TARGET_ARGS -t x86_64"
+fi
+
 # Check for cargo-ndk and cross targets
-if command -v cargo-ndk >/dev/null 2>&1 && rustup target list | grep -q "aarch64-linux-android (installed)"; then
-    echo "[BUILD] Cross-compiling native Rust shared libraries for Android..."
-    cargo ndk -t arm64-v8a -t x86_64 -o "$JNI_DIR" build -p realearth-mobile --release
+if command -v cargo-ndk >/dev/null 2>&1 && [ -n "$TARGET_ARGS" ]; then
+    echo "[BUILD] Cross-compiling native Rust shared libraries for Android ($TARGET_ARGS)..."
+    cargo ndk $TARGET_ARGS -o "$JNI_DIR" build -p realearth-mobile --release
+fi
+
+# Stage precompiled native libraries if available
+if [ -f "$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so" ] && [ ! -f "$JNI_DIR/arm64-v8a/librealearth.so" ]; then
+    cp "$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so" "$JNI_DIR/arm64-v8a/librealearth.so"
+fi
+
+if [ -f "$JNI_DIR/arm64-v8a/librealearth.so" ]; then
+    cp "$JNI_DIR/arm64-v8a/librealearth.so" "$TARGET_DIR/librealearth-arm64.so"
+    compute_sha256 "$TARGET_DIR/librealearth-arm64.so" > "$TARGET_DIR/librealearth-arm64.so.sha256"
 fi
 
 # Check for Android SDK and Gradle
-if [ -n "${ANDROID_HOME:-}" ] || [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+GRADLE_CMD=""
+if [ -f "$ROOT_DIR/android/gradlew" ]; then
+    GRADLE_CMD="$ROOT_DIR/android/gradlew"
+elif command -v gradle >/dev/null 2>&1; then
+    GRADLE_CMD="gradle"
+fi
+
+if ([ -n "${ANDROID_HOME:-}" ] || [ -n "${ANDROID_SDK_ROOT:-}" ]) && [ -n "$GRADLE_CMD" ]; then
     echo "[BUILD] Building authentic APK and AAB with Gradle..."
-    (cd "$ROOT_DIR/android" && ./gradlew assembleRelease bundleRelease)
+    (cd "$ROOT_DIR/android" && $GRADLE_CMD assembleRelease bundleRelease)
 
     APK_SRC="$ROOT_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
     AAB_SRC="$ROOT_DIR/android/app/build/outputs/bundle/release/app-release.aab"
 
     if [ -f "$APK_SRC" ]; then
         cp "$APK_SRC" "$TARGET_DIR/realearth-arm64.apk"
-        sha256sum "$TARGET_DIR/realearth-arm64.apk" | awk '{print $1}' > "$TARGET_DIR/realearth-arm64.apk.sha256"
+        compute_sha256 "$TARGET_DIR/realearth-arm64.apk" > "$TARGET_DIR/realearth-arm64.apk.sha256"
         echo "[SUCCESS] Real Android APK generated at $TARGET_DIR/realearth-arm64.apk"
     fi
 
     if [ -f "$AAB_SRC" ]; then
         cp "$AAB_SRC" "$TARGET_DIR/realearth-release.aab"
-        sha256sum "$TARGET_DIR/realearth-release.aab" | awk '{print $1}' > "$TARGET_DIR/realearth-release.aab.sha256"
+        compute_sha256 "$TARGET_DIR/realearth-release.aab" > "$TARGET_DIR/realearth-release.aab.sha256"
         echo "[SUCCESS] Real Android AAB generated at $TARGET_DIR/realearth-release.aab"
     fi
-else
+fi
+
+if [ ! -f "$TARGET_DIR/realearth-arm64.apk" ]; then
     echo "=========================================================="
     echo "[BLOCKER] Android SDK / Gradle not found on this system."
     echo "Per Stage 4 requirements, no hand-built fake ZIPs are created."

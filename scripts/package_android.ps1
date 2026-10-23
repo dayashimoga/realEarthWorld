@@ -21,11 +21,16 @@ New-Item -ItemType Directory -Path $X86Dir -Force | Out-Null
 
 # 1. Native Rust Cross-Compilation Check
 $CargoNdk = Get-Command "cargo-ndk" -ErrorAction SilentlyContinue
-$HasAndroidTarget = (rustup target list 2>$null | Select-String "aarch64-linux-android (installed)")
+$HasArm64Target = (rustup target list 2>$null | Select-String "aarch64-linux-android (installed)")
+$HasX86Target = (rustup target list 2>$null | Select-String "x86_64-linux-android (installed)")
 
-if ($CargoNdk -and $HasAndroidTarget) {
-    Write-Host "[BUILD] Compiling genuine Android native shared libraries (arm64-v8a, x86_64)..." -ForegroundColor Yellow
-    cargo ndk -t arm64-v8a -t x86_64 -o $JniDir build -p realearth-mobile --release
+$TargetArgs = @()
+if ($HasArm64Target) { $TargetArgs += "-t", "arm64-v8a" }
+if ($HasX86Target) { $TargetArgs += "-t", "x86_64" }
+
+if ($CargoNdk -and $TargetArgs.Count -gt 0) {
+    Write-Host "[BUILD] Compiling genuine Android native shared libraries ($TargetArgs)..." -ForegroundColor Yellow
+    cargo ndk @TargetArgs -o $JniDir build -p realearth-mobile --release
 } else {
     Write-Host "[INFO] Android NDK cross-compilation toolchain not installed on host." -ForegroundColor Yellow
 }
