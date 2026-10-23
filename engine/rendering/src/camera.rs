@@ -53,13 +53,12 @@ impl FloatingOriginCamera {
         }
     }
 
-    /// Relative position of camera in single precision meters relative to active anchor.
+    /// Relative position of camera in single precision meters in local ENU frame relative to active anchor.
     pub fn relative_pos_f32(&self) -> Vec3 {
-        Vec3::new(
-            (self.pos_ecef.x - self.anchor_ecef.x) as f32,
-            (self.pos_ecef.y - self.anchor_ecef.y) as f32,
-            (self.pos_ecef.z - self.anchor_ecef.z) as f32,
-        )
+        let anchor_wgs84 = realearth_geospatial::transforms::ecef_to_wgs84(self.anchor_ecef);
+        let conv = realearth_geospatial::transforms::EnuConverter::new(anchor_wgs84);
+        let enu = conv.ecef_to_enu(self.pos_ecef);
+        Vec3::new(enu.east as f32, enu.up as f32, enu.north as f32)
     }
 
     /// Computes the view matrix.

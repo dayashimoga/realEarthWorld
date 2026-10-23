@@ -202,18 +202,21 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.i(TAG, "Native Surface created, starting simulation loop.");
+        Log.i(TAG, "Native Surface created, linking to WGPU rendering.");
+        RealEarthEngine.nativeSurfaceCreated(holder.getSurface());
         startSimulationLoop();
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.i(TAG, "Surface resized: " + width + "x" + height);
+        RealEarthEngine.nativeSurfaceChanged(holder.getSurface(), width, height);
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.i(TAG, "Surface destroyed, stopping simulation loop.");
+        Log.i(TAG, "Surface destroyed, detaching WGPU surface.");
+        RealEarthEngine.nativeSurfaceDestroyed();
         stopSimulationLoop();
     }
 
@@ -256,9 +259,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     private void updateTelemetryDisplay() {
-        // Telemetry update hook
-        tvSpeed.setText(String.format("Throttle: %.1f | Steer: %.1f | Brake: %.1f",
-            currentThrottle, currentSteer, currentBrake));
+        float speed = RealEarthEngine.nativeGetSpeed();
+        double lat = RealEarthEngine.nativeGetLat();
+        double lon = RealEarthEngine.nativeGetLon();
+        double alt = RealEarthEngine.nativeGetAlt();
+        tvSpeed.setText(String.format("Speed: %.1f km/h", speed));
+        tvCoordinates.setText(String.format("%.4f°N, %.4f°W (Alt: %.1fm)", lat, lon, alt));
     }
 
     @Override
@@ -279,13 +285,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         Log.w(TAG, "TrimMemory received level: " + level + " — triggering cache prune.");
-        // Trim simulation caches
+        RealEarthEngine.nativeTrimMemory(level);
     }
 
     @Override
     public void onLowMemory() {
         super.onLowMemory();
         Log.w(TAG, "LowMemory event received — flushing chunk caches.");
+        RealEarthEngine.nativeTrimMemory(80);
     }
 
     @Override

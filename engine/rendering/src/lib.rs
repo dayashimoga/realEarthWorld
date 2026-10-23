@@ -2,17 +2,21 @@
 
 pub mod camera;
 pub mod culling;
+pub mod hud;
 pub mod preset;
 pub mod renderer;
 pub mod shaders;
 pub mod uniforms;
+pub mod vehicle_mesh;
 
 pub use camera::FloatingOriginCamera;
 pub use culling::{Frustum, FrustumPlane};
+pub use hud::{HudMesh, HudVertex};
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};
 pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
-pub use shaders::WORLD_SHADER_WGSL;
+pub use shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};
 pub use uniforms::SceneUniforms;
+pub use vehicle_mesh::{generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType};
 
 #[cfg(test)]
 mod tests {

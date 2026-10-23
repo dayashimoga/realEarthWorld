@@ -30,7 +30,7 @@ impl Default for FlatGround {
 impl GroundQuery for FlatGround {
     fn query_ground_contact(&self, origin: Vec3, max_dist: f32) -> Option<(f32, Vec3)> {
         let dist = origin.y - self.elevation;
-        if dist >= 0.0 && dist <= max_dist {
+        if dist >= -10.0 && dist <= max_dist {
             Some((dist, Vec3::Y))
         } else {
             None
@@ -59,9 +59,8 @@ impl GroundQuery for SlopedGround {
     fn query_ground_contact(&self, origin: Vec3, max_dist: f32) -> Option<(f32, Vec3)> {
         let ground_y = self.base_elevation + self.slope_x * origin.x + self.slope_z * origin.z;
         let dist = origin.y - ground_y;
-        if dist >= 0.0 && dist <= max_dist {
-            // Normal perpendicular to surface: (-slope_x, 1.0, -slope_z) normalized
-            let normal = Vec3::new(-self.slope_x, 1.0, -self.slope_z).normalize();
+        let normal = Vec3::new(-self.slope_x, 1.0, -self.slope_z).normalize();
+        if dist >= -10.0 && dist <= max_dist {
             Some((dist, normal))
         } else {
             None

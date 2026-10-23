@@ -12,6 +12,8 @@ if (Get-Command podman-compose -ErrorAction SilentlyContinue) {
     $composeCmd = "docker compose"
 } elseif (Get-Command podman -ErrorAction SilentlyContinue) {
     $composeCmd = "podman compose"
+} elseif (Test-Path "$env:LOCALAPPDATA\Programs\Podman\podman.exe") {
+    $composeCmd = "& `"$env:LOCALAPPDATA\Programs\Podman\podman.exe`" compose"
 }
 
 if ($null -eq $composeCmd) {

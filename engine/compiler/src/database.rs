@@ -228,6 +228,21 @@ impl ChunkDatabase {
         Ok(count as usize)
     }
 
+    /// Returns the total feature count across all stored chunks.
+    pub fn total_feature_count(&self) -> Result<usize> {
+        let count: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(feature_count), 0) FROM chunks",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite total features error: {}", e))
+            })?;
+        Ok(count as usize)
+    }
+
     /// Sets or updates the package manifest.
     pub fn set_package_manifest(&self, manifest: &ManifestMetadataRecord) -> Result<()> {
         self.conn

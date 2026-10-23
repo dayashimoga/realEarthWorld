@@ -1,0 +1,15 @@
+﻿{
+    "Platform":  "iOS",
+    "Status":  "BLOCKED_PENDING_PROVISIONING",
+    "Reason":  "Physical device IPA requires Apple Developer Team Provisioning Profile and macOS Xcode",
+    "SimulatorPackage":  "dist/ios/realearth-ios-simulator.zip",
+    "SimulatorPackageValid":  true,
+    "XcodeProjectLocation":  "ios/",
+    "MetalBridgeValid":  true,
+    "RequiredCredentials":  [
+                                "Apple Developer Account",
+                                "iOS Provisioning Profile",
+                                "Xcode 15+"
+                            ],
+    "ReproductionCommand":  "xcodebuild -workspace ios/RealEarth.xcworkspace -scheme RealEarth archive"
+}

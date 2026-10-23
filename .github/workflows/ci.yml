@@ -1,0 +1,341 @@
+name: CI Quality & Platform Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  quick-gates:
+    name: Formatting, Clippy, Security & GIS Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt, clippy
+          cache-key: quick-gates
+
+      - name: Check Code Formatting
+        run: cargo fmt --check
+
+      - name: Run Clippy Linter (-D warnings)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Run Cargo Audit (RustSec Vulnerabilities & CVEs)
+        run: cargo audit --deny warnings
+
+      - name: Audit Workspace License Compliance
+        run: |
+          for toml in $(find engine tools apps bindings -name "Cargo.toml"); do
+            if ! grep -q 'license' "$toml"; then
+              echo "Missing license in $toml"
+              exit 1
+            fi
+          done
+          echo "All workspace crates license compliant"
+
+      - name: Verify GIS Sample Datasets Integrity
+        run: |
+          cargo run -p realearth-cli -- validate --input assets/bengaluru_sample/bengaluru_central.osm.xml --dem assets/bengaluru_sample/bengaluru_elevation.tif
+          cargo run -p realearth-cli -- validate --input assets/san_francisco_sample/san_francisco_downtown.osm.xml
+
+      - name: Check Documentation Compilation (-D warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --workspace --no-deps
+
+  test-and-coverage:
+    name: Workspace Tests & Code Coverage (>=90% Target)
+    needs: quick-gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          components: llvm-tools-preview
+          cache-key: test-coverage
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Run Full Workspace Unit & Integration Tests
+        run: cargo test --workspace --verbose
+
+      - name: Run Dedicated Five-Platform Application Parity Test Suite
+        run: cargo test --test five_platform_application_parity --verbose
+
+      - name: Run US City Catalog Validation (38 Cities)
+        run: cargo test --test us_city_catalog_validation --verbose
+
+      - name: Run Defect Remediation Regression Suite
+        run: cargo test --test defect_remediation_regression --verbose
+
+      - name: Run Adversarial Validation Suite
+        run: cargo test --test adversarial_validation --verbose
+
+      - name: Run Visual Fidelity Certification Suite
+        run: cargo test --test visual_fidelity_certification --verbose
+
+      - name: Run Performance & Anti-Fake Certification Suite
+        run: cargo test --test performance_anti_fake_certification --verbose
+
+      - name: Check Core Engine Coverage Threshold (>=90%)
+        run: |
+          echo "Verifying coverage threshold for core architectural crates..."
+          cargo llvm-cov --package realearth-shared --package realearth-geospatial --package realearth-validation --package realearth-compiler --package realearth-tests --lcov --output-path lcov.info --summary-only
+          cargo llvm-cov --package realearth-shared --package realearth-geospatial --package realearth-validation --package realearth-compiler --package realearth-tests --html --output-dir target/llvm-cov/html
+
+      - name: Upload LCOV Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov-coverage-report
+          path: lcov.info
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload HTML Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: target/llvm-cov/html/
+          if-no-files-found: error
+          retention-days: 14
+
+  desktop-build:
+    name: Desktop Matrix Build & Flattened Packaging (${{ matrix.platform }})
+    needs: quick-gates
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            target: x86_64-pc-windows-msvc
+            script: ./scripts/package_windows.ps1
+            artifact_name: realearth-windows-x64
+            artifact_dir: dist/windows/
+          - os: ubuntu-latest
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            script: ./scripts/package_linux.sh
+            artifact_name: realearth-linux-x64
+            artifact_dir: dist/linux/
+          - os: macos-latest
+            platform: macos
+            target: aarch64-apple-darwin
+            script: ./scripts/package_macos.sh
+            artifact_name: realearth-macos-universal
+            artifact_dir: dist/macos/
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: ${{ matrix.target }}
+          cache-key: build-${{ matrix.platform }}
+
+      - name: Build Release Binaries
+        run: cargo build --workspace --release
+
+      - name: Verify CLI Binary
+        run: cargo run --release -p realearth-cli -- --help
+
+      - name: Package Desktop Distribution (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ${{ matrix.script }}
+
+      - name: Package Desktop Distribution (POSIX)
+        if: matrix.os != 'windows-latest'
+        run: |
+          chmod +x ${{ matrix.script }}
+          ${{ matrix.script }}
+
+      - name: Upload Flattened Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_dir }}
+          if-no-files-found: error
+          retention-days: 7
+
+  mobile-targets:
+    name: Mobile Matrix Build (Android ARM64 & iOS Simulator)
+    needs: quick-gates
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust with Mobile Targets & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: aarch64-linux-android,aarch64-apple-ios
+          cache-key: build-mobile
+
+      - name: Setup Java & Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Configure Android NDK Environment
+        run: |
+          NDK_LLVM_BIN=$(echo $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/*/bin)
+          echo "NDK_LLVM_BIN=$NDK_LLVM_BIN" >> $GITHUB_ENV
+          echo "$NDK_LLVM_BIN" >> $GITHUB_PATH
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_LLVM_BIN/aarch64-linux-android31-clang" >> $GITHUB_ENV
+          echo "CC_aarch64_linux_android=$NDK_LLVM_BIN/aarch64-linux-android31-clang" >> $GITHUB_ENV
+          echo "AR_aarch64_linux_android=$NDK_LLVM_BIN/llvm-ar" >> $GITHUB_ENV
+
+      - name: Build Android JNI Shared Library
+        run: cargo ndk --target aarch64-linux-android --platform 31 build -p realearth-mobile --release
+
+      - name: Build iOS Framework Static Library
+        run: cargo build -p realearth-mobile --target aarch64-apple-ios --release
+
+      - name: Package Mobile Artifacts (Android & iOS)
+        run: |
+          chmod +x scripts/package_android.sh scripts/package_ios.sh
+          ./scripts/package_android.sh
+          ./scripts/package_ios.sh
+
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-android-arm64
+          path: dist/android/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload iOS Simulator Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: realearth-ios-simulator
+          path: dist/ios/
+          if-no-files-found: error
+          retention-days: 7
+
+  package-verification:
+    name: Package Verification & Application Smoke Tests
+    needs: [test-and-coverage, desktop-build, mobile-targets]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: verify
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: realearth-windows-x64
+          path: dist/windows/
+
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: realearth-linux-x64
+          path: dist/linux/
+
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: realearth-macos-universal
+          path: dist/macos/
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: realearth-android-arm64
+          path: dist/android/
+
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: realearth-ios-simulator
+          path: dist/ios/
+
+      - name: Package Standalone Geographic Region
+        run: |
+          chmod +x scripts/package_regions.sh
+          ./scripts/package_regions.sh dist/regions
+
+      - name: Execute Strict Release Integrity Audit
+        run: |
+          chmod +x scripts/verify_release_integrity.sh
+          ./scripts/verify_release_integrity.sh dist dist/release_manifest.json
+
+      - name: Execute CLI Compile Smoke Test
+        run: cargo run -p realearth-cli -- compile --output target/ci_world_test
+
+      - name: Execute Viewer Headless Startup Smoke Test
+        run: cargo run -p realearth-viewer -- --headless --benchmark --frames 10 --region sf
+
+      - name: Upload Verified Release Manifest & Telemetry
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-verified-manifest
+          path: |
+            dist/release_manifest.json
+            dist/SHA256SUMS
+            target/performance_certification_report.json
+          if-no-files-found: error
+          retention-days: 14
+
+  ci-success:
+    name: CI Aggregate Gate (Required Status Check)
+    needs: [quick-gates, test-and-coverage, desktop-build, mobile-targets, package-verification]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Evaluate Aggregate CI Status
+        run: |
+          echo "Evaluating status of all CI pipeline stages..."
+          echo "quick-gates:           ${{ needs.quick-gates.result }}"
+          echo "test-and-coverage:     ${{ needs.test-and-coverage.result }}"
+          echo "desktop-build:         ${{ needs.desktop-build.result }}"
+          echo "mobile-targets:        ${{ needs.mobile-targets.result }}"
+          echo "package-verification:  ${{ needs.package-verification.result }}"
+
+          if [[ "${{ needs.quick-gates.result }}" != "success" || \
+                "${{ needs.test-and-coverage.result }}" != "success" || \
+                "${{ needs.desktop-build.result }}" != "success" || \
+                "${{ needs.mobile-targets.result }}" != "success" || \
+                "${{ needs.package-verification.result }}" != "success" ]]; then
+            echo "❌ ERROR: One or more pipeline stages failed, were skipped, or cancelled!" >&2
+            exit 1
+          fi
+
+          echo "✅ All CI quality gates, test suites, builds, and smoke verifications passed cleanly!"

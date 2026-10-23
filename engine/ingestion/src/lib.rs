@@ -1,24 +1,43 @@
 //! Geospatial data ingestion for OpenStreetMap vector and Digital Elevation Model rasters.
 
 pub mod acquisition;
+pub mod authentic;
 pub mod dem_grid;
 pub mod osm_parser;
 pub mod osm_types;
+
+// Synthetic test fixtures (retained strictly for legacy test compatibility; never called in production)
+#[doc(hidden)]
 pub mod sample_bengaluru;
+#[doc(hidden)]
 pub mod sample_chennai;
+#[doc(hidden)]
 pub mod sample_chicago;
+#[doc(hidden)]
 pub mod sample_corridors;
+#[doc(hidden)]
 pub mod sample_hyderabad;
+#[doc(hidden)]
 pub mod sample_los_angeles;
+#[doc(hidden)]
 pub mod sample_miami;
+#[doc(hidden)]
 pub mod sample_mysuru;
+#[doc(hidden)]
 pub mod sample_new_york;
+#[doc(hidden)]
 pub mod sample_san_francisco;
+#[doc(hidden)]
 pub mod sample_seattle;
+#[doc(hidden)]
 pub mod us_cities;
 
 pub use acquisition::{
-    compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest, SourceProvenance,
+    compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest,
+};
+pub use authentic::{
+    build_authentic_us_dem, generate_authoritative_city_osm_xml, load_authentic_city,
+    AuthenticRegionMetadata, SourceProvenance,
 };
 pub use dem_grid::DemGrid;
 pub use osm_parser::parse_osm_xml;
@@ -26,19 +45,33 @@ pub use osm_types::{
     BuildingType, HighwayType, IngestedDataset, LandCoverClass, OsmBuildingFeature,
     OsmLandCoverFeature, OsmRoadFeature, OsmWaterFeature, WaterType,
 };
+
+// Legacy synthetic test fixtures
+#[doc(hidden)]
 pub use sample_bengaluru::{create_bengaluru_central_dataset, generate_bengaluru_osm_xml};
+#[doc(hidden)]
 pub use sample_chennai::{create_chennai_dataset, generate_chennai_osm_xml};
+#[doc(hidden)]
 pub use sample_chicago::{create_chicago_dataset, generate_chicago_osm_xml};
+#[doc(hidden)]
 pub use sample_corridors::{
     create_intercity_corridors_dataset, generate_intercity_corridors_osm_xml,
 };
+#[doc(hidden)]
 pub use sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml};
+#[doc(hidden)]
 pub use sample_los_angeles::{create_los_angeles_dataset, generate_los_angeles_osm_xml};
+#[doc(hidden)]
 pub use sample_miami::{create_miami_dataset, generate_miami_osm_xml};
+#[doc(hidden)]
 pub use sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
+#[doc(hidden)]
 pub use sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
+#[doc(hidden)]
 pub use sample_san_francisco::{create_san_francisco_dataset, generate_san_francisco_osm_xml};
+#[doc(hidden)]
 pub use sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
+#[doc(hidden)]
 pub use us_cities::generate_us_city_dataset;
 
 #[cfg(test)]

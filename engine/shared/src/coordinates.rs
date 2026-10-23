@@ -79,3 +79,32 @@ impl FloatingOrigin {
         Vec3::new(diff.x as f32, diff.y as f32, diff.z as f32)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_coordinates_and_conversions() {
+        let wgs = Wgs84Coord::new(37.7749, -122.4194, 10.0);
+        assert_eq!(wgs.lat, 37.7749);
+        assert_eq!(wgs.lon, -122.4194);
+        assert_eq!(wgs.alt, 10.0);
+
+        let ecef = EcefCoord::new(100.0, 200.0, 300.0);
+        let dvec = ecef.to_dvec3();
+        assert_eq!(dvec.x, 100.0);
+        let roundtrip = EcefCoord::from_dvec3(dvec);
+        assert_eq!(roundtrip, ecef);
+
+        let enu = EnuCoord::new(10.0, 20.0, 5.0);
+        let sim_vec = enu.to_vec3();
+        assert_eq!(sim_vec, Vec3::new(10.0, 5.0, 20.0));
+        let gfx_vec = enu.to_graphics_vec3();
+        assert_eq!(gfx_vec, Vec3::new(10.0, 5.0, -20.0));
+
+        let origin = FloatingOrigin::new(EcefCoord::new(1000.0, 2000.0, 3000.0));
+        let rel = origin.to_relative_f32(EcefCoord::new(1010.0, 2020.0, 3005.0));
+        assert_eq!(rel, Vec3::new(10.0, 20.0, 5.0));
+    }
+}

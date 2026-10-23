@@ -1,0 +1,35 @@
+{
+  "engine_version": "0.1.0",
+  "default_region": "san-francisco",
+  "window": {
+    "title": "Real Earth World — Planetary Simulation",
+    "width": 1280,
+    "height": 720,
+    "vsync": true,
+    "resizable": true
+  },
+  "graphics": {
+    "preset": "High",
+    "view_distance_meters": 4000.0,
+    "lod1_distance_meters": 2200.0,
+    "shadows_enabled": true,
+    "road_markings_enabled": true,
+    "procedural_facades_enabled": true,
+    "animated_water_enabled": true
+  },
+  "simulation": {
+    "physics_rate_hz": 60,
+    "substeps": 4,
+    "traffic_density": 8,
+    "rule_of_the_road": "RightHandTraffic"
+  },
+  "storage": {
+    "cache_dir": "data/cache",
+    "max_cache_mb": 2048,
+    "preload_pilot_map": true
+  },
+  "offline_mode": {
+    "allow_bundled_fallback": true,
+    "network_fetch_enabled": false
+  }
+}

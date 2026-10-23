@@ -1,8 +1,9 @@
 //! Native wgpu rendering engine and persistent GPU buffer pipeline manager.
 
 use crate::camera::FloatingOriginCamera;
+use crate::hud::{HudMesh, HudVertex};
 use crate::preset::{GraphicsPresetLevel, GraphicsSettings};
-use crate::shaders::WORLD_SHADER_WGSL;
+use crate::shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};
 use crate::uniforms::SceneUniforms;
 use bytemuck::cast_slice;
 use realearth_compiler::chunk::WorldChunk;
@@ -31,13 +32,16 @@ pub struct GpuChunkBuffers {
 }
 
 /// Native wgpu graphics renderer supporting both headless and surface rendering,
-/// with persistent GPU buffer caching and dynamic graphics quality presets.
+/// with persistent GPU buffer caching, dynamic graphics presets, and integrated 2D HUD overlays.
 pub struct RealEarthRenderer {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub pipeline: wgpu::RenderPipeline,
     pub uniform_buffer: wgpu::Buffer,
     pub uniform_bind_group: wgpu::BindGroup,
+    pub hud_pipeline: wgpu::RenderPipeline,
+    pub hud_uniform_buffer: wgpu::Buffer,
+    pub hud_bind_group: wgpu::BindGroup,
     pub surface_format: wgpu::TextureFormat,
     pub depth_format: wgpu::TextureFormat,
     pub gpu_cache: RwLock<HashMap<(i32, i32, u32), GpuChunkBuffers>>,
@@ -61,11 +65,11 @@ impl RealEarthRenderer {
         pollster::block_on(Self::init_device(surface_format, settings, None))
     }
 
-    /// Initializes wgpu device, queue, shaders, and render pipeline.
+    /// Initializes wgpu device and queue from system graphics adapter, then constructs the renderer.
     async fn init_device(
         surface_format: wgpu::TextureFormat,
         settings: GraphicsSettings,
-        _surface: Option<&wgpu::Surface<'_>>,
+        surface: Option<&wgpu::Surface<'_>>,
     ) -> Result<Self> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -75,7 +79,7 @@ impl RealEarthRenderer {
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: None,
+                compatible_surface: surface,
                 force_fallback_adapter: false,
             })
             .await
@@ -83,7 +87,7 @@ impl RealEarthRenderer {
                 // Fallback to secondary/software adapter
                 pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                     power_preference: wgpu::PowerPreference::LowPower,
-                    compatible_surface: None,
+                    compatible_surface: surface,
                     force_fallback_adapter: true,
                 }))
                 .expect("Failed to acquire any suitable wgpu graphics adapter")
@@ -104,7 +108,18 @@ impl RealEarthRenderer {
                 RealEarthError::Geospatial(format!("Failed to create wgpu device: {}", e))
             })?;
 
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        Ok(Self::from_device(device, queue, surface_format, settings))
+    }
+
+    /// Synchronously creates a RealEarthRenderer instance given an existing wgpu Device and Queue.
+    /// This is the primary constructor for visible native window surfaces.
+    pub fn from_device(
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        surface_format: wgpu::TextureFormat,
+        settings: GraphicsSettings,
+    ) -> Self {
+        let world_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("World Shader"),
             source: wgpu::ShaderSource::Wgsl(WORLD_SHADER_WGSL.into()),
         });
@@ -179,13 +194,13 @@ impl RealEarthRenderer {
             label: Some("World Render Pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader,
+                module: &world_shader,
                 entry_point: Some("vs_main"),
                 buffers: &[vertex_layout],
                 compilation_options: Default::default(),
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader,
+                module: &world_shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: surface_format,
@@ -198,7 +213,7 @@ impl RealEarthRenderer {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None, // Render both sides of walls/ribbons
+                cull_mode: None,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,
@@ -215,17 +230,178 @@ impl RealEarthRenderer {
             cache: None,
         });
 
-        Ok(Self {
+        // 2D Screen-space HUD Pipeline
+        let hud_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("HUD Shader"),
+            source: wgpu::ShaderSource::Wgsl(HUD_SHADER_WGSL.into()),
+        });
+
+        let hud_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("HUD Uniform Buffer"),
+            size: 16, // vec2<f32> screen_size + vec2<f32> padding
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let hud_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("HUD Bind Group Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let hud_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("HUD Bind Group"),
+            layout: &hud_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: hud_uniform_buffer.as_entire_binding(),
+            }],
+        });
+
+        let hud_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("HUD Pipeline Layout"),
+            bind_group_layouts: &[&hud_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let hud_vertex_layout = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<HudVertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x2, // 2D pixel position
+                },
+                wgpu::VertexAttribute {
+                    offset: 8,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x4, // RGBA color
+                },
+            ],
+        };
+
+        let hud_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("HUD Render Pipeline"),
+            layout: Some(&hud_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &hud_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[hud_vertex_layout],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &hud_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: surface_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None, // No depth testing for 2D overlay
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        Self {
             device,
             queue,
             pipeline,
             uniform_buffer,
             uniform_bind_group,
+            hud_pipeline,
+            hud_uniform_buffer,
+            hud_bind_group,
             surface_format,
             depth_format,
             gpu_cache: RwLock::new(HashMap::new()),
             settings,
-        })
+        }
+    }
+
+    /// Renders a 2D HUD and telemetry overlay on top of the rendered frame.
+    pub fn render_hud(
+        &self,
+        hud_mesh: &HudMesh,
+        color_view: &wgpu::TextureView,
+        width: u32,
+        height: u32,
+    ) {
+        if hud_mesh.is_empty() || width == 0 || height == 0 {
+            return;
+        }
+
+        let hud_uniforms = [width as f32, height as f32, 0.0, 0.0];
+        self.queue
+            .write_buffer(&self.hud_uniform_buffer, 0, cast_slice(&hud_uniforms));
+
+        let vertex_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("HUD Vertex Buffer"),
+                contents: cast_slice(&hud_mesh.vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        let index_buf = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("HUD Index Buffer"),
+                contents: cast_slice(&hud_mesh.indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("HUD Encoder"),
+            });
+
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("HUD Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: color_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            pass.set_pipeline(&self.hud_pipeline);
+            pass.set_bind_group(0, &self.hud_bind_group, &[]);
+            pass.set_vertex_buffer(0, vertex_buf.slice(..));
+            pass.set_index_buffer(index_buf.slice(..), wgpu::IndexFormat::Uint32);
+            pass.draw_indexed(0..hud_mesh.indices.len() as u32, 0, 0..1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
     }
 
     /// Uploads an individual ChunkMesh to persistent GPU buffers.
@@ -461,13 +637,17 @@ impl RealEarthRenderer {
         let visible: Vec<&&WorldChunk> = chunks
             .iter()
             .filter(|chunk| {
+                let conv = realearth_geospatial::transforms::EnuConverter::new(chunk.header.anchor);
+                let enu_c = conv.wgs84_to_enu(chunk.header.bounds.center());
                 let rel_center = glam::Vec3::new(
-                    0.0,
+                    enu_c.east as f32,
                     (chunk.header.min_elevation + chunk.header.max_elevation) * 0.5,
-                    0.0,
+                    enu_c.north as f32,
                 );
-                let radius = 750.0;
-                frustum.intersects_sphere(rel_center, radius)
+                let radius = 800.0;
+                let cam_pos = camera.relative_pos_f32();
+                (cam_pos - rel_center).length() < radius
+                    || frustum.intersects_sphere(rel_center, radius)
             })
             .collect();
 

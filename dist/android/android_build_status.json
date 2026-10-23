@@ -1,0 +1,15 @@
+﻿{
+    "Platform":  "Android",
+    "Status":  "BLOCKED_PENDING_TOOLCHAIN",
+    "Reason":  "Android SDK 34 / NDK r26b / AAPT2 / D8 not installed on host",
+    "ProjectTreeValid":  true,
+    "JniBindingValid":  true,
+    "GradleProjectLocation":  "android/",
+    "RequiredTools":  [
+                          "Android SDK 34",
+                          "NDK r26b",
+                          "cargo-ndk",
+                          "gradle"
+                      ],
+    "ReproductionCommand":  "cd android \u0026\u0026 ./gradlew assembleRelease bundleRelease"
+}

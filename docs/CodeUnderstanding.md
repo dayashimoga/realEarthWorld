@@ -33,16 +33,25 @@ j:/rustRealEarth/
 │   ├── simulation/             # realearth-simulation: Headless Bevy ECS, sun/weather
 │   ├── vehicles/               # realearth-vehicles: Kinematics, Rapier3D physics
 │   ├── navigation/             # realearth-navigation: Petgraph lane network, A* search
-│   ├── rendering/              # realearth-rendering: wgpu pipeline, shaders, camera
-│   └── network/                # realearth-network: Optional snapshot sync
+│   ├── rendering/              # realearth-rendering: wgpu pipeline, shaders, camera, HUD
+│   ├── network/                # realearth-network: Optional snapshot sync
+│   └── gameplay/               # realearth-gameplay: Careers, contracts, economy
+├── bindings/
+│   └── mobile/                 # realearth-mobile: JNI (Android) & C (iOS) native bindings
 ├── apps/
-│   └── world-viewer/           # realearth-viewer: Desktop interactive viewer app
+│   └── world-viewer/           # realearth-viewer: Desktop interactive viewer app (winit+wgpu)
 ├── tools/
 │   └── world-cli/              # realearth-cli: Headless ingestion, compilation & inspection
+├── android/                    # Android Studio / Gradle project (MainActivity, JNI bridge)
+├── ios/                        # Xcode / Cocoa project (UIKit, Metal view controller)
+├── dist/                       # Packaged five-platform distributions and SHA256SUMS
 ├── benchmarks/                 # realearth-benchmarks: Criterion performance benchmarks
-├── assets/                     # Mock & sample Bengaluru datasets, shaders, textures
-├── tests/                      # Integration & end-to-end verification suites
-└── .github/workflows/          # Full CI/CD pipelines
+├── assets/                     # Authentic Bengaluru & San Francisco datasets, shaders
+├── data/                       # Precompiled regional world packages (chunks.db)
+├── tests/                      # 23 Integration & certification test suites
+└── .github/
+    ├── actions/setup-rust/     # Reusable composite setup & cache action
+    └── workflows/              # Consolidated CI/CD (ci.yml, nightly.yml, release.yml)
 ```
 
 ---
@@ -56,6 +65,6 @@ j:/rustRealEarth/
 3. **Streaming**:
    Camera position $\to$ `realearth-streaming` $\to$ SQLite bounding query $\to$ Tokio disk read $\to$ Rayon decompression $\to$ LRU cache.
 4. **Rendering**:
-   `LRU Cache` $\to$ `realearth-rendering` $\to$ Vertex Buffers (rebased to `FloatingOrigin`) $\to$ wgpu draw calls $\to$ Display.
-5. **Simulation & Navigation**:
-   Road network $\to$ `realearth-navigation` $\to$ A* waypoints $\to$ `realearth-vehicles` $\to$ Rapier physics $\to$ Bevy ECS transform updates.
+   `LRU Cache` $\to$ `realearth-rendering` $\to$ Vertex Buffers (rebased to `FloatingOrigin`) $\to$ wgpu draw calls + HUD $\to$ Surface Presentation.
+5. **Simulation, Navigation & Gameplay**:
+   Road network $\to$ `realearth-navigation` $\to$ A* waypoints $\to$ `realearth-vehicles` $\to$ Rapier ground physics $\to$ `realearth-gameplay` contracts $\to$ HUD Telemetry.

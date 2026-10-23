@@ -10,3 +10,5 @@ Thumbs.db
 *.log
 dist/**/*.AppDir/
 dist/**/RealEarth.app/
+dist/**/test_standalone/
+dist/**/staging_*/

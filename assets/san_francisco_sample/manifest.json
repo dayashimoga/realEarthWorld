@@ -26,7 +26,7 @@
       "name": "OpenStreetMap San Francisco Downtown Extract",
       "provider": "OpenStreetMap Contributors",
       "license": "ODbL 1.0",
-      "sha256": "verified_offline_bundle"
+      "sha256": "1550e36d289ad285a3695a21cd8b9a8ce6c343827882e4ac66160995b4cd8e1f"
     },
     {
       "name": "USGS 3DEP 1/3 Arc-Second Coastal Elevation Model",

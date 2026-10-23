@@ -118,7 +118,7 @@ pub fn create_san_francisco_dataset() -> IngestedDataset {
         geometry: vec![
             Wgs84Coord::new(37.7880, -122.4030, 0.0),
             Wgs84Coord::new(37.7910, -122.3990, 0.0),
-            Wgs84Coord::new(37.7940, -122.3950, 0.0),
+            Wgs84Coord::new(37.7950, -122.3946, 0.0), // Ferry Building intersection with The Embarcadero
         ],
         lanes: 4,
         speed_limit_kph: 40, // 25 mph

@@ -9,56 +9,49 @@ mkdir -p "$TARGET_DIR"
 JNI_DIR="$ROOT_DIR/android/app/src/main/jniLibs"
 mkdir -p "$JNI_DIR/arm64-v8a" "$JNI_DIR/x86_64"
 
-# Stage native libraries
-SO_SRC=""
-if [ -f "$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so" ]; then
-    SO_SRC="$ROOT_DIR/target/aarch64-linux-android/release/librealearth.so"
-elif [ -f "$ROOT_DIR/target/release/librealearth.so" ]; then
-    SO_SRC="$ROOT_DIR/target/release/librealearth.so"
-elif [ -f "$ROOT_DIR/target/release/realearth.dll" ]; then
-    SO_SRC="$ROOT_DIR/target/release/realearth.dll"
-else
-    cargo build -p realearth-mobile --release
-    if [ -f "$ROOT_DIR/target/release/librealearth.so" ]; then
-        SO_SRC="$ROOT_DIR/target/release/librealearth.so"
-    elif [ -f "$ROOT_DIR/target/release/realearth.dll" ]; then
-        SO_SRC="$ROOT_DIR/target/release/realearth.dll"
+# Check for cargo-ndk and cross targets
+if command -v cargo-ndk >/dev/null 2>&1 && rustup target list | grep -q "aarch64-linux-android (installed)"; then
+    echo "[BUILD] Cross-compiling native Rust shared libraries for Android..."
+    cargo ndk -t arm64-v8a -t x86_64 -o "$JNI_DIR" build -p realearth-mobile --release
+fi
+
+# Check for Android SDK and Gradle
+if [ -n "${ANDROID_HOME:-}" ] || [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+    echo "[BUILD] Building authentic APK and AAB with Gradle..."
+    (cd "$ROOT_DIR/android" && ./gradlew assembleRelease bundleRelease)
+
+    APK_SRC="$ROOT_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    AAB_SRC="$ROOT_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+
+    if [ -f "$APK_SRC" ]; then
+        cp "$APK_SRC" "$TARGET_DIR/realearth-arm64.apk"
+        sha256sum "$TARGET_DIR/realearth-arm64.apk" | awk '{print $1}' > "$TARGET_DIR/realearth-arm64.apk.sha256"
+        echo "[SUCCESS] Real Android APK generated at $TARGET_DIR/realearth-arm64.apk"
     fi
-fi
 
-if [ -n "$SO_SRC" ] && [ -f "$SO_SRC" ]; then
-    cp "$SO_SRC" "$JNI_DIR/arm64-v8a/librealearth.so"
-    cp "$SO_SRC" "$JNI_DIR/x86_64/librealearth.so"
-    echo "[OK] Staged native library from $SO_SRC to $JNI_DIR"
-fi
-
-STAGING="$TARGET_DIR/staging_apk"
-rm -rf "$STAGING"
-mkdir -p "$STAGING/lib/arm64-v8a" "$STAGING/lib/x86_64" "$STAGING/res" "$STAGING/assets" "$STAGING/META-INF"
-
-cp "$JNI_DIR/arm64-v8a/librealearth.so" "$STAGING/lib/arm64-v8a/"
-cp "$JNI_DIR/x86_64/librealearth.so" "$STAGING/lib/x86_64/"
-cp "$ROOT_DIR/android/app/src/main/AndroidManifest.xml" "$STAGING/AndroidManifest.xml"
-cp -r "$ROOT_DIR"/android/app/src/main/res/* "$STAGING/res/"
-cp -r "$ROOT_DIR"/assets/* "$STAGING/assets/"
-
-cat << 'EOF' > "$STAGING/META-INF/MANIFEST.MF"
-Manifest-Version: 1.0
-Created-By: Real Earth Platform Build Engine 0.1.0
-Package: com.realearth.world
-Main-Class: com.realearth.world.MainActivity
-Target-Architecture: arm64-v8a, x86_64
+    if [ -f "$AAB_SRC" ]; then
+        cp "$AAB_SRC" "$TARGET_DIR/realearth-release.aab"
+        sha256sum "$TARGET_DIR/realearth-release.aab" | awk '{print $1}' > "$TARGET_DIR/realearth-release.aab.sha256"
+        echo "[SUCCESS] Real Android AAB generated at $TARGET_DIR/realearth-release.aab"
+    fi
+else
+    echo "=========================================================="
+    echo "[BLOCKER] Android SDK / Gradle not found on this system."
+    echo "Per Stage 4 requirements, no hand-built fake ZIPs are created."
+    echo "To build authentic APK & AAB:"
+    echo "  1. Install Android SDK (API 34) and NDK (r26b)"
+    echo "  2. cd android && ./gradlew assembleRelease bundleRelease"
+    echo "=========================================================="
+    cat << 'EOF' > "$TARGET_DIR/android_build_status.json"
+{
+  "Platform": "Android",
+  "Status": "BLOCKED_PENDING_TOOLCHAIN",
+  "Reason": "Android SDK 34 / NDK r26b / AAPT2 / D8 not installed on host",
+  "ProjectTreeValid": true,
+  "JniBindingValid": true,
+  "GradleProjectLocation": "android/",
+  "RequiredTools": ["Android SDK 34", "NDK r26b", "cargo-ndk", "gradle"],
+  "ReproductionCommand": "cd android && ./gradlew assembleRelease bundleRelease"
+}
 EOF
-
-APK_PATH="$TARGET_DIR/realearth-arm64.apk"
-rm -f "$APK_PATH"
-(cd "$STAGING" && zip -r "$APK_PATH" .)
-shasum -a 256 "$APK_PATH" > "$APK_PATH.sha256"
-
-AAB_PATH="$TARGET_DIR/realearth-release.aab"
-cp "$APK_PATH" "$AAB_PATH"
-shasum -a 256 "$AAB_PATH" > "$AAB_PATH.sha256"
-
-rm -rf "$STAGING"
-echo "[SUCCESS] Android APK packaged at $APK_PATH"
-
+fi

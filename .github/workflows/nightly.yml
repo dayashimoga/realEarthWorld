@@ -1,0 +1,64 @@
+name: Nightly Deep Verification & Baselines
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Every night at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  nightly-deep-validation:
+    name: Deep GIS, Fuzzing, Soak & Performance Baselines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt, clippy
+          cache-key: nightly
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Run Nightly Security & Dependency Vulnerability Audit
+        run: cargo audit --deny warnings
+
+      - name: Deep GIS Validation Across All 38 US Cities
+        run: cargo test --test us_city_catalog_validation --verbose
+
+      - name: Adversarial Fuzzing & Boundary Condition Invariants
+        run: cargo test --test adversarial_validation --verbose
+
+      - name: Long-Running Soak Traversal (Zero Memory Leak Verification)
+        run: cargo test --test streaming_performance -- test_soak_traversal_zero_memory_leak --verbose
+
+      - name: 10 Million Scale Managed Geographic Objects Simulation
+        run: cargo test --test planetary_infrastructure -- test_stage11_3_ten_million_managed_objects_scaling_demonstration --verbose
+
+      - name: Planetary Infrastructure Geodesics & Boundary Invariants
+        run: cargo test --test planetary_infrastructure --verbose
+
+      - name: Vehicle Physics, Aerodynamics & Multimodal Invariants
+        run: cargo test --test vehicle_simulation --verbose
+        
+      - name: Multi-Transport Simulation Regression
+        run: cargo test --test multi_transport_simulation --verbose
+
+      - name: Criterion Performance Benchmark Baselines
+        run: cargo bench -p realearth-benchmarks -- --test
+
+      - name: CLI Throughput & Geospatial Benchmarks
+        run: cargo run --release -p realearth-cli -- bench
+
+      - name: Upload Concise Benchmark Baselines & Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-benchmark-baselines
+          path: |
+            target/criterion/
+            target/performance_certification_report.json
+          if-no-files-found: ignore
+          retention-days: 30

@@ -23,9 +23,6 @@ use realearth_ingestion::sample_los_angeles::{
 use realearth_ingestion::sample_miami::{create_miami_dataset, generate_miami_osm_xml};
 use realearth_ingestion::sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 use realearth_ingestion::sample_new_york::{create_new_york_dataset, generate_new_york_osm_xml};
-use realearth_ingestion::sample_san_francisco::{
-    create_san_francisco_dataset, generate_san_francisco_osm_xml,
-};
 use realearth_ingestion::sample_seattle::{create_seattle_dataset, generate_seattle_osm_xml};
 use realearth_validation::pipeline::{validate_dataset, validate_dataset_with_tolerances};
 use realearth_validation::{CompilerPublicationGate, PublicationVerdict, ValidationTolerance};
@@ -99,6 +96,18 @@ enum Commands {
 
 fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, String) {
     let r = region_str.to_lowercase();
+    if let Some(city) = realearth_shared::us_catalog::find_city_by_id(&r) {
+        if let Ok((dataset, dem, _)) = realearth_ingestion::load_authentic_city(city.id) {
+            let (xml, _) = realearth_ingestion::authentic::acquire_city_osm_xml(city)
+                .unwrap_or_else(|_| {
+                    (
+                        realearth_ingestion::authentic::generate_authoritative_city_osm_xml(city),
+                        String::new(),
+                    )
+                });
+            return (dataset, dem, city.name, xml);
+        }
+    }
     if r.contains("mysuru") {
         (
             create_mysuru_dataset(),
@@ -128,12 +137,10 @@ fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, 
             generate_intercity_corridors_osm_xml(),
         )
     } else if r.contains("sf") || r.contains("san-francisco") {
-        (
-            create_san_francisco_dataset(),
-            DemGrid::create_san_francisco_coastal_dem(64, 64),
-            "San Francisco Downtown (US)",
-            generate_san_francisco_osm_xml(),
-        )
+        let city = realearth_shared::us_catalog::find_city_by_id("san-francisco").unwrap();
+        let (dataset, dem, _) = realearth_ingestion::load_authentic_city("san-francisco").unwrap();
+        let xml = realearth_ingestion::authentic::generate_authoritative_city_osm_xml(city);
+        (dataset, dem, "San Francisco Downtown (US)", xml)
     } else if r.contains("nyc") || r.contains("new-york") || r.contains("manhattan") {
         (
             create_new_york_dataset(),

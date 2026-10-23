@@ -1,10 +1,14 @@
-name: Production Release & Artifact Certification
+name: Production Release & Gated Distribution
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   package-windows:
@@ -14,15 +18,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust Stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
         with:
           targets: x86_64-pc-windows-msvc
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release-windows"
+          cache-key: release-windows
 
       - name: Build Windows Release Binaries
         run: cargo build --workspace --release
@@ -31,14 +31,13 @@ jobs:
         shell: pwsh
         run: ./scripts/package_windows.ps1
 
-      - name: Upload Windows Package Artifacts
+      - name: Upload Flattened Windows Package Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-windows-x64
-          path: |
-            dist/windows/realearth-windows-x64.zip
-            dist/windows/realearth-windows-x64.zip.sha256
+          path: dist/windows/
           if-no-files-found: error
+          retention-days: 7
 
   package-linux:
     name: Package Linux (x86_64 AppImage & Tarball)
@@ -47,15 +46,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust Stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
         with:
           targets: x86_64-unknown-linux-gnu
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release-linux"
+          cache-key: release-linux
 
       - name: Build Linux Release Binaries
         run: cargo build --workspace --release
@@ -65,16 +60,13 @@ jobs:
           chmod +x scripts/package_linux.sh
           ./scripts/package_linux.sh
 
-      - name: Upload Linux Package Artifacts
+      - name: Upload Flattened Linux Package Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-linux-x64
-          path: |
-            dist/linux/RealEarth-x86_64.AppImage
-            dist/linux/RealEarth-x86_64.AppImage.sha256
-            dist/linux/realearth-linux-x64.tar.gz
-            dist/linux/realearth-linux-x64.tar.gz.sha256
+          path: dist/linux/
           if-no-files-found: error
+          retention-days: 7
 
   package-macos:
     name: Package macOS (Universal APP, DMG & Tarball)
@@ -83,15 +75,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust Stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release-macos"
+          cache-key: release-macos
 
       - name: Build macOS Universal Binaries
         run: cargo build --workspace --release
@@ -101,16 +89,13 @@ jobs:
           chmod +x scripts/package_macos.sh
           ./scripts/package_macos.sh
 
-      - name: Upload macOS Package Artifacts
+      - name: Upload Flattened macOS Package Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-universal
-          path: |
-            dist/macos/RealEarth-macOS.dmg
-            dist/macos/RealEarth-macOS.dmg.sha256
-            dist/macos/realearth-macos-universal.tar.gz
-            dist/macos/realearth-macos-universal.tar.gz.sha256
+          path: dist/macos/
           if-no-files-found: error
+          retention-days: 7
 
   package-mobile:
     name: Package Mobile (Android APK/AAB & iOS IPA/App)
@@ -119,10 +104,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust Stable with Mobile Targets
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust with Mobile Targets & Cache
+        uses: ./.github/actions/setup-rust
         with:
           targets: aarch64-linux-android,aarch64-apple-ios
+          cache-key: release-mobile
 
       - name: Setup Java & Android SDK
         uses: actions/setup-java@v4
@@ -149,11 +135,6 @@ jobs:
           echo "CC_aarch64_linux_android=$NDK_LLVM_BIN/aarch64-linux-android31-clang" >> $GITHUB_ENV
           echo "AR_aarch64_linux_android=$NDK_LLVM_BIN/llvm-ar" >> $GITHUB_ENV
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release-mobile"
-
       - name: Build Android JNI Shared Library
         run: cargo ndk --target aarch64-linux-android --platform 31 build -p realearth-mobile --release
 
@@ -170,35 +151,54 @@ jobs:
           chmod +x scripts/package_ios.sh
           ./scripts/package_ios.sh
 
-      - name: Upload Android Artifacts
+      - name: Upload Android Distribution Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-android
-          path: |
-            dist/android/realearth-arm64.apk
-            dist/android/realearth-arm64.apk.sha256
-            dist/android/realearth-release.aab
-            dist/android/realearth-release.aab.sha256
+          path: dist/android/
           if-no-files-found: error
+          retention-days: 7
 
-      - name: Upload iOS Artifacts
+      - name: Upload iOS Distribution Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-ios
-          path: |
-            dist/ios/realearth-ios-device.ipa
-            dist/ios/realearth-ios-device.ipa.sha256
-            dist/ios/realearth-ios-simulator.zip
-            dist/ios/realearth-ios-simulator.zip.sha256
+          path: dist/ios/
           if-no-files-found: error
+          retention-days: 7
 
-  verify-and-publish:
-    name: Verify Release Integrity & Publish Gate
-    needs: [package-windows, package-linux, package-macos, package-mobile]
+  package-regions:
+    name: Package Real Geographic Regions
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Package Standalone Geographic Regions
+        run: |
+          chmod +x scripts/package_regions.sh
+          ./scripts/package_regions.sh dist/regions
+
+      - name: Upload Standalone Region Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-regions
+          path: dist/regions/
+          if-no-files-found: error
+          retention-days: 7
+
+  verify-and-publish:
+    name: Verify Release Integrity, Gates & Publish Direct Assets
+    needs: [package-windows, package-linux, package-macos, package-mobile, package-regions]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust & Cache
+        uses: ./.github/actions/setup-rust
+        with:
+          cache-key: release-verify
 
       - name: Download Windows Artifacts
         uses: actions/download-artifact@v4
@@ -230,27 +230,53 @@ jobs:
           name: release-ios
           path: dist/ios/
 
+      - name: Download Standalone Region Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-regions
+          path: dist/regions/
+
       - name: Execute Strict Release Integrity Audit
         run: |
           chmod +x scripts/verify_release_integrity.sh
           ./scripts/verify_release_integrity.sh dist dist/release_manifest.json
 
-      - name: Upload Certified Release Manifest
+      - name: Execute CLI Compile Smoke Test
+        run: cargo run -p realearth-cli -- compile --output target/release_world_test
+
+      - name: Execute Viewer Headless Startup Smoke Test
+        run: cargo run -p realearth-viewer -- --headless --benchmark --frames 10 --region sf
+
+      - name: Upload Certified Release Manifest & Checksums
         uses: actions/upload-artifact@v4
         with:
           name: certified-release-manifest
-          path: dist/release_manifest.json
+          path: |
+            dist/release_manifest.json
+            dist/SHA256SUMS
           if-no-files-found: error
+          retention-days: 30
 
-      - name: Publish GitHub Release (Tagged Push Only)
+      - name: Publish GitHub Release (Tagged Release Only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/windows/*
-            dist/linux/*
-            dist/macos/*
-            dist/android/*
-            dist/ios/*
+            dist/windows/realearth-windows-x64.zip
+            dist/windows/realearth-windows-x64.zip.sha256
+            dist/linux/realearth-linux-x64.tar.gz
+            dist/linux/realearth-linux-x64.tar.gz.sha256
+            dist/macos/realearth-macos-universal.tar.gz
+            dist/macos/realearth-macos-universal.tar.gz.sha256
+            dist/ios/realearth-ios-simulator.zip
+            dist/ios/realearth-ios-simulator.zip.sha256
+            dist/regions/realearth-region-san-francisco.zip
+            dist/regions/realearth-region-san-francisco.zip.sha256
+            dist/regions/realearth-region-san-francisco.tar.gz
+            dist/regions/realearth-region-san-francisco.tar.gz.sha256
             dist/release_manifest.json
+            dist/SHA256SUMS
+            LICENSE
+            docs/UserGuide.md
+            docs/SetupAndConfiguration.md
           generate_release_notes: true

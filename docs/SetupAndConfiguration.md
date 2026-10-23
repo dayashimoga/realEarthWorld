@@ -61,5 +61,46 @@ wireframe_debug = false
 [simulation]
 tick_rate_hz = 60
 time_scale = 1.0 # 1.0 = real time
-utc_offset_hours = 5.5 # Indian Standard Time (IST)
+utc_offset_hours = -7.0 # Pacific Daylight Time (PDT for San Francisco)
 ```
+
+---
+
+## 4. Multi-Platform Distribution Packaging
+
+### 4.1 Package All Five Platforms
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package_all_platforms.ps1
+```
+Or on Linux / macOS:
+```bash
+./scripts/package_all_platforms.sh
+```
+
+### 4.2 Package Standalone Regional Geographic Datasets
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package_regions.ps1
+```
+
+### 4.3 Verify Release Package Integrity
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\verify_release_integrity.ps1
+```
+
+---
+
+## 5. Standalone Execution & Verification
+
+To run without repository dependencies, extract `dist/windows/realearth-windows-x64.zip` and run:
+```cmd
+run_viewer.bat
+```
+Or from the command line:
+```cmd
+realearth-viewer.exe --region san-francisco
+```
+For headless performance profiling and JSON telemetry:
+```cmd
+realearth-viewer.exe --headless --benchmark --frames 30 --region sf
+```
+

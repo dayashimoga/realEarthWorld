@@ -271,4 +271,14 @@ impl WorldStreamer {
             self.cache.evictions,
         )
     }
+
+    /// Returns total stored geographic features indexed in the regional database.
+    pub fn total_stored_features(&self) -> usize {
+        self.db.total_feature_count().unwrap_or(0)
+    }
+
+    /// Returns total stored chunk records indexed in the regional database.
+    pub fn total_stored_chunks(&self) -> usize {
+        self.db.count_chunks().unwrap_or(0)
+    }
 }

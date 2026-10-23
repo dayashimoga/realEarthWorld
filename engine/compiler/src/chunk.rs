@@ -63,4 +63,17 @@ impl WorldChunk {
             + self.water.triangle_count()
             + self.vegetation.triangle_count()
     }
+
+    /// Returns the approximate count of discrete geographic features represented in this chunk.
+    pub fn feature_count(&self) -> usize {
+        let b = self
+            .building_metadata
+            .len()
+            .max(if !self.buildings.is_empty() { 1 } else { 0 });
+        let r = if !self.roads.is_empty() { 1 } else { 0 };
+        let t = if !self.terrain.is_empty() { 1 } else { 0 };
+        let w = if !self.water.is_empty() { 1 } else { 0 };
+        let v = if !self.vegetation.is_empty() { 1 } else { 0 };
+        b + r + t + w + v
+    }
 }

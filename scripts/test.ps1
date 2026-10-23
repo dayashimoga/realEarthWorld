@@ -20,8 +20,12 @@ Write-Host "[4/5] Integration End-to-End Suite..." -ForegroundColor Yellow
 cargo test -p realearth-tests
 if ($LASTEXITCODE -ne 0) { throw "Integration tests failed" }
 
-Write-Host "[5/5] Benchmark Smoke Suite (cargo bench -- --test)..." -ForegroundColor Yellow
+Write-Host "[5/6] Benchmark Smoke Suite (cargo bench -- --test)..." -ForegroundColor Yellow
 cargo bench --bench geospatial_bench --bench compiler_bench -- --test
 if ($LASTEXITCODE -ne 0) { throw "Benchmark test verification failed" }
 
-Write-Host "[SUCCESS] ALL QUALITY GATES PASSED (100% test success, 0 warnings, 0 fmt errors)!" -ForegroundColor Green
+Write-Host "[6/6] Security Audit (cargo audit)..." -ForegroundColor Yellow
+cargo audit
+if ($LASTEXITCODE -ne 0) { throw "Security audit check failed" }
+
+Write-Host "[SUCCESS] ALL QUALITY GATES PASSED (100% test success, 0 warnings, 0 fmt errors, 0 security vulnerabilities)!" -ForegroundColor Green

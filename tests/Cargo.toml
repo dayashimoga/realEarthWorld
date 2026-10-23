@@ -96,5 +96,21 @@ path = "tests/performance_security_reliability.rs"
 name = "final_production_certification"
 path = "tests/final_production_certification.rs"
 
+[[test]]
+name = "interactive_rendering_certification"
+path = "tests/interactive_rendering_certification.rs"
+
+[[test]]
+name = "authentic_gis_coverage_certification"
+path = "tests/authentic_gis_coverage_certification.rs"
+
+[[test]]
+name = "end_to_end_driving_gameplay_certification"
+path = "tests/end_to_end_driving_gameplay_certification.rs"
+
+[[test]]
+name = "performance_anti_fake_certification"
+path = "tests/performance_anti_fake_certification.rs"
+
 
 

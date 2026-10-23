@@ -220,4 +220,47 @@
     <tag k="leisure" v="park"/>
     <tag k="name" v="Portsmouth Square"/>
   </way>
+
+  <!-- 14. BART / Muni Metro Market Street Subway Rail -->
+  <node id="1060" lat="37.7880000" lon="-122.4030000"/>
+  <node id="1061" lat="37.7910000" lon="-122.3990000"/>
+  <node id="1062" lat="37.7940000" lon="-122.3950000"/>
+  <way id="510001">
+    <nd ref="1060"/>
+    <nd ref="1061"/>
+    <nd ref="1062"/>
+    <tag k="railway" v="subway"/>
+    <tag k="name" v="BART / Muni Metro Market Street Subway"/>
+    <tag k="layer" v="-2"/>
+    <tag k="tunnel" v="yes"/>
+    <tag k="electrified" v="contact_line"/>
+    <tag k="gauge" v="1676"/>
+  </way>
+
+  <!-- 15. San Francisco Downtown Heliport -->
+  <node id="1070" lat="37.7958000" lon="-122.3920000"/>
+  <node id="1071" lat="37.7960000" lon="-122.3920000"/>
+  <way id="610001">
+    <nd ref="1070"/>
+    <nd ref="1071"/>
+    <tag k="aeroway" v="helipad"/>
+    <tag k="name" v="San Francisco Downtown Heliport"/>
+    <tag k="ref" v="SFDH"/>
+  </way>
+
+  <!-- 16. Port of San Francisco Ferry Terminal & Pier 1 -->
+  <node id="1080" lat="37.7950000" lon="-122.3930000"/>
+  <node id="1081" lat="37.7960000" lon="-122.3930000"/>
+  <node id="1082" lat="37.7960000" lon="-122.3920000"/>
+  <node id="1083" lat="37.7950000" lon="-122.3920000"/>
+  <node id="1084" lat="37.7950000" lon="-122.3930000"/>
+  <way id="710001">
+    <nd ref="1080"/>
+    <nd ref="1081"/>
+    <nd ref="1082"/>
+    <nd ref="1083"/>
+    <nd ref="1084"/>
+    <tag k="amenity" v="ferry_terminal"/>
+    <tag k="name" v="Port of San Francisco Ferry Terminal &amp; Pier 1"/>
+  </way>
 </osm>

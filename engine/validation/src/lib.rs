@@ -327,4 +327,121 @@ mod tests {
             .iter()
             .any(|d| d.code == "RULE_RUNWAY_LENGTH_TOO_SHORT"));
     }
+
+    #[test]
+    fn test_road_validator_direct_cases() {
+        let mut repairs = Vec::new();
+        let mut quarantined = Vec::new();
+
+        // 1. Quarantined for < 2 points
+        let bad_road = OsmRoadFeature {
+            way_id: 1,
+            name: None,
+            highway_type: HighwayType::Residential,
+            geometry: vec![Wgs84Coord::new(10.0, 20.0, 0.0)],
+            lanes: 1,
+            speed_limit_kph: 30,
+            is_oneway: false,
+            layer: 0,
+            is_bridge: false,
+            is_tunnel: false,
+        };
+        assert!(
+            crate::road_validator::validate_road(&bad_road, &mut repairs, &mut quarantined)
+                .is_none()
+        );
+        assert_eq!(quarantined.len(), 1);
+
+        // 2. Duplicate points culled
+        let jittery_road = OsmRoadFeature {
+            way_id: 2,
+            name: None,
+            highway_type: HighwayType::Residential,
+            geometry: vec![
+                Wgs84Coord::new(10.0, 20.0, 0.0),
+                Wgs84Coord::new(10.0, 20.0, 0.0),
+                Wgs84Coord::new(10.001, 20.0, 0.0),
+            ],
+            lanes: 1,
+            speed_limit_kph: 30,
+            is_oneway: false,
+            layer: 0,
+            is_bridge: false,
+            is_tunnel: false,
+        };
+        let valid_res =
+            crate::road_validator::validate_road(&jittery_road, &mut repairs, &mut quarantined);
+        assert!(valid_res.is_some());
+        assert_eq!(valid_res.unwrap().geometry.len(), 2);
+
+        // 3. Grade separation check
+        let r1 = OsmRoadFeature {
+            way_id: 10,
+            name: None,
+            highway_type: HighwayType::Motorway,
+            geometry: vec![
+                Wgs84Coord::new(10.0, 20.0, 10.0),
+                Wgs84Coord::new(10.002, 20.0, 10.0),
+            ],
+            lanes: 2,
+            speed_limit_kph: 100,
+            is_oneway: false,
+            layer: 1,
+            is_bridge: true,
+            is_tunnel: false,
+        };
+        let r2 = OsmRoadFeature {
+            way_id: 11,
+            name: None,
+            highway_type: HighwayType::Secondary,
+            geometry: vec![
+                Wgs84Coord::new(10.001, 19.999, 0.0),
+                Wgs84Coord::new(10.001, 20.001, 0.0),
+            ],
+            lanes: 2,
+            speed_limit_kph: 50,
+            is_oneway: false,
+            layer: 0,
+            is_bridge: false,
+            is_tunnel: false,
+        };
+        let mut grade_quarantined = Vec::new();
+        assert!(crate::road_validator::verify_grade_separations(
+            &[r1, r2],
+            &mut grade_quarantined
+        ));
+    }
+
+    #[test]
+    fn test_polygon_validator_direct_cases() {
+        let mut repairs = Vec::new();
+        let mut quarantined = Vec::new();
+
+        // 1. Area calculation
+        let square = vec![
+            Wgs84Coord::new(37.77, -122.42, 0.0),
+            Wgs84Coord::new(37.771, -122.42, 0.0),
+            Wgs84Coord::new(37.771, -122.419, 0.0),
+            Wgs84Coord::new(37.77, -122.419, 0.0),
+            Wgs84Coord::new(37.77, -122.42, 0.0),
+        ];
+        let area = crate::polygon_validator::approximate_metric_area_m2(&square);
+        assert!(area > 1000.0);
+
+        // 2. Validate building with winding order repair and levels attribution
+        let building = OsmBuildingFeature {
+            id: 501,
+            name: Some("Test Building".to_string()),
+            building_type: BuildingType::Residential,
+            outer_ring: square,
+            inner_rings: Vec::new(),
+            explicit_height: None,
+            levels: Some(4),
+        };
+        let validated =
+            crate::polygon_validator::validate_building(&building, &mut repairs, &mut quarantined);
+        assert!(validated.is_some());
+        let val_b = validated.unwrap();
+        assert_eq!(val_b.height.height_meters, 15.0); // 4 levels * 3.5m + 1.0m ground floor
+    }
 }

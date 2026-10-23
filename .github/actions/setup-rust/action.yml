@@ -1,0 +1,30 @@
+name: 'Setup Rust Toolchain & Cache'
+description: 'Sets up Rust toolchain with requested components/targets and enables lockfile-aware caching'
+inputs:
+  components:
+    description: 'Rustup components to install (e.g. rustfmt, clippy, llvm-tools-preview)'
+    required: false
+    default: 'rustfmt, clippy'
+  targets:
+    description: 'Target triples to install'
+    required: false
+    default: ''
+  cache-key:
+    description: 'Unique suffix for rust-cache shared-key'
+    required: false
+    default: 'workspace'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Rust Stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "realearth-${{ runner.os }}-${{ inputs.cache-key }}"
+        cache-all-crates: true

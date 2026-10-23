@@ -160,6 +160,9 @@ pub fn compile_world_package(
 
     let mut stats = CompilationStats::default();
 
+    let package_anchor = bounds.center();
+    let package_converter = EnuConverter::new(package_anchor);
+
     for cy in 0..num_chunks_y {
         let chunk_max_lat = bounds.max_lat - (cy as f64) * chunk_d_lat;
         let chunk_min_lat = (chunk_max_lat - chunk_d_lat).max(bounds.min_lat);
@@ -170,8 +173,8 @@ pub fn compile_world_package(
 
             let chunk_bounds =
                 GeoBounds::new(chunk_min_lat, chunk_max_lat, chunk_min_lon, chunk_max_lon);
-            let chunk_anchor = chunk_bounds.center();
-            let chunk_converter = EnuConverter::new(chunk_anchor);
+            let chunk_anchor = package_anchor;
+            let chunk_converter = package_converter;
 
             let source_hash = compute_chunk_source_hash(&chunk_bounds, dataset, dem);
             let file_rel_path = format!("chunks/chunk_{}_{}.rec", cx, cy);

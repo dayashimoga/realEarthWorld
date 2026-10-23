@@ -49,3 +49,9 @@ rapier3d = "0.22"
 wgpu = "23.0"
 winit = { version = "0.30", features = ["rwh_06"] }
 criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1

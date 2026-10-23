@@ -163,3 +163,31 @@ A Real Earth Chunk (`.rec`) contains:
 - **Road Block**: Road ribbon segments, width, lane markings, bridge elevation profiles.
 - **Building Block**: Extruded polygon meshes with wall vertices, roof triangles, height confidence tag (`Surveyed`, `InferredLevels`, `DefaultCategory`), and OSM building ID.
 - **Compression**: Entire chunk body compressed with `zstd` level 3 for high-speed real-time decompression.
+
+---
+
+## 5. Cross-Platform Runtime & Packaging Architecture
+
+The platform targets five distinct operating systems using native abstractions:
+- **Windows (x86_64)**: Native executable with DirectX 12 / Vulkan / wgpu backend. Resolves assets relative to `current_exe().parent()` enabling zero-repository standalone portable execution. Bundled pilot world allows offline startup.
+- **Linux (x86_64)**: Compliant `RealEarth.AppDir` specification with `AppRun` configuring Vulkan ICDs and Wayland/X11 display variables. Distributed as portable `.tar.gz` and buildable to SquashFS AppImage.
+- **macOS (Universal)**: Universal binary (`aarch64` Apple Silicon + `x86_64` Intel) packaged in standard `RealEarth.app` bundle with `Info.plist` (Metal API, Retina high-DPI scaling) and `PkgInfo: APPL????`.
+- **Android (ARM64 / x86_64)**: Native JNI shared library (`librealearth.so`) in `bindings/mobile/` interfacing with Android `SurfaceView` via `SurfaceHolder.Callback`. Features virtual driving controls, thermal status listening, and low-memory cache pruning.
+- **iOS (ARM64 / Simulator)**: Cocoa/UIKit project in `ios/RealEarth/` with `CAMetalLayer` rendering bridge (`RealEarthBridge.m`) and iOS Simulator package.
+
+---
+
+## 6. Empirical Performance, Pacing & Anti-Fake Telemetry
+
+- **OS-Native Memory Accounting**: Queries native kernel working sets (`K32GetProcessMemoryInfo` on Windows, `/proc/self/statm` on Linux) tracking true RSS and peak RSS.
+- **Statistical Frame Pacing with Warmup Separation**: Monotonic clock timing isolating the first 10 warmup frames (`warmup_mean_ms`) to prevent shader compilation skew. Computes Mean, Std Dev, Min, Max, p50, p90, p95, p99, 1% Low FPS, 0.1% Low FPS, and Presented FPS.
+- **Anti-Fake Mathematical Gate**: Dynamic evaluation in `PerformanceCertificationReport::evaluate(...)` rejecting empty frames ($0$ triangles), latency overruns ($> 16.67\text{ ms}$), and memory spikes ($> 1024\text{ MB}$).
+
+---
+
+## 7. Decoupled Standalone Geographic Regional Distribution
+
+Geographic world datasets are decoupled from executable binaries and packaged as standalone regional archives:
+- Packaged via `scripts/package_regions.ps1` and `scripts/package_regions.sh` into `dist/regions/realearth-region-<id>.zip` and `.tar.gz`.
+- Contains SQLite `chunks.db`, surveyed `.rec` binary tiles, installation guide, and individual `.sha256` digests registered in `dist/SHA256SUMS`.
+

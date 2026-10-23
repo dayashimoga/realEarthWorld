@@ -114,6 +114,128 @@ impl Default for VehicleConfig {
     }
 }
 
+impl VehicleConfig {
+    /// High-performance sports coupe: lightweight, responsive steering, stiffer suspension.
+    pub fn sports_coupe() -> Self {
+        Self {
+            mass_kg: 1250.0,
+            wheelbase: 2.5,
+            track_width: 1.65,
+            half_extents: Vec3::new(0.9, 0.55, 2.1),
+            com_height_offset: -0.30,
+            suspension_rest_length: 0.28,
+            suspension_stiffness: 42000.0,
+            suspension_damping: 3800.0,
+            wheel_radius: 0.33,
+            max_steer_angle: 0.65,
+            peak_engine_force: 8500.0,
+            max_brake_force: 4500.0,
+            handbrake_force: 7000.0,
+            tire_friction_coeff: 1.05,
+            cornering_stiffness: 38000.0,
+            aero_drag_coeff: 0.34,
+            rolling_resistance_coeff: 0.014,
+        }
+    }
+
+    /// Standard passenger sedan: balanced comfort, stability, and handling.
+    pub fn sedan() -> Self {
+        Self::default()
+    }
+
+    /// High ground-clearance SUV: longer suspension travel, robust all-terrain damping.
+    pub fn suv() -> Self {
+        Self {
+            mass_kg: 1950.0,
+            wheelbase: 2.85,
+            track_width: 1.72,
+            half_extents: Vec3::new(0.98, 0.75, 2.4),
+            com_height_offset: -0.20,
+            suspension_rest_length: 0.42,
+            suspension_stiffness: 38000.0,
+            suspension_damping: 3600.0,
+            wheel_radius: 0.38,
+            max_steer_angle: 0.58,
+            peak_engine_force: 7800.0,
+            max_brake_force: 4200.0,
+            handbrake_force: 6500.0,
+            tire_friction_coeff: 0.92,
+            cornering_stiffness: 30000.0,
+            aero_drag_coeff: 0.48,
+            rolling_resistance_coeff: 0.018,
+        }
+    }
+
+    /// Urban commercial taxi: nimble steering, quick low-end throttle response.
+    pub fn taxi() -> Self {
+        Self {
+            mass_kg: 1400.0,
+            wheelbase: 2.65,
+            track_width: 1.6,
+            half_extents: Vec3::new(0.9, 0.6, 2.2),
+            com_height_offset: -0.25,
+            suspension_rest_length: 0.34,
+            suspension_stiffness: 34000.0,
+            suspension_damping: 3100.0,
+            wheel_radius: 0.32,
+            max_steer_angle: 0.68,
+            peak_engine_force: 6800.0,
+            max_brake_force: 3600.0,
+            handbrake_force: 6200.0,
+            tire_friction_coeff: 0.96,
+            cornering_stiffness: 33000.0,
+            aero_drag_coeff: 0.40,
+            rolling_resistance_coeff: 0.015,
+        }
+    }
+
+    /// Public transit bus: high passenger capacity, long wheelbase, stable cruising.
+    pub fn transit_bus() -> Self {
+        Self {
+            mass_kg: 9500.0,
+            wheelbase: 5.8,
+            track_width: 2.1,
+            half_extents: Vec3::new(1.25, 1.4, 5.5),
+            com_height_offset: -0.40,
+            suspension_rest_length: 0.45,
+            suspension_stiffness: 120000.0,
+            suspension_damping: 15000.0,
+            wheel_radius: 0.52,
+            max_steer_angle: 0.48,
+            peak_engine_force: 18000.0,
+            max_brake_force: 12000.0,
+            handbrake_force: 16000.0,
+            tire_friction_coeff: 0.88,
+            cornering_stiffness: 85000.0,
+            aero_drag_coeff: 0.65,
+            rolling_resistance_coeff: 0.018,
+        }
+    }
+
+    /// Commercial heavy freight hauler: maximum payload tonnage, heavy duty torque.
+    pub fn heavy_truck() -> Self {
+        Self {
+            mass_kg: 14000.0,
+            wheelbase: 6.2,
+            track_width: 2.2,
+            half_extents: Vec3::new(1.3, 1.6, 6.0),
+            com_height_offset: -0.50,
+            suspension_rest_length: 0.48,
+            suspension_stiffness: 160000.0,
+            suspension_damping: 22000.0,
+            wheel_radius: 0.56,
+            max_steer_angle: 0.44,
+            peak_engine_force: 28000.0,
+            max_brake_force: 18000.0,
+            handbrake_force: 24000.0,
+            tire_friction_coeff: 0.85,
+            cornering_stiffness: 110000.0,
+            aero_drag_coeff: 0.72,
+            rolling_resistance_coeff: 0.020,
+        }
+    }
+}
+
 /// Dynamic simulation state of an individual wheel.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WheelState {
@@ -415,6 +537,17 @@ impl DynamicVehicle {
 
         // Update Position & Orientation
         self.position += self.linear_velocity * dt;
+
+        // Anti-tunneling / anti-sinking chassis safety clamp
+        if let Some((hit_dist, _)) = ground.query_ground_contact(self.position, 10.0) {
+            let min_chassis_y = (self.position.y - hit_dist) + self.config.wheel_radius * 0.5;
+            if self.position.y < min_chassis_y {
+                self.position.y = min_chassis_y;
+                if self.linear_velocity.y < 0.0 {
+                    self.linear_velocity.y = 0.0;
+                }
+            }
+        }
 
         let ang_vel_len = self.angular_velocity.length();
         if ang_vel_len > 1e-4 {

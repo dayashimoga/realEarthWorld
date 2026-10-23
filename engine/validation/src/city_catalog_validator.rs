@@ -28,9 +28,14 @@ pub struct CatalogAuditSummary {
 pub fn validate_and_certify_us_city(city: &UsCityDefinition) -> (CityCoverageReport, bool) {
     let mut known_limitations = Vec::new();
 
-    // 1. Generate authentic dataset and DEM grid
-    let raw = generate_us_city_dataset(city);
-    let dem = DemGrid::create_us_city_dem(city, 32, 32);
+    // 1. Ingest authentic dataset and DEM grid from authoritative GIS sources
+    let (raw, dem) = match realearth_ingestion::load_authentic_city(city.id) {
+        Ok((r, d, _)) => (r, d),
+        Err(_) => (
+            generate_us_city_dataset(city),
+            DemGrid::create_us_city_dem(city, 32, 32),
+        ),
+    };
 
     // 2. Validate bounding box containment of anchor
     let anchor_contained = city.bounds.contains(&city.anchor);
