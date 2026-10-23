@@ -41,6 +41,11 @@ impl FloatingOriginCamera {
         }
     }
 
+    /// Explicitly anchors the floating origin to a world package anchor.
+    pub fn set_anchor(&mut self, anchor: Wgs84Coord) {
+        self.anchor_ecef = wgs84_to_ecef(anchor);
+    }
+
     /// Re-anchors floating origin to camera position if distance exceeds threshold.
     pub fn maybe_rebase_origin(&mut self, threshold_meters: f64) {
         let dx = self.pos_ecef.x - self.anchor_ecef.x;

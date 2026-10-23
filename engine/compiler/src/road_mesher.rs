@@ -33,7 +33,7 @@ pub fn mesh_road(road: &OsmRoadFeature, converter: &EnuConverter, dem: &DemGrid)
             ground_elev - layers * 5.0
         } else {
             // Slight offset above ground to avoid z-fighting with terrain
-            ground_elev + 0.15
+            ground_elev + 0.20
         };
 
         centerlines.push(Vec3::new(enu.east as f32, final_elev, enu.north as f32));
@@ -128,17 +128,18 @@ pub fn mesh_road(road: &OsmRoadFeature, converter: &EnuConverter, dem: &DemGrid)
         ));
     }
 
-    // Triangulate continuous ribbon quads
+    // Triangulate continuous ribbon quads with Counter-Clockwise (CCW) winding facing upwards (+Y)
     for i in 0..(n - 1) {
         let base = (i * 2) as u32;
-        // CCW triangles: (left0, right0, right1) and (left0, right1, left1)
+        // First triangle (CCW viewed from +Y: left0 -> right1 -> right0)
         indices.push(base);
+        indices.push(base + 3);
         indices.push(base + 1);
-        indices.push(base + 3);
 
+        // Second triangle (CCW viewed from +Y: left0 -> left1 -> right1)
         indices.push(base);
-        indices.push(base + 3);
         indices.push(base + 2);
+        indices.push(base + 3);
     }
 
     ChunkMesh::new(vertices, indices)

@@ -65,8 +65,8 @@ pub fn mesh_building(
             continue;
         }
 
-        // Outward normal in X-Z plane: (-edge.z, 0, edge.x)
-        let normal = Vec3::new(-edge.z, 0.0, edge.x).normalize();
+        // Outward normal in X-Z plane: for CCW footprint in X-Z, right perpendicular is (edge.z, 0, -edge.x)
+        let normal = Vec3::new(edge.z, 0.0, -edge.x).normalize();
         let norm_arr = [normal.x, normal.y, normal.z];
 
         // Sample terrain height at each vertex to prevent downhill floating or gaps on slopes
@@ -88,14 +88,14 @@ pub fn mesh_building(
         vertices.push(v2);
         vertices.push(v3);
 
-        // Quad triangles (CCW)
-        indices.push(base_idx);
-        indices.push(base_idx + 1);
-        indices.push(base_idx + 2);
+        // Quad triangles (CCW facing outward from building)
+        indices.push(base_idx);     // v0
+        indices.push(base_idx + 3); // v3
+        indices.push(base_idx + 2); // v2
 
-        indices.push(base_idx);
-        indices.push(base_idx + 2);
-        indices.push(base_idx + 3);
+        indices.push(base_idx);     // v0
+        indices.push(base_idx + 2); // v2
+        indices.push(base_idx + 1); // v1
     }
 
     // 4. Triangulate flat roof using earcutr
@@ -119,8 +119,13 @@ pub fn mesh_building(
             ));
         }
 
-        for idx in roof_indices {
-            indices.push(roof_base_idx + idx as u32);
+        // Invert winding of earcut triangles from CW to CCW facing upwards (+Y)
+        for chunk in roof_indices.chunks(3) {
+            if chunk.len() == 3 {
+                indices.push(roof_base_idx + chunk[0] as u32);
+                indices.push(roof_base_idx + chunk[2] as u32);
+                indices.push(roof_base_idx + chunk[1] as u32);
+            }
         }
     }
 

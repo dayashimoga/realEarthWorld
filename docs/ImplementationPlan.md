@@ -868,4 +868,27 @@
   - Updated `docs/ExecutionContract.md` with Section 10 enshrining anti-fabrication and non-production-ready invariants.
   - Appended forensic audit history to `ImplementationPlan.md`, `Todo.md`, and `Changelog.md`.
 
+## STAGE 1: Production 3D World Geometry and Interactive Rendering Repair (Completed)
+- [x] Phase 1.1: Geometry and coordinate correctness
+  - Diagnosed and resolved inverted triangle winding order in `engine/compiler/src/terrain_mesher.rs`, switching from CW to CCW `(top_left, top_right, bottom_left)` and `(top_right, bottom_right, bottom_left)` with upward (+Y) geometric normals.
+  - Replaced uniform flat green vertex coloring with altitude- and slope-aware geomorphic vertex shading (shoreline sand <= 0.8m, urban soil 0.8m-30m, hillside green 30m-85m, steep cliff rock ny < 0.82 and ridges > 85m).
+  - Corrected road ribbon quad winding to CCW in `engine/compiler/src/road_mesher.rs` and added +0.20m ground clearance offset to eliminate coplanar z-fighting with terrain.
+  - Corrected building outward wall normals in the X-Z plane and inverted roof triangulation to CCW in `engine/compiler/src/building_mesher.rs`.
+  - Removed artificial 0.88 clamp in `engine/rendering/src/shaders.rs`, allowing atmospheric fog to smoothly reach 1.0 at view distance without horizon cutoffs.
+  - Synchronized `FloatingOriginCamera` anchor with active chunk package anchor (`first_chunk.header.anchor`), bringing camera and chunk meshes into identical local ENU coordinates.
+- [x] Phase 1.2: Rendering integration
+  - Maintained persistent Winit/Wgpu frame lifecycle (acquire texture -> camera/input update -> world stream -> ECS simulation -> buffer upload -> batched scene render -> HUD overlay -> present).
+  - Handled window resize, DPI changes via `ScaleFactorChanged` with depth buffer recreation to prevent dimension mismatch panics, minimization guards, and clean shutdown.
+  - Maintained strict separation between offscreen headless benchmarking and real interactive rendering.
+- [x] Phase 1.3: Camera and navigation
+  - Implemented 5 distinct camera navigation modes (`Fly`, `Walk`, `Orbit`, `Free`, `Chase`) with mode cycling on `Tab`.
+  - Added terrain collision clamping (`clamp_terrain`) using DEM bilinear ground elevation sampling to prevent clipping under terrain.
+  - Added camera reset (`Home` key), variable speed controls (`[` / `]` or `PageUp` / `PageDown`), sprint acceleration (`Shift`), and precision control (`Ctrl`).
+- [x] Phase 1.4: Runtime validation
+  - Verified authentic San Francisco GIS pilot fixture rendering: 30 active chunks, 23 visible in frustum, 13,629 authentic scene triangles.
+  - Captured verified reference screenshot at `sf_stage1_reference.png` showing aligned skyscraper facades, window textures, streets, and terrain.
+  - 100% pass across all unit and integration tests (12/12 in `interactive_rendering_certification.rs`, 6/6 in `visual_fidelity_certification.rs`, 13/13 in `defect_remediation_regression.rs`, all workspace crates).
+  - Authored ADR-0034 (`docs/adr/0034-stage-1-production-3d-world-geometry-and-interactive-rendering.md`).
+
+
 

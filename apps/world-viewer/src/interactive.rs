@@ -663,6 +663,9 @@ impl InteractiveViewerApp {
         self.camera_ctrl.coord = landmark.coord;
         self.camera_ctrl.yaw = landmark.yaw;
         self.camera_ctrl.pitch = landmark.pitch;
+        if let Some(first_chunk) = active_chunks.first() {
+            self.camera.set_anchor(first_chunk.header.anchor);
+        }
         self.camera_ctrl.update_camera(&mut self.camera);
 
         self.ground_query = Some(ground_query);
@@ -926,16 +929,38 @@ impl ApplicationHandler for InteractiveViewerApp {
             WindowEvent::ScaleFactorChanged { .. } => {
                 if let Some(ref window) = self.window {
                     let size = window.inner_size();
-                    if size.width > 0 && size.height > 0 {
-                        if let (Some(ref mut config), Some(ref surface), Some(ref renderer)) =
-                            (&mut self.surface_config, &self.surface, &self.renderer)
-                        {
-                            config.width = size.width;
-                            config.height = size.height;
-                            surface.configure(&renderer.device, config);
-                            self.camera.aspect = size.width as f32 / size.height as f32;
-                            window.request_redraw();
-                        }
+                    if size.width == 0 || size.height == 0 {
+                        self.is_minimized = true;
+                        return;
+                    }
+                    self.is_minimized = false;
+
+                    if let (Some(ref mut config), Some(ref surface), Some(ref renderer)) =
+                        (&mut self.surface_config, &self.surface, &self.renderer)
+                    {
+                        config.width = size.width;
+                        config.height = size.height;
+                        surface.configure(&renderer.device, config);
+
+                        let depth_tex = renderer.device.create_texture(&wgpu::TextureDescriptor {
+                            label: Some("Surface Depth Texture"),
+                            size: wgpu::Extent3d {
+                                width: size.width,
+                                height: size.height,
+                                depth_or_array_layers: 1,
+                            },
+                            mip_level_count: 1,
+                            sample_count: 1,
+                            dimension: wgpu::TextureDimension::D2,
+                            format: wgpu::TextureFormat::Depth32Float,
+                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                            view_formats: &[],
+                        });
+                        self.depth_view =
+                            Some(depth_tex.create_view(&wgpu::TextureViewDescriptor::default()));
+                        self.depth_texture = Some(depth_tex);
+                        self.camera.aspect = size.width as f32 / size.height as f32;
+                        window.request_redraw();
                     }
                 }
             }
@@ -967,7 +992,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                     MouseScrollDelta::LineDelta(_, y) => y as f64 * 8.0,
                     MouseScrollDelta::PixelDelta(pos) => pos.y * 0.1,
                 };
-                if self.camera_ctrl.mode == CameraMode::Fly {
+                if self.camera_ctrl.mode == CameraMode::Orbit {
+                    self.camera_ctrl.orbit_zoom(
+                        -scroll_y * 4.0,
+                        self.region_resources.as_ref().map(|r| &r.dem),
+                    );
+                } else if self.camera_ctrl.mode == CameraMode::Fly
+                    || self.camera_ctrl.mode == CameraMode::Free
+                {
                     self.camera_ctrl.move_vertical(scroll_y);
                 }
             }
@@ -989,14 +1021,41 @@ impl ApplicationHandler for InteractiveViewerApp {
                             event_loop.exit();
                         }
 
-                        // Toggle Camera Mode (Fly <-> Walk)
+                        // Cycle Camera Mode (Fly -> Walk -> Orbit -> Free -> Chase -> Fly)
                         KeyCode::Tab => {
-                            self.camera_ctrl.mode = match self.camera_ctrl.mode {
-                                CameraMode::Fly => CameraMode::Walk,
-                                CameraMode::Walk => CameraMode::Fly,
-                            };
-                            let label = format!("Camera Mode: {:?}", self.camera_ctrl.mode);
+                            let new_mode = self.camera_ctrl.cycle_mode();
+                            let label = format!("Camera Navigation Mode: {:?}", new_mode);
                             println!("🎥 {}", label);
+                            self.status_notification = Some((label, Instant::now()));
+                        }
+
+                        // Instant Camera Reset to Anchor Landmark (Home key)
+                        KeyCode::Home => {
+                            self.camera_ctrl.reset_to_default();
+                            let label = "Camera Reset to Anchor Landmark".to_string();
+                            println!("🎯 {}", label);
+                            self.status_notification = Some((label, Instant::now()));
+                        }
+
+                        // Increase Camera Movement Speed ([ / PageUp / Equal)
+                        KeyCode::BracketRight | KeyCode::Equal | KeyCode::PageUp => {
+                            let spd = self.camera_ctrl.increase_speed();
+                            let label = format!(
+                                "Camera Speed: {:.1} m/s ({:.1}x)",
+                                spd, self.camera_ctrl.speed_multiplier
+                            );
+                            println!("⏩ {}", label);
+                            self.status_notification = Some((label, Instant::now()));
+                        }
+
+                        // Decrease Camera Movement Speed (] / PageDown / Minus)
+                        KeyCode::BracketLeft | KeyCode::Minus | KeyCode::PageDown => {
+                            let spd = self.camera_ctrl.decrease_speed();
+                            let label = format!(
+                                "Camera Speed: {:.1} m/s ({:.1}x)",
+                                spd, self.camera_ctrl.speed_multiplier
+                            );
+                            println!("⏪ {}", label);
                             self.status_notification = Some((label, Instant::now()));
                         }
 
@@ -1461,31 +1520,50 @@ impl ApplicationHandler for InteractiveViewerApp {
                     let forward = rot.col(2);
                     forward * (self.vehicle.speed_kph * (1000.0 / 3600.0))
                 } else {
-                    // Camera navigation in Fly or Walk mode
-                    let move_speed = if self.camera_ctrl.mode == CameraMode::Fly {
-                        60.0 * dt
-                    } else {
-                        5.0 * dt
+                    // Camera navigation in Fly, Walk, Orbit, Free, or Chase mode
+                    let base_speed = match self.camera_ctrl.mode {
+                        CameraMode::Fly => self.camera_ctrl.effective_speed(),
+                        CameraMode::Walk => 5.0,
+                        CameraMode::Orbit => 25.0,
+                        CameraMode::Free => self.camera_ctrl.effective_speed() * 1.5,
+                        CameraMode::Chase => self.camera_ctrl.effective_speed(),
                     };
+                    let move_speed = base_speed * dt;
                     let rot_speed = 1.6 * dt as f32;
 
+                    // Sprint acceleration with Shift / precision slow with Control
+                    let speed_mult = if self.pressed_keys.contains(&KeyCode::ShiftLeft)
+                        || self.pressed_keys.contains(&KeyCode::ShiftRight)
+                    {
+                        2.5
+                    } else if self.pressed_keys.contains(&KeyCode::ControlLeft)
+                        || self.pressed_keys.contains(&KeyCode::ControlRight)
+                    {
+                        0.35
+                    } else {
+                        1.0
+                    };
+                    let effective_move = move_speed * speed_mult;
+
                     if self.pressed_keys.contains(&KeyCode::KeyW) {
-                        self.camera_ctrl.move_forward(move_speed, Some(&res.dem));
+                        self.camera_ctrl.move_forward(effective_move, Some(&res.dem));
                     }
                     if self.pressed_keys.contains(&KeyCode::KeyS) {
-                        self.camera_ctrl.move_forward(-move_speed, Some(&res.dem));
+                        self.camera_ctrl.move_forward(-effective_move, Some(&res.dem));
                     }
                     if self.pressed_keys.contains(&KeyCode::KeyA) {
-                        self.camera_ctrl.strafe(-move_speed, Some(&res.dem));
+                        self.camera_ctrl.strafe(-effective_move, Some(&res.dem));
                     }
                     if self.pressed_keys.contains(&KeyCode::KeyD) {
-                        self.camera_ctrl.strafe(move_speed, Some(&res.dem));
+                        self.camera_ctrl.strafe(effective_move, Some(&res.dem));
                     }
-                    if self.pressed_keys.contains(&KeyCode::Space) {
-                        self.camera_ctrl.move_vertical(move_speed);
+                    if self.pressed_keys.contains(&KeyCode::Space)
+                        || self.pressed_keys.contains(&KeyCode::KeyE)
+                    {
+                        self.camera_ctrl.move_vertical(effective_move);
                     }
-                    if self.pressed_keys.contains(&KeyCode::KeyC) {
-                        self.camera_ctrl.move_vertical(-move_speed);
+                    if self.pressed_keys.contains(&KeyCode::KeyQ) {
+                        self.camera_ctrl.move_vertical(-effective_move);
                     }
                     if self.pressed_keys.contains(&KeyCode::ArrowLeft) {
                         self.camera_ctrl.rotate(-rot_speed, 0.0);
@@ -1500,8 +1578,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                         self.camera_ctrl.rotate(0.0, -rot_speed);
                     }
 
+                    // Collision-aware ground clamping: prevents clipping below DEM terrain
+                    self.camera_ctrl.clamp_terrain(&res.dem);
                     self.camera_ctrl.update_camera(&mut self.camera);
-                    self.camera_ctrl.forward_velocity_vector(move_speed)
+                    self.camera_ctrl.forward_velocity_vector(effective_move)
                 };
 
                 // 4. Update nearby real chunks using WorldStreamer

@@ -836,5 +836,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Authored ADR-0033: `docs/adr/0033-phase-0-forensic-inventory-and-correctness-audit.md`.
   - Updated `docs/ExecutionContract.md` with Section 10 formalizing anti-fabrication rules, behavioral testing mandates, and classification requirements.
 
+## [1.9.0] - 2026-10-23 — STAGE 1: Production 3D World Geometry and Interactive Rendering Repair
+### Fixed
+- **Terrain Triangle Winding & Geomorphic Shading (`realearth-compiler`)**:
+  - Corrected triangle index winding from clockwise to counter-clockwise `(top_left, top_right, bottom_left)` and `(top_right, bottom_right, bottom_left)` in `engine/compiler/src/terrain_mesher.rs`, restoring upward (+Y) surface normals.
+  - Eliminated the artificial uniform green plane by introducing dynamic altitude- and slope-aware geomorphic vertex colors (shoreline sand at $\le 0.8\text{m}$, urban soil at $0.8\text{m}-30\text{m}$, park green at $30\text{m}-85\text{m}$, exposed sandstone/granite on steep slopes $n_y < 0.82$ and ridges $> 85\text{m}$).
+- **Road Ribbon Geometry & Elevation Clearance (`realearth-compiler`)**:
+  - Corrected road quad ribbon index winding from CW to CCW `(base, base + 3, base + 1)` and `(base, base + 2, base + 3)` in `engine/compiler/src/road_mesher.rs`.
+  - Elevated road centerline and shoulder vertices by $+0.20\text{m}$ above local ground level, completely eliminating coplanar z-fighting with the underlying terrain mesh.
+- **Building Normals & Roof Triangulation (`realearth-compiler`)**:
+  - Corrected outward horizontal wall normals in the X-Z plane via `Vec3::new(edge.z, 0.0, -edge.x).normalize()` in `engine/compiler/src/building_mesher.rs`.
+  - Inverted building roof triangulation indices from earcut clockwise winding to counter-clockwise upward-pointing (+Y) normal winding.
+- **Atmospheric Fog & Horizon Cutoff (`realearth-rendering`)**:
+  - Removed artificial `clamp(..., 0.0, 0.88)` on linear fog and smoothstep in `engine/rendering/src/shaders.rs`. Geometry at the far plane now blends seamlessly into `sky_fog_color` without hard horizon edges.
+- **Camera Floating Origin Alignment (`realearth-rendering`, `realearth-viewer`)**:
+  - Added `set_anchor(&mut self, anchor: Wgs84Coord)` to `FloatingOriginCamera`.
+  - Synchronized `camera.anchor_ecef` with the active world package anchor (`first_chunk.header.anchor`), bringing the camera and chunk vertex buffers into the exact same local ENU coordinate system with sub-millimeter precision.
+- **Window Lifecycle & Navigation Controls (`apps/world-viewer`)**:
+  - Handled `WindowEvent::ScaleFactorChanged` by recreating the `Depth32Float` depth buffer to match new window dimensions, eliminating GPU size mismatch panics.
+  - Expanded camera navigation with 5 distinct modes (`Fly`, `Walk`, `Orbit`, `Free`, `Chase`), `Tab` cycling, `Home` landmark reset, speed adjustment keys (`[` / `]`), sprint (`Shift` = 2.5x), and precision (`Ctrl` = 0.35x).
+  - Implemented `clamp_terrain` preventing camera penetration beneath DEM ground elevation.
+### Added
+- **Architectural Decision Record**:
+  - Published ADR-0034: `docs/adr/0034-stage-1-production-3d-world-geometry-and-interactive-rendering.md`.
+- **Visual Reference Evidence**:
+  - Captured verified reference screenshot of San Francisco Bay Area at `sf_stage1_reference.png` showing aligned skyscraper facades, window grids, street ribbons, and terrain.
+- **Integration Test Validation**:
+  - 12/12 passing in `tests/tests/interactive_rendering_certification.rs`.
+  - 6/6 passing in `tests/tests/visual_fidelity_certification.rs`.
+  - 13/13 passing in `tests/tests/defect_remediation_regression.rs`.
+  - 100% pass across all workspace unit and integration tests.
+
+
 
 

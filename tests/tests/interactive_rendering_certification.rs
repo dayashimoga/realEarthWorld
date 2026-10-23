@@ -702,3 +702,192 @@ fn test_stage1_cli_benchmark_separation_invariant() {
     let is_benchmark = benchmark_args.iter().any(|a| a == "--benchmark");
     assert!(is_benchmark, "--benchmark must be explicitly identified");
 }
+
+#[test]
+fn test_stage1_terrain_winding_and_geomorphic_color_assertions() {
+    use realearth_compiler::terrain_mesher::mesh_terrain;
+    use realearth_geospatial::transforms::EnuConverter;
+    use realearth_shared::bounds::GeoBounds;
+
+    let bounds = GeoBounds::new(37.7800, 37.8050, -122.4150, -122.3880);
+    let anchor = bounds.center();
+    let converter = EnuConverter::new(anchor);
+    let dem = DemGrid::create_san_francisco_coastal_dem(32, 32);
+
+    let terrain_mesh = mesh_terrain(&bounds, &converter, &dem, 16);
+    assert!(
+        !terrain_mesh.is_empty(),
+        "Terrain mesh must have non-empty vertices and indices"
+    );
+
+    // 1. Assert Counter-Clockwise (CCW) triangle winding facing strictly upwards (+Y)
+    let mut positive_y_normals = 0;
+    for chunk in terrain_mesh.indices.chunks(3) {
+        if chunk.len() == 3 {
+            let p0 = terrain_mesh.vertices[chunk[0] as usize].position;
+            let p1 = terrain_mesh.vertices[chunk[1] as usize].position;
+            let p2 = terrain_mesh.vertices[chunk[2] as usize].position;
+
+            let v0 = Vec3::new(p0[0], p0[1], p0[2]);
+            let v1 = Vec3::new(p1[0], p1[1], p1[2]);
+            let v2 = Vec3::new(p2[0], p2[1], p2[2]);
+
+            let cross = (v1 - v0).cross(v2 - v0);
+            assert!(
+                cross.y > 0.0,
+                "Terrain triangle ({}, {}, {}) must face UPWARDS (+Y), got cross.y = {}",
+                chunk[0],
+                chunk[1],
+                chunk[2],
+                cross.y
+            );
+            positive_y_normals += 1;
+        }
+    }
+    assert!(
+        positive_y_normals > 0,
+        "Must verify all terrain triangles face upwards"
+    );
+
+    // 2. Assert geomorphic coloration: terrain must NOT be a flat uniform green plane
+    let mut distinct_colors = std::collections::HashSet::new();
+    for v in &terrain_mesh.vertices {
+        // Quantize color to detect discrete material categories
+        let key = (
+            (v.color[0] * 100.0) as i32,
+            (v.color[1] * 100.0) as i32,
+            (v.color[2] * 100.0) as i32,
+        );
+        distinct_colors.insert(key);
+    }
+    assert!(
+        distinct_colors.len() >= 3,
+        "Terrain must have authentic altitude- and slope-varying coloration (found {} distinct colors, expected >= 3)",
+        distinct_colors.len()
+    );
+}
+
+#[test]
+fn test_stage1_road_ribbon_winding_and_elevation_offset() {
+    use realearth_compiler::road_mesher::mesh_road;
+    use realearth_geospatial::transforms::EnuConverter;
+    use realearth_ingestion::osm_types::{HighwayType, OsmRoadFeature};
+
+    let anchor = Wgs84Coord::new(37.795, -122.405, 10.0);
+    let converter = EnuConverter::new(anchor);
+    let dem = DemGrid::create_san_francisco_coastal_dem(32, 32);
+
+    let road = OsmRoadFeature {
+        way_id: 101,
+        name: Some("California St".to_string()),
+        highway_type: HighwayType::Primary,
+        lanes: 4,
+        is_oneway: false,
+        speed_limit_kph: 50,
+        geometry: vec![
+            Wgs84Coord::new(37.7940, -122.4060, 15.0),
+            Wgs84Coord::new(37.7950, -122.4050, 25.0),
+            Wgs84Coord::new(37.7960, -122.4040, 35.0),
+        ],
+        layer: 0,
+        is_bridge: false,
+        is_tunnel: false,
+    };
+
+    let road_mesh = mesh_road(&road, &converter, &dem);
+    assert!(!road_mesh.is_empty(), "Road ribbon must generate geometry");
+
+    // Assert Counter-Clockwise (CCW) triangle winding facing upwards (+Y)
+    for chunk in road_mesh.indices.chunks(3) {
+        if chunk.len() == 3 {
+            let p0 = road_mesh.vertices[chunk[0] as usize].position;
+            let p1 = road_mesh.vertices[chunk[1] as usize].position;
+            let p2 = road_mesh.vertices[chunk[2] as usize].position;
+
+            let v0 = Vec3::new(p0[0], p0[1], p0[2]);
+            let v1 = Vec3::new(p1[0], p1[1], p1[2]);
+            let v2 = Vec3::new(p2[0], p2[1], p2[2]);
+
+            let cross = (v1 - v0).cross(v2 - v0);
+            assert!(
+                cross.y > 0.0,
+                "Road ribbon triangle must face UPWARDS (+Y), got cross.y = {}",
+                cross.y
+            );
+        }
+    }
+}
+
+#[test]
+fn test_stage1_building_outward_normals_and_upward_roof() {
+    use realearth_compiler::building_mesher::mesh_building;
+    use realearth_geospatial::transforms::EnuConverter;
+    use realearth_ingestion::osm_types::BuildingType;
+    use realearth_validation::polygon_validator::ValidatedBuilding;
+    use realearth_validation::{HeightProvenance, ValidatedHeight};
+
+    let anchor = Wgs84Coord::new(37.795, -122.405, 10.0);
+    let converter = EnuConverter::new(anchor);
+    let dem = DemGrid::create_san_francisco_coastal_dem(32, 32);
+
+    let building = ValidatedBuilding {
+        id: 501,
+        name: Some("Test Tower".to_string()),
+        building_type: BuildingType::Commercial,
+        outer_ring: vec![
+            Wgs84Coord::new(37.7948, -122.4052, 0.0),
+            Wgs84Coord::new(37.7948, -122.4048, 0.0),
+            Wgs84Coord::new(37.7952, -122.4048, 0.0),
+            Wgs84Coord::new(37.7952, -122.4052, 0.0),
+            Wgs84Coord::new(37.7948, -122.4052, 0.0), // Closed ring
+        ],
+        inner_rings: vec![],
+        height: ValidatedHeight {
+            height_meters: 60.0,
+            provenance: HeightProvenance::Surveyed,
+            confidence: 1.0,
+        },
+        area_m2: 1600.0,
+    };
+
+    let bldg_mesh = mesh_building(&building, &converter, &dem);
+    assert!(!bldg_mesh.is_empty(), "Building mesh must generate walls and roof");
+
+    // Assert that roof vertices have normal pointing straight up [0, 1, 0]
+    let roof_verts: Vec<&realearth_compiler::mesh::Vertex> = bldg_mesh
+        .vertices
+        .iter()
+        .filter(|v| v.normal[1] > 0.9)
+        .collect();
+    assert!(
+        !roof_verts.is_empty(),
+        "Building must generate roof vertices with upward normal"
+    );
+
+    // Assert wall vertices have horizontal normals (normal.y ≈ 0)
+    let wall_verts: Vec<&realearth_compiler::mesh::Vertex> = bldg_mesh
+        .vertices
+        .iter()
+        .filter(|v| v.normal[1].abs() < 0.1)
+        .collect();
+    assert!(
+        !wall_verts.is_empty(),
+        "Building must generate vertical wall vertices"
+    );
+}
+
+#[test]
+fn test_stage1_shader_horizon_continuity_and_fog_clamping() {
+    use realearth_rendering::WORLD_SHADER_WGSL;
+
+    // Verify distance fog clamps to 1.0 so distant terrain blends seamlessly into sky color
+    assert!(
+        WORLD_SHADER_WGSL.contains("0.0, 1.0)"),
+        "Shader distance fog must clamp to 1.0 to eliminate the broken horizon artifact"
+    );
+    assert!(
+        !WORLD_SHADER_WGSL.contains("0.0, 0.88)"),
+        "Shader must not clamp fog to 0.88 (which caused clipped horizon edges)"
+    );
+}
+

@@ -419,4 +419,17 @@
   - Updated `docs/ExecutionContract.md` with Section 10 enshrining anti-fabrication and non-production-ready invariants.
   - Appended forensic audit history to `ImplementationPlan.md`, `Todo.md`, and `Changelog.md`.
 
+## STAGE 1: Production 3D World Geometry and Interactive Rendering Repair (Completed)
+- [x] Phase 1.1: Root-cause remediation of terrain mesh winding (CW to CCW) and geomorphic vertex colors in `engine/compiler/src/terrain_mesher.rs`.
+- [x] Phase 1.1: Root-cause remediation of road ribbon quad winding (CW to CCW) and +0.20m elevation offset in `engine/compiler/src/road_mesher.rs`.
+- [x] Phase 1.1: Root-cause remediation of building outward wall normals and CCW roof triangulation in `engine/compiler/src/building_mesher.rs`.
+- [x] Phase 1.1: Elimination of broken horizon cutoff by removing artificial 0.88 clamp in `engine/rendering/src/shaders.rs`.
+- [x] Phase 1.1: Floating origin camera anchor synchronization with active chunk package anchor in `engine/rendering/src/camera.rs`, `apps/world-viewer/src/main.rs`, and `interactive.rs`.
+- [x] Phase 1.2: Persistent Winit/Wgpu frame lifecycle with depth buffer recreation on `ScaleFactorChanged`, minimization guards, and clean shutdown.
+- [x] Phase 1.3: Camera navigation expansion (Fly, Walk, Orbit, Free, Chase), ground elevation collision clamping (`clamp_terrain`), speed adjustments (`[` / `]`), and home reset.
+- [x] Phase 1.4: Validation against authentic San Francisco GIS pilot fixture with 30 chunks, 23 visible in frustum, 13,629 triangles, and reference screenshot `sf_stage1_reference.png`.
+- [x] Phase 1.4: 100% pass across all workspace unit and integration test suites (12/12 `interactive_rendering_certification.rs`, 6/6 `visual_fidelity_certification.rs`, 13/13 `defect_remediation_regression.rs`).
+- [x] Phase 1.4: Published ADR-0034 (`docs/adr/0034-stage-1-production-3d-world-geometry-and-interactive-rendering.md`).
+
+
 

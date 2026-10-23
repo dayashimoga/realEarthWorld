@@ -131,9 +131,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let fog_end = uniforms.fog_params.z;
     let fog_density = uniforms.fog_params.x;
 
-    let linear_fog = clamp((dist - fog_start) / max(fog_end - fog_start, 1.0), 0.0, 0.88);
+    let linear_fog = clamp((dist - fog_start) / max(fog_end - fog_start, 1.0), 0.0, 1.0);
     let exp_fog = 1.0 - exp(-dist * fog_density);
-    let fog_factor = max(linear_fog, exp_fog);
+    let fog_factor = clamp(max(linear_fog, exp_fog), 0.0, 1.0);
 
     // Sky haze gradient matching time of day
     let day_sky = vec3<f32>(0.65, 0.76, 0.92);

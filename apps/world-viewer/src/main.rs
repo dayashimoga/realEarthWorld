@@ -71,7 +71,7 @@ fn print_usage() {
         "  --scenario <dense-city|highway|teleport|soak|standard> Profiling scenario (default: standard)"
     );
     println!(
-        "  --camera-mode <fly|walk>                Initial camera navigation mode (default: fly)"
+        "  --camera-mode <fly|walk|orbit|free|chase> Initial camera navigation mode (default: fly)"
     );
     println!(
         "  --drive                                 Enable complete drivable car dynamics mode"
@@ -189,6 +189,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .any(|a| a == "walk" || a == "--camera-mode=walk")
     {
         CameraMode::Walk
+    } else if args
+        .iter()
+        .any(|a| a == "orbit" || a == "--camera-mode=orbit")
+    {
+        CameraMode::Orbit
+    } else if args
+        .iter()
+        .any(|a| a == "free" || a == "--camera-mode=free")
+    {
+        CameraMode::Free
+    } else if args
+        .iter()
+        .any(|a| a == "chase" || a == "--camera-mode=chase")
+    {
+        CameraMode::Chase
     } else {
         CameraMode::Fly
     };
@@ -711,6 +726,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initial streaming update around camera anchor
     let loaded = streamer.update(camera_ctrl.coord)?;
     let active_chunks = streamer.get_active_chunks();
+    if let Some(first_chunk) = active_chunks.first() {
+        camera.set_anchor(first_chunk.header.anchor);
+    }
     println!(
         "🎯 Camera Anchor: ({:.4}°N, {:.4}°W, {:.1}m MSL) - Mode: {:?}",
         camera_ctrl.coord.lat, camera_ctrl.coord.lon, camera_ctrl.coord.alt, camera_ctrl.mode
@@ -894,6 +912,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         camera_ctrl.jump_to(&lm);
                         camera_ctrl.update_camera(&mut camera);
                         streamer.teleport(camera_ctrl.coord);
+                        let active = streamer.get_active_chunks();
+                        if let Some(first_chunk) = active.first() {
+                            camera.set_anchor(first_chunk.header.anchor);
+                        }
                     }
                     glam::Vec3::ZERO
                 }
