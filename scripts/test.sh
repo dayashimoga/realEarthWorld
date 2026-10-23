@@ -19,7 +19,7 @@ cargo test -p realearth-tests
 echo "5. Benchmark Smoke Suite (cargo bench -- --test)..."
 cargo bench --bench geospatial_bench --bench compiler_bench -- --test
 
-echo "6. Security Audit (cargo audit)..."
-cargo audit
+echo "6. Security Audit (cargo audit --deny warnings)..."
+cargo audit --deny warnings
 
 echo "🎉 ALL QUALITY GATES PASSED (100% test success, 0 warnings, 0 fmt errors, 0 security vulnerabilities)!"

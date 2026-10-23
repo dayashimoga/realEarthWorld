@@ -24,8 +24,8 @@ Write-Host "[5/6] Benchmark Smoke Suite (cargo bench -- --test)..." -ForegroundC
 cargo bench --bench geospatial_bench --bench compiler_bench -- --test
 if ($LASTEXITCODE -ne 0) { throw "Benchmark test verification failed" }
 
-Write-Host "[6/6] Security Audit (cargo audit)..." -ForegroundColor Yellow
-cargo audit
+Write-Host "[6/6] Security Audit (cargo audit --deny warnings)..." -ForegroundColor Yellow
+cargo audit --deny warnings
 if ($LASTEXITCODE -ne 0) { throw "Security audit check failed" }
 
 Write-Host "[SUCCESS] ALL QUALITY GATES PASSED (100% test success, 0 warnings, 0 fmt errors, 0 security vulnerabilities)!" -ForegroundColor Green
