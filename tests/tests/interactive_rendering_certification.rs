@@ -617,6 +617,7 @@ fn test_stage1_vehicle_mesh_generation_and_rendering() {
         wheel_steer_angle: 0.25,
         headlights_on: true,
         brake_lights_on: true,
+        reverse_lights_on: false,
     };
 
     let mesh = generate_vehicle_mesh(&params);
@@ -851,7 +852,10 @@ fn test_stage1_building_outward_normals_and_upward_roof() {
     };
 
     let bldg_mesh = mesh_building(&building, &converter, &dem);
-    assert!(!bldg_mesh.is_empty(), "Building mesh must generate walls and roof");
+    assert!(
+        !bldg_mesh.is_empty(),
+        "Building mesh must generate walls and roof"
+    );
 
     // Assert that roof vertices have normal pointing straight up [0, 1, 0]
     let roof_verts: Vec<&realearth_compiler::mesh::Vertex> = bldg_mesh
@@ -890,4 +894,3 @@ fn test_stage1_shader_horizon_continuity_and_fog_clamping() {
         "Shader must not clamp fog to 0.88 (which caused clipped horizon edges)"
     );
 }
-

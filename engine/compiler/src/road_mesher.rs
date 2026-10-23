@@ -126,8 +126,18 @@ pub fn mesh_road(road: &OsmRoadFeature, converter: &EnuConverter, dem: &DemGrid)
         right_edge_pts.push(right);
 
         let v = cumulative_dist;
-        vertices.push(Vertex::new([left.x, left.y, left.z], up_norm, [0.0, v], road_color));
-        vertices.push(Vertex::new([right.x, right.y, right.z], up_norm, [1.0, v], road_color));
+        vertices.push(Vertex::new(
+            [left.x, left.y, left.z],
+            up_norm,
+            [0.0, v],
+            road_color,
+        ));
+        vertices.push(Vertex::new(
+            [right.x, right.y, right.z],
+            up_norm,
+            [1.0, v],
+            road_color,
+        ));
     }
 
     // CCW triangle winding facing upwards (+Y)
@@ -245,7 +255,7 @@ pub fn mesh_road_infrastructure(
     let mut indices = Vec::new();
 
     let sidewalk_color = [0.72, 0.71, 0.69, 0.92]; // Concrete sidewalk / curb
-    let barrier_color = [0.65, 0.65, 0.68, 0.86];  // Concrete guardrail / bridge girder
+    let barrier_color = [0.65, 0.65, 0.68, 0.86]; // Concrete guardrail / bridge girder
     let steel_pole_color = [0.35, 0.38, 0.42, 0.70]; // Streetlight pole
     let up_norm = [0.0, 1.0, 0.0];
 
@@ -265,7 +275,11 @@ pub fn mesh_road_infrastructure(
                     cum_dist += (centerlines[i] - centerlines[i - 1]).length();
                 }
 
-                let road_edge = if *side > 0.0 { left_edge_pts[i] } else { right_edge_pts[i] };
+                let road_edge = if *side > 0.0 {
+                    left_edge_pts[i]
+                } else {
+                    right_edge_pts[i]
+                };
                 let (miter, factor) = miter_perps[i];
                 let out_dir = miter * (*side * factor);
 
@@ -273,8 +287,18 @@ pub fn mesh_road_infrastructure(
                 let sidewalk_outer = curb_top + out_dir * sidewalk_w;
 
                 let v = cum_dist * 0.5;
-                vertices.push(Vertex::new([curb_top.x, curb_top.y, curb_top.z], up_norm, [0.0, v], sidewalk_color));
-                vertices.push(Vertex::new([sidewalk_outer.x, sidewalk_outer.y, sidewalk_outer.z], up_norm, [1.0, v], sidewalk_color));
+                vertices.push(Vertex::new(
+                    [curb_top.x, curb_top.y, curb_top.z],
+                    up_norm,
+                    [0.0, v],
+                    sidewalk_color,
+                ));
+                vertices.push(Vertex::new(
+                    [sidewalk_outer.x, sidewalk_outer.y, sidewalk_outer.z],
+                    up_norm,
+                    [1.0, v],
+                    sidewalk_color,
+                ));
             }
 
             for i in 0..(n - 1) {
@@ -316,14 +340,28 @@ pub fn mesh_road_infrastructure(
                 if i > 0 {
                     cum_dist += (centerlines[i] - centerlines[i - 1]).length();
                 }
-                let pt = if *side > 0.0 { left_edge_pts[i] } else { right_edge_pts[i] };
+                let pt = if *side > 0.0 {
+                    left_edge_pts[i]
+                } else {
+                    right_edge_pts[i]
+                };
                 let pt_top = pt + Vec3::new(0.0, barrier_h, 0.0);
                 let (miter, _) = miter_perps[i];
                 let norm = miter * (*side);
                 let norm_arr = [norm.x, norm.y, norm.z];
 
-                vertices.push(Vertex::new([pt.x, pt.y, pt.z], norm_arr, [0.0, cum_dist], barrier_color));
-                vertices.push(Vertex::new([pt_top.x, pt_top.y, pt_top.z], norm_arr, [1.0, cum_dist], barrier_color));
+                vertices.push(Vertex::new(
+                    [pt.x, pt.y, pt.z],
+                    norm_arr,
+                    [0.0, cum_dist],
+                    barrier_color,
+                ));
+                vertices.push(Vertex::new(
+                    [pt_top.x, pt_top.y, pt_top.z],
+                    norm_arr,
+                    [1.0, cum_dist],
+                    barrier_color,
+                ));
             }
 
             for i in 0..(n - 1) {
@@ -344,8 +382,18 @@ pub fn mesh_road_infrastructure(
         for i in 0..n {
             let left_bot = left_edge_pts[i] - Vec3::new(0.0, girder_depth, 0.0);
             let right_bot = right_edge_pts[i] - Vec3::new(0.0, girder_depth, 0.0);
-            vertices.push(Vertex::new([left_bot.x, left_bot.y, left_bot.z], down_norm, [0.0, 0.0], barrier_color));
-            vertices.push(Vertex::new([right_bot.x, right_bot.y, right_bot.z], down_norm, [1.0, 0.0], barrier_color));
+            vertices.push(Vertex::new(
+                [left_bot.x, left_bot.y, left_bot.z],
+                down_norm,
+                [0.0, 0.0],
+                barrier_color,
+            ));
+            vertices.push(Vertex::new(
+                [right_bot.x, right_bot.y, right_bot.z],
+                down_norm,
+                [1.0, 0.0],
+                barrier_color,
+            ));
         }
         for i in 0..(n - 1) {
             let base = soffit_idx + (i * 2) as u32;
@@ -396,10 +444,30 @@ pub fn mesh_road_infrastructure(
                         let n_arr = p_normals[f];
 
                         let b_idx = vertices.len() as u32;
-                        vertices.push(Vertex::new([corner0.x, ground_y, corner0.z], n_arr, [0.0, 0.0], barrier_color));
-                        vertices.push(Vertex::new([corner1.x, ground_y, corner1.z], n_arr, [1.0, 0.0], barrier_color));
-                        vertices.push(Vertex::new([corner1.x, deck_bot, corner1.z], n_arr, [1.0, 1.0], barrier_color));
-                        vertices.push(Vertex::new([corner0.x, deck_bot, corner0.z], n_arr, [0.0, 1.0], barrier_color));
+                        vertices.push(Vertex::new(
+                            [corner0.x, ground_y, corner0.z],
+                            n_arr,
+                            [0.0, 0.0],
+                            barrier_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [corner1.x, ground_y, corner1.z],
+                            n_arr,
+                            [1.0, 0.0],
+                            barrier_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [corner1.x, deck_bot, corner1.z],
+                            n_arr,
+                            [1.0, 1.0],
+                            barrier_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [corner0.x, deck_bot, corner0.z],
+                            n_arr,
+                            [0.0, 1.0],
+                            barrier_color,
+                        ));
 
                         indices.push(b_idx);
                         indices.push(b_idx + 3);
@@ -444,10 +512,30 @@ pub fn mesh_road_infrastructure(
                 let pole_base_idx = vertices.len() as u32;
                 let norm = [miter_perps[i].0.x, 0.0, miter_perps[i].0.z];
 
-                vertices.push(Vertex::new([base_pt.x - w, base_pt.y, base_pt.z], norm, [0.0, 0.0], steel_pole_color));
-                vertices.push(Vertex::new([base_pt.x + w, base_pt.y, base_pt.z], norm, [1.0, 0.0], steel_pole_color));
-                vertices.push(Vertex::new([pole_top.x + w, pole_top.y, pole_top.z], norm, [1.0, 1.0], steel_pole_color));
-                vertices.push(Vertex::new([pole_top.x - w, pole_top.y, pole_top.z], norm, [0.0, 1.0], steel_pole_color));
+                vertices.push(Vertex::new(
+                    [base_pt.x - w, base_pt.y, base_pt.z],
+                    norm,
+                    [0.0, 0.0],
+                    steel_pole_color,
+                ));
+                vertices.push(Vertex::new(
+                    [base_pt.x + w, base_pt.y, base_pt.z],
+                    norm,
+                    [1.0, 0.0],
+                    steel_pole_color,
+                ));
+                vertices.push(Vertex::new(
+                    [pole_top.x + w, pole_top.y, pole_top.z],
+                    norm,
+                    [1.0, 1.0],
+                    steel_pole_color,
+                ));
+                vertices.push(Vertex::new(
+                    [pole_top.x - w, pole_top.y, pole_top.z],
+                    norm,
+                    [0.0, 1.0],
+                    steel_pole_color,
+                ));
 
                 indices.push(pole_base_idx);
                 indices.push(pole_base_idx + 3);
@@ -462,9 +550,24 @@ pub fn mesh_road_infrastructure(
                 let down_n = [0.0, -1.0, 0.0];
                 let light_color = [0.95, 0.90, 0.70, 0.70]; // Warm luminaire head
 
-                vertices.push(Vertex::new([pole_top.x, pole_top.y, pole_top.z], down_n, [0.0, 0.0], steel_pole_color));
-                vertices.push(Vertex::new([arm_tip.x, arm_tip.y, arm_tip.z], down_n, [1.0, 0.0], light_color));
-                vertices.push(Vertex::new([arm_tip.x, arm_tip.y - 0.2, arm_tip.z], down_n, [1.0, 1.0], light_color));
+                vertices.push(Vertex::new(
+                    [pole_top.x, pole_top.y, pole_top.z],
+                    down_n,
+                    [0.0, 0.0],
+                    steel_pole_color,
+                ));
+                vertices.push(Vertex::new(
+                    [arm_tip.x, arm_tip.y, arm_tip.z],
+                    down_n,
+                    [1.0, 0.0],
+                    light_color,
+                ));
+                vertices.push(Vertex::new(
+                    [arm_tip.x, arm_tip.y - 0.2, arm_tip.z],
+                    down_n,
+                    [1.0, 1.0],
+                    light_color,
+                ));
 
                 indices.push(arm_base_idx);
                 indices.push(arm_base_idx + 2);

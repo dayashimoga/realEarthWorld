@@ -940,5 +940,38 @@
   - 100% test pass rate across all 23 integration test suites and crate unit tests in the workspace (`cargo test --workspace`).
   - Authored ADR-0036 (`docs/adr/0036-stage-3-high-fidelity-rendering-and-environmental-overhaul.md`) and comprehensive report (`docs/reports/Stage3_High_Fidelity_Rendering_Report.md`).
 
+## STAGE 4: Complete Integrated Car Driving and Physics Experience (Completed)
+- [x] Phase 4.1 — Vehicle representation and visual integration:
+  - Procedurally meshed 6 distinct, properly scaled vehicle types (Sports Coupe, Sedan, SUV, Taxi, Transit Bus, Heavy Truck) with unique aerodynamic and functional additions (rear wing spoiler, front splitter, chrome exhaust tips, utility roof crossbars, illuminated warm-amber `"TAXI"` rooftop dome, vertical exhaust stacks).
+  - Modeled detailed 3D cockpit interior geometry: angled dashboard instrument binnacle, driver and passenger bucket seats with headrests, side rearview mirrors, and an animated steering wheel rotating with front wheel steer angle at a $3.5\times$ steering gear ratio.
+  - Implemented dynamic vehicle lighting states: high-intensity forward headlights, dual red brake lights illuminating intensely during braking, and dual white reverse lights on the rear fascia activating when reverse gear is engaged.
+  - Added 4 distinct camera perspectives: Chase (third-person spring-damper tracking), Hood (bonnet mounted), Cockpit (first-person driver seat at $X=-0.38\text{m}$, $Y=+1.05\text{m}$, $Z=+0.15\text{m}$ with downward dashboard pitch), and Bumper (low-slung road clearance).
+  - Wired cyclic camera perspective switching via `[C]` (`Chase` $\to$ `Hood` $\to$ `Cockpit` $\to$ `Bumper` $\to$ `Chase`).
+- [x] Phase 4.2 — Automotive vehicle dynamics and Rapier3D integration:
+  - Configured dynamic vehicle rigid bodies with Continuous Collision Detection (`.ccd_enabled(true)`) to eliminate high-speed obstacle tunneling through thin concrete barriers and guardrails.
+  - Implemented 4-wheel independent raycast suspension with non-linear spring/damper tuning, normal force compliance, and Anti-Roll Bar (ARB) torsional spring moments ($6500\text{ N/m}$ front, $5500\text{ N/m}$ rear) suppressing cornering roll.
+  - Added dedicated reverse transmission mode with half-power reverse torque curve and reverse speed governor capping backward velocity around $45\text{ km/h}$.
+  - Implemented planar-locked motionless hill-hold holding vehicles completely motionless on steep inclines ($\le 0.05\text{ m}$ drift) without rollback while preserving vertical suspension settling and allowing Neutral roll.
+  - Implemented streaming chunk collider pinning lifecycle (`register_chunk_collider` / `remove_chunk_colliders`) for roadside barriers and obstacle geometry.
+  - Implemented chassis safe upright recovery (`recover_on_surface`) and pose resets (`reset_at_pose`).
+- [x] Phase 4.3 — Controls, interaction and automotive telemetry HUD:
+  - Implemented progressive speed-sensitive steering attenuation ($0.40$ lock factor at $120\text{ km/h}$, full lock at parking speeds).
+  - Added automatic transmission pedal arbitration: pressing `S`/Down while stationary engages reverse; pressing `W`/Up while in reverse applies service brakes to halt before driving forward.
+  - Added live garage model hot-swapping via number keys `[1-6]` in drive mode while preserving landmark jumps in fly mode.
+  - Connected `[C]` for camera cycling and `[R]` for safe vehicle upright recovery on the road surface.
+  - Built comprehensive driving telemetry HUD: digital speedometer (KM/H + M/S), gear indicator (`R`, `N`, `D1`..`D5`), steer angle readout, analog tachometer RPM with redline bar, and 4-wheel independent suspension travel meters.
+- [x] Phase 4.4 — Driving route certification and performance evidence:
+  - Created dedicated Stage 4 integration test suite (`tests/tests/stage4_driving_gameplay_certification.rs`) with 6 forensic tests:
+    - Test 1 (Market Street): Progressive 0-60 km/h acceleration, emergency braking stopping distance $< 50\text{m}$ from $106.7\text{ km/h}$ ($a \approx 10.25\text{ m/s}^2 \approx 1.05g$), reverse transmission mode, and reverse light activation.
+    - Test 2 (Nob Hill / California St): 22% grade slope climb ($12.4^\circ$), anti-roll bar roll stability, and motionless hill-hold holding without rollback.
+    - Test 3 (Bay Bridge Skyway): 120 km/h cruise, Continuous Collision Detection (CCD) preventing barrier penetration, and chunk collider eviction lifecycle.
+    - Test 4 (Lombard Switchbacks): Ackermann inner/outer wheel geometry ($|\delta_{\text{inner}}| > |\delta_{\text{outer}}|$), speed-sensitive steering lock attenuation, and friction circle lateral cornering traction.
+    - Test 5 (Garage Fleet & Safe Recovery): Mass/torque/steer hierarchy across 6 models, complete 3D interior meshing, and inverted chassis recovery on road surface.
+    - Test 6 (Camera Optics & Telemetry): Mathematical projection verification across all 4 perspectives, cockpit seat offset alignment, and HUD telemetry conversions.
+  - Captured verified offscreen driving screenshots across all 4 perspectives: `sf_stage4_chase.png`, `sf_stage4_cockpit.png`, `sf_stage4_hood.png`, `sf_stage4_bumper.png`.
+  - Benchmarked performance: **1,572–1,782 FPS**, **0.65–1.04 ms** p95 frame latency, **233.32 MB** working set RSS memory, **11.81–16.28 ms** cold startup time.
+  - 100% test pass rate across all workspace unit tests and integration suites (`cargo test --workspace -- --test-threads=1`).
+  - Authored ADR-0037 (`docs/adr/0037-stage-4-complete-integrated-car-driving-and-physics.md`) and forensic report (`docs/reports/Stage4_Car_Driving_Physics_Report.md`).
+
 
 

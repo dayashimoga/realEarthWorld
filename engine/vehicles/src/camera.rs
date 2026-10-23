@@ -10,6 +10,8 @@ pub enum VehicleCameraPerspective {
     Chase,
     /// First-person view mounted on the vehicle hood facing forward.
     Hood,
+    /// First-person interior cockpit perspective from the driver's seat.
+    Cockpit,
     /// Low-slung front bumper perspective.
     Bumper,
 }
@@ -53,11 +55,12 @@ impl VehicleCameraController {
         }
     }
 
-    /// Cycles through camera perspectives (Chase -> Hood -> Bumper -> Chase).
+    /// Cycles through camera perspectives (Chase -> Hood -> Cockpit -> Bumper -> Chase).
     pub fn cycle_perspective(&mut self) {
         self.perspective = match self.perspective {
             VehicleCameraPerspective::Chase => VehicleCameraPerspective::Hood,
-            VehicleCameraPerspective::Hood => VehicleCameraPerspective::Bumper,
+            VehicleCameraPerspective::Hood => VehicleCameraPerspective::Cockpit,
+            VehicleCameraPerspective::Cockpit => VehicleCameraPerspective::Bumper,
             VehicleCameraPerspective::Bumper => VehicleCameraPerspective::Chase,
         };
     }
@@ -67,6 +70,7 @@ impl VehicleCameraController {
         let rot_mat = Mat3::from_quat(vehicle.orientation);
         let car_forward = rot_mat.col(2);
         let car_up = rot_mat.col(1);
+        let car_right = rot_mat.col(0);
 
         let target_yaw = car_forward.x.atan2(car_forward.z);
 
@@ -101,10 +105,17 @@ impl VehicleCameraController {
                 self.current_pitch = pitch.clamp(-0.4, 0.2);
             }
             VehicleCameraPerspective::Hood => {
-                // Mounted 0.5m forward and 0.9m up relative to center
+                // Mounted 0.8m forward and 0.9m up relative to center
                 self.current_camera_pos = vehicle.position + car_forward * 0.8 + car_up * 0.9;
                 self.current_yaw = target_yaw;
                 self.current_pitch = -0.05;
+            }
+            VehicleCameraPerspective::Cockpit => {
+                // Driver eye position in left-hand drive cockpit: -0.38m X, +1.05m Y, +0.15m Z
+                self.current_camera_pos =
+                    vehicle.position + car_right * -0.38 + car_up * 1.05 + car_forward * 0.15;
+                self.current_yaw = target_yaw;
+                self.current_pitch = -0.06;
             }
             VehicleCameraPerspective::Bumper => {
                 // Mounted 1.8m forward and 0.35m up
@@ -119,5 +130,43 @@ impl VehicleCameraController {
             self.current_yaw,
             self.current_pitch,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dynamics::VehicleConfig;
+
+    #[test]
+    fn test_camera_perspective_cycling() {
+        let mut cam = VehicleCameraController::new(VehicleCameraPerspective::Chase);
+        assert_eq!(cam.perspective, VehicleCameraPerspective::Chase);
+
+        cam.cycle_perspective();
+        assert_eq!(cam.perspective, VehicleCameraPerspective::Hood);
+
+        cam.cycle_perspective();
+        assert_eq!(cam.perspective, VehicleCameraPerspective::Cockpit);
+
+        cam.cycle_perspective();
+        assert_eq!(cam.perspective, VehicleCameraPerspective::Bumper);
+
+        cam.cycle_perspective();
+        assert_eq!(cam.perspective, VehicleCameraPerspective::Chase);
+    }
+
+    #[test]
+    fn test_cockpit_camera_positioning() {
+        let mut cam = VehicleCameraController::new(VehicleCameraPerspective::Cockpit);
+        let veh = DynamicVehicle::new(VehicleConfig::default(), Vec3::new(10.0, 5.0, 20.0), 0.0);
+
+        let (pos, yaw, pitch) = cam.update(&veh, 0.016);
+        // Vehicle forward is along +Z, right is +X, up is +Y
+        assert!((pos.x - (10.0 - 0.38)).abs() < 1e-3);
+        assert!((pos.y - (5.0 + 1.05)).abs() < 1e-3);
+        assert!((pos.z - (20.0 + 0.15)).abs() < 1e-3);
+        assert!(yaw.abs() < 1e-3);
+        assert!((pitch - (-0.06)).abs() < 1e-3);
     }
 }

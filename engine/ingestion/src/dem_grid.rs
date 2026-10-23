@@ -47,7 +47,10 @@ impl DemGrid {
         if bytes.len() != expected_bytes {
             return Err(RealEarthError::Ingestion(format!(
                 "DEM byte buffer length mismatch: expected {} bytes ({}x{} f32), got {}",
-                expected_bytes, width, height, bytes.len()
+                expected_bytes,
+                width,
+                height,
+                bytes.len()
             )));
         }
         let mut elevations = Vec::with_capacity(width * height);

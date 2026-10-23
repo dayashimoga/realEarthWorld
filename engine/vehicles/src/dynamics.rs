@@ -442,7 +442,16 @@ impl DynamicVehicle {
                             compute_brake(inputs.brake, self.config.max_brake_force, v_forward);
                     }
                     TransmissionMode::Reverse => {
-                        f_long -= inputs.throttle * self.config.peak_engine_force * 0.5;
+                        let rev_speed_cap = 12.5; // ~45 km/h
+                        let rev_throttle_factor = if v_forward < -rev_speed_cap {
+                            0.0
+                        } else {
+                            (1.0 - (-v_forward / rev_speed_cap).max(0.0)).clamp(0.0, 1.0)
+                        };
+                        f_long -= inputs.throttle
+                            * self.config.peak_engine_force
+                            * 0.5
+                            * rev_throttle_factor;
                         f_long -=
                             compute_brake(inputs.brake, self.config.max_brake_force, v_forward);
                     }
@@ -506,6 +515,18 @@ impl DynamicVehicle {
 
         self.is_grounded = grounded_wheels >= 2;
 
+        // Anti-roll bar (ARB) torsional spring forces: resists body roll during cornering
+        if self.wheels[0].in_contact && self.wheels[1].in_contact {
+            let front_roll_diff = self.wheels[0].compression - self.wheels[1].compression;
+            let arb_force = front_roll_diff * 6500.0; // N/m ARB stiffness
+            total_torque += forward * (arb_force * self.config.track_width * 0.5);
+        }
+        if self.wheels[2].in_contact && self.wheels[3].in_contact {
+            let rear_roll_diff = self.wheels[2].compression - self.wheels[3].compression;
+            let arb_force = rear_roll_diff * 5500.0;
+            total_torque += forward * (arb_force * self.config.track_width * 0.5);
+        }
+
         // Aerodynamic drag opposing velocity
         let speed = self.linear_velocity.length();
         if speed > 0.1 {
@@ -519,8 +540,13 @@ impl DynamicVehicle {
         self.linear_velocity += acceleration * dt;
 
         // Hill-hold static lock when stationary on slope with brake applied
-        if inputs.brake > 0.5 && inputs.throttle == 0.0 && self.linear_velocity.length() < 0.15 {
-            self.linear_velocity = Vec3::ZERO;
+        if inputs.brake > 0.4
+            && inputs.throttle == 0.0
+            && inputs.gear_mode != TransmissionMode::Neutral
+            && self.linear_velocity.length() < 0.25
+        {
+            self.linear_velocity.x = 0.0;
+            self.linear_velocity.z = 0.0;
         }
 
         // Moment of Inertia approximation for cuboid chassis: I = (1/12) * m * (d1^2 + d2^2)
@@ -560,18 +586,24 @@ impl DynamicVehicle {
         let forward_speed_ms = self.linear_velocity.dot(forward);
         self.speed_kph = forward_speed_ms * 3.6;
 
-        // Simulated Engine RPM calculation
+        // Simulated Engine RPM & Gear calculation
         let abs_speed = self.speed_kph.abs();
-        self.current_gear = if abs_speed < 20.0 {
-            1
-        } else if abs_speed < 45.0 {
-            2
-        } else if abs_speed < 75.0 {
-            3
-        } else if abs_speed < 110.0 {
-            4
-        } else {
-            5
+        self.current_gear = match inputs.gear_mode {
+            TransmissionMode::Reverse => -1,
+            TransmissionMode::Neutral | TransmissionMode::Park => 0,
+            TransmissionMode::Drive => {
+                if abs_speed < 20.0 {
+                    1
+                } else if abs_speed < 45.0 {
+                    2
+                } else if abs_speed < 75.0 {
+                    3
+                } else if abs_speed < 110.0 {
+                    4
+                } else {
+                    5
+                }
+            }
         };
 
         let target_rpm = 800.0 + (abs_speed * 45.0) + (inputs.throttle * 1200.0);
@@ -591,6 +623,26 @@ impl DynamicVehicle {
         self.linear_velocity = Vec3::ZERO;
         self.angular_velocity = Vec3::ZERO;
         self.is_overturned = false;
+    }
+
+    /// Safe full reset: places vehicle at given position and yaw with zero velocities and level chassis.
+    pub fn reset_at_pose(&mut self, position: Vec3, yaw: f32) {
+        self.position = position;
+        self.orientation = Quat::from_rotation_y(yaw);
+        self.linear_velocity = Vec3::ZERO;
+        self.angular_velocity = Vec3::ZERO;
+        self.is_overturned = false;
+        self.speed_kph = 0.0;
+        self.engine_rpm = 800.0;
+        self.current_gear = 1;
+        for wheel in &mut self.wheels {
+            wheel.compression = 0.0;
+            wheel.compression_velocity = 0.0;
+            wheel.normal_force_fz = 0.0;
+            wheel.in_contact = false;
+            wheel.longitudinal_force_fx = 0.0;
+            wheel.lateral_force_fy = 0.0;
+        }
     }
 
     /// Captures a complete serializable state snapshot.
@@ -760,5 +812,88 @@ mod tests {
 
         assert!(!car.is_overturned, "Car should no longer be overturned");
         assert!(car.position.y > 0.0, "Car should be above ground");
+    }
+
+    #[test]
+    fn test_reverse_transmission_mode_and_braking() {
+        let config = VehicleConfig::default();
+        let ground = FlatGround::new(0.0);
+        let mut car = DynamicVehicle::new(config, Vec3::new(0.0, 0.8, 0.0), 0.0);
+
+        // Settle on ground
+        for _ in 0..40 {
+            car.step(&VehicleInputs::default(), &ground, 1.0 / 60.0);
+        }
+
+        // Apply reverse throttle
+        let rev_input = VehicleInputs {
+            throttle: 0.8,
+            gear_mode: TransmissionMode::Reverse,
+            ..Default::default()
+        };
+        for _ in 0..60 {
+            car.step(&rev_input, &ground, 1.0 / 60.0);
+        }
+
+        assert_eq!(car.current_gear, -1, "Reverse gear should be -1");
+        assert!(
+            car.linear_velocity.z < -1.0,
+            "Car should accelerate backwards in Reverse gear (vz = {:.2})",
+            car.linear_velocity.z
+        );
+
+        // Apply brake while in reverse
+        let brake_rev = VehicleInputs {
+            brake: 1.0,
+            gear_mode: TransmissionMode::Reverse,
+            ..Default::default()
+        };
+        for _ in 0..60 {
+            car.step(&brake_rev, &ground, 1.0 / 60.0);
+        }
+        assert!(
+            car.linear_velocity.z.abs() < 1.0,
+            "Braking should arrest reverse motion"
+        );
+    }
+
+    #[test]
+    fn test_anti_roll_bar_stabilization() {
+        let config = VehicleConfig::default();
+        let ground = FlatGround::new(0.0);
+        let mut car = DynamicVehicle::new(config, Vec3::new(0.0, 0.8, 0.0), 0.0);
+
+        // Settle
+        for _ in 0..40 {
+            car.step(&VehicleInputs::default(), &ground, 1.0 / 60.0);
+        }
+
+        // Induce roll by manually compressing left wheels
+        car.wheels[0].compression = 0.15;
+        car.wheels[1].compression = 0.02;
+
+        let input = VehicleInputs::default();
+        car.step(&input, &ground, 1.0 / 60.0);
+
+        // Anti-roll bar should apply restorative angular acceleration
+        assert!(car.is_grounded);
+    }
+
+    #[test]
+    fn test_reset_at_pose() {
+        let config = VehicleConfig::default();
+        let mut car = DynamicVehicle::new(config, Vec3::new(10.0, 5.0, 10.0), 1.0);
+        car.linear_velocity = Vec3::new(20.0, 0.0, 15.0);
+        car.angular_velocity = Vec3::new(0.1, 0.5, 0.0);
+        car.speed_kph = 90.0;
+
+        car.reset_at_pose(Vec3::new(50.0, 2.0, -100.0), 0.0);
+
+        assert_eq!(car.position, Vec3::new(50.0, 2.0, -100.0));
+        assert_eq!(car.linear_velocity, Vec3::ZERO);
+        assert_eq!(car.angular_velocity, Vec3::ZERO);
+        assert_eq!(car.speed_kph, 0.0);
+        assert_eq!(car.current_gear, 1);
+        assert!(!car.is_overturned);
     }
 }

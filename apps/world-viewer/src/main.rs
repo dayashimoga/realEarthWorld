@@ -80,7 +80,7 @@ fn print_usage() {
     println!("  --job <id>                              Accept and track specific contract ID");
     println!("  --traffic <N>                           Spawn N autonomous AI traffic vehicles (default: 8 with --drive)");
     println!(
-        "  --vehicle-cam <chase|hood|bumper>       Vehicle camera perspective (default: chase)"
+        "  --vehicle-cam <chase|hood|cockpit|bumper> Vehicle camera perspective (default: chase)"
     );
     println!("  --location <name>                       Preset location (transamerica, salesforce, vidhana, mysore, chennai, charminar, kaveri, palar, pvnr)");
     println!(
@@ -243,6 +243,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let vehicle_cam_perspective = if args.iter().any(|a| a.contains("hood")) {
         VehicleCameraPerspective::Hood
+    } else if args.iter().any(|a| a.contains("cockpit")) {
+        VehicleCameraPerspective::Cockpit
     } else if args.iter().any(|a| a.contains("bumper")) {
         VehicleCameraPerspective::Bumper
     } else {
@@ -553,7 +555,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok((dataset, dem, _)) => (dataset, dem),
             Err(e) => {
                 eprintln!("⚠️ Warning: Failed to load authentic San Francisco data ({:?}), using fallback", e);
-                (create_san_francisco_dataset(), DemGrid::create_san_francisco_coastal_dem(64, 64))
+                (
+                    create_san_francisco_dataset(),
+                    DemGrid::create_san_francisco_coastal_dem(64, 64),
+                )
             }
         };
         if !dir.join("chunks.db").exists() {

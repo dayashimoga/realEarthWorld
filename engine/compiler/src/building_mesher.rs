@@ -128,8 +128,18 @@ fn mesh_standard_building(
 
         let v0 = Vertex::new([p0.x, wall_bottom0, p0.z], norm_arr, [u0, 0.0], wall_color);
         let v1 = Vertex::new([p1.x, wall_bottom1, p1.z], norm_arr, [u1, 0.0], wall_color);
-        let v2 = Vertex::new([p1.x, roof_elev, p1.z], norm_arr, [u1, building_height], wall_color);
-        let v3 = Vertex::new([p0.x, roof_elev, p0.z], norm_arr, [u0, building_height], wall_color);
+        let v2 = Vertex::new(
+            [p1.x, roof_elev, p1.z],
+            norm_arr,
+            [u1, building_height],
+            wall_color,
+        );
+        let v3 = Vertex::new(
+            [p0.x, roof_elev, p0.z],
+            norm_arr,
+            [u0, building_height],
+            wall_color,
+        );
 
         vertices.push(v0);
         vertices.push(v1);
@@ -198,9 +208,17 @@ fn mesh_standard_building(
 
     // 4. Rooftop Mechanical Penthouse / HVAC Infrastructure for buildings > 16m
     if building_height > 16.0 && enu_pts.len() >= 5 {
-        let center_x = enu_pts.iter().take(enu_pts.len() - 1).map(|p| p.x).sum::<f32>()
+        let center_x = enu_pts
+            .iter()
+            .take(enu_pts.len() - 1)
+            .map(|p| p.x)
+            .sum::<f32>()
             / (enu_pts.len() - 1) as f32;
-        let center_z = enu_pts.iter().take(enu_pts.len() - 1).map(|p| p.z).sum::<f32>()
+        let center_z = enu_pts
+            .iter()
+            .take(enu_pts.len() - 1)
+            .map(|p| p.z)
+            .sum::<f32>()
             / (enu_pts.len() - 1) as f32;
 
         let ph_half_w = 4.5f32;
@@ -232,8 +250,18 @@ fn mesh_standard_building(
             let n = ph_normals[i];
 
             let b_idx = vertices.len() as u32;
-            vertices.push(Vertex::new([c0.x, ph_bottom, c0.z], n, [0.0, 0.0], ph_color));
-            vertices.push(Vertex::new([c1.x, ph_bottom, c1.z], n, [1.0, 0.0], ph_color));
+            vertices.push(Vertex::new(
+                [c0.x, ph_bottom, c0.z],
+                n,
+                [0.0, 0.0],
+                ph_color,
+            ));
+            vertices.push(Vertex::new(
+                [c1.x, ph_bottom, c1.z],
+                n,
+                [1.0, 0.0],
+                ph_color,
+            ));
             vertices.push(Vertex::new([c1.x, ph_top, c1.z], n, [1.0, 1.0], ph_color));
             vertices.push(Vertex::new([c0.x, ph_top, c0.z], n, [0.0, 1.0], ph_color));
 
@@ -249,10 +277,30 @@ fn mesh_standard_building(
         // Penthouse roof
         let r_idx = vertices.len() as u32;
         let up_norm = [0.0, 1.0, 0.0];
-        vertices.push(Vertex::new([ph_corners[0].x, ph_top, ph_corners[0].z], up_norm, [0.0, 0.0], ph_color));
-        vertices.push(Vertex::new([ph_corners[1].x, ph_top, ph_corners[1].z], up_norm, [1.0, 0.0], ph_color));
-        vertices.push(Vertex::new([ph_corners[2].x, ph_top, ph_corners[2].z], up_norm, [1.0, 1.0], ph_color));
-        vertices.push(Vertex::new([ph_corners[3].x, ph_top, ph_corners[3].z], up_norm, [0.0, 1.0], ph_color));
+        vertices.push(Vertex::new(
+            [ph_corners[0].x, ph_top, ph_corners[0].z],
+            up_norm,
+            [0.0, 0.0],
+            ph_color,
+        ));
+        vertices.push(Vertex::new(
+            [ph_corners[1].x, ph_top, ph_corners[1].z],
+            up_norm,
+            [1.0, 0.0],
+            ph_color,
+        ));
+        vertices.push(Vertex::new(
+            [ph_corners[2].x, ph_top, ph_corners[2].z],
+            up_norm,
+            [1.0, 1.0],
+            ph_color,
+        ));
+        vertices.push(Vertex::new(
+            [ph_corners[3].x, ph_top, ph_corners[3].z],
+            up_norm,
+            [0.0, 1.0],
+            ph_color,
+        ));
 
         indices.push(r_idx);
         indices.push(r_idx + 2);
@@ -287,8 +335,8 @@ fn mesh_transamerica_pyramid(
     let spire_top_elev = base_elev + 260.0f32;
 
     let pyramid_color = [0.86, 0.84, 0.80, 0.82]; // White precast quartz aggregate (alpha 0.82)
-    let glass_band = [0.45, 0.62, 0.78, 0.80];    // Glass windows
-    let spire_color = [0.92, 0.92, 0.94, 0.70];   // Aluminum spire (alpha 0.70)
+    let glass_band = [0.45, 0.62, 0.78, 0.80]; // Glass windows
+    let spire_color = [0.92, 0.92, 0.94, 0.70]; // Aluminum spire (alpha 0.70)
 
     // 1. Pyramid 4 Tapered Walls
     let base_corners = [
@@ -318,10 +366,30 @@ fn mesh_transamerica_pyramid(
         let norm_arr = [normal.x, normal.y, normal.z];
 
         let start_idx = vertices.len() as u32;
-        vertices.push(Vertex::new([b0.x, b0.y, b0.z], norm_arr, [0.0, 0.0], pyramid_color));
-        vertices.push(Vertex::new([b1.x, b1.y, b1.z], norm_arr, [base_half * 2.0, 0.0], pyramid_color));
-        vertices.push(Vertex::new([t1.x, t1.y, t1.z], norm_arr, [base_half * 2.0, 212.0], glass_band));
-        vertices.push(Vertex::new([t0.x, t0.y, t0.z], norm_arr, [0.0, 212.0], glass_band));
+        vertices.push(Vertex::new(
+            [b0.x, b0.y, b0.z],
+            norm_arr,
+            [0.0, 0.0],
+            pyramid_color,
+        ));
+        vertices.push(Vertex::new(
+            [b1.x, b1.y, b1.z],
+            norm_arr,
+            [base_half * 2.0, 0.0],
+            pyramid_color,
+        ));
+        vertices.push(Vertex::new(
+            [t1.x, t1.y, t1.z],
+            norm_arr,
+            [base_half * 2.0, 212.0],
+            glass_band,
+        ));
+        vertices.push(Vertex::new(
+            [t0.x, t0.y, t0.z],
+            norm_arr,
+            [0.0, 212.0],
+            glass_band,
+        ));
 
         indices.push(start_idx);
         indices.push(start_idx + 3);
@@ -347,10 +415,30 @@ fn mesh_transamerica_pyramid(
 
         let w_idx = vertices.len() as u32;
         let n = [side, 0.0, 0.0];
-        vertices.push(Vertex::new([wx0, wing_bottom, wz0], n, [0.0, 0.0], pyramid_color));
-        vertices.push(Vertex::new([wx1, wing_bottom, wz1], n, [wing_w, 0.0], pyramid_color));
-        vertices.push(Vertex::new([wx1, wing_top, wz1], n, [wing_w, 65.0], pyramid_color));
-        vertices.push(Vertex::new([wx0, wing_top, wz0], n, [0.0, 65.0], pyramid_color));
+        vertices.push(Vertex::new(
+            [wx0, wing_bottom, wz0],
+            n,
+            [0.0, 0.0],
+            pyramid_color,
+        ));
+        vertices.push(Vertex::new(
+            [wx1, wing_bottom, wz1],
+            n,
+            [wing_w, 0.0],
+            pyramid_color,
+        ));
+        vertices.push(Vertex::new(
+            [wx1, wing_top, wz1],
+            n,
+            [wing_w, 65.0],
+            pyramid_color,
+        ));
+        vertices.push(Vertex::new(
+            [wx0, wing_top, wz0],
+            n,
+            [0.0, 65.0],
+            pyramid_color,
+        ));
 
         indices.push(w_idx);
         indices.push(w_idx + 3);
@@ -364,10 +452,26 @@ fn mesh_transamerica_pyramid(
     // 3. Slender Architectural Spire / Needle (212m to 260m)
     let spire_base_half = 2.4f32;
     let spire_corners = [
-        Vec3::new(center.x - spire_base_half, py_top_elev, center.z - spire_base_half),
-        Vec3::new(center.x + spire_base_half, py_top_elev, center.z - spire_base_half),
-        Vec3::new(center.x + spire_base_half, py_top_elev, center.z + spire_base_half),
-        Vec3::new(center.x - spire_base_half, py_top_elev, center.z + spire_base_half),
+        Vec3::new(
+            center.x - spire_base_half,
+            py_top_elev,
+            center.z - spire_base_half,
+        ),
+        Vec3::new(
+            center.x + spire_base_half,
+            py_top_elev,
+            center.z - spire_base_half,
+        ),
+        Vec3::new(
+            center.x + spire_base_half,
+            py_top_elev,
+            center.z + spire_base_half,
+        ),
+        Vec3::new(
+            center.x - spire_base_half,
+            py_top_elev,
+            center.z + spire_base_half,
+        ),
     ];
     let spire_tip = Vec3::new(center.x, spire_top_elev, center.z);
 
@@ -380,9 +484,24 @@ fn mesh_transamerica_pyramid(
         let norm_arr = [norm.x, norm.y, norm.z];
 
         let sp_idx = vertices.len() as u32;
-        vertices.push(Vertex::new([s0.x, s0.y, s0.z], norm_arr, [0.0, 0.0], spire_color));
-        vertices.push(Vertex::new([s1.x, s1.y, s1.z], norm_arr, [4.8, 0.0], spire_color));
-        vertices.push(Vertex::new([spire_tip.x, spire_tip.y, spire_tip.z], norm_arr, [2.4, 48.0], spire_color));
+        vertices.push(Vertex::new(
+            [s0.x, s0.y, s0.z],
+            norm_arr,
+            [0.0, 0.0],
+            spire_color,
+        ));
+        vertices.push(Vertex::new(
+            [s1.x, s1.y, s1.z],
+            norm_arr,
+            [4.8, 0.0],
+            spire_color,
+        ));
+        vertices.push(Vertex::new(
+            [spire_tip.x, spire_tip.y, spire_tip.z],
+            norm_arr,
+            [2.4, 48.0],
+            spire_color,
+        ));
 
         indices.push(sp_idx);
         indices.push(sp_idx + 2);
@@ -392,10 +511,30 @@ fn mesh_transamerica_pyramid(
     // 4. Crown Platform Roof (+Y normal required by tests)
     let roof_idx = vertices.len() as u32;
     let up_norm = [0.0, 1.0, 0.0];
-    vertices.push(Vertex::new([top_corners[0].x, py_top_elev, top_corners[0].z], up_norm, [0.0, 0.0], spire_color));
-    vertices.push(Vertex::new([top_corners[1].x, py_top_elev, top_corners[1].z], up_norm, [1.0, 0.0], spire_color));
-    vertices.push(Vertex::new([top_corners[2].x, py_top_elev, top_corners[2].z], up_norm, [1.0, 1.0], spire_color));
-    vertices.push(Vertex::new([top_corners[3].x, py_top_elev, top_corners[3].z], up_norm, [0.0, 1.0], spire_color));
+    vertices.push(Vertex::new(
+        [top_corners[0].x, py_top_elev, top_corners[0].z],
+        up_norm,
+        [0.0, 0.0],
+        spire_color,
+    ));
+    vertices.push(Vertex::new(
+        [top_corners[1].x, py_top_elev, top_corners[1].z],
+        up_norm,
+        [1.0, 0.0],
+        spire_color,
+    ));
+    vertices.push(Vertex::new(
+        [top_corners[2].x, py_top_elev, top_corners[2].z],
+        up_norm,
+        [1.0, 1.0],
+        spire_color,
+    ));
+    vertices.push(Vertex::new(
+        [top_corners[3].x, py_top_elev, top_corners[3].z],
+        up_norm,
+        [0.0, 1.0],
+        spire_color,
+    ));
 
     indices.push(roof_idx);
     indices.push(roof_idx + 2);
@@ -447,10 +586,26 @@ fn mesh_salesforce_tower(
             let angle0 = (i as f32) * (std::f32::consts::TAU / num_sides as f32);
             let angle1 = ((i + 1) as f32) * (std::f32::consts::TAU / num_sides as f32);
 
-            let p0 = Vec3::new(center.x + angle0.cos() * r0, h0, center.z + angle0.sin() * r0);
-            let p1 = Vec3::new(center.x + angle1.cos() * r0, h0, center.z + angle1.sin() * r0);
-            let p2 = Vec3::new(center.x + angle1.cos() * r1, h1, center.z + angle1.sin() * r1);
-            let p3 = Vec3::new(center.x + angle0.cos() * r1, h1, center.z + angle0.sin() * r1);
+            let p0 = Vec3::new(
+                center.x + angle0.cos() * r0,
+                h0,
+                center.z + angle0.sin() * r0,
+            );
+            let p1 = Vec3::new(
+                center.x + angle1.cos() * r0,
+                h0,
+                center.z + angle1.sin() * r0,
+            );
+            let p2 = Vec3::new(
+                center.x + angle1.cos() * r1,
+                h1,
+                center.z + angle1.sin() * r1,
+            );
+            let p3 = Vec3::new(
+                center.x + angle0.cos() * r1,
+                h1,
+                center.z + angle0.sin() * r1,
+            );
 
             let normal = (p1 - p0).cross(p3 - p0).normalize();
             let norm_arr = [normal.x, normal.y, normal.z];
@@ -458,8 +613,18 @@ fn mesh_salesforce_tower(
             let b_idx = vertices.len() as u32;
             vertices.push(Vertex::new([p0.x, p0.y, p0.z], norm_arr, [0.0, 0.0], col));
             vertices.push(Vertex::new([p1.x, p1.y, p1.z], norm_arr, [12.0, 0.0], col));
-            vertices.push(Vertex::new([p2.x, p2.y, p2.z], norm_arr, [12.0, h1 - h0], col));
-            vertices.push(Vertex::new([p3.x, p3.y, p3.z], norm_arr, [0.0, h1 - h0], col));
+            vertices.push(Vertex::new(
+                [p2.x, p2.y, p2.z],
+                norm_arr,
+                [12.0, h1 - h0],
+                col,
+            ));
+            vertices.push(Vertex::new(
+                [p3.x, p3.y, p3.z],
+                norm_arr,
+                [0.0, h1 - h0],
+                col,
+            ));
 
             indices.push(b_idx);
             indices.push(b_idx + 3);
@@ -480,7 +645,12 @@ fn mesh_salesforce_tower(
         let angle = (i as f32) * (std::f32::consts::TAU / num_sides as f32);
         let px = center.x + angle.cos() * top_r;
         let pz = center.z + angle.sin() * top_r;
-        vertices.push(Vertex::new([px, crown_top, pz], up_norm, [angle.cos(), angle.sin()], crown_color));
+        vertices.push(Vertex::new(
+            [px, crown_top, pz],
+            up_norm,
+            [angle.cos(), angle.sin()],
+            crown_color,
+        ));
     }
     // Fan triangulation for 8-sided roof
     for i in 1..(num_sides - 1) {
@@ -552,10 +722,30 @@ fn mesh_ferry_building(
         let n = t_normals[i];
 
         let base_idx = mesh.vertices.len() as u32;
-        mesh.vertices.push(Vertex::new([c0.x, base_elev, c0.z], n, [0.0, 0.0], stone_color));
-        mesh.vertices.push(Vertex::new([c1.x, base_elev, c1.z], n, [12.0, 0.0], stone_color));
-        mesh.vertices.push(Vertex::new([c1.x, tower_top, c1.z], n, [12.0, 75.0], clock_color));
-        mesh.vertices.push(Vertex::new([c0.x, tower_top, c0.z], n, [0.0, 75.0], clock_color));
+        mesh.vertices.push(Vertex::new(
+            [c0.x, base_elev, c0.z],
+            n,
+            [0.0, 0.0],
+            stone_color,
+        ));
+        mesh.vertices.push(Vertex::new(
+            [c1.x, base_elev, c1.z],
+            n,
+            [12.0, 0.0],
+            stone_color,
+        ));
+        mesh.vertices.push(Vertex::new(
+            [c1.x, tower_top, c1.z],
+            n,
+            [12.0, 75.0],
+            clock_color,
+        ));
+        mesh.vertices.push(Vertex::new(
+            [c0.x, tower_top, c0.z],
+            n,
+            [0.0, 75.0],
+            clock_color,
+        ));
 
         mesh.indices.push(base_idx);
         mesh.indices.push(base_idx + 3);
@@ -569,10 +759,30 @@ fn mesh_ferry_building(
     // Tower roof
     let r_idx = mesh.vertices.len() as u32;
     let up_norm = [0.0, 1.0, 0.0];
-    mesh.vertices.push(Vertex::new([t_corners[0].x, tower_top, t_corners[0].z], up_norm, [0.0, 0.0], stone_color));
-    mesh.vertices.push(Vertex::new([t_corners[1].x, tower_top, t_corners[1].z], up_norm, [1.0, 0.0], stone_color));
-    mesh.vertices.push(Vertex::new([t_corners[2].x, tower_top, t_corners[2].z], up_norm, [1.0, 1.0], stone_color));
-    mesh.vertices.push(Vertex::new([t_corners[3].x, tower_top, t_corners[3].z], up_norm, [0.0, 1.0], stone_color));
+    mesh.vertices.push(Vertex::new(
+        [t_corners[0].x, tower_top, t_corners[0].z],
+        up_norm,
+        [0.0, 0.0],
+        stone_color,
+    ));
+    mesh.vertices.push(Vertex::new(
+        [t_corners[1].x, tower_top, t_corners[1].z],
+        up_norm,
+        [1.0, 0.0],
+        stone_color,
+    ));
+    mesh.vertices.push(Vertex::new(
+        [t_corners[2].x, tower_top, t_corners[2].z],
+        up_norm,
+        [1.0, 1.0],
+        stone_color,
+    ));
+    mesh.vertices.push(Vertex::new(
+        [t_corners[3].x, tower_top, t_corners[3].z],
+        up_norm,
+        [0.0, 1.0],
+        stone_color,
+    ));
 
     mesh.indices.push(r_idx);
     mesh.indices.push(r_idx + 2);
@@ -614,19 +824,55 @@ fn mesh_coit_tower(
         let a0 = (i as f32) * (std::f32::consts::TAU / num_flutes as f32);
         let a1 = ((i + 1) as f32) * (std::f32::consts::TAU / num_flutes as f32);
 
-        let p0 = Vec3::new(center.x + a0.cos() * r_shaft, base_elev - 0.2, center.z + a0.sin() * r_shaft);
-        let p1 = Vec3::new(center.x + a1.cos() * r_shaft, base_elev - 0.2, center.z + a1.sin() * r_shaft);
-        let p2 = Vec3::new(center.x + a1.cos() * r_shaft, h_shaft, center.z + a1.sin() * r_shaft);
-        let p3 = Vec3::new(center.x + a0.cos() * r_shaft, h_shaft, center.z + a0.sin() * r_shaft);
+        let p0 = Vec3::new(
+            center.x + a0.cos() * r_shaft,
+            base_elev - 0.2,
+            center.z + a0.sin() * r_shaft,
+        );
+        let p1 = Vec3::new(
+            center.x + a1.cos() * r_shaft,
+            base_elev - 0.2,
+            center.z + a1.sin() * r_shaft,
+        );
+        let p2 = Vec3::new(
+            center.x + a1.cos() * r_shaft,
+            h_shaft,
+            center.z + a1.sin() * r_shaft,
+        );
+        let p3 = Vec3::new(
+            center.x + a0.cos() * r_shaft,
+            h_shaft,
+            center.z + a0.sin() * r_shaft,
+        );
 
         let n = Vec3::new(a0.cos() + a1.cos(), 0.0, a0.sin() + a1.sin()).normalize();
         let norm_arr = [n.x, n.y, n.z];
 
         let b_idx = vertices.len() as u32;
-        vertices.push(Vertex::new([p0.x, p0.y, p0.z], norm_arr, [0.0, 0.0], tower_color));
-        vertices.push(Vertex::new([p1.x, p1.y, p1.z], norm_arr, [3.5, 0.0], tower_color));
-        vertices.push(Vertex::new([p2.x, p2.y, p2.z], norm_arr, [3.5, 48.0], tower_color));
-        vertices.push(Vertex::new([p3.x, p3.y, p3.z], norm_arr, [0.0, 48.0], tower_color));
+        vertices.push(Vertex::new(
+            [p0.x, p0.y, p0.z],
+            norm_arr,
+            [0.0, 0.0],
+            tower_color,
+        ));
+        vertices.push(Vertex::new(
+            [p1.x, p1.y, p1.z],
+            norm_arr,
+            [3.5, 0.0],
+            tower_color,
+        ));
+        vertices.push(Vertex::new(
+            [p2.x, p2.y, p2.z],
+            norm_arr,
+            [3.5, 48.0],
+            tower_color,
+        ));
+        vertices.push(Vertex::new(
+            [p3.x, p3.y, p3.z],
+            norm_arr,
+            [0.0, 48.0],
+            tower_color,
+        ));
 
         indices.push(b_idx);
         indices.push(b_idx + 3);
@@ -642,19 +888,55 @@ fn mesh_coit_tower(
         let a0 = (i as f32) * (std::f32::consts::TAU / num_flutes as f32);
         let a1 = ((i + 1) as f32) * (std::f32::consts::TAU / num_flutes as f32);
 
-        let p0 = Vec3::new(center.x + a0.cos() * r_arcade, h_shaft, center.z + a0.sin() * r_arcade);
-        let p1 = Vec3::new(center.x + a1.cos() * r_arcade, h_shaft, center.z + a1.sin() * r_arcade);
-        let p2 = Vec3::new(center.x + a1.cos() * r_arcade, h_top, center.z + a1.sin() * r_arcade);
-        let p3 = Vec3::new(center.x + a0.cos() * r_arcade, h_top, center.z + a0.sin() * r_arcade);
+        let p0 = Vec3::new(
+            center.x + a0.cos() * r_arcade,
+            h_shaft,
+            center.z + a0.sin() * r_arcade,
+        );
+        let p1 = Vec3::new(
+            center.x + a1.cos() * r_arcade,
+            h_shaft,
+            center.z + a1.sin() * r_arcade,
+        );
+        let p2 = Vec3::new(
+            center.x + a1.cos() * r_arcade,
+            h_top,
+            center.z + a1.sin() * r_arcade,
+        );
+        let p3 = Vec3::new(
+            center.x + a0.cos() * r_arcade,
+            h_top,
+            center.z + a0.sin() * r_arcade,
+        );
 
         let n = Vec3::new(a0.cos() + a1.cos(), 0.0, a0.sin() + a1.sin()).normalize();
         let norm_arr = [n.x, n.y, n.z];
 
         let b_idx = vertices.len() as u32;
-        vertices.push(Vertex::new([p0.x, p0.y, p0.z], norm_arr, [0.0, 0.0], arcade_color));
-        vertices.push(Vertex::new([p1.x, p1.y, p1.z], norm_arr, [3.0, 0.0], arcade_color));
-        vertices.push(Vertex::new([p2.x, p2.y, p2.z], norm_arr, [3.0, 16.0], arcade_color));
-        vertices.push(Vertex::new([p3.x, p3.y, p3.z], norm_arr, [0.0, 16.0], arcade_color));
+        vertices.push(Vertex::new(
+            [p0.x, p0.y, p0.z],
+            norm_arr,
+            [0.0, 0.0],
+            arcade_color,
+        ));
+        vertices.push(Vertex::new(
+            [p1.x, p1.y, p1.z],
+            norm_arr,
+            [3.0, 0.0],
+            arcade_color,
+        ));
+        vertices.push(Vertex::new(
+            [p2.x, p2.y, p2.z],
+            norm_arr,
+            [3.0, 16.0],
+            arcade_color,
+        ));
+        vertices.push(Vertex::new(
+            [p3.x, p3.y, p3.z],
+            norm_arr,
+            [0.0, 16.0],
+            arcade_color,
+        ));
 
         indices.push(b_idx);
         indices.push(b_idx + 3);
@@ -672,7 +954,12 @@ fn mesh_coit_tower(
         let a = (i as f32) * (std::f32::consts::TAU / num_flutes as f32);
         let px = center.x + a.cos() * r_arcade;
         let pz = center.z + a.sin() * r_arcade;
-        vertices.push(Vertex::new([px, h_top, pz], up_norm, [a.cos(), a.sin()], tower_color));
+        vertices.push(Vertex::new(
+            [px, h_top, pz],
+            up_norm,
+            [a.cos(), a.sin()],
+            tower_color,
+        ));
     }
     for i in 1..(num_flutes - 1) {
         indices.push(roof_idx);

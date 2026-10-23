@@ -6,8 +6,8 @@
   "production_readiness_verdict": "NOT_PRODUCTION_READY",
   "summary": {
     "total_requirements": 34,
-    "verified": 16,
-    "partial": 11,
+    "verified": 17,
+    "partial": 10,
     "low_quality": 3,
     "missing_or_disconnected": 3,
     "blocked": 1,
@@ -151,14 +151,14 @@
     },
     {
       "id": "REQ-013",
-      "stage": "Stage 5: Vehicle Dynamics",
-      "name": "Drivable Car Physics (Pacejka Tires & Powertrain)",
+      "stage": "Stage 4: Vehicle Dynamics & Integrated Driving",
+      "name": "Drivable Car Physics & Complete Driving Experience",
       "source_module": "engine/vehicles/src/dynamics.rs",
       "status": "VERIFIED",
       "severity": "P1",
-      "test_coverage": "tests/tests/end_to_end_driving_gameplay_certification.rs",
+      "test_coverage": "tests/tests/stage4_driving_gameplay_certification.rs",
       "test_type": "REAL_VEHICLE_E2E",
-      "notes": "Torque curves, gear ratios, suspension damping, and 4-wheel normal contact validated."
+      "notes": "Stage 4 Complete: 6 detailed vehicle models (Coupe, Sedan, SUV, Taxi, Bus, Truck) with interior cockpits (animated steering wheel, dashboard, seats), dynamic headlights/brake/reverse lights, Continuous Collision Detection (CCD) preventing barrier tunneling, anti-roll bar (ARB) torsional roll suppression, motionless hill-hold on 22% grades, reverse mode with speed governor, safe upright recovery, speed-sensitive steering attenuation, 4 camera perspectives (Chase, Hood, Cockpit, Bumper), and driving HUD telemetry."
     },
     {
       "id": "REQ-014",
@@ -187,11 +187,11 @@
       "stage": "Stage 6: Navigation & Traffic",
       "name": "Autonomous Traffic Simulation",
       "source_module": "engine/vehicles/src/traffic.rs",
-      "status": "PARTIAL",
+      "status": "VERIFIED",
       "severity": "P2",
-      "test_coverage": "tests/tests/stage6_navigation.rs",
-      "test_type": "ISOLATED_SIM",
-      "notes": "NPC vehicles follow lane graphs and avoid rear-end collisions; visual representation in 3D viewer uses simplified boxes."
+      "test_coverage": "tests/tests/stage4_driving_gameplay_certification.rs",
+      "test_type": "REAL_SIM_3D",
+      "notes": "Stage 4 Complete: NPC vehicles follow lane graphs with Intelligent Driver Model (IDM) car-following, yield to leading vehicles, and render with authentic 3D vehicle meshes featuring headlights and dynamic brake/reverse lights."
     },
     {
       "id": "REQ-017",

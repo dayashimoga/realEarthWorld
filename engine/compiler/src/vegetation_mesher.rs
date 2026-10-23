@@ -87,25 +87,18 @@ pub fn mesh_vegetation(
     let center_z = enu_pts.iter().take(count).map(|p| p.z).sum::<f32>() / count as f32;
 
     // Distribute a grid of authentic 3D trees
-    let trunk_color = [0.38, 0.26, 0.18, 0.40];   // Wood bark (alpha 0.40)
+    let trunk_color = [0.38, 0.26, 0.18, 0.40]; // Wood bark (alpha 0.40)
     let foliage_color = [0.18, 0.52, 0.22, 0.50]; // Leaf canopy (alpha 0.50)
 
     let mut tree_offsets = vec![Vec3::new(center_x, 0.0, center_z)];
     for p in enu_pts.iter().take(count.min(4)) {
-        let mid = Vec3::new(
-            center_x * 0.4 + p.x * 0.6,
-            0.0,
-            center_z * 0.4 + p.z * 0.6,
-        );
+        let mid = Vec3::new(center_x * 0.4 + p.x * 0.6, 0.0, center_z * 0.4 + p.z * 0.6);
         tree_offsets.push(mid);
     }
 
     for tree_pos in tree_offsets {
-        let pt_wgs = converter.enu_to_wgs84(EnuCoord::new(
-            tree_pos.x as f64,
-            tree_pos.z as f64,
-            0.0,
-        ));
+        let pt_wgs =
+            converter.enu_to_wgs84(EnuCoord::new(tree_pos.x as f64, tree_pos.z as f64, 0.0));
         let ground_y = dem.sample_bilinear(&pt_wgs);
 
         let trunk_h = 2.4f32;
@@ -139,10 +132,30 @@ pub fn mesh_vegetation(
             let n = t_normals[f];
 
             let b_idx = vertices.len() as u32;
-            vertices.push(Vertex::new([c0.x, ground_y, c0.z], n, [0.0, 0.0], trunk_color));
-            vertices.push(Vertex::new([c1.x, ground_y, c1.z], n, [1.0, 0.0], trunk_color));
-            vertices.push(Vertex::new([c1.x, canopy_bot, c1.z], n, [1.0, 1.0], trunk_color));
-            vertices.push(Vertex::new([c0.x, canopy_bot, c0.z], n, [0.0, 1.0], trunk_color));
+            vertices.push(Vertex::new(
+                [c0.x, ground_y, c0.z],
+                n,
+                [0.0, 0.0],
+                trunk_color,
+            ));
+            vertices.push(Vertex::new(
+                [c1.x, ground_y, c1.z],
+                n,
+                [1.0, 0.0],
+                trunk_color,
+            ));
+            vertices.push(Vertex::new(
+                [c1.x, canopy_bot, c1.z],
+                n,
+                [1.0, 1.0],
+                trunk_color,
+            ));
+            vertices.push(Vertex::new(
+                [c0.x, canopy_bot, c0.z],
+                n,
+                [0.0, 1.0],
+                trunk_color,
+            ));
 
             indices.push(b_idx);
             indices.push(b_idx + 3);
@@ -160,8 +173,16 @@ pub fn mesh_vegetation(
 
         for s in 0..sides {
             let a = (s as f32) * (std::f32::consts::TAU / sides as f32);
-            canopy_pts_bot.push(Vec3::new(tx + a.cos() * canopy_r * 0.7, canopy_bot, tz + a.sin() * canopy_r * 0.7));
-            canopy_pts_mid.push(Vec3::new(tx + a.cos() * canopy_r, canopy_mid, tz + a.sin() * canopy_r));
+            canopy_pts_bot.push(Vec3::new(
+                tx + a.cos() * canopy_r * 0.7,
+                canopy_bot,
+                tz + a.sin() * canopy_r * 0.7,
+            ));
+            canopy_pts_mid.push(Vec3::new(
+                tx + a.cos() * canopy_r,
+                canopy_mid,
+                tz + a.sin() * canopy_r,
+            ));
         }
         let apex = Vec3::new(tx, canopy_top, tz);
 
@@ -177,10 +198,30 @@ pub fn mesh_vegetation(
             let norm_arr = [norm.x, norm.y, norm.z];
 
             let b_idx = vertices.len() as u32;
-            vertices.push(Vertex::new([p0.x, p0.y, p0.z], norm_arr, [0.0, 0.0], foliage_color));
-            vertices.push(Vertex::new([p1.x, p1.y, p1.z], norm_arr, [1.0, 0.0], foliage_color));
-            vertices.push(Vertex::new([p2.x, p2.y, p2.z], norm_arr, [1.0, 1.0], foliage_color));
-            vertices.push(Vertex::new([p3.x, p3.y, p3.z], norm_arr, [0.0, 1.0], foliage_color));
+            vertices.push(Vertex::new(
+                [p0.x, p0.y, p0.z],
+                norm_arr,
+                [0.0, 0.0],
+                foliage_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, p1.y, p1.z],
+                norm_arr,
+                [1.0, 0.0],
+                foliage_color,
+            ));
+            vertices.push(Vertex::new(
+                [p2.x, p2.y, p2.z],
+                norm_arr,
+                [1.0, 1.0],
+                foliage_color,
+            ));
+            vertices.push(Vertex::new(
+                [p3.x, p3.y, p3.z],
+                norm_arr,
+                [0.0, 1.0],
+                foliage_color,
+            ));
 
             indices.push(b_idx);
             indices.push(b_idx + 3);
@@ -201,9 +242,24 @@ pub fn mesh_vegetation(
             let norm_arr = [norm.x, norm.y, norm.z];
 
             let b_idx = vertices.len() as u32;
-            vertices.push(Vertex::new([p0.x, p0.y, p0.z], norm_arr, [0.0, 0.0], foliage_color));
-            vertices.push(Vertex::new([p1.x, p1.y, p1.z], norm_arr, [1.0, 0.0], foliage_color));
-            vertices.push(Vertex::new([apex.x, apex.y, apex.z], norm_arr, [0.5, 1.0], foliage_color));
+            vertices.push(Vertex::new(
+                [p0.x, p0.y, p0.z],
+                norm_arr,
+                [0.0, 0.0],
+                foliage_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, p1.y, p1.z],
+                norm_arr,
+                [1.0, 0.0],
+                foliage_color,
+            ));
+            vertices.push(Vertex::new(
+                [apex.x, apex.y, apex.z],
+                norm_arr,
+                [0.5, 1.0],
+                foliage_color,
+            ));
 
             indices.push(b_idx);
             indices.push(b_idx + 2);

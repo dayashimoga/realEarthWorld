@@ -21,7 +21,6 @@ pub fn mesh_terrain(
     let delta_lat = (bounds.max_lat - bounds.min_lat) / (res - 1) as f64;
     let delta_lon = (bounds.max_lon - bounds.min_lon) / (res - 1) as f64;
 
-
     for y in 0..res {
         let lat = bounds.max_lat - (y as f64) * delta_lat;
         let v = y as f32 / (res - 1) as f32;

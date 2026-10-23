@@ -3,6 +3,7 @@
 use crate::ground::GroundQuery;
 use glam::Vec3;
 use rapier3d::prelude::*;
+use std::collections::HashMap;
 
 /// Spatial collision filtering groups.
 pub const GROUP_VEHICLE: Group = Group::GROUP_1;
@@ -25,6 +26,7 @@ pub struct PhysicsWorld {
     pub multibody_joint_set: MultibodyJointSet,
     pub ccd_solver: CCDSolver,
     pub query_pipeline: QueryPipeline,
+    pub chunk_colliders: HashMap<String, Vec<ColliderHandle>>,
 }
 
 impl Default for PhysicsWorld {
@@ -48,6 +50,7 @@ impl PhysicsWorld {
             multibody_joint_set: MultibodyJointSet::new(),
             ccd_solver: CCDSolver::new(),
             query_pipeline: QueryPipeline::new(),
+            chunk_colliders: HashMap::new(),
         }
     }
 
@@ -123,6 +126,42 @@ impl PhysicsWorld {
         handle
     }
 
+    /// Spawns a static obstacle collider (guardrails, barriers, street furniture) with obstacle filtering.
+    pub fn spawn_obstacle_collider(&mut self, center: Vec3, half_extents: Vec3) -> ColliderHandle {
+        let interaction = InteractionGroups::new(GROUP_OBSTACLE, GROUP_VEHICLE);
+        let collider = ColliderBuilder::cuboid(half_extents.x, half_extents.y, half_extents.z)
+            .translation(vector![center.x, center.y, center.z])
+            .collision_groups(interaction)
+            .friction(0.8)
+            .build();
+        let handle = self.collider_set.insert(collider);
+        self.query_pipeline.update(&self.collider_set);
+        handle
+    }
+
+    /// Registers a collider handle associated with a streaming chunk.
+    pub fn register_chunk_collider(&mut self, chunk_id: &str, handle: ColliderHandle) {
+        self.chunk_colliders
+            .entry(chunk_id.to_string())
+            .or_default()
+            .push(handle);
+    }
+
+    /// Safely unregisters all collider handles belonging to a despawned or unloaded chunk.
+    pub fn remove_chunk_colliders(&mut self, chunk_id: &str) {
+        if let Some(handles) = self.chunk_colliders.remove(chunk_id) {
+            for handle in handles {
+                self.collider_set.remove(
+                    handle,
+                    &mut self.island_manager,
+                    &mut self.rigid_body_set,
+                    false,
+                );
+            }
+            self.query_pipeline.update(&self.collider_set);
+        }
+    }
+
     /// Spawns a dynamic vehicle body with a cuboid collider and spatial filtering.
     pub fn spawn_vehicle_body(
         &mut self,
@@ -135,6 +174,7 @@ impl PhysicsWorld {
         let rigid_body = RigidBodyBuilder::dynamic()
             .translation(vector![x, y, z])
             .additional_mass(mass_kg)
+            .ccd_enabled(true)
             .build();
         let body_handle = self.rigid_body_set.insert(rigid_body);
 
@@ -280,5 +320,57 @@ mod tests {
             "Vehicle should not penetrate building (expected z < 8.0, got z = {})",
             final_pos.z
         );
+    }
+
+    #[test]
+    fn test_physics_obstacle_guardrail_collision_and_ccd() {
+        let mut physics = PhysicsWorld::new();
+        physics.spawn_ground(0.0);
+
+        // Thin guardrail barrier at z = 20.0m with half-width 5.0, half-height 0.6, half-thickness 0.1m
+        let guardrail =
+            physics.spawn_obstacle_collider(Vec3::new(0.0, 0.6, 20.0), Vec3::new(5.0, 0.6, 0.1));
+        assert!(physics.collider_set.contains(guardrail));
+
+        // High-speed vehicle: 40 m/s (~144 km/h) heading directly at the guardrail
+        let (body, _) = physics.spawn_vehicle_body(0.0, 0.8, 0.0, [0.9, 0.5, 2.0], 1450.0);
+        physics.rigid_body_set[body].set_linvel(vector![0.0, 0.0, 40.0], true);
+
+        // Simulate 40 ticks (~0.66s)
+        for _ in 0..40 {
+            physics.step(1.0 / 60.0);
+        }
+
+        let final_pos = physics.rigid_body_set[body].translation();
+        // Guardrail is at z = 20.0. With vehicle half-length = 2.0, vehicle center must stay < 20.0 (no tunneling)
+        assert!(
+            final_pos.z < 20.0,
+            "High-speed vehicle must not tunnel through thin guardrail with CCD enabled: z={}",
+            final_pos.z
+        );
+    }
+
+    #[test]
+    fn test_physics_chunk_collider_pinning_lifecycle() {
+        let mut physics = PhysicsWorld::new();
+        let chunk_id = "sf_chunk_37_122";
+
+        let c1 =
+            physics.spawn_building_collider(Vec3::new(10.0, 5.0, 10.0), Vec3::new(2.0, 5.0, 2.0));
+        let c2 =
+            physics.spawn_obstacle_collider(Vec3::new(15.0, 1.0, 15.0), Vec3::new(1.0, 1.0, 1.0));
+
+        physics.register_chunk_collider(chunk_id, c1);
+        physics.register_chunk_collider(chunk_id, c2);
+
+        assert_eq!(physics.chunk_colliders.get(chunk_id).unwrap().len(), 2);
+        assert!(physics.collider_set.contains(c1));
+        assert!(physics.collider_set.contains(c2));
+
+        // Unregister when chunk is unloaded
+        physics.remove_chunk_colliders(chunk_id);
+        assert!(!physics.chunk_colliders.contains_key(chunk_id));
+        assert!(!physics.collider_set.contains(c1));
+        assert!(!physics.collider_set.contains(c2));
     }
 }

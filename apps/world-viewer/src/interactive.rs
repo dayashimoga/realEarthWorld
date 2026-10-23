@@ -42,7 +42,7 @@ use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
 use realearth_vehicles::{
-    DynamicVehicle, GroundQuery, TrafficSimulation, VehicleCameraController,
+    DynamicVehicle, GroundQuery, TrafficSimulation, TransmissionMode, VehicleCameraController,
     VehicleCameraPerspective, VehicleConfig, VehicleInputs,
 };
 
@@ -551,7 +551,10 @@ impl InteractiveViewerApp {
                 Ok((dataset, dem, _)) => (dataset, dem),
                 Err(e) => {
                     eprintln!("⚠️ Warning: Failed to load authentic San Francisco data ({:?}), using fallback", e);
-                    (create_san_francisco_dataset(), DemGrid::create_san_francisco_coastal_dem(64, 64))
+                    (
+                        create_san_francisco_dataset(),
+                        DemGrid::create_san_francisco_coastal_dem(64, 64),
+                    )
                 }
             };
             if !dir.join("chunks.db").exists() {
@@ -1076,20 +1079,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.status_notification = Some((label.to_string(), Instant::now()));
                         }
 
-                        // Cycle Vehicle Camera Perspective (Chase -> Hood -> Bumper)
+                        // Cycle Vehicle Camera Perspective (Chase -> Hood -> Cockpit -> Bumper)
                         KeyCode::KeyC => {
                             if self.config.is_drive {
-                                self.vehicle_cam.perspective = match self.vehicle_cam.perspective {
-                                    VehicleCameraPerspective::Chase => {
-                                        VehicleCameraPerspective::Hood
-                                    }
-                                    VehicleCameraPerspective::Hood => {
-                                        VehicleCameraPerspective::Bumper
-                                    }
-                                    VehicleCameraPerspective::Bumper => {
-                                        VehicleCameraPerspective::Chase
-                                    }
-                                };
+                                self.vehicle_cam.cycle_perspective();
                                 let label =
                                     format!("Vehicle Camera: {:?}", self.vehicle_cam.perspective);
                                 println!("📷 {}", label);
@@ -1114,13 +1107,26 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.status_notification = Some((label, Instant::now()));
                         }
 
-                        // Cycle Geographic Regions
+                        // Safe Vehicle Reset on Road (Drive mode) or Cycle Geographic Regions (Fly mode)
                         KeyCode::KeyR => {
-                            self.region_cycle_idx =
-                                (self.region_cycle_idx + 1) % self.region_cycle.len();
-                            let next_reg = self.region_cycle[self.region_cycle_idx];
-                            self.config.region_id = next_reg.to_string();
-                            let _ = self.load_region(next_reg);
+                            if self.config.is_drive {
+                                let ground_y = if let Some(ref gq) = self.ground_query {
+                                    gq.elevation(self.vehicle.position.x, self.vehicle.position.z)
+                                } else {
+                                    0.0
+                                };
+                                self.vehicle.recover_on_surface(ground_y);
+                                let label =
+                                    "🏎️ Vehicle Safely Reset Upright on Road Surface".to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.region_cycle_idx =
+                                    (self.region_cycle_idx + 1) % self.region_cycle.len();
+                                let next_reg = self.region_cycle[self.region_cycle_idx];
+                                self.config.region_id = next_reg.to_string();
+                                let _ = self.load_region(next_reg);
+                            }
                         }
 
                         // Cycle Garage / Vehicle Mode with authentic physics presets
@@ -1284,57 +1290,128 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.capture_screenshot();
                         }
 
-                        // Instant Landmark Bookmarks (1-9)
-                        KeyCode::Digit1 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::SAN_FRANCISCO_TRANSAMERICA);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::SAN_FRANCISCO_TRANSAMERICA.name),
-                                Instant::now(),
-                            ));
+                        // Vehicle Selection (Drive Mode) or Instant Landmark Bookmarks (Fly Mode)
+                        KeyCode::Digit1 | KeyCode::Numpad1 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::Sedan;
+                                self.vehicle.config = VehicleConfig::sedan();
+                                let label =
+                                    "🚗 Vehicle Selected: Sedan (1450 kg, Comfort Suspension)"
+                                        .to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::SAN_FRANCISCO_TRANSAMERICA);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::SAN_FRANCISCO_TRANSAMERICA.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
-                        KeyCode::Digit2 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::SAN_FRANCISCO_SALESFORCE.name),
-                                Instant::now(),
-                            ));
+                        KeyCode::Digit2 | KeyCode::Numpad2 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
+                                self.vehicle.config = VehicleConfig::sports_coupe();
+                                let label = "🏎️ Vehicle Selected: Sports Coupe (1250 kg, Stiff ARB & Spoiler)".to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::SAN_FRANCISCO_SALESFORCE.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
-                        KeyCode::Digit3 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
-                            self.status_notification = Some((
-                                format!(
-                                    "📍 Jump to {}",
-                                    Landmark::SAN_FRANCISCO_FERRY_BUILDING.name
-                                ),
-                                Instant::now(),
-                            ));
+                        KeyCode::Digit3 | KeyCode::Numpad3 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::Suv;
+                                self.vehicle.config = VehicleConfig::suv();
+                                let label = "🚙 Vehicle Selected: SUV (1950 kg, High Clearance & Roof Racks)".to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::SAN_FRANCISCO_FERRY_BUILDING.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
-                        KeyCode::Digit4 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::SAN_FRANCISCO_COIT_TOWER.name),
-                                Instant::now(),
-                            ));
+                        KeyCode::Digit4 | KeyCode::Numpad4 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::Taxi;
+                                self.vehicle.config = VehicleConfig::taxi();
+                                let label =
+                                    "🚕 Vehicle Selected: Taxi (1400 kg, Illuminated Rooftop Sign)"
+                                        .to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::SAN_FRANCISCO_COIT_TOWER.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
-                        KeyCode::Digit5 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::SAN_FRANCISCO_BAY_BRIDGE.name),
-                                Instant::now(),
-                            ));
+                        KeyCode::Digit5 | KeyCode::Numpad5 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::TransitBus;
+                                self.vehicle.config = VehicleConfig::transit_bus();
+                                let label =
+                                    "🚌 Vehicle Selected: Transit Bus (9500 kg, High Capacity)"
+                                        .to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::SAN_FRANCISCO_BAY_BRIDGE.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
-                        KeyCode::Digit6 => {
-                            self.camera_ctrl
-                                .jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
-                            self.status_notification = Some((
-                                format!("📍 Jump to {}", Landmark::BENGALURU_VIDHANA_SOUDHA.name),
-                                Instant::now(),
-                            ));
+                        KeyCode::Digit6 | KeyCode::Numpad6 => {
+                            if self.config.is_drive {
+                                self.vehicle_visual_type = VehicleVisualType::HeavyTruck;
+                                self.vehicle.config = VehicleConfig::heavy_truck();
+                                let label =
+                                    "🚛 Vehicle Selected: Heavy Truck (14000 kg, Freight Hauler)"
+                                        .to_string();
+                                println!("{}", label);
+                                self.status_notification = Some((label, Instant::now()));
+                            } else {
+                                self.camera_ctrl
+                                    .jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
+                                self.status_notification = Some((
+                                    format!(
+                                        "📍 Jump to {}",
+                                        Landmark::BENGALURU_VIDHANA_SOUDHA.name
+                                    ),
+                                    Instant::now(),
+                                ));
+                            }
                         }
                         KeyCode::Digit7 => {
                             self.camera_ctrl.jump_to(&Landmark::MYSURU_PALACE);
@@ -1427,24 +1504,55 @@ impl ApplicationHandler for InteractiveViewerApp {
                 let velocity = if self.config.is_drive {
                     // Update vehicle dynamics from inputs
                     let mut inputs = VehicleInputs::default();
-                    if self.pressed_keys.contains(&KeyCode::KeyW)
-                        || self.pressed_keys.contains(&KeyCode::ArrowUp)
-                    {
-                        inputs.throttle = 1.0;
+
+                    let rot = glam::Mat3::from_quat(self.vehicle.orientation);
+                    let forward = rot.col(2);
+                    let forward_speed = self.vehicle.linear_velocity.dot(forward);
+
+                    let is_forward_key = self.pressed_keys.contains(&KeyCode::KeyW)
+                        || self.pressed_keys.contains(&KeyCode::ArrowUp);
+                    let is_reverse_or_brake_key = self.pressed_keys.contains(&KeyCode::KeyS)
+                        || self.pressed_keys.contains(&KeyCode::ArrowDown);
+
+                    // Automatic transmission and pedal arbitration:
+                    if is_forward_key {
+                        if forward_speed < -0.3 {
+                            // Moving backward: service brake stops vehicle
+                            inputs.brake = 0.95;
+                            inputs.gear_mode = TransmissionMode::Reverse;
+                        } else {
+                            // Moving forward or stationary: accelerate forward
+                            inputs.throttle = 1.0;
+                            inputs.gear_mode = TransmissionMode::Drive;
+                        }
+                    } else if is_reverse_or_brake_key {
+                        if forward_speed > 0.35 {
+                            // Moving forward: service brake slows vehicle
+                            inputs.brake = 0.95;
+                            inputs.gear_mode = TransmissionMode::Drive;
+                        } else {
+                            // Stopped or moving backwards: accelerate backwards in Reverse
+                            inputs.throttle = 0.85;
+                            inputs.gear_mode = TransmissionMode::Reverse;
+                        }
                     }
-                    if is_braking {
-                        inputs.brake = 0.8;
+
+                    // Speed-sensitive steering response
+                    let steer_left = self.pressed_keys.contains(&KeyCode::KeyA)
+                        || self.pressed_keys.contains(&KeyCode::ArrowLeft);
+                    let steer_right = self.pressed_keys.contains(&KeyCode::KeyD)
+                        || self.pressed_keys.contains(&KeyCode::ArrowRight);
+
+                    let speed_kph = self.vehicle.speed_kph.abs();
+                    let speed_factor = (1.0 - (speed_kph / 120.0).min(0.60)).clamp(0.40, 1.0);
+                    if steer_left {
+                        inputs.steer = -0.65 * speed_factor;
+                    } else if steer_right {
+                        inputs.steer = 0.65 * speed_factor;
+                    } else {
+                        inputs.steer = 0.0;
                     }
-                    if self.pressed_keys.contains(&KeyCode::KeyA)
-                        || self.pressed_keys.contains(&KeyCode::ArrowLeft)
-                    {
-                        inputs.steer = -0.55;
-                    }
-                    if self.pressed_keys.contains(&KeyCode::KeyD)
-                        || self.pressed_keys.contains(&KeyCode::ArrowRight)
-                    {
-                        inputs.steer = 0.55;
-                    }
+
                     if self.pressed_keys.contains(&KeyCode::Space) {
                         inputs.handbrake = true;
                     }
@@ -1551,10 +1659,12 @@ impl ApplicationHandler for InteractiveViewerApp {
                     let effective_move = move_speed * speed_mult;
 
                     if self.pressed_keys.contains(&KeyCode::KeyW) {
-                        self.camera_ctrl.move_forward(effective_move, Some(&res.dem));
+                        self.camera_ctrl
+                            .move_forward(effective_move, Some(&res.dem));
                     }
                     if self.pressed_keys.contains(&KeyCode::KeyS) {
-                        self.camera_ctrl.move_forward(-effective_move, Some(&res.dem));
+                        self.camera_ctrl
+                            .move_forward(-effective_move, Some(&res.dem));
                     }
                     if self.pressed_keys.contains(&KeyCode::KeyA) {
                         self.camera_ctrl.strafe(-effective_move, Some(&res.dem));
@@ -1623,6 +1733,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                 // 7. Render 3D Vehicles (Player Car and AI Traffic)
                 let mut fleet_mesh = realearth_compiler::mesh::ChunkMesh::default();
                 if self.config.is_drive {
+                    let rot_mat = glam::Mat3::from_quat(self.vehicle.orientation);
+                    let forward_vec = rot_mat.col(2);
+                    let is_in_reverse = self.vehicle.current_gear == -1
+                        || self.vehicle.linear_velocity.dot(forward_vec) < -0.05;
+
                     let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                         position: self.vehicle.position,
                         orientation: self.vehicle.orientation,
@@ -1638,6 +1753,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                         wheel_steer_angle: self.vehicle.wheels[0].steer_angle,
                         headlights_on: true,
                         brake_lights_on: is_braking,
+                        reverse_lights_on: is_in_reverse,
                     });
                     fleet_mesh.append(&player_mesh);
                 }
@@ -1652,18 +1768,22 @@ impl ApplicationHandler for InteractiveViewerApp {
                 ];
                 for (idx, agent) in self.traffic_sim.agents.iter().enumerate() {
                     let t_color = traffic_colors[idx % traffic_colors.len()];
+                    let t_type = match idx % 5 {
+                        0 => VehicleVisualType::Taxi,
+                        1 => VehicleVisualType::Sedan,
+                        2 => VehicleVisualType::Suv,
+                        3 => VehicleVisualType::SportsCoupe,
+                        _ => VehicleVisualType::Sedan,
+                    };
                     let t_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                         position: agent.position,
                         orientation: glam::Quat::from_rotation_y(agent.yaw),
                         color: t_color,
-                        vehicle_type: if idx % 4 == 0 {
-                            VehicleVisualType::Taxi
-                        } else {
-                            VehicleVisualType::Sedan
-                        },
+                        vehicle_type: t_type,
                         wheel_steer_angle: 0.0,
                         headlights_on: true,
-                        brake_lights_on: false,
+                        brake_lights_on: agent.speed_ms < 1.0,
+                        reverse_lights_on: false,
                     });
                     fleet_mesh.append(&t_mesh);
                 }
@@ -1760,15 +1880,29 @@ impl ApplicationHandler for InteractiveViewerApp {
 
                     // Vehicle Cockpit & Speedometer Panel (when in Drive mode)
                     if self.config.is_drive {
-                        let panel_y = height_f - 150.0;
-                        hud.add_panel(16.0, panel_y, 400.0, 130.0, [1.0, 0.4, 0.1, 1.0]);
+                        let panel_y = height_f - 155.0;
+                        hud.add_panel(16.0, panel_y, 450.0, 138.0, [1.0, 0.4, 0.1, 1.0]);
+
+                        let gear_str = match self.vehicle.current_gear {
+                            -1 => "R",
+                            0 => "N",
+                            1 => "D1",
+                            2 => "D2",
+                            3 => "D3",
+                            4 => "D4",
+                            5 => "D5",
+                            _ => "D",
+                        };
+                        let speed_mps = self.vehicle.speed_kph.abs() * (1000.0 / 3600.0);
+                        let steer_deg = self.vehicle.wheels[0].steer_angle.to_degrees();
+
                         hud.add_text(
                             26.0,
                             panel_y + 12.0,
-                            1.4,
+                            1.35,
                             &format!(
-                                "SPEED: {:>5.1} KM/H  |  GEAR: {}",
-                                self.vehicle.speed_kph, self.vehicle.current_gear
+                                "SPEED: {:>5.1} KM/H ({:>4.1} M/S) | GEAR: {:<2} | STEER: {:>+3.0}°",
+                                self.vehicle.speed_kph, speed_mps, gear_str, steer_deg
                             ),
                             [1.0, 0.9, 0.2, 1.0],
                         );
@@ -1777,9 +1911,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                         hud.add_bar(
                             26.0,
                             panel_y + 36.0,
-                            360.0,
+                            410.0,
                             12.0,
-                            self.vehicle.speed_kph / 180.0,
+                            (self.vehicle.speed_kph.abs() / 180.0).clamp(0.0, 1.0),
                             [0.95, 0.35, 0.10, 1.0],
                             [0.15, 0.18, 0.22, 1.0],
                         );
@@ -1790,17 +1924,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                             panel_y + 58.0,
                             1.1,
                             &format!(
-                                "ENGINE: {:.0} RPM  |  Cam: {:?}",
-                                self.vehicle.engine_rpm, self.vehicle_cam.perspective
+                                "ENGINE: {:.0} RPM | Cam: {:?} | Model: {:?}",
+                                self.vehicle.engine_rpm,
+                                self.vehicle_cam.perspective,
+                                self.vehicle_visual_type
                             ),
                             [0.7, 0.85, 1.0, 1.0],
                         );
                         hud.add_bar(
                             26.0,
                             panel_y + 74.0,
-                            360.0,
+                            410.0,
                             8.0,
-                            self.vehicle.engine_rpm / 7500.0,
+                            (self.vehicle.engine_rpm / 7500.0).clamp(0.0, 1.0),
                             [0.10, 0.85, 0.70, 1.0],
                             [0.15, 0.18, 0.22, 1.0],
                         );
@@ -1818,7 +1954,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 self.vehicle.wheels[3].compression,
                                 self.traffic_sim.agents.len()
                             ),
-                            [0.8, 0.8, 0.8, 0.9],
+                            [0.85, 0.85, 0.88, 0.95],
+                        );
+
+                        hud.add_text(
+                            26.0,
+                            panel_y + 110.0,
+                            0.85,
+                            "Controls: [W/S] Throttle/Brake/Rev | [A/D] Steer | [1-6] Vehicles | [R] Reset | [C] Cam",
+                            [0.65, 0.75, 0.85, 0.85],
                         );
                     }
 

@@ -25,6 +25,7 @@ pub use multimodal::{
 pub use physics::{
     PhysicsWorld, GROUP_BUILDING, GROUP_OBSTACLE, GROUP_ROAD, GROUP_TERRAIN, GROUP_VEHICLE,
 };
+pub use rapier3d;
 pub use traffic::{IdmConfig, TrafficAgent, TrafficSimulation};
 pub use vehicle_agent::PurePursuitController;
 
