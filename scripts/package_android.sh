@@ -56,7 +56,14 @@ if ([ -n "${ANDROID_HOME:-}" ] || [ -n "${ANDROID_SDK_ROOT:-}" ]) && [ -n "$GRAD
     (cd "$ROOT_DIR/android" && $GRADLE_CMD assembleRelease bundleRelease)
 
     APK_SRC="$ROOT_DIR/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    if [ ! -f "$APK_SRC" ] && [ -f "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" ]; then
+        APK_SRC="$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk"
+    fi
+
     AAB_SRC="$ROOT_DIR/android/app/build/outputs/bundle/release/app-release.aab"
+    if [ ! -f "$AAB_SRC" ] && [ -f "$ROOT_DIR/android/app/build/outputs/bundle/release/app-release-unsigned.aab" ]; then
+        AAB_SRC="$ROOT_DIR/android/app/build/outputs/bundle/release/app-release-unsigned.aab"
+    fi
 
     if [ -f "$APK_SRC" ]; then
         cp "$APK_SRC" "$TARGET_DIR/realearth-arm64.apk"

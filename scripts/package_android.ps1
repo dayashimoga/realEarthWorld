@@ -51,6 +51,16 @@ if ($HasAndroidHome -and $GradleCmd) {
         Pop-Location
     }
 
+    $ApkBuilt = "android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    if (-not (Test-Path $ApkBuilt) -and (Test-Path "android/app/build/outputs/apk/release/app-release.apk")) {
+        $ApkBuilt = "android/app/build/outputs/apk/release/app-release.apk"
+    }
+
+    $AabBuilt = "android/app/build/outputs/bundle/release/app-release.aab"
+    if (-not (Test-Path $AabBuilt) -and (Test-Path "android/app/build/outputs/bundle/release/app-release-unsigned.aab")) {
+        $AabBuilt = "android/app/build/outputs/bundle/release/app-release-unsigned.aab"
+    }
+
     if (Test-Path $ApkBuilt) {
         $DestApk = "$TargetDir/realearth-arm64.apk"
         Copy-Item $ApkBuilt -Destination $DestApk -Force
