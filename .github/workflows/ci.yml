@@ -73,6 +73,11 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
+      - name: Install System Graphics & Audio Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-tools libasound2-dev libudev-dev
+
       - name: Run Full Workspace Unit & Integration Tests
         run: cargo test --workspace --verbose
 

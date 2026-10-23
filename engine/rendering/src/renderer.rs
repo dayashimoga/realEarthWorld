@@ -76,22 +76,31 @@ impl RealEarthRenderer {
             ..Default::default()
         });
 
-        let adapter = instance
+        let adapter = match instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: surface,
                 force_fallback_adapter: false,
             })
             .await
-            .unwrap_or_else(|| {
-                // Fallback to secondary/software adapter
-                pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        {
+            Some(a) => a,
+            None => match instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
                     power_preference: wgpu::PowerPreference::LowPower,
                     compatible_surface: surface,
                     force_fallback_adapter: true,
-                }))
-                .expect("Failed to acquire any suitable wgpu graphics adapter")
-            });
+                })
+                .await
+            {
+                Some(a) => a,
+                None => {
+                    return Err(RealEarthError::Geospatial(
+                        "Failed to acquire any suitable wgpu graphics adapter".to_string(),
+                    ));
+                }
+            },
+        };
 
         let (device, queue) = adapter
             .request_device(
