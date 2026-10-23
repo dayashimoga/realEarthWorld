@@ -5,7 +5,7 @@ use crate::chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUN
 use crate::database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 use crate::mesh::ChunkMesh;
 use crate::packager::write_chunk_file;
-use crate::road_mesher::mesh_road;
+use crate::road_mesher::{mesh_road, mesh_road_infrastructure};
 use crate::terrain_mesher::mesh_terrain;
 use crate::vegetation_mesher::mesh_vegetation;
 use crate::water_mesher::mesh_water;
@@ -266,6 +266,8 @@ pub fn compile_world_package(
                 if intersects {
                     let m = mesh_road(r, &chunk_converter, dem);
                     road_mesh.append(&m);
+                    let infra = mesh_road_infrastructure(r, &chunk_converter, dem);
+                    road_mesh.append(&infra);
                 }
             }
 

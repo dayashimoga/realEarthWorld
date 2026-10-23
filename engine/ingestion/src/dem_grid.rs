@@ -51,9 +51,8 @@ impl DemGrid {
             )));
         }
         let mut elevations = Vec::with_capacity(width * height);
-        for chunk in bytes.chunks_exact(4) {
-            let val = f32::from_le_bytes(chunk.try_into().unwrap());
-            elevations.push(val);
+        for chunk in bytes.as_chunks::<4>().0 {
+            elevations.push(f32::from_le_bytes(*chunk));
         }
         Self::new(bounds, width, height, elevations)
     }

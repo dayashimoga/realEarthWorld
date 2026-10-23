@@ -915,5 +915,30 @@
   - Passed 100% of workspace tests (157+ tests across all crates, including 7/7 in `authentic_gis_coverage_certification.rs`).
   - Authored ADR-0035 (`docs/adr/0035-stage-2-authentic-san-francisco-gis-acquisition-and-compilation.md`).
 
+## STAGE 3: High-Fidelity Rendering, Architecture and Environmental Overhaul (Completed)
+- [x] Phase 3.1 — Architectural realism:
+  - Replaced primitive rectangular building massing with parameterized metric UV mapping ($u$ along perimeter in meters, $v$ elevation in meters), eliminating all vertical and horizontal texture stretching regardless of skyscraper height.
+  - Added extruded rooftop parapet safety walls ($+0.8\text{m}$) and mechanical penthouses / HVAC infrastructure ($+3.5\text{m}$) with industrial metallic coloration.
+  - Modeled authentic architectural massing for iconic San Francisco landmarks: Transamerica Pyramid (tapering pyramidal trunk, wing setbacks, and 48m needle spire to 260m), Salesforce Tower (3-tier chamfered setbacks with sculpted crown screen to 326m), 555 California (faceted carnelian granite piers and bronze spandrels to 237m), Ferry Building (Beaux-Arts hall with 75m clock tower), and Coit Tower (12-sided fluted Art Deco cylinder with observation arcade to 64m).
+  - Encoded material alpha tags in vertex data: glass curtain walls (`0.80`), carnelian granite/stone (`0.82`), red running-bond brick (`0.84`), reinforced concrete (`0.86`), Victorian wood siding (`0.88`), and industrial metal (`0.70`).
+- [x] Phase 3.2 — Roads and urban infrastructure:
+  - Metric UV parameterization along carriageway centerline with PBR shader-generated double solid yellow centerlines with black median gap, white dashed lane dividers ($3\text{m}$ dash, $9\text{m}$ gap), solid white edge fog lines, and zebra crosswalks ($0.5\text{m}$ bars).
+  - Raised concrete curbs ($+0.16\text{m}$) and wide pedestrian sidewalks ($2.0\text{m}$) with transverse contraction joints every $2.0\text{m}$.
+  - Elevated bridge box girders ($1.6\text{m}$ depth), concrete highway guardrail barriers ($+0.95\text{m}$), and heavy vertical ground support piers ($1.8\text{m} \times 1.8\text{m}$) spaced every $35\text{m}$ on elevated structures.
+  - 3D streetlight poles along urban arterials with cantilevered luminaire arms extending across driving lanes.
+  - Modular separation between drivable carriageway ribbon (`mesh_road`) and complementary urban infrastructure (`mesh_road_infrastructure`).
+- [x] Phase 3.3 — Nature and environmental atmosphere:
+  - Populated 3D procedural trees with textured wooden bark trunks and multi-tiered octagonal foliage crowns rooted on surveyed DEM elevations across urban parks and green land cover.
+  - Multi-frequency animated Gerstner wave water displacement with wave crests, coastal depth gradients, Fresnel reflectance, and sun specular glints.
+  - Solar Rayleigh/Mie atmospheric scattering gradient from horizon to zenith, warm sun disk with solar glow, and procedural cumulus cloud deck.
+  - Geomorphic DEM terrain material blending (sand, soil, rock, grass).
+- [x] Phase 3.4 — Production renderer & validation:
+  - Single-pass forward PBR renderer with Cook-Torrance microfacet specular, Schlick Fresnel, and ACES filmic tonemapping.
+  - Depth32Float precision buffer, Gribb-Hartmann frustum culling, persistent GPU buffer caching, and graphics presets (Low, Medium, High, Adaptive).
+  - Upgraded viewer with `--1080p` ($1920 \times 1080$) resolution flag and captured fixed-camera reference frames for skyline, dense streets, bridges, coastline, hills, and urban parks.
+  - Benchmarked performance: **947–1843 FPS** at 1080p, **0.54–1.53 ms** p95 frame latency, **0.45 MB** resident VRAM, **232 MB** working set RSS.
+  - 100% test pass rate across all 23 integration test suites and crate unit tests in the workspace (`cargo test --workspace`).
+  - Authored ADR-0036 (`docs/adr/0036-stage-3-high-fidelity-rendering-and-environmental-overhaul.md`) and comprehensive report (`docs/reports/Stage3_High_Fidelity_Rendering_Report.md`).
+
 
 

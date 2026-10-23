@@ -786,8 +786,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let width = 1280;
-    let height = 720;
+    let (width, height) = if args.iter().any(|a| a == "--1080p") {
+        (1920, 1080)
+    } else {
+        (1280, 720)
+    };
     let color_tex = renderer.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("Color Target Texture"),
         size: wgpu::Extent3d {

@@ -46,6 +46,7 @@ pub struct RealEarthRenderer {
     pub depth_format: wgpu::TextureFormat,
     pub gpu_cache: RwLock<HashMap<(i32, i32, u32), GpuChunkBuffers>>,
     pub settings: GraphicsSettings,
+    pub start_time: std::time::Instant,
 }
 
 impl RealEarthRenderer {
@@ -346,6 +347,7 @@ impl RealEarthRenderer {
             depth_format,
             gpu_cache: RwLock::new(HashMap::new()),
             settings,
+            start_time: std::time::Instant::now(),
         }
     }
 
@@ -520,6 +522,7 @@ impl RealEarthRenderer {
     ) {
         let view_proj = camera.view_proj_matrix();
         let rel_pos = camera.relative_pos_f32();
+        let elapsed_time = self.start_time.elapsed().as_secs_f32();
 
         let uniforms = SceneUniforms {
             view_proj: view_proj.to_cols_array_2d(),
@@ -540,8 +543,8 @@ impl RealEarthRenderer {
                 } else {
                     0.0
                 },
-                0.0,
-                0.0,
+                elapsed_time,
+                1.0,
             ],
         };
 

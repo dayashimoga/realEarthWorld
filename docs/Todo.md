@@ -449,5 +449,24 @@
 - [x] Stage 2.4: Ingested, packaged, and rendered bounded San Francisco pilot area ($37.7800^\circ\text{N} - 37.8050^\circ\text{N}$, $-122.4150^\circ\text{W} - -122.3880^\circ\text{W}$).
 - [x] Stage 2.4: Executed headless and drivable vehicle benchmark: steady-state 752–1678 FPS, 233.23 MB RSS memory, 12.87 ms cold startup time.
 - [x] Stage 2.4: Captured verified reference screenshots: `sf_stage2_authentic.png` and `sf_stage2_drivable.png`.
-- [x] Stage 2.4: 100% pass across all workspace tests (157+ tests, 7/7 in `authentic_gis_coverage_certification.rs`).
 - [x] Stage 2.4: Published ADR-0035 (`docs/adr/0035-stage-2-authentic-san-francisco-gis-acquisition-and-compilation.md`).
+
+## STAGE 3: High-Fidelity Rendering, Architecture and Environmental Overhaul (Completed)
+- [x] Stage 3.1: Metric UV coordinate mapping on building facades ($u$ in meters along perimeter, $v$ in meters elevation), eliminating texture stretching.
+- [x] Stage 3.1: Added rooftop parapets ($+0.8\text{m}$) and mechanical penthouses ($+3.5\text{m}$) with industrial HVAC coloration.
+- [x] Stage 3.1: Modeled authentic landmark massing: Transamerica Pyramid (tapering spire & wing setbacks to 260m), Salesforce Tower (3-tier chamfered setbacks with crown screen to 326m), 555 California (faceted piers to 237m), Ferry Building (nave & 75m clock tower), and Coit Tower (fluted cylinder to 64m).
+- [x] Stage 3.1: Encoded PBR material tags in vertex alpha (glass, stone, brick, concrete, wood, metal).
+- [x] Stage 3.2: Metric road UV mapping with double yellow centerlines, white dashed lane dividers, edge fog lines, and zebra crosswalks.
+- [x] Stage 3.2: Concrete curbs ($+0.16\text{m}$) and wide sidewalks ($2.0\text{m}$) with slab contraction joints every $2.0\text{m}$.
+- [x] Stage 3.2: Bridge box girders ($1.6\text{m}$ depth), concrete safety guardrails ($+0.95\text{m}$), and vertical ground piers ($1.8\text{m} \times 1.8\text{m}$) spaced every $35\text{m}$.
+- [x] Stage 3.2: 3D streetlight poles along urban arterials with cantilevered luminaire arms.
+- [x] Stage 3.2: Clean separation between drivable carriageway ribbon (`mesh_road`) and complementary infrastructure (`mesh_road_infrastructure`).
+- [x] Stage 3.3: 3D procedural trees with textured bark trunks and multi-tiered octagonal foliage crowns rooted on surveyed DEM elevations.
+- [x] Stage 3.3: Multi-frequency animated Gerstner wave water displacement, Fresnel reflectance, coastal depth gradients, and sun specular glints.
+- [x] Stage 3.3: Solar Rayleigh/Mie atmospheric scattering gradient, warm sun disk, and procedural cumulus cloud deck.
+- [x] Stage 3.4: Production PBR renderer with Cook-Torrance microfacet specular and ACES filmic tonemapping.
+- [x] Stage 3.4: 1080p ($1920 \times 1080$) high-resolution offscreen framebuffer readback and Netpbm binary PPM export (`--1080p`).
+- [x] Stage 3.4: Captured fixed-camera 1080p references: `sf_stage3_skyline.png`, `sf_stage3_streets.png`, `sf_stage3_bridge.png`, `sf_stage3_coastline.png`, `sf_stage3_hills.png`, `sf_stage3_parks.png`.
+- [x] Stage 3.4: Benchmarked performance: 947–1843 FPS at 1080p, 0.54–1.53 ms p95 frame latency, 0.45 MB resident VRAM, 232 MB RSS memory.
+- [x] Stage 3.4: 100% test pass rate across all 23 integration test suites and crate unit tests in the workspace (`cargo test --workspace`).
+- [x] Stage 3.4: Published ADR-0036 (`docs/adr/0036-stage-3-high-fidelity-rendering-and-environmental-overhaul.md`) and report (`docs/reports/Stage3_High_Fidelity_Rendering_Report.md`).

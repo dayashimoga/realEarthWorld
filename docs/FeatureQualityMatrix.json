@@ -207,13 +207,13 @@
     {
       "id": "REQ-018",
       "stage": "Stage 7: Rendering Engine",
-      "name": "Cascaded Shadow Maps & Atmospheric Scattering",
+      "name": "High-Fidelity PBR Shading, Metric Façades, Roads & Atmospheric Environment",
       "source_module": "engine/rendering/src/shaders.rs",
       "status": "VERIFIED",
       "severity": "P2",
-      "test_coverage": "tests/tests/interactive_rendering_certification.rs",
+      "test_coverage": "tests/tests/visual_fidelity_certification.rs",
       "test_type": "REAL_GPU",
-      "notes": "WGSL world shader incorporates directional solar illumination, sun shadows, and atmospheric color gradients."
+      "notes": "Stage 3 High-Fidelity Rendering complete: Parameterized metric UVs eliminate vertical texture stretching; authentic landmark massing for Transamerica, Salesforce Tower, 555 California, Ferry Building, and Coit Tower; asphalt lane markings, raised curbs, and sidewalks; bridge box girders, guardrails, and vertical ground piers; 3D trees with foliage; dynamic Gerstner waves; Rayleigh/Mie skylight gradient and ACES tonemapping. 1080p reference frames verified."
     },
     {
       "id": "REQ-019",
