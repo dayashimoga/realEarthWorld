@@ -88,3 +88,13 @@ For EVERY subsequent development or remediation stage:
 5. **Measure Real Metrics**: Measure performance and memory using real system timers.
 6. **No Regressions**: Verify that existing working functionality remains intact.
 7. **Honest Reporting**: Update `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json`. If a capability cannot be completed due to missing external prerequisites, report it honestly as `BLOCKED`.
+
+---
+
+## 9. Stage 0.6 Ratification: Geographic Collision, Vehicle Spawning and Real City Switching
+
+1. **Phase 1 — Building Footprint & Road Corridor Repair**: Verified 0 penetrations in San Francisco via [`test_stage0_6_diagnostic_audit_building_road_collisions`](file:///j:/rustRealEarth/tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs).
+2. **Phase 2 — Vehicle Garage & Multimodal Spawning**: Verified validated spawning across all 10 multimodal vehicle classes with chase camera synchronization and contract cleansing via [`test_stage0_6_vehicle_garage_selection_and_spawning_all_ten_classes`](file:///j:/rustRealEarth/tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs).
+3. **Phase 3 — Real World City Switching**: Verified asynchronous state machine switching across San Francisco, New York, Chicago, and Los Angeles, double-precision ECEF floating-origin re-anchoring, GPU cache purging, and rejection of catalog-only definitions without bundled GIS packages via [`test_stage0_6_real_world_city_switching_sf_nyc_chicago_la`](file:///j:/rustRealEarth/tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs) and [`test_stage0_6_catalog_only_missing_package_rejection`](file:///j:/rustRealEarth/tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs).
+4. **Phase 4 — Automated Test Suite & Codebase Quality**: All workspace tests pass (`cargo test --workspace` 100% pass), zero compiler warnings under `cargo clippy --workspace --all-targets -- -D warnings`, and clean formatting under `cargo fmt --check`.
+

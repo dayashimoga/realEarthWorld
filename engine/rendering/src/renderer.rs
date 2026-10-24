@@ -502,6 +502,15 @@ impl RealEarthRenderer {
         before - cache.len()
     }
 
+    /// Clears all persistent GPU chunk buffer allocations from the cache.
+    /// Used when transitioning between regions or cities to prevent chunk coordinate collision.
+    pub fn clear_gpu_cache(&self) -> usize {
+        let mut cache = self.gpu_cache.write().unwrap();
+        let count = cache.len();
+        cache.clear();
+        count
+    }
+
     /// Updates uniform buffer data with active camera and lighting conditions.
     pub fn update_uniforms(
         &self,

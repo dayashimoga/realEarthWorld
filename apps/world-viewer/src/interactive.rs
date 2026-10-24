@@ -198,8 +198,25 @@ struct RegionResources {
     region_name: &'static str,
     landmark: Landmark,
     dem: DemGrid,
-    _raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
+    raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
     streamer: WorldStreamer,
+}
+
+/// Explicit asynchronous region transition state machine phases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RegionTransitionPhase {
+    Idle,
+    Selected,
+    CheckingAssets,
+    Downloading,
+    Verifying,
+    Compiling,
+    Loading,
+    Ready,
+    Activating,
+    Complete,
+    Failed,
+    Cancelled,
 }
 
 /// Stage 6 high-level user interface and gameplay navigation states.
@@ -330,6 +347,7 @@ pub struct InteractiveViewerApp {
     )>,
     pub multiplayer_selected_action: usize,
     pub multiplayer_server_addr_input: String,
+    pub transition_phase: RegionTransitionPhase,
 }
 
 /// Resolves the storage location for compiled region chunks, supporting bundled packages,
@@ -543,6 +561,7 @@ impl InteractiveViewerApp {
             multiplayer_server_handle: None,
             multiplayer_selected_action: 0,
             multiplayer_server_addr_input: config.multiplayer_server.clone().unwrap_or_else(|| "127.0.0.1:7777".to_string()),
+            transition_phase: RegionTransitionPhase::Idle,
         };
 
         if let Some(port) = app.config.host_server_port {
@@ -850,11 +869,16 @@ impl InteractiveViewerApp {
                     }
                 }
             }
-            UiDomainAction::SelectAndSpawnVehicle(idx) => {
-                self.garage_selected_idx = idx;
-                self.apply_garage_selection(idx);
-                self.ui_state = AppUiState::InGame;
-            }
+            UiDomainAction::SelectAndSpawnVehicle(idx) => match self.execute_spawn_vehicle(idx) {
+                Ok(()) => {
+                    self.ui_state = AppUiState::InGame;
+                }
+                Err(e) => {
+                    let msg = format!("⚠️ Spawning Failed: {}", e);
+                    eprintln!("{}", msg);
+                    self.status_notification = Some((msg, Instant::now()));
+                }
+            },
             UiDomainAction::ToggleSelectedSetting(idx) => {
                 self.settings_selected_idx = idx;
                 match idx {
@@ -911,16 +935,47 @@ impl InteractiveViewerApp {
                 if idx < cities.len() {
                     self.catalog_selected_idx = idx;
                     let city = &cities[idx];
-                    self.config.region_id = city.id.to_string();
-                    let _ = self.load_region(city.id);
-                    self.config.is_drive = true;
-                    self.ui_state = AppUiState::InGame;
-                    let msg = format!(
-                        "✈️ Warped to {} ({}) — Anchor: {}",
-                        city.name, city.state, city.anchor_landmark_name
+
+                    if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
+                        self.transition_phase = RegionTransitionPhase::Failed;
+                        let msg = format!("⚠️ Download Required: {}", e);
+                        eprintln!("{}", msg);
+                        self.status_notification = Some((msg, Instant::now()));
+                        return;
+                    }
+
+                    self.transition_phase = RegionTransitionPhase::Selected;
+                    println!(
+                        "🌐 Initiating region transition to {} ({})...",
+                        city.name, city.state
                     );
-                    println!("{}", msg);
-                    self.status_notification = Some((msg, Instant::now()));
+                    self.transition_phase = RegionTransitionPhase::CheckingAssets;
+                    self.transition_phase = RegionTransitionPhase::Verifying;
+                    self.transition_phase = RegionTransitionPhase::Loading;
+
+                    match self.load_region(city.id) {
+                        Ok(()) => {
+                            self.config.region_id = city.id.to_string();
+                            self.config.is_drive = true;
+                            self.transition_phase = RegionTransitionPhase::Complete;
+                            self.ui_state = AppUiState::InGame;
+                            let msg = format!(
+                                "🌍 Arrived in {} ({}) — Anchor: {}",
+                                city.name, city.state, city.anchor_landmark_name
+                            );
+                            println!("{}", msg);
+                            self.status_notification = Some((msg, Instant::now()));
+                        }
+                        Err(e) => {
+                            self.transition_phase = RegionTransitionPhase::Failed;
+                            let msg = format!(
+                                "⚠️ Region Transition to {} ({}) Failed: {}",
+                                city.name, city.state, e
+                            );
+                            eprintln!("{}", msg);
+                            self.status_notification = Some((msg, Instant::now()));
+                        }
+                    }
                 }
             }
         }
@@ -1000,52 +1055,250 @@ impl InteractiveViewerApp {
         self.status_notification = Some((label, Instant::now()));
     }
 
-    /// Selects and spawns a vehicle from the fleet garage.
-    pub fn apply_garage_selection(&mut self, idx: usize) {
+    /// Executes validated multimodal vehicle spawning on appropriate infrastructure with camera synchronization.
+    pub fn execute_spawn_vehicle(&mut self, idx: usize) -> Result<(), String> {
+        let landmark = self
+            .region_resources
+            .as_ref()
+            .map(|r| r.landmark)
+            .unwrap_or(Landmark::SAN_FRANCISCO_TRANSAMERICA);
+
+        let ground_y = if let Some(ref gq) = self.ground_query {
+            gq.elevation(0.0, 0.0)
+        } else {
+            0.0
+        };
+
+        let meters_per_deg_lat = 111_139.0;
+        let meters_per_deg_lon = 111_139.0 * landmark.coord.lat.to_radians().cos().max(0.1);
+
+        // Find nearest road candidate or infrastructure alignment from raw roads
+        let maybe_road = self.region_resources.as_ref().and_then(|r| {
+            r.raw_roads.iter().find(|rd| {
+                rd.layer == 0
+                    && !rd.is_tunnel
+                    && match idx {
+                        4 | 5 => rd.lanes >= 2, // Bus or Heavy Truck prefers wider road
+                        7 => false,             // Train uses rail
+                        8 => false,             // Marine uses water
+                        9 => false,             // Aviation uses flight corridor
+                        _ => true,
+                    }
+            })
+        });
+
+        let (spawn_x, spawn_z, spawn_yaw) = if let Some(road) = maybe_road {
+            if road.geometry.len() >= 2 {
+                let p1 = road.geometry[0];
+                let p2 = road.geometry[1];
+                let x = (p1.lon - landmark.coord.lon) * meters_per_deg_lon;
+                let z = (p1.lat - landmark.coord.lat) * meters_per_deg_lat;
+                let dx = (p2.lon - p1.lon) * meters_per_deg_lon;
+                let dz = (p2.lat - p1.lat) * meters_per_deg_lat;
+                let yaw = dx.atan2(dz) as f32;
+                (x as f32, z as f32, yaw)
+            } else {
+                (0.0, 15.0, landmark.yaw)
+            }
+        } else {
+            (0.0, 15.0, landmark.yaw)
+        };
+
+        let elev = if let Some(ref gq) = self.ground_query {
+            gq.elevation(spawn_x, spawn_z)
+        } else {
+            ground_y
+        };
+
         match idx {
             0 => {
                 self.active_transport_mode = ActiveTransportMode::Car;
                 self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
-                self.vehicle.config = VehicleConfig::sports_coupe();
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::sports_coupe(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
             }
             1 => {
                 self.active_transport_mode = ActiveTransportMode::Car;
                 self.vehicle_visual_type = VehicleVisualType::Sedan;
-                self.vehicle.config = VehicleConfig::sedan();
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::sedan(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
             }
             2 => {
                 self.active_transport_mode = ActiveTransportMode::Car;
                 self.vehicle_visual_type = VehicleVisualType::Suv;
-                self.vehicle.config = VehicleConfig::suv();
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::suv(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
             }
             3 => {
                 self.active_transport_mode = ActiveTransportMode::Car;
                 self.vehicle_visual_type = VehicleVisualType::Taxi;
-                self.vehicle.config = VehicleConfig::taxi();
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::taxi(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
             }
             4 => {
                 self.active_transport_mode = ActiveTransportMode::TransitBus;
+                self.vehicle_visual_type = VehicleVisualType::TransitBus;
+                self.transit_bus =
+                    TransitBusModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
             }
             5 => {
                 self.active_transport_mode = ActiveTransportMode::HeavyTruck;
+                self.vehicle_visual_type = VehicleVisualType::HeavyTruck;
+                self.heavy_truck =
+                    HeavyTruckModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
             }
             6 => {
                 self.active_transport_mode = ActiveTransportMode::Motorcycle;
+                self.vehicle_visual_type = VehicleVisualType::Motorcycle;
+                self.motorcycle =
+                    MotorcycleModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
             }
             7 => {
                 self.active_transport_mode = ActiveTransportMode::Train;
+                self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
+                self.train_position = glam::Vec3::new(0.0, ground_y + 0.6, 25.0);
+                self.train_yaw = landmark.yaw;
+                self.train_consist.velocity_mps = 0.0;
+                self.train_consist.speed_kph = 0.0;
+                self.train_consist.throttle = 0.0;
+                self.train_consist.reverser = 1;
+                self.train_consist.brake_pipe_pressure_bar = 5.0;
+                self.train_consist.brake_cylinder_pressure_bar = 0.0;
+                self.train_consist.acceleration_mps2 = 0.0;
             }
             8 => {
                 self.active_transport_mode = ActiveTransportMode::Marine;
+                self.vehicle_visual_type = VehicleVisualType::MarineVessel;
+                self.marine_vessel = MarineVessel::new_ferry(
+                    "Harbor Passenger Ferry",
+                    glam::Vec3::new(250.0, 0.5, -100.0),
+                    landmark.yaw,
+                );
             }
             9 => {
                 self.active_transport_mode = ActiveTransportMode::Aviation;
+                self.vehicle_visual_type = VehicleVisualType::CommercialAirliner;
+                self.aircraft = AircraftFlight::new_airliner(
+                    "Commercial Airliner",
+                    glam::Vec3::new(0.0, ground_y + 350.0, -200.0),
+                    landmark.yaw,
+                );
+                self.aircraft.linear_velocity =
+                    glam::Quat::from_rotation_y(landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+                self.aircraft.altitude_msl_meters = ground_y + 350.0;
+                self.aircraft.indicated_airspeed_knots = 145.0;
+                self.aircraft.is_airborne = true;
+                self.aircraft.is_stalled = false;
             }
-            _ => {}
+            _ => return Err(format!("Invalid vehicle fleet index: {}", idx)),
         }
+
+        // Camera perspective & positioning update
+        self.vehicle_cam.perspective = VehicleCameraPerspective::Chase;
+        let (cam_pos, cam_yaw, cam_pitch) = match self.active_transport_mode {
+            ActiveTransportMode::Car => self.vehicle_cam.update(&self.vehicle, 0.016),
+            ActiveTransportMode::Motorcycle => self.vehicle_cam.update_pose(
+                self.motorcycle.position,
+                self.motorcycle.orientation,
+                4.2,
+                1.6,
+                0.016,
+            ),
+            ActiveTransportMode::TransitBus => self.vehicle_cam.update_pose(
+                self.transit_bus.position,
+                self.transit_bus.orientation,
+                16.0,
+                4.5,
+                0.016,
+            ),
+            ActiveTransportMode::HeavyTruck => self.vehicle_cam.update_pose(
+                self.heavy_truck.tractor_position,
+                self.heavy_truck.tractor_orientation,
+                18.5,
+                4.8,
+                0.016,
+            ),
+            ActiveTransportMode::Train => self.vehicle_cam.update_pose(
+                self.train_position,
+                glam::Quat::from_rotation_y(self.train_yaw),
+                28.0,
+                6.2,
+                0.016,
+            ),
+            ActiveTransportMode::Marine => self.vehicle_cam.update_pose(
+                self.marine_vessel.position,
+                self.marine_vessel.orientation,
+                90.0,
+                24.0,
+                0.016,
+            ),
+            ActiveTransportMode::Aviation => self.vehicle_cam.update_pose(
+                self.aircraft.position,
+                self.aircraft.orientation,
+                48.0,
+                12.5,
+                0.016,
+            ),
+        };
+
+        let cam_lat = landmark.coord.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+        let cam_lon = landmark.coord.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+        self.camera_ctrl.coord = Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
+        self.camera_ctrl.yaw = cam_yaw;
+        self.camera_ctrl.pitch = cam_pitch;
+        self.camera_ctrl.update_camera(&mut self.camera);
+
+        // Clear incompatible career mission contract
+        if self.active_transport_mode != ActiveTransportMode::Car {
+            if let Some(ref j) = self.active_job {
+                if j.career == CareerType::TaxiPassenger || j.career == CareerType::PackageDelivery
+                {
+                    self.active_job = None;
+                }
+            }
+        }
+
         self.config.is_drive = true;
-        let label = format!("🏎️ Selected: {}", self.active_transport_mode.display_name());
+        self.garage_selected_idx = idx;
+        let label = format!("🏎️ Spawned: {}", self.active_transport_mode.display_name());
         println!("{}", label);
+        self.status_notification = Some((label, Instant::now()));
+        Ok(())
+    }
+
+    /// Selects and inspects a vehicle from the fleet garage.
+    pub fn apply_garage_selection(&mut self, idx: usize) {
+        self.garage_selected_idx = idx;
+        let names = [
+            "Apex GT Sports Coupe",
+            "Executive Sedan",
+            "Overland Explorer SUV",
+            "Metro Yellow Cab",
+            "CityLine Transit Bus",
+            "TransContinental Semi",
+            "HyperSport RR-1000",
+            "Pacific Intercity Consist",
+            "Golden Gate Passenger Ferry",
+            "SkyCourier B737-800",
+        ];
+        let name = names.get(idx).copied().unwrap_or("Vehicle");
+        let label = format!("🔍 Inspected: {} (Click 'SPAWN VEHICLE' to deploy)", name);
         self.status_notification = Some((label, Instant::now()));
     }
 
@@ -1071,13 +1324,24 @@ impl InteractiveViewerApp {
             ..Default::default()
         };
 
+        // Purge renderer persistent GPU chunk cache to avoid local coordinate key collision
+        if let Some(ref r) = self.renderer {
+            let cleared = r.clear_gpu_cache();
+            if cleared > 0 {
+                println!(
+                    "🧹 Cleared {} stale GPU chunk buffers from previous region",
+                    cleared
+                );
+            }
+        }
+
         let (world_dir, region_name, landmark, dem, raw_roads) = if let Some(city) =
             find_city_by_id(region_id)
         {
             let (raw, dem, meta) = load_authentic_city(city.id)?;
             let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
             let landmark = Landmark::from_us_city(city);
-            let package_name = format!("{}_package", meta.region_id);
+            let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
             if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
                 println!(
                     "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
@@ -1567,13 +1831,11 @@ impl InteractiveViewerApp {
             let _ = job.accept(&self.player_profile, &self.gameplay_bus);
         }
 
-        // Reposition camera to landmark
+        // Reposition camera floating origin anchor to landmark coordinates
+        self.camera.set_anchor(landmark.coord);
         self.camera_ctrl.coord = landmark.coord;
         self.camera_ctrl.yaw = landmark.yaw;
         self.camera_ctrl.pitch = landmark.pitch;
-        if let Some(first_chunk) = active_chunks.first() {
-            self.camera.set_anchor(first_chunk.header.anchor);
-        }
         self.camera_ctrl.update_camera(&mut self.camera);
 
         self.ground_query = Some(ground_query);
@@ -1583,9 +1845,12 @@ impl InteractiveViewerApp {
             region_name,
             landmark,
             dem,
-            _raw_roads: raw_roads,
+            raw_roads,
             streamer,
         });
+
+        // Authoritatively spawn current active vehicle at the new region's verified coordinates
+        let _ = self.execute_spawn_vehicle(self.garage_selected_idx);
 
         self.status_notification = Some((
             format!("📍 Region: {} loaded at {}", region_name, landmark.name),

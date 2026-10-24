@@ -90,7 +90,7 @@
       "license": "ODbL 1.0",
       "name": "OpenStreetMap San Francisco Downtown Extract",
       "provider": "OpenStreetMap Contributors",
-      "sha256": "7bd75f00e616fac37705319ad04f3ec6a4514f189979f106f9880507fa195632"
+      "sha256": "fc3097700c01b097677470cea27ba18a66e5c635968617aeb4a93fe4269cd48d"
     },
     {
       "elevation_range_msl": [

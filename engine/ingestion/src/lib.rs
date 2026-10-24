@@ -38,7 +38,7 @@ pub use acquisition::{
 #[allow(deprecated)]
 pub use authentic::{
     acquire_city_dem, build_authentic_us_dem, generate_authoritative_city_osm_xml,
-    load_authentic_city, AuthenticRegionMetadata, SourceProvenance,
+    load_authentic_city, verify_city_playable, AuthenticRegionMetadata, SourceProvenance,
 };
 pub use dem_grid::DemGrid;
 pub use osm_parser::parse_osm_xml;

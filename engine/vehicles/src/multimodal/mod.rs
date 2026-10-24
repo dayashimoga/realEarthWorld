@@ -40,3 +40,41 @@ pub enum MultimodalAudioEvent {
     /// Oleo-pneumatic landing gear tire touchdown chirp.
     AircraftGearTouchdown { descent_mps: f32 },
 }
+
+/// Primary active transportation mode across the multimodal fleet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ActiveTransportMode {
+    Car,
+    Motorcycle,
+    TransitBus,
+    HeavyTruck,
+    Train,
+    Marine,
+    Aviation,
+}
+
+impl ActiveTransportMode {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Car => "Automobile (Ackermann/Pacejka)",
+            Self::Motorcycle => "Motorcycle (2-Wheel Lean Dynamics)",
+            Self::TransitBus => "Transit Bus (Pneumatic Air Brakes)",
+            Self::HeavyTruck => "Heavy Haul Truck (Trailer Articulation)",
+            Self::Train => "Railway Train Consist (Davis / Westinghouse)",
+            Self::Marine => "Marine Vessel (Archimedes / Metacentric)",
+            Self::Aviation => "Aviation Aircraft (6-DOF Aerodynamic Polar)",
+        }
+    }
+
+    pub fn icon(&self) -> &'static str {
+        match self {
+            Self::Car => "🏎️",
+            Self::Motorcycle => "🏍️",
+            Self::TransitBus => "🚌",
+            Self::HeavyTruck => "🚛",
+            Self::Train => "🚆",
+            Self::Marine => "🚢",
+            Self::Aviation => "✈️",
+        }
+    }
+}

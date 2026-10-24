@@ -1389,6 +1389,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Final Production Readiness Ratification (`docs/FeatureQualityMatrix.json`, `docs/FeatureQualityMatrix.md`, `docs/ProductionReadiness.md`)**:
   - Ratified production verdict: `QUALIFIED (DESKTOP PILOT PRODUCTION CERTIFIED)`.
   - Feature quality metrics: 23 Verified (67.6%), 9 Partial (26.5%), 0 Low-Quality, 0 Broken, 2 Blocked (with truthful platform prerequisite contracts).
-  - Critical P0 severity count: 0; High P1 severity count: 0.
   - 100% test pass rate across all 5 remediation certification suites (33/33 tests passing).
+
+## [0.8.0] - 2026-10-24 — STAGE 0.6: Geographic Collision, Vehicle Spawning and Real City Switching (Completed & Certified)
+### Added
+- **Building-Road Corridor Conflict Detector & Setback Solver (`engine/validation/src/building_road_validator.rs`, `tools/world-cli/src/bin/generate_sf_gis.rs`)**:
+  - Implemented 3-phase geometric collision checking: road centerline intersection with building footprint edge, road node containment inside building polygon, and building perimeter vertices within road corridor buffer (lane width + 2.0m sidewalk + 2.5m clearance buffer).
+  - Implemented iterative normal-projection setback solver in `tools/world-cli/src/bin/generate_sf_gis.rs` with parcel anchor preservation for landmarks (555 California St, Transamerica Pyramid, Salesforce Tower, 181 Fremont, Millennium Tower, Citigroup Center, First Market Tower, 100 Montgomery St, Hyatt Regency).
+  - Regenerated `assets/san_francisco_sample/san_francisco_downtown.osm.xml`, updated SHA-256 in `manifest.json`, and recompiled SQLite chunk database `data/world_san_francisco/chunks.db`.
+  - Zero synthetic fallback data: Verified by `test_stage0_6_diagnostic_audit_building_road_collisions`, reducing building penetrations into road carriageways from 131 down to **0**.
+- **Vehicle Garage Inspection & Validated Multimodal Fleet Spawning (`apps/world-viewer/src/interactive.rs`, `engine/rendering/src/renderer.rs`)**:
+  - Added `clear_gpu_cache(&self) -> usize` to `RealEarthRenderer` to release cached chunk meshes upon region transitions.
+  - Exported `ActiveTransportMode` from `realearth_vehicles`.
+  - Decoupled garage inspection from physical spawning; added `execute_spawn_vehicle(idx)`:
+    - Road vehicles (Coupe, Sedan, SUV, Taxi, Bike): surface road corridor, ground elevation, yaw aligned with road heading.
+    - Transit Bus & Heavy Truck: multi-lane arterial roads ($\ge 2$ lanes).
+    - Train: rail corridor at $y = \text{ground} + 0.6\text{m}$.
+    - Marine Vessel: sea level ($y = 0.5\text{m}$) in navigable harbor.
+    - Aircraft: safe flight corridor at $y = \text{ground} + 350.0\text{m}$ with forward airspeed $75.0\text{ m/s}$.
+    - Resets physics velocities and orientations.
+    - Synchronizes chase camera perspective immediately.
+    - Purges incompatible mission contracts (e.g., Taxi contracts cleared on Train, Marine, or Aviation).
+- **Real World City Switching & State Machine (`apps/world-viewer/src/interactive.rs`, `engine/ingestion/src/authentic.rs`)**:
+  - Implemented `verify_city_playable(city_id)` in `engine/ingestion/src/authentic.rs` to validate GIS dataset availability.
+  - Implemented asynchronous region transition state machine in `InteractiveViewerApp` with explicit states (`Selected` -> `CheckingAssets` -> `Verifying` -> `Compiling` -> `Loading` -> `Ready` -> `Activating` -> `Complete`/`Failed`).
+  - Supported real-world city switching across San Francisco, New York, Chicago, and Los Angeles with distinct surveyed GIS datasets, NAVD88 DEMs, and SHA-256 hashes.
+  - Invoked `renderer.clear_gpu_cache()` on region transition, eliminating local coordinate collisions across regions.
+  - Atomically updated double-precision floating origin camera anchors (`camera.set_anchor(landmark.coord)` and `camera_ctrl.coord = landmark.coord`), eliminating 4,000+ km coordinate offsets.
+  - Rejected catalog-only definitions (e.g. Phoenix) without bundled GIS packages with clear notification (`"⚠️ Download Required: Region '<name>' requires GIS data package"`), preserving the existing playable world without state corruption.
+- **Dedicated Independent Certification Suite (`tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs`)**:
+  - Implemented 6 independent certification tests:
+    1. `test_stage0_6_diagnostic_audit_building_road_collisions`: 0 building-road collisions in San Francisco.
+    2. `test_stage0_6_test_block_alignment_algorithm`: 0 collisions after block alignment.
+    3. `test_stage0_6_vehicle_garage_selection_and_spawning_all_ten_classes`: All 10 vehicle types spawn safely with correct modes and contracts.
+    4. `test_stage0_6_real_world_city_switching_sf_nyc_chicago_la`: Authentic city switching across SF, NYC, Chicago, LA.
+    5. `test_stage0_6_catalog_only_missing_package_rejection`: Rejection of unbundled catalog cities.
+    6. `test_stage0_6_gpu_cache_invalidation_and_floating_origin`: GPU cache invalidation and double-precision anchor re-anchoring.
+  - 100% test pass rate across all 6 certification tests and clean `cargo test --workspace`.
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
+
 

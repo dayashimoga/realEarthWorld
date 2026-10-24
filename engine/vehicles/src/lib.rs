@@ -17,8 +17,8 @@ pub use dynamics::{
 pub use ground::{FlatGround, FunctionalGroundQuery, GroundQuery, SlopedGround};
 pub use kinematics::AckermannVehicle;
 pub use multimodal::{
-    AircraftFlight, AviationCategory, DavisCoefficients, FlightInputs, HeavyTruckModel,
-    LocomotiveType, MarineInputs, MarineVessel, MarineVesselType, MotorcycleModel,
+    ActiveTransportMode, AircraftFlight, AviationCategory, DavisCoefficients, FlightInputs,
+    HeavyTruckModel, LocomotiveType, MarineInputs, MarineVessel, MarineVesselType, MotorcycleModel,
     MultimodalAudioEvent, RoadAccessRestriction, RoadVehicleCategory, TrainBrakeState, TrainCar,
     TrainConsist, TransitBusModel,
 };

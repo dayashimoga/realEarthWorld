@@ -160,3 +160,7 @@ path = "tests/stage4_mobile_packaging_truth_certification.rs"
 [[test]]
 name = "stage5_production_reconciliation_certification"
 path = "tests/stage5_production_reconciliation_certification.rs"
+
+[[test]]
+name = "stage0_6_geographic_collision_and_spawning_certification"
+path = "tests/stage0_6_geographic_collision_and_spawning_certification.rs"

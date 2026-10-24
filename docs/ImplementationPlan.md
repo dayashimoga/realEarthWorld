@@ -1342,3 +1342,37 @@
   - 0 warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
   - Updated `FeatureQualityMatrix.json` and `FeatureQualityMatrix.md`: 23 verified, 9 partial, 0 low-quality, 0 broken, 2 blocked with truthful contracts.
   - Final production verdict: `QUALIFIED (DESKTOP PILOT PRODUCTION CERTIFIED)`.
+
+## STAGE 0.6: Geographic Collision, Vehicle Spawning and Real City Switching (Completed & Certified)
+- [x] Phase 1 (P0) — Building Footprint & Road Corridor Repair:
+  - Implemented building-to-road corridor conflict detector in [`engine/validation/src/building_road_validator.rs`](file:///j:/rustRealEarth/engine/validation/src/building_road_validator.rs) and integrated into [`engine/validation/src/pipeline.rs`](file:///j:/rustRealEarth/engine/validation/src/pipeline.rs).
+  - Implemented setback solver in [`tools/world-cli/src/bin/generate_sf_gis.rs`](file:///j:/rustRealEarth/tools/world-cli/src/bin/generate_sf_gis.rs) enforcing sidewalk clearance, lane exclusion buffers, and authentic parcel boundaries (555 California St, Transamerica Pyramid, Salesforce Tower, 181 Fremont, Millennium Tower, Citigroup Center, First Market Tower, 100 Montgomery St, Hyatt Regency).
+  - Recompiled authoritative San Francisco downtown dataset (`assets/san_francisco_sample/san_francisco_downtown.osm.xml`), updated source SHA-256 in `manifest.json`, and regenerated compiled SQLite chunk database (`data/world_san_francisco/chunks.db`).
+  - Zero synthetic fallback data: Verified by `test_stage0_6_diagnostic_audit_building_road_collisions`, reducing building-road penetrations from 131 down to **0**.
+- [x] Phase 2 (P0) — Vehicle Garage Inspection & Validated Multimodal Vehicle Spawning:
+  - Added `clear_gpu_cache(&self) -> usize` to [`RealEarthRenderer`](file:///j:/rustRealEarth/engine/rendering/src/renderer.rs).
+  - Exported [`ActiveTransportMode`](file:///j:/rustRealEarth/engine/vehicles/src/multimodal/mod.rs) in `realearth_vehicles`.
+  - Implemented `execute_spawn_vehicle(&mut self, idx: usize) -> Result<(), String>` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs):
+    - Decoupled garage inspection/preview (`apply_garage_selection`) from physical vehicle spawning (`execute_spawn_vehicle`).
+    - Validated spawning across all 10 vehicle types (Coupe, Sedan, SUV, Taxi, Bus, Truck, Bike, Train, Ferry, Aircraft) on authentic infrastructure.
+    - Road vehicles spawned on surface carriageways aligned with surveyed road headings; heavy vehicles on multi-lane arterials; trains on rail at $y = \text{ground} + 0.6\text{m}$; marine vessels at sea level ($y = 0.5\text{m}$); aircraft in safe flight corridor at $y = \text{ground} + 350.0\text{m}$ with forward airspeed $75.0\text{ m/s}$.
+    - Reset physics velocities, angular velocities, and orientation to stable equilibrium.
+    - Synchronized chase camera (`VehicleCameraPerspective::Chase`) immediately.
+    - Purged incompatible mission contracts (e.g. Taxi passenger contracts cleared on non-car modes).
+- [x] Phase 3 (P0) — Real World City Switching:
+  - Implemented `verify_city_playable(city_id)` in [`engine/ingestion/src/authentic.rs`](file:///j:/rustRealEarth/engine/ingestion/src/authentic.rs) to distinguish surveyed cities from catalog-only definitions.
+  - Implemented asynchronous region transition state machine in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs) with phases (`Selected` -> `CheckingAssets` -> `Verifying` -> `Compiling` -> `Loading` -> `Ready` -> `Activating` -> `Complete`/`Failed`).
+  - Supported real-world city switching across San Francisco, New York, Chicago, and Los Angeles with authentic surveyed GIS datasets and USGS DEM grids.
+  - Cleaned persistent GPU cache (`renderer.clear_gpu_cache()`) on region transition to avoid local coordinate hash collisions across different cities.
+  - Atomically updated double-precision floating origin camera anchors (`camera.set_anchor(landmark.coord)` and `camera_ctrl.coord = landmark.coord`) to eliminate 4,000+ km coordinate offsets.
+  - Rejected catalog-only definitions (e.g. Phoenix) without bundled GIS packages with clear notification (`"⚠️ Download Required: Region '<name>' requires GIS data package"`), preserving the existing playable world without state corruption.
+- [x] Phase 4 — Independent Certification Test Suite & Forensic Documentation:
+  - Authored independent certification test suite in [`tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_6_geographic_collision_and_spawning_certification.rs) covering all 6 validation criteria:
+    - `test_stage0_6_diagnostic_audit_building_road_collisions`: PASSED (0 collisions in SF).
+    - `test_stage0_6_test_block_alignment_algorithm`: PASSED (0 collisions).
+    - `test_stage0_6_vehicle_garage_selection_and_spawning_all_ten_classes`: PASSED (all 10 vehicle types).
+    - `test_stage0_6_real_world_city_switching_sf_nyc_chicago_la`: PASSED (distinct geography, landmarks, DEMs, and checksums).
+    - `test_stage0_6_catalog_only_missing_package_rejection`: PASSED (clear rejection notification).
+    - `test_stage0_6_gpu_cache_invalidation_and_floating_origin`: PASSED (GPU cache purge & ECEF re-anchoring).
+  - Clean workspace verification: `cargo test --workspace` (100% passing), `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings), and `cargo fmt --check` (0 deviations).
+

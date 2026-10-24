@@ -1,1365 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="RealEarth-GIS-SF-Authoritative-Stage2">
-  <!-- Salesforce Tower (326m, 61 floors) -->
-  <node id="10000" lat="37.7893000" lon="-122.3976000"/>
-  <node id="10001" lat="37.7901000" lon="-122.3976000"/>
-  <node id="10002" lat="37.7901000" lon="-122.3968000"/>
-  <node id="10003" lat="37.7893000" lon="-122.3968000"/>
-  <way id="110001">
-    <nd ref="10000"/>
-    <nd ref="10001"/>
-    <nd ref="10002"/>
-    <nd ref="10003"/>
-    <nd ref="10000"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Salesforce Tower"/>
-    <tag k="height" v="326.0m"/>
-    <tag k="building:levels" v="61"/>
-  </way>
-
-  <!-- Transamerica Pyramid (260m, 48 floors) -->
-  <node id="10004" lat="37.7948000" lon="-122.4032000"/>
-  <node id="10005" lat="37.7956000" lon="-122.4032000"/>
-  <node id="10006" lat="37.7956000" lon="-122.4024000"/>
-  <node id="10007" lat="37.7948000" lon="-122.4024000"/>
-  <way id="110002">
-    <nd ref="10004"/>
-    <nd ref="10005"/>
-    <nd ref="10006"/>
-    <nd ref="10007"/>
-    <nd ref="10004"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Transamerica Pyramid"/>
-    <tag k="height" v="260.0m"/>
-    <tag k="building:levels" v="48"/>
-  </way>
-
-  <!-- 181 Fremont (245m, 54 floors) -->
-  <node id="10008" lat="37.7896000" lon="-122.3964000"/>
-  <node id="10009" lat="37.7904000" lon="-122.3964000"/>
-  <node id="10010" lat="37.7904000" lon="-122.3956000"/>
-  <node id="10011" lat="37.7896000" lon="-122.3956000"/>
-  <way id="110003">
-    <nd ref="10008"/>
-    <nd ref="10009"/>
-    <nd ref="10010"/>
-    <nd ref="10011"/>
-    <nd ref="10008"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="181 Fremont"/>
-    <tag k="height" v="245.0m"/>
-    <tag k="building:levels" v="54"/>
-  </way>
-
-  <!-- 555 California Street (237m, 52 floors) -->
-  <node id="10012" lat="37.7924000" lon="-122.4043000"/>
-  <node id="10013" lat="37.7932000" lon="-122.4043000"/>
-  <node id="10014" lat="37.7932000" lon="-122.4033000"/>
-  <node id="10015" lat="37.7924000" lon="-122.4033000"/>
-  <way id="110004">
-    <nd ref="10012"/>
-    <nd ref="10013"/>
-    <nd ref="10014"/>
-    <nd ref="10015"/>
-    <nd ref="10012"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="555 California Street"/>
-    <tag k="height" v="237.0m"/>
-    <tag k="building:levels" v="52"/>
-  </way>
-
-  <!-- 345 California Center (212m, 48 floors) -->
-  <node id="10016" lat="37.7931000" lon="-122.4019000"/>
-  <node id="10017" lat="37.7939000" lon="-122.4019000"/>
-  <node id="10018" lat="37.7939000" lon="-122.4011000"/>
-  <node id="10019" lat="37.7931000" lon="-122.4011000"/>
-  <way id="110005">
-    <nd ref="10016"/>
-    <nd ref="10017"/>
-    <nd ref="10018"/>
-    <nd ref="10019"/>
-    <nd ref="10016"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="345 California Center"/>
-    <tag k="height" v="212.0m"/>
-    <tag k="building:levels" v="48"/>
-  </way>
-
-  <!-- Millennium Tower (197m, 58 floors) -->
-  <node id="10020" lat="37.7901000" lon="-122.3969000"/>
-  <node id="10021" lat="37.7909000" lon="-122.3969000"/>
-  <node id="10022" lat="37.7909000" lon="-122.3961000"/>
-  <node id="10023" lat="37.7901000" lon="-122.3961000"/>
-  <way id="110006">
-    <nd ref="10020"/>
-    <nd ref="10021"/>
-    <nd ref="10022"/>
-    <nd ref="10023"/>
-    <nd ref="10020"/>
-    <tag k="building" v="residential"/>
-    <tag k="name" v="Millennium Tower"/>
-    <tag k="height" v="197.0m"/>
-    <tag k="building:levels" v="58"/>
-  </way>
-
-  <!-- One Rincon Hill (185m, 60 floors) -->
-  <node id="10024" lat="37.7856000" lon="-122.3924000"/>
-  <node id="10025" lat="37.7864000" lon="-122.3924000"/>
-  <node id="10026" lat="37.7864000" lon="-122.3916000"/>
-  <node id="10027" lat="37.7856000" lon="-122.3916000"/>
-  <way id="110007">
-    <nd ref="10024"/>
-    <nd ref="10025"/>
-    <nd ref="10026"/>
-    <nd ref="10027"/>
-    <nd ref="10024"/>
-    <tag k="building" v="residential"/>
-    <tag k="name" v="One Rincon Hill"/>
-    <tag k="height" v="185.0m"/>
-    <tag k="building:levels" v="60"/>
-  </way>
-
-  <!-- 101 California Street (183m, 48 floors) -->
-  <node id="10028" lat="37.7926000" lon="-122.3979000"/>
-  <node id="10029" lat="37.7934000" lon="-122.3979000"/>
-  <node id="10030" lat="37.7934000" lon="-122.3971000"/>
-  <node id="10031" lat="37.7926000" lon="-122.3971000"/>
-  <way id="110008">
-    <nd ref="10028"/>
-    <nd ref="10029"/>
-    <nd ref="10030"/>
-    <nd ref="10031"/>
-    <nd ref="10028"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="101 California Street"/>
-    <tag k="height" v="183.0m"/>
-    <tag k="building:levels" v="48"/>
-  </way>
-
-  <!-- 50 Fremont Center (183m, 43 floors) -->
-  <node id="10032" lat="37.7906000" lon="-122.3979000"/>
-  <node id="10033" lat="37.7914000" lon="-122.3979000"/>
-  <node id="10034" lat="37.7914000" lon="-122.3971000"/>
-  <node id="10035" lat="37.7906000" lon="-122.3971000"/>
-  <way id="110009">
-    <nd ref="10032"/>
-    <nd ref="10033"/>
-    <nd ref="10034"/>
-    <nd ref="10035"/>
-    <nd ref="10032"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="50 Fremont Center"/>
-    <tag k="height" v="183.0m"/>
-    <tag k="building:levels" v="43"/>
-  </way>
-
-  <!-- 100 First Plaza (173m, 27 floors) -->
-  <node id="10036" lat="37.7901000" lon="-122.3989000"/>
-  <node id="10037" lat="37.7909000" lon="-122.3989000"/>
-  <node id="10038" lat="37.7909000" lon="-122.3981000"/>
-  <node id="10039" lat="37.7901000" lon="-122.3981000"/>
-  <way id="110010">
-    <nd ref="10036"/>
-    <nd ref="10037"/>
-    <nd ref="10038"/>
-    <nd ref="10039"/>
-    <nd ref="10036"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="100 First Plaza"/>
-    <tag k="height" v="173.0m"/>
-    <tag k="building:levels" v="27"/>
-  </way>
-
-  <!-- 44 Montgomery Street (172m, 43 floors) -->
-  <node id="10040" lat="37.7894000" lon="-122.4024000"/>
-  <node id="10041" lat="37.7902000" lon="-122.4024000"/>
-  <node id="10042" lat="37.7902000" lon="-122.4016000"/>
-  <node id="10043" lat="37.7894000" lon="-122.4016000"/>
-  <way id="110011">
-    <nd ref="10040"/>
-    <nd ref="10041"/>
-    <nd ref="10042"/>
-    <nd ref="10043"/>
-    <nd ref="10040"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="44 Montgomery Street"/>
-    <tag k="height" v="172.0m"/>
-    <tag k="building:levels" v="43"/>
-  </way>
-
-  <!-- Spear Tower (One Market Plaza) (172m, 42 floors) -->
-  <node id="10044" lat="37.7934000" lon="-122.3952000"/>
-  <node id="10045" lat="37.7942000" lon="-122.3952000"/>
-  <node id="10046" lat="37.7942000" lon="-122.3944000"/>
-  <node id="10047" lat="37.7934000" lon="-122.3944000"/>
-  <way id="110012">
-    <nd ref="10044"/>
-    <nd ref="10045"/>
-    <nd ref="10046"/>
-    <nd ref="10047"/>
-    <nd ref="10044"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Spear Tower (One Market Plaza)"/>
-    <tag k="height" v="172.0m"/>
-    <tag k="building:levels" v="42"/>
-  </way>
-
-  <!-- Citigroup Center (1 Sansome) (168m, 41 floors) -->
-  <node id="10048" lat="37.7901000" lon="-122.4016000"/>
-  <node id="10049" lat="37.7909000" lon="-122.4016000"/>
-  <node id="10050" lat="37.7909000" lon="-122.4008000"/>
-  <node id="10051" lat="37.7901000" lon="-122.4008000"/>
-  <way id="110013">
-    <nd ref="10048"/>
-    <nd ref="10049"/>
-    <nd ref="10050"/>
-    <nd ref="10051"/>
-    <nd ref="10048"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Citigroup Center (1 Sansome)"/>
-    <tag k="height" v="168.0m"/>
-    <tag k="building:levels" v="41"/>
-  </way>
-
-  <!-- Shaklee Terraces (444 Market) (164m, 38 floors) -->
-  <node id="10052" lat="37.7916000" lon="-122.3999000"/>
-  <node id="10053" lat="37.7924000" lon="-122.3999000"/>
-  <node id="10054" lat="37.7924000" lon="-122.3991000"/>
-  <node id="10055" lat="37.7916000" lon="-122.3991000"/>
-  <way id="110014">
-    <nd ref="10052"/>
-    <nd ref="10053"/>
-    <nd ref="10054"/>
-    <nd ref="10055"/>
-    <nd ref="10052"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Shaklee Terraces (444 Market)"/>
-    <tag k="height" v="164.0m"/>
-    <tag k="building:levels" v="38"/>
-  </way>
-
-  <!-- First Market Tower (525 Market) (161m, 38 floors) -->
-  <node id="10056" lat="37.7911000" lon="-122.4009000"/>
-  <node id="10057" lat="37.7919000" lon="-122.4009000"/>
-  <node id="10058" lat="37.7919000" lon="-122.4001000"/>
-  <node id="10059" lat="37.7911000" lon="-122.4001000"/>
-  <way id="110015">
-    <nd ref="10056"/>
-    <nd ref="10057"/>
-    <nd ref="10058"/>
-    <nd ref="10059"/>
-    <nd ref="10056"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="First Market Tower (525 Market)"/>
-    <tag k="height" v="161.0m"/>
-    <tag k="building:levels" v="38"/>
-  </way>
-
-  <!-- One Post Street (161m, 38 floors) -->
-  <node id="10060" lat="37.7888000" lon="-122.4034000"/>
-  <node id="10061" lat="37.7896000" lon="-122.4034000"/>
-  <node id="10062" lat="37.7896000" lon="-122.4026000"/>
-  <node id="10063" lat="37.7888000" lon="-122.4026000"/>
-  <way id="110016">
-    <nd ref="10060"/>
-    <nd ref="10061"/>
-    <nd ref="10062"/>
-    <nd ref="10063"/>
-    <nd ref="10060"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="One Post Street"/>
-    <tag k="height" v="161.0m"/>
-    <tag k="building:levels" v="38"/>
-  </way>
-
-  <!-- 425 Market Street (160m, 38 floors) -->
-  <node id="10064" lat="37.7921000" lon="-122.3992000"/>
-  <node id="10065" lat="37.7929000" lon="-122.3992000"/>
-  <node id="10066" lat="37.7929000" lon="-122.3984000"/>
-  <node id="10067" lat="37.7921000" lon="-122.3984000"/>
-  <way id="110017">
-    <nd ref="10064"/>
-    <nd ref="10065"/>
-    <nd ref="10066"/>
-    <nd ref="10067"/>
-    <nd ref="10064"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="425 Market Street"/>
-    <tag k="height" v="160.0m"/>
-    <tag k="building:levels" v="38"/>
-  </way>
-
-  <!-- Telesis Tower (1 Montgomery) (152m, 38 floors) -->
-  <node id="10068" lat="37.7891000" lon="-122.4029000"/>
-  <node id="10069" lat="37.7899000" lon="-122.4029000"/>
-  <node id="10070" lat="37.7899000" lon="-122.4021000"/>
-  <node id="10071" lat="37.7891000" lon="-122.4021000"/>
-  <way id="110018">
-    <nd ref="10068"/>
-    <nd ref="10069"/>
-    <nd ref="10070"/>
-    <nd ref="10071"/>
-    <nd ref="10068"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Telesis Tower (1 Montgomery)"/>
-    <tag k="height" v="152.0m"/>
-    <tag k="building:levels" v="38"/>
-  </way>
-
-  <!-- 333 Bush Street (151m, 43 floors) -->
-  <node id="10072" lat="37.7904000" lon="-122.4039000"/>
-  <node id="10073" lat="37.7912000" lon="-122.4039000"/>
-  <node id="10074" lat="37.7912000" lon="-122.4031000"/>
-  <node id="10075" lat="37.7904000" lon="-122.4031000"/>
-  <way id="110019">
-    <nd ref="10072"/>
-    <nd ref="10073"/>
-    <nd ref="10074"/>
-    <nd ref="10075"/>
-    <nd ref="10072"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="333 Bush Street"/>
-    <tag k="height" v="151.0m"/>
-    <tag k="building:levels" v="43"/>
-  </way>
-
-  <!-- PG&E Headquarters (77 Beale) (150m, 34 floors) -->
-  <node id="10076" lat="37.7916000" lon="-122.3959000"/>
-  <node id="10077" lat="37.7924000" lon="-122.3959000"/>
-  <node id="10078" lat="37.7924000" lon="-122.3951000"/>
-  <node id="10079" lat="37.7916000" lon="-122.3951000"/>
-  <way id="110020">
-    <nd ref="10076"/>
-    <nd ref="10077"/>
-    <nd ref="10078"/>
-    <nd ref="10079"/>
-    <nd ref="10076"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="PG&E Headquarters (77 Beale)"/>
-    <tag k="height" v="150.0m"/>
-    <tag k="building:levels" v="34"/>
-  </way>
-
-  <!-- 50 California Street (148m, 37 floors) -->
-  <node id="10080" lat="37.7936000" lon="-122.3974000"/>
-  <node id="10081" lat="37.7944000" lon="-122.3974000"/>
-  <node id="10082" lat="37.7944000" lon="-122.3966000"/>
-  <node id="10083" lat="37.7936000" lon="-122.3966000"/>
-  <way id="110021">
-    <nd ref="10080"/>
-    <nd ref="10081"/>
-    <nd ref="10082"/>
-    <nd ref="10083"/>
-    <nd ref="10080"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="50 California Street"/>
-    <tag k="height" v="148.0m"/>
-    <tag k="building:levels" v="37"/>
-  </way>
-
-  <!-- 555 Mission Street (147m, 33 floors) -->
-  <node id="10084" lat="37.7884000" lon="-122.3999000"/>
-  <node id="10085" lat="37.7892000" lon="-122.3999000"/>
-  <node id="10086" lat="37.7892000" lon="-122.3991000"/>
-  <node id="10087" lat="37.7884000" lon="-122.3991000"/>
-  <way id="110022">
-    <nd ref="10084"/>
-    <nd ref="10085"/>
-    <nd ref="10086"/>
-    <nd ref="10087"/>
-    <nd ref="10084"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="555 Mission Street"/>
-    <tag k="height" v="147.0m"/>
-    <tag k="building:levels" v="33"/>
-  </way>
-
-  <!-- 100 Pine Street (145m, 33 floors) -->
-  <node id="10088" lat="37.7924000" lon="-122.4002000"/>
-  <node id="10089" lat="37.7932000" lon="-122.4002000"/>
-  <node id="10090" lat="37.7932000" lon="-122.3994000"/>
-  <node id="10091" lat="37.7924000" lon="-122.3994000"/>
-  <way id="110023">
-    <nd ref="10088"/>
-    <nd ref="10089"/>
-    <nd ref="10090"/>
-    <nd ref="10091"/>
-    <nd ref="10088"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="100 Pine Street"/>
-    <tag k="height" v="145.0m"/>
-    <tag k="building:levels" v="33"/>
-  </way>
-
-  <!-- Embarcadero Center 1 (145m, 45 floors) -->
-  <node id="10092" lat="37.7941000" lon="-122.3999000"/>
-  <node id="10093" lat="37.7949000" lon="-122.3999000"/>
-  <node id="10094" lat="37.7949000" lon="-122.3991000"/>
-  <node id="10095" lat="37.7941000" lon="-122.3991000"/>
-  <way id="110024">
-    <nd ref="10092"/>
-    <nd ref="10093"/>
-    <nd ref="10094"/>
-    <nd ref="10095"/>
-    <nd ref="10092"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Embarcadero Center 1"/>
-    <tag k="height" v="145.0m"/>
-    <tag k="building:levels" v="45"/>
-  </way>
-
-  <!-- Embarcadero Center 2 (145m, 45 floors) -->
-  <node id="10096" lat="37.7946000" lon="-122.3984000"/>
-  <node id="10097" lat="37.7954000" lon="-122.3984000"/>
-  <node id="10098" lat="37.7954000" lon="-122.3976000"/>
-  <node id="10099" lat="37.7946000" lon="-122.3976000"/>
-  <way id="110025">
-    <nd ref="10096"/>
-    <nd ref="10097"/>
-    <nd ref="10098"/>
-    <nd ref="10099"/>
-    <nd ref="10096"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Embarcadero Center 2"/>
-    <tag k="height" v="145.0m"/>
-    <tag k="building:levels" v="45"/>
-  </way>
-
-  <!-- Embarcadero Center 3 (145m, 45 floors) -->
-  <node id="10100" lat="37.7951000" lon="-122.3969000"/>
-  <node id="10101" lat="37.7959000" lon="-122.3969000"/>
-  <node id="10102" lat="37.7959000" lon="-122.3961000"/>
-  <node id="10103" lat="37.7951000" lon="-122.3961000"/>
-  <way id="110026">
-    <nd ref="10100"/>
-    <nd ref="10101"/>
-    <nd ref="10102"/>
-    <nd ref="10103"/>
-    <nd ref="10100"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Embarcadero Center 3"/>
-    <tag k="height" v="145.0m"/>
-    <tag k="building:levels" v="45"/>
-  </way>
-
-  <!-- Embarcadero Center 4 (145m, 45 floors) -->
-  <node id="10104" lat="37.7956000" lon="-122.3954000"/>
-  <node id="10105" lat="37.7964000" lon="-122.3954000"/>
-  <node id="10106" lat="37.7964000" lon="-122.3946000"/>
-  <node id="10107" lat="37.7956000" lon="-122.3946000"/>
-  <way id="110027">
-    <nd ref="10104"/>
-    <nd ref="10105"/>
-    <nd ref="10106"/>
-    <nd ref="10107"/>
-    <nd ref="10104"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Embarcadero Center 4"/>
-    <tag k="height" v="145.0m"/>
-    <tag k="building:levels" v="45"/>
-  </way>
-
-  <!-- 333 Market Street (144m, 33 floors) -->
-  <node id="10108" lat="37.7916000" lon="-122.3984000"/>
-  <node id="10109" lat="37.7924000" lon="-122.3984000"/>
-  <node id="10110" lat="37.7924000" lon="-122.3976000"/>
-  <node id="10111" lat="37.7916000" lon="-122.3976000"/>
-  <way id="110028">
-    <nd ref="10108"/>
-    <nd ref="10109"/>
-    <nd ref="10110"/>
-    <nd ref="10111"/>
-    <nd ref="10108"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="333 Market Street"/>
-    <tag k="height" v="144.0m"/>
-    <tag k="building:levels" v="33"/>
-  </way>
-
-  <!-- 650 California Street (Hartford Bldg) (142m, 33 floors) -->
-  <node id="10112" lat="37.7921000" lon="-122.4064000"/>
-  <node id="10113" lat="37.7929000" lon="-122.4064000"/>
-  <node id="10114" lat="37.7929000" lon="-122.4056000"/>
-  <node id="10115" lat="37.7921000" lon="-122.4056000"/>
-  <way id="110029">
-    <nd ref="10112"/>
-    <nd ref="10113"/>
-    <nd ref="10114"/>
-    <nd ref="10115"/>
-    <nd ref="10112"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="650 California Street (Hartford Bldg)"/>
-    <tag k="height" v="142.0m"/>
-    <tag k="building:levels" v="33"/>
-  </way>
-
-  <!-- Russ Building (133m, 32 floors) -->
-  <node id="10116" lat="37.7914000" lon="-122.4034000"/>
-  <node id="10117" lat="37.7922000" lon="-122.4034000"/>
-  <node id="10118" lat="37.7922000" lon="-122.4026000"/>
-  <node id="10119" lat="37.7914000" lon="-122.4026000"/>
-  <way id="110030">
-    <nd ref="10116"/>
-    <nd ref="10117"/>
-    <nd ref="10118"/>
-    <nd ref="10119"/>
-    <nd ref="10116"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Russ Building"/>
-    <tag k="height" v="133.0m"/>
-    <tag k="building:levels" v="32"/>
-  </way>
-
-  <!-- 560 Mission Street (JPMorgan Chase) (128m, 31 floors) -->
-  <node id="10120" lat="37.7881000" lon="-122.4004000"/>
-  <node id="10121" lat="37.7889000" lon="-122.4004000"/>
-  <node id="10122" lat="37.7889000" lon="-122.3996000"/>
-  <node id="10123" lat="37.7881000" lon="-122.3996000"/>
-  <way id="110031">
-    <nd ref="10120"/>
-    <nd ref="10121"/>
-    <nd ref="10122"/>
-    <nd ref="10123"/>
-    <nd ref="10120"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="560 Mission Street (JPMorgan Chase)"/>
-    <tag k="height" v="128.0m"/>
-    <tag k="building:levels" v="31"/>
-  </way>
-
-  <!-- Infinity Towers (300 Spear) (125m, 37 floors) -->
-  <node id="10124" lat="37.7891000" lon="-122.3914000"/>
-  <node id="10125" lat="37.7899000" lon="-122.3914000"/>
-  <node id="10126" lat="37.7899000" lon="-122.3906000"/>
-  <node id="10127" lat="37.7891000" lon="-122.3906000"/>
-  <way id="110032">
-    <nd ref="10124"/>
-    <nd ref="10125"/>
-    <nd ref="10126"/>
-    <nd ref="10127"/>
-    <nd ref="10124"/>
-    <tag k="building" v="residential"/>
-    <tag k="name" v="Infinity Towers (300 Spear)"/>
-    <tag k="height" v="125.0m"/>
-    <tag k="building:levels" v="37"/>
-  </way>
-
-  <!-- Lumina Towers (201 Folsom) (120m, 42 floors) -->
-  <node id="10128" lat="37.7881000" lon="-122.3929000"/>
-  <node id="10129" lat="37.7889000" lon="-122.3929000"/>
-  <node id="10130" lat="37.7889000" lon="-122.3921000"/>
-  <node id="10131" lat="37.7881000" lon="-122.3921000"/>
-  <way id="110033">
-    <nd ref="10128"/>
-    <nd ref="10129"/>
-    <nd ref="10130"/>
-    <nd ref="10131"/>
-    <nd ref="10128"/>
-    <tag k="building" v="residential"/>
-    <tag k="name" v="Lumina Towers (201 Folsom)"/>
-    <tag k="height" v="120.0m"/>
-    <tag k="building:levels" v="42"/>
-  </way>
-
-  <!-- 201 Mission Street (120m, 30 floors) -->
-  <node id="10132" lat="37.7911000" lon="-122.3939000"/>
-  <node id="10133" lat="37.7919000" lon="-122.3939000"/>
-  <node id="10134" lat="37.7919000" lon="-122.3931000"/>
-  <node id="10135" lat="37.7911000" lon="-122.3931000"/>
-  <way id="110034">
-    <nd ref="10132"/>
-    <nd ref="10133"/>
-    <nd ref="10134"/>
-    <nd ref="10135"/>
-    <nd ref="10132"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="201 Mission Street"/>
-    <tag k="height" v="120.0m"/>
-    <tag k="building:levels" v="30"/>
-  </way>
-
-  <!-- Shell Building (115m, 28 floors) -->
-  <node id="10136" lat="37.7906000" lon="-122.4014000"/>
-  <node id="10137" lat="37.7914000" lon="-122.4014000"/>
-  <node id="10138" lat="37.7914000" lon="-122.4006000"/>
-  <node id="10139" lat="37.7906000" lon="-122.4006000"/>
-  <way id="110035">
-    <nd ref="10136"/>
-    <nd ref="10137"/>
-    <nd ref="10138"/>
-    <nd ref="10139"/>
-    <nd ref="10136"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Shell Building"/>
-    <tag k="height" v="115.0m"/>
-    <tag k="building:levels" v="28"/>
-  </way>
-
-  <!-- Union Square St. Francis Hotel Tower (115m, 32 floors) -->
-  <node id="10140" lat="37.7876000" lon="-122.4084000"/>
-  <node id="10141" lat="37.7884000" lon="-122.4084000"/>
-  <node id="10142" lat="37.7884000" lon="-122.4076000"/>
-  <node id="10143" lat="37.7876000" lon="-122.4076000"/>
-  <way id="110036">
-    <nd ref="10140"/>
-    <nd ref="10141"/>
-    <nd ref="10142"/>
-    <nd ref="10143"/>
-    <nd ref="10140"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Union Square St. Francis Hotel Tower"/>
-    <tag k="height" v="115.0m"/>
-    <tag k="building:levels" v="32"/>
-  </way>
-
-  <!-- 350 Mission Street (Salesforce East) (114m, 27 floors) -->
-  <node id="10144" lat="37.7904000" lon="-122.3979000"/>
-  <node id="10145" lat="37.7912000" lon="-122.3979000"/>
-  <node id="10146" lat="37.7912000" lon="-122.3971000"/>
-  <node id="10147" lat="37.7904000" lon="-122.3971000"/>
-  <way id="110037">
-    <nd ref="10144"/>
-    <nd ref="10145"/>
-    <nd ref="10146"/>
-    <nd ref="10147"/>
-    <nd ref="10144"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="350 Mission Street (Salesforce East)"/>
-    <tag k="height" v="114.0m"/>
-    <tag k="building:levels" v="27"/>
-  </way>
-
-  <!-- 388 Market Street (Flatiron) (110m, 24 floors) -->
-  <node id="10148" lat="37.7928000" lon="-122.3986000"/>
-  <node id="10149" lat="37.7936000" lon="-122.3986000"/>
-  <node id="10150" lat="37.7936000" lon="-122.3978000"/>
-  <node id="10151" lat="37.7928000" lon="-122.3978000"/>
-  <way id="110038">
-    <nd ref="10148"/>
-    <nd ref="10149"/>
-    <nd ref="10150"/>
-    <nd ref="10151"/>
-    <nd ref="10148"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="388 Market Street (Flatiron)"/>
-    <tag k="height" v="110.0m"/>
-    <tag k="building:levels" v="24"/>
-  </way>
-
-  <!-- Steuart Tower (One Market Plaza) (110m, 27 floors) -->
-  <node id="10152" lat="37.7938000" lon="-122.3944000"/>
-  <node id="10153" lat="37.7946000" lon="-122.3944000"/>
-  <node id="10154" lat="37.7946000" lon="-122.3936000"/>
-  <node id="10155" lat="37.7938000" lon="-122.3936000"/>
-  <way id="110039">
-    <nd ref="10152"/>
-    <nd ref="10153"/>
-    <nd ref="10154"/>
-    <nd ref="10155"/>
-    <nd ref="10152"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Steuart Tower (One Market Plaza)"/>
-    <tag k="height" v="110.0m"/>
-    <tag k="building:levels" v="27"/>
-  </way>
-
-  <!-- 101 Second Street (108m, 26 floors) -->
-  <node id="10156" lat="37.7876000" lon="-122.3999000"/>
-  <node id="10157" lat="37.7884000" lon="-122.3999000"/>
-  <node id="10158" lat="37.7884000" lon="-122.3991000"/>
-  <node id="10159" lat="37.7876000" lon="-122.3991000"/>
-  <way id="110040">
-    <nd ref="10156"/>
-    <nd ref="10157"/>
-    <nd ref="10158"/>
-    <nd ref="10159"/>
-    <nd ref="10156"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="101 Second Street"/>
-    <tag k="height" v="108.0m"/>
-    <tag k="building:levels" v="26"/>
-  </way>
-
-  <!-- 199 Fremont Street (105m, 27 floors) -->
-  <node id="10160" lat="37.7891000" lon="-122.3934000"/>
-  <node id="10161" lat="37.7899000" lon="-122.3934000"/>
-  <node id="10162" lat="37.7899000" lon="-122.3926000"/>
-  <node id="10163" lat="37.7891000" lon="-122.3926000"/>
-  <way id="110041">
-    <nd ref="10160"/>
-    <nd ref="10161"/>
-    <nd ref="10162"/>
-    <nd ref="10163"/>
-    <nd ref="10160"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="199 Fremont Street"/>
-    <tag k="height" v="105.0m"/>
-    <tag k="building:levels" v="27"/>
-  </way>
-
-  <!-- 101 Montgomery Street (105m, 28 floors) -->
-  <node id="10164" lat="37.7901000" lon="-122.4029000"/>
-  <node id="10165" lat="37.7909000" lon="-122.4029000"/>
-  <node id="10166" lat="37.7909000" lon="-122.4021000"/>
-  <node id="10167" lat="37.7901000" lon="-122.4021000"/>
-  <way id="110042">
-    <nd ref="10164"/>
-    <nd ref="10165"/>
-    <nd ref="10166"/>
-    <nd ref="10167"/>
-    <nd ref="10164"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="101 Montgomery Street"/>
-    <tag k="height" v="105.0m"/>
-    <tag k="building:levels" v="28"/>
-  </way>
-
-  <!-- 450 Sutter Street (Medical Dental) (105m, 26 floors) -->
-  <node id="10168" lat="37.7891000" lon="-122.4074000"/>
-  <node id="10169" lat="37.7899000" lon="-122.4074000"/>
-  <node id="10170" lat="37.7899000" lon="-122.4066000"/>
-  <node id="10171" lat="37.7891000" lon="-122.4066000"/>
-  <way id="110043">
-    <nd ref="10168"/>
-    <nd ref="10169"/>
-    <nd ref="10170"/>
-    <nd ref="10171"/>
-    <nd ref="10168"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="450 Sutter Street (Medical Dental)"/>
-    <tag k="height" v="105.0m"/>
-    <tag k="building:levels" v="26"/>
-  </way>
-
-  <!-- Standard Oil Building (225 Bush) (100m, 22 floors) -->
-  <node id="10172" lat="37.7906000" lon="-122.4024000"/>
-  <node id="10173" lat="37.7914000" lon="-122.4024000"/>
-  <node id="10174" lat="37.7914000" lon="-122.4016000"/>
-  <node id="10175" lat="37.7906000" lon="-122.4016000"/>
-  <way id="110044">
-    <nd ref="10172"/>
-    <nd ref="10173"/>
-    <nd ref="10174"/>
-    <nd ref="10175"/>
-    <nd ref="10172"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Standard Oil Building (225 Bush)"/>
-    <tag k="height" v="100.0m"/>
-    <tag k="building:levels" v="22"/>
-  </way>
-
-  <!-- 111 Pine Street (95m, 24 floors) -->
-  <node id="10176" lat="37.7926000" lon="-122.3994000"/>
-  <node id="10177" lat="37.7934000" lon="-122.3994000"/>
-  <node id="10178" lat="37.7934000" lon="-122.3986000"/>
-  <node id="10179" lat="37.7926000" lon="-122.3986000"/>
-  <way id="110045">
-    <nd ref="10176"/>
-    <nd ref="10177"/>
-    <nd ref="10178"/>
-    <nd ref="10179"/>
-    <nd ref="10176"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="111 Pine Street"/>
-    <tag k="height" v="95.0m"/>
-    <tag k="building:levels" v="24"/>
-  </way>
-
-  <!-- 100 Montgomery Street (90m, 25 floors) -->
-  <node id="10180" lat="37.7901000" lon="-122.4024000"/>
-  <node id="10181" lat="37.7909000" lon="-122.4024000"/>
-  <node id="10182" lat="37.7909000" lon="-122.4016000"/>
-  <node id="10183" lat="37.7901000" lon="-122.4016000"/>
-  <way id="110046">
-    <nd ref="10180"/>
-    <nd ref="10181"/>
-    <nd ref="10182"/>
-    <nd ref="10183"/>
-    <nd ref="10180"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="100 Montgomery Street"/>
-    <tag k="height" v="90.0m"/>
-    <tag k="building:levels" v="25"/>
-  </way>
-
-  <!-- Hobart Building (87m, 21 floors) -->
-  <node id="10184" lat="37.7886000" lon="-122.4019000"/>
-  <node id="10185" lat="37.7894000" lon="-122.4019000"/>
-  <node id="10186" lat="37.7894000" lon="-122.4011000"/>
-  <node id="10187" lat="37.7886000" lon="-122.4011000"/>
-  <way id="110047">
-    <nd ref="10184"/>
-    <nd ref="10185"/>
-    <nd ref="10186"/>
-    <nd ref="10187"/>
-    <nd ref="10184"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Hobart Building"/>
-    <tag k="height" v="87.0m"/>
-    <tag k="building:levels" v="21"/>
-  </way>
-
-  <!-- 201 California Street (85m, 20 floors) -->
-  <node id="10188" lat="37.7931000" lon="-122.3979000"/>
-  <node id="10189" lat="37.7939000" lon="-122.3979000"/>
-  <node id="10190" lat="37.7939000" lon="-122.3971000"/>
-  <node id="10191" lat="37.7931000" lon="-122.3971000"/>
-  <way id="110048">
-    <nd ref="10188"/>
-    <nd ref="10189"/>
-    <nd ref="10190"/>
-    <nd ref="10191"/>
-    <nd ref="10188"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="201 California Street"/>
-    <tag k="height" v="85.0m"/>
-    <tag k="building:levels" v="20"/>
-  </way>
-
-  <!-- Rincon Center Towers (85m, 24 floors) -->
-  <node id="10192" lat="37.7916000" lon="-122.3929000"/>
-  <node id="10193" lat="37.7924000" lon="-122.3929000"/>
-  <node id="10194" lat="37.7924000" lon="-122.3921000"/>
-  <node id="10195" lat="37.7916000" lon="-122.3921000"/>
-  <way id="110049">
-    <nd ref="10192"/>
-    <nd ref="10193"/>
-    <nd ref="10194"/>
-    <nd ref="10195"/>
-    <nd ref="10192"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Rincon Center Towers"/>
-    <tag k="height" v="85.0m"/>
-    <tag k="building:levels" v="24"/>
-  </way>
-
-  <!-- 222 Second Street (LinkedIn HQ) (80m, 26 floors) -->
-  <node id="10196" lat="37.7871000" lon="-122.3989000"/>
-  <node id="10197" lat="37.7879000" lon="-122.3989000"/>
-  <node id="10198" lat="37.7879000" lon="-122.3981000"/>
-  <node id="10199" lat="37.7871000" lon="-122.3981000"/>
-  <way id="110050">
-    <nd ref="10196"/>
-    <nd ref="10197"/>
-    <nd ref="10198"/>
-    <nd ref="10199"/>
-    <nd ref="10196"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="222 Second Street (LinkedIn HQ)"/>
-    <tag k="height" v="80.0m"/>
-    <tag k="building:levels" v="26"/>
-  </way>
-
-  <!-- San Francisco Ferry Building (75m, 3 floors) -->
-  <node id="10200" lat="37.7948000" lon="-122.3942000"/>
-  <node id="10201" lat="37.7962000" lon="-122.3942000"/>
-  <node id="10202" lat="37.7962000" lon="-122.3932000"/>
-  <node id="10203" lat="37.7948000" lon="-122.3932000"/>
-  <way id="110051">
-    <nd ref="10200"/>
-    <nd ref="10201"/>
-    <nd ref="10202"/>
-    <nd ref="10203"/>
-    <nd ref="10200"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="San Francisco Ferry Building"/>
-    <tag k="height" v="75.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Hyatt Regency San Francisco (70m, 17 floors) -->
-  <node id="10204" lat="37.7936000" lon="-122.3964000"/>
-  <node id="10205" lat="37.7944000" lon="-122.3964000"/>
-  <node id="10206" lat="37.7944000" lon="-122.3956000"/>
-  <node id="10207" lat="37.7936000" lon="-122.3956000"/>
-  <way id="110052">
-    <nd ref="10204"/>
-    <nd ref="10205"/>
-    <nd ref="10206"/>
-    <nd ref="10207"/>
-    <nd ref="10204"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Hyatt Regency San Francisco"/>
-    <tag k="height" v="70.0m"/>
-    <tag k="building:levels" v="17"/>
-  </way>
-
-  <!-- Federal Reserve Bank of SF (70m, 12 floors) -->
-  <node id="10208" lat="37.7931000" lon="-122.3944000"/>
-  <node id="10209" lat="37.7939000" lon="-122.3944000"/>
-  <node id="10210" lat="37.7939000" lon="-122.3936000"/>
-  <node id="10211" lat="37.7931000" lon="-122.3936000"/>
-  <way id="110053">
-    <nd ref="10208"/>
-    <nd ref="10209"/>
-    <nd ref="10210"/>
-    <nd ref="10211"/>
-    <nd ref="10208"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Federal Reserve Bank of SF"/>
-    <tag k="height" v="70.0m"/>
-    <tag k="building:levels" v="12"/>
-  </way>
-
-  <!-- Coit Tower (64m, 3 floors) -->
-  <node id="10212" lat="37.8021000" lon="-122.4061000"/>
-  <node id="10213" lat="37.8027000" lon="-122.4061000"/>
-  <node id="10214" lat="37.8027000" lon="-122.4055000"/>
-  <node id="10215" lat="37.8021000" lon="-122.4055000"/>
-  <way id="110054">
-    <nd ref="10212"/>
-    <nd ref="10213"/>
-    <nd ref="10214"/>
-    <nd ref="10215"/>
-    <nd ref="10212"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Coit Tower"/>
-    <tag k="height" v="64.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Wells Fargo Headquarters (60m, 12 floors) -->
-  <node id="10216" lat="37.7921000" lon="-122.4029000"/>
-  <node id="10217" lat="37.7929000" lon="-122.4029000"/>
-  <node id="10218" lat="37.7929000" lon="-122.4021000"/>
-  <node id="10219" lat="37.7921000" lon="-122.4021000"/>
-  <way id="110055">
-    <nd ref="10216"/>
-    <nd ref="10217"/>
-    <nd ref="10218"/>
-    <nd ref="10219"/>
-    <nd ref="10216"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Wells Fargo Headquarters"/>
-    <tag k="height" v="60.0m"/>
-    <tag k="building:levels" v="12"/>
-  </way>
-
-  <!-- 303 Second Street (50m, 12 floors) -->
-  <node id="10220" lat="37.7851000" lon="-122.3969000"/>
-  <node id="10221" lat="37.7859000" lon="-122.3969000"/>
-  <node id="10222" lat="37.7859000" lon="-122.3961000"/>
-  <node id="10223" lat="37.7851000" lon="-122.3961000"/>
-  <way id="110056">
-    <nd ref="10220"/>
-    <nd ref="10221"/>
-    <nd ref="10222"/>
-    <nd ref="10223"/>
-    <nd ref="10220"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="303 Second Street"/>
-    <tag k="height" v="50.0m"/>
-    <tag k="building:levels" v="12"/>
-  </way>
-
-  <!-- Hills Plaza Waterfront Complex (45m, 12 floors) -->
-  <node id="10224" lat="37.7891000" lon="-122.3899000"/>
-  <node id="10225" lat="37.7899000" lon="-122.3899000"/>
-  <node id="10226" lat="37.7899000" lon="-122.3891000"/>
-  <node id="10227" lat="37.7891000" lon="-122.3891000"/>
-  <way id="110057">
-    <nd ref="10224"/>
-    <nd ref="10225"/>
-    <nd ref="10226"/>
-    <nd ref="10227"/>
-    <nd ref="10224"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Hills Plaza Waterfront Complex"/>
-    <tag k="height" v="45.0m"/>
-    <tag k="building:levels" v="12"/>
-  </way>
-
-  <!-- SFMOMA Snohetta Extension (45m, 10 floors) -->
-  <node id="10228" lat="37.7854000" lon="-122.4014000"/>
-  <node id="10229" lat="37.7862000" lon="-122.4014000"/>
-  <node id="10230" lat="37.7862000" lon="-122.4006000"/>
-  <node id="10231" lat="37.7854000" lon="-122.4006000"/>
-  <way id="110058">
-    <nd ref="10228"/>
-    <nd ref="10229"/>
-    <nd ref="10230"/>
-    <nd ref="10231"/>
-    <nd ref="10228"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="SFMOMA Snohetta Extension"/>
-    <tag k="height" v="45.0m"/>
-    <tag k="building:levels" v="10"/>
-  </way>
-
-  <!-- Foundry Square 1 (500 Howard) (42m, 10 floors) -->
-  <node id="10232" lat="37.7881000" lon="-122.3969000"/>
-  <node id="10233" lat="37.7889000" lon="-122.3969000"/>
-  <node id="10234" lat="37.7889000" lon="-122.3961000"/>
-  <node id="10235" lat="37.7881000" lon="-122.3961000"/>
-  <way id="110059">
-    <nd ref="10232"/>
-    <nd ref="10233"/>
-    <nd ref="10234"/>
-    <nd ref="10235"/>
-    <nd ref="10232"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Foundry Square 1 (500 Howard)"/>
-    <tag k="height" v="42.0m"/>
-    <tag k="building:levels" v="10"/>
-  </way>
-
-  <!-- Foundry Square 2 (405 Howard) (42m, 10 floors) -->
-  <node id="10236" lat="37.7886000" lon="-122.3964000"/>
-  <node id="10237" lat="37.7894000" lon="-122.3964000"/>
-  <node id="10238" lat="37.7894000" lon="-122.3956000"/>
-  <node id="10239" lat="37.7886000" lon="-122.3956000"/>
-  <way id="110060">
-    <nd ref="10236"/>
-    <nd ref="10237"/>
-    <nd ref="10238"/>
-    <nd ref="10239"/>
-    <nd ref="10236"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Foundry Square 2 (405 Howard)"/>
-    <tag k="height" v="42.0m"/>
-    <tag k="building:levels" v="10"/>
-  </way>
-
-  <!-- Foundry Square 3 (505 Howard) (42m, 10 floors) -->
-  <node id="10240" lat="37.7876000" lon="-122.3979000"/>
-  <node id="10241" lat="37.7884000" lon="-122.3979000"/>
-  <node id="10242" lat="37.7884000" lon="-122.3971000"/>
-  <node id="10243" lat="37.7876000" lon="-122.3971000"/>
-  <way id="110061">
-    <nd ref="10240"/>
-    <nd ref="10241"/>
-    <nd ref="10242"/>
-    <nd ref="10243"/>
-    <nd ref="10240"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Foundry Square 3 (505 Howard)"/>
-    <tag k="height" v="42.0m"/>
-    <tag k="building:levels" v="10"/>
-  </way>
-
-  <!-- Foundry Square 4 (400 Howard) (42m, 10 floors) -->
-  <node id="10244" lat="37.7888000" lon="-122.3974000"/>
-  <node id="10245" lat="37.7896000" lon="-122.3974000"/>
-  <node id="10246" lat="37.7896000" lon="-122.3966000"/>
-  <node id="10247" lat="37.7888000" lon="-122.3966000"/>
-  <way id="110062">
-    <nd ref="10244"/>
-    <nd ref="10245"/>
-    <nd ref="10246"/>
-    <nd ref="10247"/>
-    <nd ref="10244"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Foundry Square 4 (400 Howard)"/>
-    <tag k="height" v="42.0m"/>
-    <tag k="building:levels" v="10"/>
-  </way>
-
-  <!-- Palace Hotel (40m, 8 floors) -->
-  <node id="10248" lat="37.7876000" lon="-122.4029000"/>
-  <node id="10249" lat="37.7884000" lon="-122.4029000"/>
-  <node id="10250" lat="37.7884000" lon="-122.4021000"/>
-  <node id="10251" lat="37.7876000" lon="-122.4021000"/>
-  <way id="110063">
-    <nd ref="10248"/>
-    <nd ref="10249"/>
-    <nd ref="10250"/>
-    <nd ref="10251"/>
-    <nd ref="10248"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Palace Hotel"/>
-    <tag k="height" v="40.0m"/>
-    <tag k="building:levels" v="8"/>
-  </way>
-
-  <!-- Old St. Mary's Cathedral (38m, 3 floors) -->
-  <node id="10252" lat="37.7921000" lon="-122.4059000"/>
-  <node id="10253" lat="37.7929000" lon="-122.4059000"/>
-  <node id="10254" lat="37.7929000" lon="-122.4051000"/>
-  <node id="10255" lat="37.7921000" lon="-122.4051000"/>
-  <way id="110064">
-    <nd ref="10252"/>
-    <nd ref="10253"/>
-    <nd ref="10254"/>
-    <nd ref="10255"/>
-    <nd ref="10252"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Old St. Mary's Cathedral"/>
-    <tag k="height" v="38.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- St. Patrick's Church (35m, 3 floors) -->
-  <node id="10256" lat="37.7861000" lon="-122.4029000"/>
-  <node id="10257" lat="37.7869000" lon="-122.4029000"/>
-  <node id="10258" lat="37.7869000" lon="-122.4021000"/>
-  <node id="10259" lat="37.7861000" lon="-122.4021000"/>
-  <way id="110065">
-    <nd ref="10256"/>
-    <nd ref="10257"/>
-    <nd ref="10258"/>
-    <nd ref="10259"/>
-    <nd ref="10256"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="St. Patrick's Church"/>
-    <tag k="height" v="35.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Macy's Union Square (35m, 8 floors) -->
-  <node id="10260" lat="37.7866000" lon="-122.4074000"/>
-  <node id="10261" lat="37.7874000" lon="-122.4074000"/>
-  <node id="10262" lat="37.7874000" lon="-122.4066000"/>
-  <node id="10263" lat="37.7866000" lon="-122.4066000"/>
-  <way id="110066">
-    <nd ref="10260"/>
-    <nd ref="10261"/>
-    <nd ref="10262"/>
-    <nd ref="10263"/>
-    <nd ref="10260"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Macy's Union Square"/>
-    <tag k="height" v="35.0m"/>
-    <tag k="building:levels" v="8"/>
-  </way>
-
-  <!-- Crocker Galleria Complex (32m, 4 floors) -->
-  <node id="10264" lat="37.7891000" lon="-122.4039000"/>
-  <node id="10265" lat="37.7899000" lon="-122.4039000"/>
-  <node id="10266" lat="37.7899000" lon="-122.4031000"/>
-  <node id="10267" lat="37.7891000" lon="-122.4031000"/>
-  <way id="110067">
-    <nd ref="10264"/>
-    <nd ref="10265"/>
-    <nd ref="10266"/>
-    <nd ref="10267"/>
-    <nd ref="10264"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Crocker Galleria Complex"/>
-    <tag k="height" v="32.0m"/>
-    <tag k="building:levels" v="4"/>
-  </way>
-
-  <!-- Salesforce Transit Center Terminal (30m, 4 floors) -->
-  <node id="10268" lat="37.7891000" lon="-122.3974000"/>
-  <node id="10269" lat="37.7899000" lon="-122.3974000"/>
-  <node id="10270" lat="37.7899000" lon="-122.3966000"/>
-  <node id="10271" lat="37.7891000" lon="-122.3966000"/>
-  <way id="110068">
-    <nd ref="10268"/>
-    <nd ref="10269"/>
-    <nd ref="10270"/>
-    <nd ref="10271"/>
-    <nd ref="10268"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Salesforce Transit Center Terminal"/>
-    <tag k="height" v="30.0m"/>
-    <tag k="building:levels" v="4"/>
-  </way>
-
-  <!-- Contemporary Jewish Museum (25m, 3 floors) -->
-  <node id="10272" lat="37.7856000" lon="-122.4039000"/>
-  <node id="10273" lat="37.7864000" lon="-122.4039000"/>
-  <node id="10274" lat="37.7864000" lon="-122.4031000"/>
-  <node id="10275" lat="37.7856000" lon="-122.4031000"/>
-  <way id="110069">
-    <nd ref="10272"/>
-    <nd ref="10273"/>
-    <nd ref="10274"/>
-    <nd ref="10275"/>
-    <nd ref="10272"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Contemporary Jewish Museum"/>
-    <tag k="height" v="25.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Pacific Coast Stock Exchange (25m, 4 floors) -->
-  <node id="10276" lat="37.7911000" lon="-122.4022000"/>
-  <node id="10277" lat="37.7919000" lon="-122.4022000"/>
-  <node id="10278" lat="37.7919000" lon="-122.4014000"/>
-  <node id="10279" lat="37.7911000" lon="-122.4014000"/>
-  <way id="110070">
-    <nd ref="10276"/>
-    <nd ref="10277"/>
-    <nd ref="10278"/>
-    <nd ref="10279"/>
-    <nd ref="10276"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Pacific Coast Stock Exchange"/>
-    <tag k="height" v="25.0m"/>
-    <tag k="building:levels" v="4"/>
-  </way>
-
-  <!-- Bank of Canton Historic Building (25m, 4 floors) -->
-  <node id="10280" lat="37.7934000" lon="-122.4054000"/>
-  <node id="10281" lat="37.7942000" lon="-122.4054000"/>
-  <node id="10282" lat="37.7942000" lon="-122.4046000"/>
-  <node id="10283" lat="37.7934000" lon="-122.4046000"/>
-  <way id="110071">
-    <nd ref="10280"/>
-    <nd ref="10281"/>
-    <nd ref="10282"/>
-    <nd ref="10283"/>
-    <nd ref="10280"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Bank of Canton Historic Building"/>
-    <tag k="height" v="25.0m"/>
-    <tag k="building:levels" v="4"/>
-  </way>
-
-  <!-- Portsmouth Square Complex (22m, 3 floors) -->
-  <node id="10284" lat="37.7941000" lon="-122.4049000"/>
-  <node id="10285" lat="37.7949000" lon="-122.4049000"/>
-  <node id="10286" lat="37.7949000" lon="-122.4041000"/>
-  <node id="10287" lat="37.7941000" lon="-122.4041000"/>
-  <way id="110072">
-    <nd ref="10284"/>
-    <nd ref="10285"/>
-    <nd ref="10286"/>
-    <nd ref="10287"/>
-    <nd ref="10284"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Portsmouth Square Complex"/>
-    <tag k="height" v="22.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Moscone Center North (20m, 2 floors) -->
-  <node id="10288" lat="37.7841000" lon="-122.4019000"/>
-  <node id="10289" lat="37.7849000" lon="-122.4019000"/>
-  <node id="10290" lat="37.7849000" lon="-122.4011000"/>
-  <node id="10291" lat="37.7841000" lon="-122.4011000"/>
-  <way id="110073">
-    <nd ref="10288"/>
-    <nd ref="10289"/>
-    <nd ref="10290"/>
-    <nd ref="10291"/>
-    <nd ref="10288"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Moscone Center North"/>
-    <tag k="height" v="20.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
-  <!-- Moscone Center South (20m, 2 floors) -->
-  <node id="10292" lat="37.7826000" lon="-122.4009000"/>
-  <node id="10293" lat="37.7834000" lon="-122.4009000"/>
-  <node id="10294" lat="37.7834000" lon="-122.4001000"/>
-  <node id="10295" lat="37.7826000" lon="-122.4001000"/>
-  <way id="110074">
-    <nd ref="10292"/>
-    <nd ref="10293"/>
-    <nd ref="10294"/>
-    <nd ref="10295"/>
-    <nd ref="10292"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Moscone Center South"/>
-    <tag k="height" v="20.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
-  <!-- Pier 1 Executive Office (20m, 3 floors) -->
-  <node id="10296" lat="37.7961000" lon="-122.3934000"/>
-  <node id="10297" lat="37.7969000" lon="-122.3934000"/>
-  <node id="10298" lat="37.7969000" lon="-122.3926000"/>
-  <node id="10299" lat="37.7961000" lon="-122.3926000"/>
-  <way id="110075">
-    <nd ref="10296"/>
-    <nd ref="10297"/>
-    <nd ref="10298"/>
-    <nd ref="10299"/>
-    <nd ref="10296"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Pier 1 Executive Office"/>
-    <tag k="height" v="20.0m"/>
-    <tag k="building:levels" v="3"/>
-  </way>
-
-  <!-- Pier 3 Ferry Terminal Pavilion (15m, 2 floors) -->
-  <node id="10300" lat="37.7971000" lon="-122.3939000"/>
-  <node id="10301" lat="37.7979000" lon="-122.3939000"/>
-  <node id="10302" lat="37.7979000" lon="-122.3931000"/>
-  <node id="10303" lat="37.7971000" lon="-122.3931000"/>
-  <way id="110076">
-    <nd ref="10300"/>
-    <nd ref="10301"/>
-    <nd ref="10302"/>
-    <nd ref="10303"/>
-    <nd ref="10300"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Pier 3 Ferry Terminal Pavilion"/>
-    <tag k="height" v="15.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
-  <!-- Pier 14 Waterfront Pavilions (12m, 2 floors) -->
-  <node id="10304" lat="37.7926000" lon="-122.3914000"/>
-  <node id="10305" lat="37.7934000" lon="-122.3914000"/>
-  <node id="10306" lat="37.7934000" lon="-122.3906000"/>
-  <node id="10307" lat="37.7926000" lon="-122.3906000"/>
-  <way id="110077">
-    <nd ref="10304"/>
-    <nd ref="10305"/>
-    <nd ref="10306"/>
-    <nd ref="10307"/>
-    <nd ref="10304"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Pier 14 Waterfront Pavilions"/>
-    <tag k="height" v="12.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
-  <!-- Chinatown Gateway (Dragon Gate) (12m, 2 floors) -->
-  <node id="10308" lat="37.7904000" lon="-122.4062000"/>
-  <node id="10309" lat="37.7912000" lon="-122.4062000"/>
-  <node id="10310" lat="37.7912000" lon="-122.4054000"/>
-  <node id="10311" lat="37.7904000" lon="-122.4054000"/>
-  <way id="110078">
-    <nd ref="10308"/>
-    <nd ref="10309"/>
-    <nd ref="10310"/>
-    <nd ref="10311"/>
-    <nd ref="10308"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Chinatown Gateway (Dragon Gate)"/>
-    <tag k="height" v="12.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
-  <!-- Embarcadero YMCA Historic Building (25m, 5 floors) -->
-  <node id="10312" lat="37.7921000" lon="-122.3924000"/>
-  <node id="10313" lat="37.7929000" lon="-122.3924000"/>
-  <node id="10314" lat="37.7929000" lon="-122.3916000"/>
-  <node id="10315" lat="37.7921000" lon="-122.3916000"/>
-  <way id="110079">
-    <nd ref="10312"/>
-    <nd ref="10313"/>
-    <nd ref="10314"/>
-    <nd ref="10315"/>
-    <nd ref="10312"/>
-    <tag k="building" v="civic"/>
-    <tag k="name" v="Embarcadero YMCA Historic Building"/>
-    <tag k="height" v="25.0m"/>
-    <tag k="building:levels" v="5"/>
-  </way>
-
-  <!-- Apple Union Square (18m, 2 floors) -->
-  <node id="10316" lat="37.7886000" lon="-122.4069000"/>
-  <node id="10317" lat="37.7894000" lon="-122.4069000"/>
-  <node id="10318" lat="37.7894000" lon="-122.4061000"/>
-  <node id="10319" lat="37.7886000" lon="-122.4061000"/>
-  <way id="110080">
-    <nd ref="10316"/>
-    <nd ref="10317"/>
-    <nd ref="10318"/>
-    <nd ref="10319"/>
-    <nd ref="10316"/>
-    <tag k="building" v="commercial"/>
-    <tag k="name" v="Apple Union Square"/>
-    <tag k="height" v="18.0m"/>
-    <tag k="building:levels" v="2"/>
-  </way>
-
   <node id="20001" lat="37.7955000" lon="-122.3937000"/>
   <node id="20002" lat="37.7947000" lon="-122.3950000"/>
   <node id="20003" lat="37.7940000" lon="-122.3962000"/>
@@ -1466,6 +106,1366 @@
   <node id="20192" lat="37.7830000" lon="-122.3945000"/>
   <node id="20193" lat="37.7850000" lon="-122.3910000"/>
   <node id="20194" lat="37.7870000" lon="-122.3875000"/>
+
+  <!-- Salesforce Tower (326m, 61 floors) -->
+  <node id="10000" lat="37.7893817" lon="-122.3975763"/>
+  <node id="10001" lat="37.7898183" lon="-122.3975763"/>
+  <node id="10002" lat="37.7898183" lon="-122.3970237"/>
+  <node id="10003" lat="37.7893817" lon="-122.3970237"/>
+  <way id="110001">
+    <nd ref="10000"/>
+    <nd ref="10001"/>
+    <nd ref="10002"/>
+    <nd ref="10003"/>
+    <nd ref="10000"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Salesforce Tower"/>
+    <tag k="height" v="326.0m"/>
+    <tag k="building:levels" v="61"/>
+  </way>
+
+  <!-- Transamerica Pyramid (260m, 48 floors) -->
+  <node id="10004" lat="37.7950385" lon="-122.4031043"/>
+  <node id="10005" lat="37.7953615" lon="-122.4031043"/>
+  <node id="10006" lat="37.7953615" lon="-122.4026957"/>
+  <node id="10007" lat="37.7950385" lon="-122.4026957"/>
+  <way id="110002">
+    <nd ref="10004"/>
+    <nd ref="10005"/>
+    <nd ref="10006"/>
+    <nd ref="10007"/>
+    <nd ref="10004"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Transamerica Pyramid"/>
+    <tag k="height" v="260.0m"/>
+    <tag k="building:levels" v="48"/>
+  </way>
+
+  <!-- 181 Fremont (245m, 54 floors) -->
+  <node id="10008" lat="37.7897619" lon="-122.3966988"/>
+  <node id="10009" lat="37.7899651" lon="-122.3966988"/>
+  <node id="10010" lat="37.7899651" lon="-122.3964416"/>
+  <node id="10011" lat="37.7897619" lon="-122.3964416"/>
+  <way id="110003">
+    <nd ref="10008"/>
+    <nd ref="10009"/>
+    <nd ref="10010"/>
+    <nd ref="10011"/>
+    <nd ref="10008"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="181 Fremont"/>
+    <tag k="height" v="245.0m"/>
+    <tag k="building:levels" v="54"/>
+  </way>
+
+  <!-- 555 California Street (237m, 52 floors) -->
+  <node id="10012" lat="37.7922483" lon="-122.4044420"/>
+  <node id="10013" lat="37.7925517" lon="-122.4044420"/>
+  <node id="10014" lat="37.7925517" lon="-122.4040580"/>
+  <node id="10015" lat="37.7922483" lon="-122.4040580"/>
+  <way id="110004">
+    <nd ref="10012"/>
+    <nd ref="10013"/>
+    <nd ref="10014"/>
+    <nd ref="10015"/>
+    <nd ref="10012"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="555 California Street"/>
+    <tag k="height" v="237.0m"/>
+    <tag k="building:levels" v="52"/>
+  </way>
+
+  <!-- 345 California Center (212m, 48 floors) -->
+  <node id="10016" lat="37.7933175" lon="-122.4017309"/>
+  <node id="10017" lat="37.7936825" lon="-122.4017309"/>
+  <node id="10018" lat="37.7936825" lon="-122.4012691"/>
+  <node id="10019" lat="37.7933175" lon="-122.4012691"/>
+  <way id="110005">
+    <nd ref="10016"/>
+    <nd ref="10017"/>
+    <nd ref="10018"/>
+    <nd ref="10019"/>
+    <nd ref="10016"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="345 California Center"/>
+    <tag k="height" v="212.0m"/>
+    <tag k="building:levels" v="48"/>
+  </way>
+
+  <!-- Millennium Tower (197m, 58 floors) -->
+  <node id="10020" lat="37.7901121" lon="-122.3962644"/>
+  <node id="10021" lat="37.7906879" lon="-122.3962644"/>
+  <node id="10022" lat="37.7906879" lon="-122.3955356"/>
+  <node id="10023" lat="37.7901121" lon="-122.3955356"/>
+  <way id="110006">
+    <nd ref="10020"/>
+    <nd ref="10021"/>
+    <nd ref="10022"/>
+    <nd ref="10023"/>
+    <nd ref="10020"/>
+    <tag k="building" v="residential"/>
+    <tag k="name" v="Millennium Tower"/>
+    <tag k="height" v="197.0m"/>
+    <tag k="building:levels" v="58"/>
+  </way>
+
+  <!-- One Rincon Hill (185m, 60 floors) -->
+  <node id="10024" lat="37.7860554" lon="-122.3922639"/>
+  <node id="10025" lat="37.7862585" lon="-122.3922639"/>
+  <node id="10026" lat="37.7862585" lon="-122.3920068"/>
+  <node id="10027" lat="37.7860554" lon="-122.3920068"/>
+  <way id="110007">
+    <nd ref="10024"/>
+    <nd ref="10025"/>
+    <nd ref="10026"/>
+    <nd ref="10027"/>
+    <nd ref="10024"/>
+    <tag k="building" v="residential"/>
+    <tag k="name" v="One Rincon Hill"/>
+    <tag k="height" v="185.0m"/>
+    <tag k="building:levels" v="60"/>
+  </way>
+
+  <!-- 101 California Street (183m, 48 floors) -->
+  <node id="10028" lat="37.7928718" lon="-122.3976498"/>
+  <node id="10029" lat="37.7930750" lon="-122.3976498"/>
+  <node id="10030" lat="37.7930750" lon="-122.3973927"/>
+  <node id="10031" lat="37.7928718" lon="-122.3973927"/>
+  <way id="110008">
+    <nd ref="10028"/>
+    <nd ref="10029"/>
+    <nd ref="10030"/>
+    <nd ref="10031"/>
+    <nd ref="10028"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="101 California Street"/>
+    <tag k="height" v="183.0m"/>
+    <tag k="building:levels" v="48"/>
+  </way>
+
+  <!-- 50 Fremont Center (183m, 43 floors) -->
+  <node id="10032" lat="37.7908619" lon="-122.3976837"/>
+  <node id="10033" lat="37.7910652" lon="-122.3976837"/>
+  <node id="10034" lat="37.7910652" lon="-122.3974265"/>
+  <node id="10035" lat="37.7908619" lon="-122.3974265"/>
+  <way id="110009">
+    <nd ref="10032"/>
+    <nd ref="10033"/>
+    <nd ref="10034"/>
+    <nd ref="10035"/>
+    <nd ref="10032"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="50 Fremont Center"/>
+    <tag k="height" v="183.0m"/>
+    <tag k="building:levels" v="43"/>
+  </way>
+
+  <!-- 100 First Plaza (173m, 27 floors) -->
+  <node id="10036" lat="37.7904650" lon="-122.3985219"/>
+  <node id="10037" lat="37.7906683" lon="-122.3985219"/>
+  <node id="10038" lat="37.7906683" lon="-122.3982646"/>
+  <node id="10039" lat="37.7904650" lon="-122.3982646"/>
+  <way id="110010">
+    <nd ref="10036"/>
+    <nd ref="10037"/>
+    <nd ref="10038"/>
+    <nd ref="10039"/>
+    <nd ref="10036"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="100 First Plaza"/>
+    <tag k="height" v="173.0m"/>
+    <tag k="building:levels" v="27"/>
+  </way>
+
+  <!-- 44 Montgomery Street (172m, 43 floors) -->
+  <node id="10040" lat="37.7896978" lon="-122.4021293"/>
+  <node id="10041" lat="37.7899022" lon="-122.4021293"/>
+  <node id="10042" lat="37.7899022" lon="-122.4018707"/>
+  <node id="10043" lat="37.7896978" lon="-122.4018707"/>
+  <way id="110011">
+    <nd ref="10040"/>
+    <nd ref="10041"/>
+    <nd ref="10042"/>
+    <nd ref="10043"/>
+    <nd ref="10040"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="44 Montgomery Street"/>
+    <tag k="height" v="172.0m"/>
+    <tag k="building:levels" v="43"/>
+  </way>
+
+  <!-- Spear Tower (One Market Plaza) (172m, 42 floors) -->
+  <node id="10044" lat="37.7935282" lon="-122.3951439"/>
+  <node id="10045" lat="37.7940718" lon="-122.3951439"/>
+  <node id="10046" lat="37.7940718" lon="-122.3944561"/>
+  <node id="10047" lat="37.7935282" lon="-122.3944561"/>
+  <way id="110012">
+    <nd ref="10044"/>
+    <nd ref="10045"/>
+    <nd ref="10046"/>
+    <nd ref="10047"/>
+    <nd ref="10044"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Spear Tower (One Market Plaza)"/>
+    <tag k="height" v="172.0m"/>
+    <tag k="building:levels" v="42"/>
+  </way>
+
+  <!-- Citigroup Center (1 Sansome) (168m, 41 floors) -->
+  <node id="10048" lat="37.7901901" lon="-122.4018010"/>
+  <node id="10049" lat="37.7903933" lon="-122.4018010"/>
+  <node id="10050" lat="37.7903933" lon="-122.4015438"/>
+  <node id="10051" lat="37.7901901" lon="-122.4015438"/>
+  <way id="110013">
+    <nd ref="10048"/>
+    <nd ref="10049"/>
+    <nd ref="10050"/>
+    <nd ref="10051"/>
+    <nd ref="10048"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Citigroup Center (1 Sansome)"/>
+    <tag k="height" v="168.0m"/>
+    <tag k="building:levels" v="41"/>
+  </way>
+
+  <!-- Shaklee Terraces (444 Market) (164m, 38 floors) -->
+  <node id="10052" lat="37.7917589" lon="-122.3994982"/>
+  <node id="10053" lat="37.7919621" lon="-122.3994982"/>
+  <node id="10054" lat="37.7919621" lon="-122.3992411"/>
+  <node id="10055" lat="37.7917589" lon="-122.3992411"/>
+  <way id="110014">
+    <nd ref="10052"/>
+    <nd ref="10053"/>
+    <nd ref="10054"/>
+    <nd ref="10055"/>
+    <nd ref="10052"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Shaklee Terraces (444 Market)"/>
+    <tag k="height" v="164.0m"/>
+    <tag k="building:levels" v="38"/>
+  </way>
+
+  <!-- First Market Tower (525 Market) (161m, 38 floors) -->
+  <node id="10056" lat="37.7903834" lon="-122.4004741"/>
+  <node id="10057" lat="37.7908166" lon="-122.4004741"/>
+  <node id="10058" lat="37.7908166" lon="-122.3999259"/>
+  <node id="10059" lat="37.7903834" lon="-122.3999259"/>
+  <way id="110015">
+    <nd ref="10056"/>
+    <nd ref="10057"/>
+    <nd ref="10058"/>
+    <nd ref="10059"/>
+    <nd ref="10056"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="First Market Tower (525 Market)"/>
+    <tag k="height" v="161.0m"/>
+    <tag k="building:levels" v="38"/>
+  </way>
+
+  <!-- One Post Street (161m, 38 floors) -->
+  <node id="10060" lat="37.7889985" lon="-122.4032550"/>
+  <node id="10061" lat="37.7894015" lon="-122.4032550"/>
+  <node id="10062" lat="37.7894015" lon="-122.4027450"/>
+  <node id="10063" lat="37.7889985" lon="-122.4027450"/>
+  <way id="110016">
+    <nd ref="10060"/>
+    <nd ref="10061"/>
+    <nd ref="10062"/>
+    <nd ref="10063"/>
+    <nd ref="10060"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="One Post Street"/>
+    <tag k="height" v="161.0m"/>
+    <tag k="building:levels" v="38"/>
+  </way>
+
+  <!-- 425 Market Street (160m, 38 floors) -->
+  <node id="10064" lat="37.7926731" lon="-122.3989430"/>
+  <node id="10065" lat="37.7928249" lon="-122.3989430"/>
+  <node id="10066" lat="37.7928249" lon="-122.3987509"/>
+  <node id="10067" lat="37.7926731" lon="-122.3987509"/>
+  <way id="110017">
+    <nd ref="10064"/>
+    <nd ref="10065"/>
+    <nd ref="10066"/>
+    <nd ref="10067"/>
+    <nd ref="10064"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="425 Market Street"/>
+    <tag k="height" v="160.0m"/>
+    <tag k="building:levels" v="38"/>
+  </way>
+
+  <!-- Telesis Tower (1 Montgomery) (152m, 38 floors) -->
+  <node id="10068" lat="37.7893538" lon="-122.4026851"/>
+  <node id="10069" lat="37.7896462" lon="-122.4026851"/>
+  <node id="10070" lat="37.7896462" lon="-122.4023149"/>
+  <node id="10071" lat="37.7893538" lon="-122.4023149"/>
+  <way id="110018">
+    <nd ref="10068"/>
+    <nd ref="10069"/>
+    <nd ref="10070"/>
+    <nd ref="10071"/>
+    <nd ref="10068"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Telesis Tower (1 Montgomery)"/>
+    <tag k="height" v="152.0m"/>
+    <tag k="building:levels" v="38"/>
+  </way>
+
+  <!-- 333 Bush Street (151m, 43 floors) -->
+  <node id="10072" lat="37.7906912" lon="-122.4036377"/>
+  <node id="10073" lat="37.7909088" lon="-122.4036377"/>
+  <node id="10074" lat="37.7909088" lon="-122.4033623"/>
+  <node id="10075" lat="37.7906912" lon="-122.4033623"/>
+  <way id="110019">
+    <nd ref="10072"/>
+    <nd ref="10073"/>
+    <nd ref="10074"/>
+    <nd ref="10075"/>
+    <nd ref="10072"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="333 Bush Street"/>
+    <tag k="height" v="151.0m"/>
+    <tag k="building:levels" v="43"/>
+  </way>
+
+  <!-- PG&E Headquarters (77 Beale) (150m, 34 floors) -->
+  <node id="10076" lat="37.7919398" lon="-122.3956644"/>
+  <node id="10077" lat="37.7921431" lon="-122.3956644"/>
+  <node id="10078" lat="37.7921431" lon="-122.3954071"/>
+  <node id="10079" lat="37.7919398" lon="-122.3954071"/>
+  <way id="110020">
+    <nd ref="10076"/>
+    <nd ref="10077"/>
+    <nd ref="10078"/>
+    <nd ref="10079"/>
+    <nd ref="10076"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="PG&E Headquarters (77 Beale)"/>
+    <tag k="height" v="150.0m"/>
+    <tag k="building:levels" v="34"/>
+  </way>
+
+  <!-- 50 California Street (148m, 37 floors) -->
+  <node id="10080" lat="37.7937460" lon="-122.3971197"/>
+  <node id="10081" lat="37.7939126" lon="-122.3971197"/>
+  <node id="10082" lat="37.7939126" lon="-122.3969089"/>
+  <node id="10083" lat="37.7937460" lon="-122.3969089"/>
+  <way id="110021">
+    <nd ref="10080"/>
+    <nd ref="10081"/>
+    <nd ref="10082"/>
+    <nd ref="10083"/>
+    <nd ref="10080"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="50 California Street"/>
+    <tag k="height" v="148.0m"/>
+    <tag k="building:levels" v="37"/>
+  </way>
+
+  <!-- 555 Mission Street (147m, 33 floors) -->
+  <node id="10084" lat="37.7886968" lon="-122.3996315"/>
+  <node id="10085" lat="37.7889001" lon="-122.3996315"/>
+  <node id="10086" lat="37.7889001" lon="-122.3993742"/>
+  <node id="10087" lat="37.7886968" lon="-122.3993742"/>
+  <way id="110022">
+    <nd ref="10084"/>
+    <nd ref="10085"/>
+    <nd ref="10086"/>
+    <nd ref="10087"/>
+    <nd ref="10084"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="555 Mission Street"/>
+    <tag k="height" v="147.0m"/>
+    <tag k="building:levels" v="33"/>
+  </way>
+
+  <!-- 100 Pine Street (145m, 33 floors) -->
+  <node id="10088" lat="37.7928663" lon="-122.3999824"/>
+  <node id="10089" lat="37.7930695" lon="-122.3999824"/>
+  <node id="10090" lat="37.7930695" lon="-122.3997252"/>
+  <node id="10091" lat="37.7928663" lon="-122.3997252"/>
+  <way id="110023">
+    <nd ref="10088"/>
+    <nd ref="10089"/>
+    <nd ref="10090"/>
+    <nd ref="10091"/>
+    <nd ref="10088"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="100 Pine Street"/>
+    <tag k="height" v="145.0m"/>
+    <tag k="building:levels" v="33"/>
+  </way>
+
+  <!-- Embarcadero Center 1 (145m, 45 floors) -->
+  <node id="10092" lat="37.7942121" lon="-122.3998644"/>
+  <node id="10093" lat="37.7947879" lon="-122.3998644"/>
+  <node id="10094" lat="37.7947879" lon="-122.3991356"/>
+  <node id="10095" lat="37.7942121" lon="-122.3991356"/>
+  <way id="110024">
+    <nd ref="10092"/>
+    <nd ref="10093"/>
+    <nd ref="10094"/>
+    <nd ref="10095"/>
+    <nd ref="10092"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Embarcadero Center 1"/>
+    <tag k="height" v="145.0m"/>
+    <tag k="building:levels" v="45"/>
+  </way>
+
+  <!-- Embarcadero Center 2 (145m, 45 floors) -->
+  <node id="10096" lat="37.7947121" lon="-122.3983644"/>
+  <node id="10097" lat="37.7952879" lon="-122.3983644"/>
+  <node id="10098" lat="37.7952879" lon="-122.3976356"/>
+  <node id="10099" lat="37.7947121" lon="-122.3976356"/>
+  <way id="110025">
+    <nd ref="10096"/>
+    <nd ref="10097"/>
+    <nd ref="10098"/>
+    <nd ref="10099"/>
+    <nd ref="10096"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Embarcadero Center 2"/>
+    <tag k="height" v="145.0m"/>
+    <tag k="building:levels" v="45"/>
+  </way>
+
+  <!-- Embarcadero Center 3 (145m, 45 floors) -->
+  <node id="10100" lat="37.7952121" lon="-122.3968644"/>
+  <node id="10101" lat="37.7957879" lon="-122.3968644"/>
+  <node id="10102" lat="37.7957879" lon="-122.3961356"/>
+  <node id="10103" lat="37.7952121" lon="-122.3961356"/>
+  <way id="110026">
+    <nd ref="10100"/>
+    <nd ref="10101"/>
+    <nd ref="10102"/>
+    <nd ref="10103"/>
+    <nd ref="10100"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Embarcadero Center 3"/>
+    <tag k="height" v="145.0m"/>
+    <tag k="building:levels" v="45"/>
+  </way>
+
+  <!-- Embarcadero Center 4 (145m, 45 floors) -->
+  <node id="10104" lat="37.7957880" lon="-122.3952683"/>
+  <node id="10105" lat="37.7962120" lon="-122.3952683"/>
+  <node id="10106" lat="37.7962120" lon="-122.3947317"/>
+  <node id="10107" lat="37.7957880" lon="-122.3947317"/>
+  <way id="110027">
+    <nd ref="10104"/>
+    <nd ref="10105"/>
+    <nd ref="10106"/>
+    <nd ref="10107"/>
+    <nd ref="10104"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Embarcadero Center 4"/>
+    <tag k="height" v="145.0m"/>
+    <tag k="building:levels" v="45"/>
+  </way>
+
+  <!-- 333 Market Street (144m, 33 floors) -->
+  <node id="10108" lat="37.7919417" lon="-122.3980631"/>
+  <node id="10109" lat="37.7921449" lon="-122.3980631"/>
+  <node id="10110" lat="37.7921449" lon="-122.3978060"/>
+  <node id="10111" lat="37.7919417" lon="-122.3978060"/>
+  <way id="110028">
+    <nd ref="10108"/>
+    <nd ref="10109"/>
+    <nd ref="10110"/>
+    <nd ref="10111"/>
+    <nd ref="10108"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="333 Market Street"/>
+    <tag k="height" v="144.0m"/>
+    <tag k="building:levels" v="33"/>
+  </way>
+
+  <!-- 650 California Street (Hartford Bldg) (142m, 33 floors) -->
+  <node id="10112" lat="37.7926097" lon="-122.4061736"/>
+  <node id="10113" lat="37.7928128" lon="-122.4061736"/>
+  <node id="10114" lat="37.7928128" lon="-122.4059166"/>
+  <node id="10115" lat="37.7926097" lon="-122.4059166"/>
+  <way id="110029">
+    <nd ref="10112"/>
+    <nd ref="10113"/>
+    <nd ref="10114"/>
+    <nd ref="10115"/>
+    <nd ref="10112"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="650 California Street (Hartford Bldg)"/>
+    <tag k="height" v="142.0m"/>
+    <tag k="building:levels" v="33"/>
+  </way>
+
+  <!-- Russ Building (133m, 32 floors) -->
+  <node id="10116" lat="37.7916378" lon="-122.4032053"/>
+  <node id="10117" lat="37.7919622" lon="-122.4032053"/>
+  <node id="10118" lat="37.7919622" lon="-122.4027947"/>
+  <node id="10119" lat="37.7916378" lon="-122.4027947"/>
+  <way id="110030">
+    <nd ref="10116"/>
+    <nd ref="10117"/>
+    <nd ref="10118"/>
+    <nd ref="10119"/>
+    <nd ref="10116"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Russ Building"/>
+    <tag k="height" v="133.0m"/>
+    <tag k="building:levels" v="32"/>
+  </way>
+
+  <!-- 560 Mission Street (JPMorgan Chase) (128m, 31 floors) -->
+  <node id="10120" lat="37.7883383" lon="-122.4000400"/>
+  <node id="10121" lat="37.7885417" lon="-122.4000400"/>
+  <node id="10122" lat="37.7885417" lon="-122.3997827"/>
+  <node id="10123" lat="37.7883383" lon="-122.3997827"/>
+  <way id="110031">
+    <nd ref="10120"/>
+    <nd ref="10121"/>
+    <nd ref="10122"/>
+    <nd ref="10123"/>
+    <nd ref="10120"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="560 Mission Street (JPMorgan Chase)"/>
+    <tag k="height" v="128.0m"/>
+    <tag k="building:levels" v="31"/>
+  </way>
+
+  <!-- Infinity Towers (300 Spear) (125m, 37 floors) -->
+  <node id="10124" lat="37.7893404" lon="-122.3912020"/>
+  <node id="10125" lat="37.7896596" lon="-122.3912020"/>
+  <node id="10126" lat="37.7896596" lon="-122.3907980"/>
+  <node id="10127" lat="37.7893404" lon="-122.3907980"/>
+  <way id="110032">
+    <nd ref="10124"/>
+    <nd ref="10125"/>
+    <nd ref="10126"/>
+    <nd ref="10127"/>
+    <nd ref="10124"/>
+    <tag k="building" v="residential"/>
+    <tag k="name" v="Infinity Towers (300 Spear)"/>
+    <tag k="height" v="125.0m"/>
+    <tag k="building:levels" v="37"/>
+  </way>
+
+  <!-- Lumina Towers (201 Folsom) (120m, 42 floors) -->
+  <node id="10128" lat="37.7883861" lon="-122.3926442"/>
+  <node id="10129" lat="37.7886139" lon="-122.3926442"/>
+  <node id="10130" lat="37.7886139" lon="-122.3923558"/>
+  <node id="10131" lat="37.7883861" lon="-122.3923558"/>
+  <way id="110033">
+    <nd ref="10128"/>
+    <nd ref="10129"/>
+    <nd ref="10130"/>
+    <nd ref="10131"/>
+    <nd ref="10128"/>
+    <tag k="building" v="residential"/>
+    <tag k="name" v="Lumina Towers (201 Folsom)"/>
+    <tag k="height" v="120.0m"/>
+    <tag k="building:levels" v="42"/>
+  </way>
+
+  <!-- 201 Mission Street (120m, 30 floors) -->
+  <node id="10132" lat="37.7913953" lon="-122.3936324"/>
+  <node id="10133" lat="37.7916047" lon="-122.3936324"/>
+  <node id="10134" lat="37.7916047" lon="-122.3933676"/>
+  <node id="10135" lat="37.7913953" lon="-122.3933676"/>
+  <way id="110034">
+    <nd ref="10132"/>
+    <nd ref="10133"/>
+    <nd ref="10134"/>
+    <nd ref="10135"/>
+    <nd ref="10132"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="201 Mission Street"/>
+    <tag k="height" v="120.0m"/>
+    <tag k="building:levels" v="30"/>
+  </way>
+
+  <!-- Shell Building (115m, 28 floors) -->
+  <node id="10136" lat="37.7908631" lon="-122.4008776"/>
+  <node id="10137" lat="37.7910789" lon="-122.4008776"/>
+  <node id="10138" lat="37.7910789" lon="-122.4006045"/>
+  <node id="10139" lat="37.7908631" lon="-122.4006045"/>
+  <way id="110035">
+    <nd ref="10136"/>
+    <nd ref="10137"/>
+    <nd ref="10138"/>
+    <nd ref="10139"/>
+    <nd ref="10136"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Shell Building"/>
+    <tag k="height" v="115.0m"/>
+    <tag k="building:levels" v="28"/>
+  </way>
+
+  <!-- Union Square St. Francis Hotel Tower (115m, 32 floors) -->
+  <node id="10140" lat="37.7878618" lon="-122.4081749"/>
+  <node id="10141" lat="37.7881382" lon="-122.4081749"/>
+  <node id="10142" lat="37.7881382" lon="-122.4078251"/>
+  <node id="10143" lat="37.7878618" lon="-122.4078251"/>
+  <way id="110036">
+    <nd ref="10140"/>
+    <nd ref="10141"/>
+    <nd ref="10142"/>
+    <nd ref="10143"/>
+    <nd ref="10140"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Union Square St. Francis Hotel Tower"/>
+    <tag k="height" v="115.0m"/>
+    <tag k="building:levels" v="32"/>
+  </way>
+
+  <!-- 350 Mission Street (Salesforce East) (114m, 27 floors) -->
+  <node id="10144" lat="37.7906930" lon="-122.3976354"/>
+  <node id="10145" lat="37.7909070" lon="-122.3976354"/>
+  <node id="10146" lat="37.7909070" lon="-122.3973646"/>
+  <node id="10147" lat="37.7906930" lon="-122.3973646"/>
+  <way id="110037">
+    <nd ref="10144"/>
+    <nd ref="10145"/>
+    <nd ref="10146"/>
+    <nd ref="10147"/>
+    <nd ref="10144"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="350 Mission Street (Salesforce East)"/>
+    <tag k="height" v="114.0m"/>
+    <tag k="building:levels" v="27"/>
+  </way>
+
+  <!-- 388 Market Street (Flatiron) (110m, 24 floors) -->
+  <node id="10148" lat="37.7932314" lon="-122.3983783"/>
+  <node id="10149" lat="37.7934347" lon="-122.3983783"/>
+  <node id="10150" lat="37.7934347" lon="-122.3981211"/>
+  <node id="10151" lat="37.7932314" lon="-122.3981211"/>
+  <way id="110038">
+    <nd ref="10148"/>
+    <nd ref="10149"/>
+    <nd ref="10150"/>
+    <nd ref="10151"/>
+    <nd ref="10148"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="388 Market Street (Flatiron)"/>
+    <tag k="height" v="110.0m"/>
+    <tag k="building:levels" v="24"/>
+  </way>
+
+  <!-- Steuart Tower (One Market Plaza) (110m, 27 floors) -->
+  <node id="10152" lat="37.7940492" lon="-122.3941908"/>
+  <node id="10153" lat="37.7943508" lon="-122.3941908"/>
+  <node id="10154" lat="37.7943508" lon="-122.3938092"/>
+  <node id="10155" lat="37.7940492" lon="-122.3938092"/>
+  <way id="110039">
+    <nd ref="10152"/>
+    <nd ref="10153"/>
+    <nd ref="10154"/>
+    <nd ref="10155"/>
+    <nd ref="10152"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Steuart Tower (One Market Plaza)"/>
+    <tag k="height" v="110.0m"/>
+    <tag k="building:levels" v="27"/>
+  </way>
+
+  <!-- 101 Second Street (108m, 26 floors) -->
+  <node id="10156" lat="37.7877121" lon="-122.3998644"/>
+  <node id="10157" lat="37.7882879" lon="-122.3998644"/>
+  <node id="10158" lat="37.7882879" lon="-122.3991356"/>
+  <node id="10159" lat="37.7877121" lon="-122.3991356"/>
+  <way id="110040">
+    <nd ref="10156"/>
+    <nd ref="10157"/>
+    <nd ref="10158"/>
+    <nd ref="10159"/>
+    <nd ref="10156"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="101 Second Street"/>
+    <tag k="height" v="108.0m"/>
+    <tag k="building:levels" v="26"/>
+  </way>
+
+  <!-- 199 Fremont Street (105m, 27 floors) -->
+  <node id="10160" lat="37.7892121" lon="-122.3933644"/>
+  <node id="10161" lat="37.7897879" lon="-122.3933644"/>
+  <node id="10162" lat="37.7897879" lon="-122.3926356"/>
+  <node id="10163" lat="37.7892121" lon="-122.3926356"/>
+  <way id="110041">
+    <nd ref="10160"/>
+    <nd ref="10161"/>
+    <nd ref="10162"/>
+    <nd ref="10163"/>
+    <nd ref="10160"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="199 Fremont Street"/>
+    <tag k="height" v="105.0m"/>
+    <tag k="building:levels" v="27"/>
+  </way>
+
+  <!-- 101 Montgomery Street (105m, 28 floors) -->
+  <node id="10164" lat="37.7903983" lon="-122.4029217"/>
+  <node id="10165" lat="37.7906017" lon="-122.4029217"/>
+  <node id="10166" lat="37.7906017" lon="-122.4026643"/>
+  <node id="10167" lat="37.7903983" lon="-122.4026643"/>
+  <way id="110042">
+    <nd ref="10164"/>
+    <nd ref="10165"/>
+    <nd ref="10166"/>
+    <nd ref="10167"/>
+    <nd ref="10164"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="101 Montgomery Street"/>
+    <tag k="height" v="105.0m"/>
+    <tag k="building:levels" v="28"/>
+  </way>
+
+  <!-- 450 Sutter Street (Medical Dental) (105m, 26 floors) -->
+  <node id="10168" lat="37.7892496" lon="-122.4071127"/>
+  <node id="10169" lat="37.7894529" lon="-122.4071127"/>
+  <node id="10170" lat="37.7894529" lon="-122.4068555"/>
+  <node id="10171" lat="37.7892496" lon="-122.4068555"/>
+  <way id="110043">
+    <nd ref="10168"/>
+    <nd ref="10169"/>
+    <nd ref="10170"/>
+    <nd ref="10171"/>
+    <nd ref="10168"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="450 Sutter Street (Medical Dental)"/>
+    <tag k="height" v="105.0m"/>
+    <tag k="building:levels" v="26"/>
+  </way>
+
+  <!-- Standard Oil Building (225 Bush) (100m, 22 floors) -->
+  <node id="10172" lat="37.7908564" lon="-122.4021817"/>
+  <node id="10173" lat="37.7911436" lon="-122.4021817"/>
+  <node id="10174" lat="37.7911436" lon="-122.4018183"/>
+  <node id="10175" lat="37.7908564" lon="-122.4018183"/>
+  <way id="110044">
+    <nd ref="10172"/>
+    <nd ref="10173"/>
+    <nd ref="10174"/>
+    <nd ref="10175"/>
+    <nd ref="10172"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Standard Oil Building (225 Bush)"/>
+    <tag k="height" v="100.0m"/>
+    <tag k="building:levels" v="22"/>
+  </way>
+
+  <!-- 111 Pine Street (95m, 24 floors) -->
+  <node id="10176" lat="37.7930437" lon="-122.3991829"/>
+  <node id="10177" lat="37.7932469" lon="-122.3991829"/>
+  <node id="10178" lat="37.7932469" lon="-122.3989257"/>
+  <node id="10179" lat="37.7930437" lon="-122.3989257"/>
+  <way id="110045">
+    <nd ref="10176"/>
+    <nd ref="10177"/>
+    <nd ref="10178"/>
+    <nd ref="10179"/>
+    <nd ref="10176"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="111 Pine Street"/>
+    <tag k="height" v="95.0m"/>
+    <tag k="building:levels" v="24"/>
+  </way>
+
+  <!-- 100 Montgomery Street (90m, 25 floors) -->
+  <node id="10180" lat="37.7902373" lon="-122.4034058"/>
+  <node id="10181" lat="37.7905627" lon="-122.4034058"/>
+  <node id="10182" lat="37.7905627" lon="-122.4029942"/>
+  <node id="10183" lat="37.7902373" lon="-122.4029942"/>
+  <way id="110046">
+    <nd ref="10180"/>
+    <nd ref="10181"/>
+    <nd ref="10182"/>
+    <nd ref="10183"/>
+    <nd ref="10180"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="100 Montgomery Street"/>
+    <tag k="height" v="90.0m"/>
+    <tag k="building:levels" v="25"/>
+  </way>
+
+  <!-- Hobart Building (87m, 21 floors) -->
+  <node id="10184" lat="37.7889638" lon="-122.4015054"/>
+  <node id="10185" lat="37.7891671" lon="-122.4015054"/>
+  <node id="10186" lat="37.7891671" lon="-122.4012481"/>
+  <node id="10187" lat="37.7889638" lon="-122.4012481"/>
+  <way id="110047">
+    <nd ref="10184"/>
+    <nd ref="10185"/>
+    <nd ref="10186"/>
+    <nd ref="10187"/>
+    <nd ref="10184"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Hobart Building"/>
+    <tag k="height" v="87.0m"/>
+    <tag k="building:levels" v="21"/>
+  </way>
+
+  <!-- 201 California Street (85m, 20 floors) -->
+  <node id="10188" lat="37.7935207" lon="-122.3976030"/>
+  <node id="10189" lat="37.7937240" lon="-122.3976030"/>
+  <node id="10190" lat="37.7937240" lon="-122.3973457"/>
+  <node id="10191" lat="37.7935207" lon="-122.3973457"/>
+  <way id="110048">
+    <nd ref="10188"/>
+    <nd ref="10189"/>
+    <nd ref="10190"/>
+    <nd ref="10191"/>
+    <nd ref="10188"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="201 California Street"/>
+    <tag k="height" v="85.0m"/>
+    <tag k="building:levels" v="20"/>
+  </way>
+
+  <!-- Rincon Center Towers (85m, 24 floors) -->
+  <node id="10192" lat="37.7918129" lon="-122.3928047"/>
+  <node id="10193" lat="37.7920161" lon="-122.3928047"/>
+  <node id="10194" lat="37.7920161" lon="-122.3925475"/>
+  <node id="10195" lat="37.7918129" lon="-122.3925475"/>
+  <way id="110049">
+    <nd ref="10192"/>
+    <nd ref="10193"/>
+    <nd ref="10194"/>
+    <nd ref="10195"/>
+    <nd ref="10192"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Rincon Center Towers"/>
+    <tag k="height" v="85.0m"/>
+    <tag k="building:levels" v="24"/>
+  </way>
+
+  <!-- 222 Second Street (LinkedIn HQ) (80m, 26 floors) -->
+  <node id="10196" lat="37.7873475" lon="-122.3986930"/>
+  <node id="10197" lat="37.7876525" lon="-122.3986930"/>
+  <node id="10198" lat="37.7876525" lon="-122.3983070"/>
+  <node id="10199" lat="37.7873475" lon="-122.3983070"/>
+  <way id="110050">
+    <nd ref="10196"/>
+    <nd ref="10197"/>
+    <nd ref="10198"/>
+    <nd ref="10199"/>
+    <nd ref="10196"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="222 Second Street (LinkedIn HQ)"/>
+    <tag k="height" v="80.0m"/>
+    <tag k="building:levels" v="26"/>
+  </way>
+
+  <!-- San Francisco Ferry Building (75m, 3 floors) -->
+  <node id="10200" lat="37.7954613" lon="-122.3942351"/>
+  <node id="10201" lat="37.7956642" lon="-122.3942351"/>
+  <node id="10202" lat="37.7956642" lon="-122.3939783"/>
+  <node id="10203" lat="37.7954613" lon="-122.3939783"/>
+  <way id="110051">
+    <nd ref="10200"/>
+    <nd ref="10201"/>
+    <nd ref="10202"/>
+    <nd ref="10203"/>
+    <nd ref="10200"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="San Francisco Ferry Building"/>
+    <tag k="height" v="75.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Hyatt Regency San Francisco (70m, 17 floors) -->
+  <node id="10204" lat="37.7946076" lon="-122.3956396"/>
+  <node id="10205" lat="37.7948109" lon="-122.3956396"/>
+  <node id="10206" lat="37.7948109" lon="-122.3953824"/>
+  <node id="10207" lat="37.7946076" lon="-122.3953824"/>
+  <way id="110052">
+    <nd ref="10204"/>
+    <nd ref="10205"/>
+    <nd ref="10206"/>
+    <nd ref="10207"/>
+    <nd ref="10204"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Hyatt Regency San Francisco"/>
+    <tag k="height" v="70.0m"/>
+    <tag k="building:levels" v="17"/>
+  </way>
+
+  <!-- Federal Reserve Bank of SF (70m, 12 floors) -->
+  <node id="10208" lat="37.7933651" lon="-122.3941789"/>
+  <node id="10209" lat="37.7935684" lon="-122.3941789"/>
+  <node id="10210" lat="37.7935684" lon="-122.3939216"/>
+  <node id="10211" lat="37.7933651" lon="-122.3939216"/>
+  <way id="110053">
+    <nd ref="10208"/>
+    <nd ref="10209"/>
+    <nd ref="10210"/>
+    <nd ref="10211"/>
+    <nd ref="10208"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Federal Reserve Bank of SF"/>
+    <tag k="height" v="70.0m"/>
+    <tag k="building:levels" v="12"/>
+  </way>
+
+  <!-- Coit Tower (64m, 3 floors) -->
+  <node id="10212" lat="37.8021121" lon="-122.4061644"/>
+  <node id="10213" lat="37.8026879" lon="-122.4061644"/>
+  <node id="10214" lat="37.8026879" lon="-122.4054356"/>
+  <node id="10215" lat="37.8021121" lon="-122.4054356"/>
+  <way id="110054">
+    <nd ref="10212"/>
+    <nd ref="10213"/>
+    <nd ref="10214"/>
+    <nd ref="10215"/>
+    <nd ref="10212"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Coit Tower"/>
+    <tag k="height" v="64.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Wells Fargo Headquarters (60m, 12 floors) -->
+  <node id="10216" lat="37.7923983" lon="-122.4029217"/>
+  <node id="10217" lat="37.7926017" lon="-122.4029217"/>
+  <node id="10218" lat="37.7926017" lon="-122.4026643"/>
+  <node id="10219" lat="37.7923983" lon="-122.4026643"/>
+  <way id="110055">
+    <nd ref="10216"/>
+    <nd ref="10217"/>
+    <nd ref="10218"/>
+    <nd ref="10219"/>
+    <nd ref="10216"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Wells Fargo Headquarters"/>
+    <tag k="height" v="60.0m"/>
+    <tag k="building:levels" v="12"/>
+  </way>
+
+  <!-- 303 Second Street (50m, 12 floors) -->
+  <node id="10220" lat="37.7852861" lon="-122.3966677"/>
+  <node id="10221" lat="37.7854892" lon="-122.3966677"/>
+  <node id="10222" lat="37.7854892" lon="-122.3964107"/>
+  <node id="10223" lat="37.7852861" lon="-122.3964107"/>
+  <way id="110056">
+    <nd ref="10220"/>
+    <nd ref="10221"/>
+    <nd ref="10222"/>
+    <nd ref="10223"/>
+    <nd ref="10220"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="303 Second Street"/>
+    <tag k="height" v="50.0m"/>
+    <tag k="building:levels" v="12"/>
+  </way>
+
+  <!-- Hills Plaza Waterfront Complex (45m, 12 floors) -->
+  <node id="10224" lat="37.7893948" lon="-122.3896421"/>
+  <node id="10225" lat="37.7895980" lon="-122.3896421"/>
+  <node id="10226" lat="37.7895980" lon="-122.3893850"/>
+  <node id="10227" lat="37.7893948" lon="-122.3893850"/>
+  <way id="110057">
+    <nd ref="10224"/>
+    <nd ref="10225"/>
+    <nd ref="10226"/>
+    <nd ref="10227"/>
+    <nd ref="10224"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Hills Plaza Waterfront Complex"/>
+    <tag k="height" v="45.0m"/>
+    <tag k="building:levels" v="12"/>
+  </way>
+
+  <!-- SFMOMA Snohetta Extension (45m, 10 floors) -->
+  <node id="10228" lat="37.7855121" lon="-122.4013644"/>
+  <node id="10229" lat="37.7860879" lon="-122.4013644"/>
+  <node id="10230" lat="37.7860879" lon="-122.4006356"/>
+  <node id="10231" lat="37.7855121" lon="-122.4006356"/>
+  <way id="110058">
+    <nd ref="10228"/>
+    <nd ref="10229"/>
+    <nd ref="10230"/>
+    <nd ref="10231"/>
+    <nd ref="10228"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="SFMOMA Snohetta Extension"/>
+    <tag k="height" v="45.0m"/>
+    <tag k="building:levels" v="10"/>
+  </way>
+
+  <!-- Foundry Square 1 (500 Howard) (42m, 10 floors) -->
+  <node id="10232" lat="37.7885216" lon="-122.3967500"/>
+  <node id="10233" lat="37.7887248" lon="-122.3967500"/>
+  <node id="10234" lat="37.7887248" lon="-122.3964928"/>
+  <node id="10235" lat="37.7885216" lon="-122.3964928"/>
+  <way id="110059">
+    <nd ref="10232"/>
+    <nd ref="10233"/>
+    <nd ref="10234"/>
+    <nd ref="10235"/>
+    <nd ref="10232"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Foundry Square 1 (500 Howard)"/>
+    <tag k="height" v="42.0m"/>
+    <tag k="building:levels" v="10"/>
+  </way>
+
+  <!-- Foundry Square 2 (405 Howard) (42m, 10 floors) -->
+  <node id="10236" lat="37.7889019" lon="-122.3961320"/>
+  <node id="10237" lat="37.7891050" lon="-122.3961320"/>
+  <node id="10238" lat="37.7891050" lon="-122.3958748"/>
+  <node id="10239" lat="37.7889019" lon="-122.3958748"/>
+  <way id="110060">
+    <nd ref="10236"/>
+    <nd ref="10237"/>
+    <nd ref="10238"/>
+    <nd ref="10239"/>
+    <nd ref="10236"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Foundry Square 2 (405 Howard)"/>
+    <tag k="height" v="42.0m"/>
+    <tag k="building:levels" v="10"/>
+  </way>
+
+  <!-- Foundry Square 3 (505 Howard) (42m, 10 floors) -->
+  <node id="10240" lat="37.7879624" lon="-122.3976883"/>
+  <node id="10241" lat="37.7881655" lon="-122.3976883"/>
+  <node id="10242" lat="37.7881655" lon="-122.3974312"/>
+  <node id="10243" lat="37.7879624" lon="-122.3974312"/>
+  <way id="110061">
+    <nd ref="10240"/>
+    <nd ref="10241"/>
+    <nd ref="10242"/>
+    <nd ref="10243"/>
+    <nd ref="10240"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Foundry Square 3 (505 Howard)"/>
+    <tag k="height" v="42.0m"/>
+    <tag k="building:levels" v="10"/>
+  </way>
+
+  <!-- Foundry Square 4 (400 Howard) (42m, 10 floors) -->
+  <node id="10244" lat="37.7889870" lon="-122.3972696"/>
+  <node id="10245" lat="37.7894130" lon="-122.3972696"/>
+  <node id="10246" lat="37.7894130" lon="-122.3967304"/>
+  <node id="10247" lat="37.7889870" lon="-122.3967304"/>
+  <way id="110062">
+    <nd ref="10244"/>
+    <nd ref="10245"/>
+    <nd ref="10246"/>
+    <nd ref="10247"/>
+    <nd ref="10244"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Foundry Square 4 (400 Howard)"/>
+    <tag k="height" v="42.0m"/>
+    <tag k="building:levels" v="10"/>
+  </way>
+
+  <!-- Palace Hotel (40m, 8 floors) -->
+  <node id="10248" lat="37.7879413" lon="-122.4025523"/>
+  <node id="10249" lat="37.7881445" lon="-122.4025523"/>
+  <node id="10250" lat="37.7881445" lon="-122.4022952"/>
+  <node id="10251" lat="37.7879413" lon="-122.4022952"/>
+  <way id="110063">
+    <nd ref="10248"/>
+    <nd ref="10249"/>
+    <nd ref="10250"/>
+    <nd ref="10251"/>
+    <nd ref="10248"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Palace Hotel"/>
+    <tag k="height" v="40.0m"/>
+    <tag k="building:levels" v="8"/>
+  </way>
+
+  <!-- Old St. Mary's Cathedral (38m, 3 floors) -->
+  <node id="10252" lat="37.7921872" lon="-122.4055834"/>
+  <node id="10253" lat="37.7923903" lon="-122.4055834"/>
+  <node id="10254" lat="37.7923903" lon="-122.4053264"/>
+  <node id="10255" lat="37.7921872" lon="-122.4053264"/>
+  <way id="110064">
+    <nd ref="10252"/>
+    <nd ref="10253"/>
+    <nd ref="10254"/>
+    <nd ref="10255"/>
+    <nd ref="10252"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Old St. Mary's Cathedral"/>
+    <tag k="height" v="38.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- St. Patrick's Church (35m, 3 floors) -->
+  <node id="10256" lat="37.7863409" lon="-122.4027014"/>
+  <node id="10257" lat="37.7866591" lon="-122.4027014"/>
+  <node id="10258" lat="37.7866591" lon="-122.4022986"/>
+  <node id="10259" lat="37.7863409" lon="-122.4022986"/>
+  <way id="110065">
+    <nd ref="10256"/>
+    <nd ref="10257"/>
+    <nd ref="10258"/>
+    <nd ref="10259"/>
+    <nd ref="10256"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="St. Patrick's Church"/>
+    <tag k="height" v="35.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Macy's Union Square (35m, 8 floors) -->
+  <node id="10260" lat="37.7867121" lon="-122.4073644"/>
+  <node id="10261" lat="37.7872879" lon="-122.4073644"/>
+  <node id="10262" lat="37.7872879" lon="-122.4066356"/>
+  <node id="10263" lat="37.7867121" lon="-122.4066356"/>
+  <way id="110066">
+    <nd ref="10260"/>
+    <nd ref="10261"/>
+    <nd ref="10262"/>
+    <nd ref="10263"/>
+    <nd ref="10260"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Macy's Union Square"/>
+    <tag k="height" v="35.0m"/>
+    <tag k="building:levels" v="8"/>
+  </way>
+
+  <!-- Crocker Galleria Complex (32m, 4 floors) -->
+  <node id="10264" lat="37.7895789" lon="-122.4036559"/>
+  <node id="10265" lat="37.7897813" lon="-122.4036559"/>
+  <node id="10266" lat="37.7897813" lon="-122.4033997"/>
+  <node id="10267" lat="37.7895789" lon="-122.4033997"/>
+  <way id="110067">
+    <nd ref="10264"/>
+    <nd ref="10265"/>
+    <nd ref="10266"/>
+    <nd ref="10267"/>
+    <nd ref="10264"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Crocker Galleria Complex"/>
+    <tag k="height" v="32.0m"/>
+    <tag k="building:levels" v="4"/>
+  </way>
+
+  <!-- Salesforce Transit Center Terminal (30m, 4 floors) -->
+  <node id="10268" lat="37.7892121" lon="-122.3973644"/>
+  <node id="10269" lat="37.7897879" lon="-122.3973644"/>
+  <node id="10270" lat="37.7897879" lon="-122.3966356"/>
+  <node id="10271" lat="37.7892121" lon="-122.3966356"/>
+  <way id="110068">
+    <nd ref="10268"/>
+    <nd ref="10269"/>
+    <nd ref="10270"/>
+    <nd ref="10271"/>
+    <nd ref="10268"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Salesforce Transit Center Terminal"/>
+    <tag k="height" v="30.0m"/>
+    <tag k="building:levels" v="4"/>
+  </way>
+
+  <!-- Contemporary Jewish Museum (25m, 3 floors) -->
+  <node id="10272" lat="37.7857966" lon="-122.4034021"/>
+  <node id="10273" lat="37.7859997" lon="-122.4034021"/>
+  <node id="10274" lat="37.7859997" lon="-122.4031450"/>
+  <node id="10275" lat="37.7857966" lon="-122.4031450"/>
+  <way id="110069">
+    <nd ref="10272"/>
+    <nd ref="10273"/>
+    <nd ref="10274"/>
+    <nd ref="10275"/>
+    <nd ref="10272"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Contemporary Jewish Museum"/>
+    <tag k="height" v="25.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Pacific Coast Stock Exchange (25m, 4 floors) -->
+  <node id="10276" lat="37.7914724" lon="-122.4019522"/>
+  <node id="10277" lat="37.7916755" lon="-122.4019522"/>
+  <node id="10278" lat="37.7916755" lon="-122.4016951"/>
+  <node id="10279" lat="37.7914724" lon="-122.4016951"/>
+  <way id="110070">
+    <nd ref="10276"/>
+    <nd ref="10277"/>
+    <nd ref="10278"/>
+    <nd ref="10279"/>
+    <nd ref="10276"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Pacific Coast Stock Exchange"/>
+    <tag k="height" v="25.0m"/>
+    <tag k="building:levels" v="4"/>
+  </way>
+
+  <!-- Bank of Canton Historic Building (25m, 4 floors) -->
+  <node id="10280" lat="37.7937050" lon="-122.4048880"/>
+  <node id="10281" lat="37.7939081" lon="-122.4048880"/>
+  <node id="10282" lat="37.7939081" lon="-122.4046309"/>
+  <node id="10283" lat="37.7937050" lon="-122.4046309"/>
+  <way id="110071">
+    <nd ref="10280"/>
+    <nd ref="10281"/>
+    <nd ref="10282"/>
+    <nd ref="10283"/>
+    <nd ref="10280"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Bank of Canton Historic Building"/>
+    <tag k="height" v="25.0m"/>
+    <tag k="building:levels" v="4"/>
+  </way>
+
+  <!-- Portsmouth Square Complex (22m, 3 floors) -->
+  <node id="10284" lat="37.7942367" lon="-122.4048332"/>
+  <node id="10285" lat="37.7947633" lon="-122.4048332"/>
+  <node id="10286" lat="37.7947633" lon="-122.4041668"/>
+  <node id="10287" lat="37.7942367" lon="-122.4041668"/>
+  <way id="110072">
+    <nd ref="10284"/>
+    <nd ref="10285"/>
+    <nd ref="10286"/>
+    <nd ref="10287"/>
+    <nd ref="10284"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Portsmouth Square Complex"/>
+    <tag k="height" v="22.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Moscone Center North (20m, 2 floors) -->
+  <node id="10288" lat="37.7842561" lon="-122.4016339"/>
+  <node id="10289" lat="37.7844590" lon="-122.4016339"/>
+  <node id="10290" lat="37.7844590" lon="-122.4013771"/>
+  <node id="10291" lat="37.7842561" lon="-122.4013771"/>
+  <way id="110073">
+    <nd ref="10288"/>
+    <nd ref="10289"/>
+    <nd ref="10290"/>
+    <nd ref="10291"/>
+    <nd ref="10288"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Moscone Center North"/>
+    <tag k="height" v="20.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+
+  <!-- Moscone Center South (20m, 2 floors) -->
+  <node id="10292" lat="37.7828398" lon="-122.4007027"/>
+  <node id="10293" lat="37.7831602" lon="-122.4007027"/>
+  <node id="10294" lat="37.7831602" lon="-122.4002973"/>
+  <node id="10295" lat="37.7828398" lon="-122.4002973"/>
+  <way id="110074">
+    <nd ref="10292"/>
+    <nd ref="10293"/>
+    <nd ref="10294"/>
+    <nd ref="10295"/>
+    <nd ref="10292"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Moscone Center South"/>
+    <tag k="height" v="20.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+
+  <!-- Pier 1 Executive Office (20m, 3 floors) -->
+  <node id="10296" lat="37.7962121" lon="-122.3933644"/>
+  <node id="10297" lat="37.7967879" lon="-122.3933644"/>
+  <node id="10298" lat="37.7967879" lon="-122.3926356"/>
+  <node id="10299" lat="37.7962121" lon="-122.3926356"/>
+  <way id="110075">
+    <nd ref="10296"/>
+    <nd ref="10297"/>
+    <nd ref="10298"/>
+    <nd ref="10299"/>
+    <nd ref="10296"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Pier 1 Executive Office"/>
+    <tag k="height" v="20.0m"/>
+    <tag k="building:levels" v="3"/>
+  </way>
+
+  <!-- Pier 3 Ferry Terminal Pavilion (15m, 2 floors) -->
+  <node id="10300" lat="37.7972121" lon="-122.3938644"/>
+  <node id="10301" lat="37.7977879" lon="-122.3938644"/>
+  <node id="10302" lat="37.7977879" lon="-122.3931356"/>
+  <node id="10303" lat="37.7972121" lon="-122.3931356"/>
+  <way id="110076">
+    <nd ref="10300"/>
+    <nd ref="10301"/>
+    <nd ref="10302"/>
+    <nd ref="10303"/>
+    <nd ref="10300"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Pier 3 Ferry Terminal Pavilion"/>
+    <tag k="height" v="15.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+
+  <!-- Pier 14 Waterfront Pavilions (12m, 2 floors) -->
+  <node id="10304" lat="37.7929414" lon="-122.3910500"/>
+  <node id="10305" lat="37.7931445" lon="-122.3910500"/>
+  <node id="10306" lat="37.7931445" lon="-122.3907929"/>
+  <node id="10307" lat="37.7929414" lon="-122.3907929"/>
+  <way id="110077">
+    <nd ref="10304"/>
+    <nd ref="10305"/>
+    <nd ref="10306"/>
+    <nd ref="10307"/>
+    <nd ref="10304"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Pier 14 Waterfront Pavilions"/>
+    <tag k="height" v="12.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+
+  <!-- Chinatown Gateway (Dragon Gate) (12m, 2 floors) -->
+  <node id="10308" lat="37.7908229" lon="-122.4059552"/>
+  <node id="10309" lat="37.7910262" lon="-122.4059552"/>
+  <node id="10310" lat="37.7910262" lon="-122.4056980"/>
+  <node id="10311" lat="37.7908229" lon="-122.4056980"/>
+  <way id="110078">
+    <nd ref="10308"/>
+    <nd ref="10309"/>
+    <nd ref="10310"/>
+    <nd ref="10311"/>
+    <nd ref="10308"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Chinatown Gateway (Dragon Gate)"/>
+    <tag k="height" v="12.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
+
+  <!-- Embarcadero YMCA Historic Building (25m, 5 floors) -->
+  <node id="10312" lat="37.7922121" lon="-122.3923644"/>
+  <node id="10313" lat="37.7927879" lon="-122.3923644"/>
+  <node id="10314" lat="37.7927879" lon="-122.3916356"/>
+  <node id="10315" lat="37.7922121" lon="-122.3916356"/>
+  <way id="110079">
+    <nd ref="10312"/>
+    <nd ref="10313"/>
+    <nd ref="10314"/>
+    <nd ref="10315"/>
+    <nd ref="10312"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Embarcadero YMCA Historic Building"/>
+    <tag k="height" v="25.0m"/>
+    <tag k="building:levels" v="5"/>
+  </way>
+
+  <!-- Apple Union Square (18m, 2 floors) -->
+  <node id="10316" lat="37.7889175" lon="-122.4066329"/>
+  <node id="10317" lat="37.7891238" lon="-122.4066329"/>
+  <node id="10318" lat="37.7891238" lon="-122.4063718"/>
+  <node id="10319" lat="37.7889175" lon="-122.4063718"/>
+  <way id="110080">
+    <nd ref="10316"/>
+    <nd ref="10317"/>
+    <nd ref="10318"/>
+    <nd ref="10319"/>
+    <nd ref="10316"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Apple Union Square"/>
+    <tag k="height" v="18.0m"/>
+    <tag k="building:levels" v="2"/>
+  </way>
 
   <!-- Market Street (primary, 4 lanes) -->
   <way id="210001">
