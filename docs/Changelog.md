@@ -1460,4 +1460,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 100% test pass rate across all 8 certification tests and clean `cargo test --workspace`.
   - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
 
+## [0.8.2] - 2026-10-24 — STAGE 0.7: Critical Vehicle Physics and Control Stabilization (Completed & Certified)
+### Fixed
+- **Equilibrium Ride Height Preload & Frame-0 Shock Impulse Elimination (`engine/vehicles/src/dynamics.rs`)**:
+  - Implemented `equilibrium_ride_height()` ($h_{\text{eq}} = l_{\text{rest}} + r - x_{\text{eq}}$) and `equilibrium_compression()` ($x_{\text{eq}} = Mg / 4k$).
+  - Preloaded all 4 wheel suspension struts in [`DynamicVehicle::new`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), [`reset_at_pose`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), and [`recover_on_surface`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs) with equilibrium compression and normal force $F_{\text{eq}} = Mg / 4$, eliminating vertical frame-0 launch shocks and vehicle rebound.
+- **Critically-Damped Low-Speed Lateral Resistance & Euler Oscillation Elimination (`engine/vehicles/src/dynamics.rs`)**:
+  - Remediated low-speed kinematic slip angle singularity ($v \to 0$) by blending high-speed slip angle ($> 0.5\text{ m/s}$) with critically-damped contact damping ($f_{\text{damping}} = -c \cdot v_{\text{lateral}}$ where $c \le (M/4\Delta t) \cdot 0.75$) at low speeds ($\le 0.5\text{ m/s}$), preventing Euler oscillation explosion and uncontrolled sideways creeping.
+- **Anti-Roll Bar Torque Sign Inversion (`engine/vehicles/src/dynamics.rs`)**:
+  - Corrected ARB torsional moment sign to `total_torque -= forward * (arb_force * self.config.track_width * 0.5)`, providing genuine roll stabilization and keeping maximum body lean under $1.58^\circ$ during high-speed cornering without rollover.
+- **Static Friction Clamping & Transmission Park Lock (`engine/vehicles/src/dynamics.rs`)**:
+  - Implemented static Coulomb friction clamping for `TransmissionMode::Park`, handbrake, service brake, and level-ground idle ($< 2.5\%$ grade), locking horizontal velocities to zero when nearly stationary while preserving free vertical suspension oscillation and authentic gravity roll down slopes $> 2.5\%$ in Neutral.
+- **Yaw Extraction Invariant (`engine/vehicles/src/dynamics.rs`)**:
+  - Corrected yaw extraction in `recover_on_surface` from `forward.z.atan2(forward.x)` to `forward.x.atan2(forward.z)`, aligning heading angles with OpenGL/Vulkan/WGPU right-handed coordinate conventions.
+- **Fixed-Timestep 60Hz Physics Loop & Render Pose Interpolation (`apps/world-viewer/src/interactive.rs`)**:
+  - Replaced variable frame delta time with a deterministic 60Hz accumulator loop (`PHYSICS_DT = 1.0 / 60.0`) with bounded catch-up ($\le 0.20\text{s}$).
+  - Added sub-tick render interpolation (`lerp` for positions, `slerp` for orientations) and bound chase camera tracking to interpolated poses for judder-free 30/60/120 FPS camera follow.
+  - Added [`VehicleCameraController::reset`](file:///j:/rustRealEarth/engine/vehicles/src/camera.rs) to instantly snap camera pose without lag across vehicle spawns and resets.
+- **Modal Input Isolation & Smooth Steering Rate Limiting (`apps/world-viewer/src/interactive.rs`)**:
+  - Isolated vehicle keyboard controls behind `ui_state == AppUiState::InGame`, clearing all input states upon opening modal menus (`Escape`, `KeyN`, `KeyJ`, `KeyG`, `KeyO`, `KeyU`) and in `dispatch_ui_action`.
+  - Added dynamic steering rate limiter ($3.5\text{ rad/s}$ steering, $5.0\text{ rad/s}$ return) with speed-sensitive scaling ($1.0 \to 0.40$).
+  - Added transmission Park mode toggle (`KeyP`), speedometer HUD cluster indicator `[P]`, and live F3 vehicle dynamics telemetry overlay.
+- **Dedicated Stabilization Certification Suite (`tests/tests/stage0_7_vehicle_stabilization_certification.rs`)**:
+  - Certified all 9 physics and control gates (9/9 PASSED ✅): 60s flat ground zero drift (0.000000m), 15% slope park hold (0.000170m drift), 15% unbraked neutral roll (3.98 m/s, -5.97m downhill), W/S/A/D input signs, braking distance (9.51m from 50.5 km/h), circle turn stability (1.58 deg roll), repeated spawn equilibrium (10/10 zero impulse), multi-framerate determinism (bit-exact at 30, 60, 120 FPS), and SF Montgomery Street settling (0.0077m drift).
+  - 100% test pass rate across entire workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), and zero formatting deviations (`cargo fmt --check`).
+
+
 

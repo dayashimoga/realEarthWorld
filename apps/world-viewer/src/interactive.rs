@@ -304,6 +304,11 @@ pub struct InteractiveViewerApp {
     // Driving, traffic, and gameplay state
     vehicle: DynamicVehicle,
     vehicle_cam: VehicleCameraController,
+    physics_accumulator: f32,
+    previous_vehicle_pos: glam::Vec3,
+    previous_vehicle_orient: glam::Quat,
+    smoothed_steer_input: f32,
+    pub park_engaged: bool,
     traffic_sim: TrafficSimulation,
     vehicle_visual_type: VehicleVisualType,
     gameplay_bus: GameplayEventBus,
@@ -516,8 +521,13 @@ impl InteractiveViewerApp {
             camera_ctrl,
             camera,
 
+            previous_vehicle_pos: vehicle.position,
+            previous_vehicle_orient: vehicle.orientation,
             vehicle,
             vehicle_cam,
+            physics_accumulator: 0.0,
+            smoothed_steer_input: 0.0,
+            park_engaged: false,
             traffic_sim: TrafficSimulation::new(),
             vehicle_visual_type: VehicleVisualType::SportsCoupe,
             gameplay_bus,
@@ -789,6 +799,8 @@ impl InteractiveViewerApp {
         action: UiDomainAction,
         event_loop: Option<&ActiveEventLoop>,
     ) {
+        self.pressed_keys.clear();
+        self.smoothed_steer_input = 0.0;
         match action {
             UiDomainAction::ContinueCareer => {
                 if self.has_saved_game() {
@@ -1062,6 +1074,10 @@ impl InteractiveViewerApp {
                 self.aircraft.is_stalled = false;
             }
         }
+        self.previous_vehicle_pos = self.vehicle.position;
+        self.previous_vehicle_orient = self.vehicle.orientation;
+        self.smoothed_steer_input = 0.0;
+        self.vehicle_cam.reset();
         let label = format!(
             "🛠️ {} Safely Recovered to Surface",
             self.active_transport_mode.display_name()
@@ -1303,6 +1319,10 @@ impl InteractiveViewerApp {
             }
             _ => {}
         }
+        self.previous_vehicle_pos = self.vehicle.position;
+        self.previous_vehicle_orient = self.vehicle.orientation;
+        self.smoothed_steer_input = 0.0;
+        self.vehicle_cam.reset();
     }
 
     /// Executes validated multimodal vehicle spawning on appropriate infrastructure with camera synchronization.
@@ -1453,10 +1473,21 @@ impl InteractiveViewerApp {
             _ => return Err(format!("Invalid vehicle fleet index: {}", idx)),
         }
 
+        self.previous_vehicle_pos = self.vehicle.position;
+        self.previous_vehicle_orient = self.vehicle.orientation;
+        self.smoothed_steer_input = 0.0;
+        self.vehicle_cam.reset();
+
         // Camera perspective & positioning update
         self.vehicle_cam.perspective = VehicleCameraPerspective::Chase;
         let (cam_pos, cam_yaw, cam_pitch) = match self.active_transport_mode {
-            ActiveTransportMode::Car => self.vehicle_cam.update(&self.vehicle, 0.016),
+            ActiveTransportMode::Car => self.vehicle_cam.update_pose(
+                self.vehicle.position,
+                self.vehicle.orientation,
+                5.5,
+                2.2,
+                0.016,
+            ),
             ActiveTransportMode::Motorcycle => self.vehicle_cam.update_pose(
                 self.motorcycle.position,
                 self.motorcycle.orientation,
@@ -1945,6 +1976,11 @@ impl InteractiveViewerApp {
         );
         self.aircraft.linear_velocity =
             glam::Quat::from_rotation_y(landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+
+        self.previous_vehicle_pos = self.vehicle.position;
+        self.previous_vehicle_orient = self.vehicle.orientation;
+        self.smoothed_steer_input = 0.0;
+        self.vehicle_cam.reset();
 
         // Populate traffic fleet, signals, and pedestrians
         self.traffic_sim = TrafficSimulation::new();
@@ -2970,11 +3006,15 @@ impl ApplicationHandler for InteractiveViewerApp {
 
                         AppUiState::InGame => match key {
                             KeyCode::Escape => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::PauseMenu;
                                 return;
                             }
 
                             KeyCode::KeyN | KeyCode::F4 => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::MultiplayerModal;
                                 return;
                             }
@@ -2991,21 +3031,29 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
 
                             KeyCode::KeyJ | KeyCode::Tab => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::JobBrowser;
                                 return;
                             }
 
                             KeyCode::KeyG => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::GarageSelect;
                                 return;
                             }
 
                             KeyCode::KeyO => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::SettingsMenu;
                                 return;
                             }
 
                             KeyCode::KeyU | KeyCode::F2 => {
+                                self.pressed_keys.clear();
+                                self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::CatalogModal;
                                 return;
                             }
@@ -3131,6 +3179,18 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
 
                             KeyCode::KeyP => {
+                                if self.config.is_drive {
+                                    self.park_engaged = !self.park_engaged;
+                                    let label = if self.park_engaged {
+                                        "🅿️ Transmission: [P] PARK (Parking Brake Locked)"
+                                    } else {
+                                        "🏎️ Transmission: [D] DRIVE"
+                                    };
+                                    println!("{}", label);
+                                    self.status_notification =
+                                        Some((label.to_string(), Instant::now()));
+                                    return;
+                                }
                                 let next_preset = match self.config.preset_level {
                                     GraphicsPresetLevel::Low => GraphicsPresetLevel::Medium,
                                     GraphicsPresetLevel::Medium => GraphicsPresetLevel::High,
@@ -3376,43 +3436,85 @@ impl ApplicationHandler for InteractiveViewerApp {
                 sim_world.tick(dt);
                 let solar = sim_world.current_solar_position();
 
-                let is_braking = self.pressed_keys.contains(&KeyCode::KeyS)
-                    || self.pressed_keys.contains(&KeyCode::ArrowDown);
+                let is_gameplay = self.ui_state == AppUiState::InGame;
+                let is_braking = if is_gameplay {
+                    self.pressed_keys.contains(&KeyCode::KeyS)
+                        || self.pressed_keys.contains(&KeyCode::ArrowDown)
+                } else {
+                    true
+                };
 
-                let velocity = if self.config.is_drive {
-                    let is_forward_key = self.pressed_keys.contains(&KeyCode::KeyW)
-                        || self.pressed_keys.contains(&KeyCode::ArrowUp);
-                    let is_reverse_or_brake_key = self.pressed_keys.contains(&KeyCode::KeyS)
-                        || self.pressed_keys.contains(&KeyCode::ArrowDown);
-                    let steer_left = self.pressed_keys.contains(&KeyCode::KeyA)
-                        || self.pressed_keys.contains(&KeyCode::ArrowLeft);
-                    let steer_right = self.pressed_keys.contains(&KeyCode::KeyD)
-                        || self.pressed_keys.contains(&KeyCode::ArrowRight);
+                const PHYSICS_DT: f32 = 1.0 / 60.0;
+                self.physics_accumulator = (self.physics_accumulator + dt as f32).min(0.20);
 
-                    let speed_kph = match self.active_transport_mode {
-                        ActiveTransportMode::Car => self.vehicle.speed_kph.abs(),
-                        ActiveTransportMode::Motorcycle => self.motorcycle.speed_kph.abs(),
-                        ActiveTransportMode::TransitBus => self.transit_bus.speed_kph.abs(),
-                        ActiveTransportMode::HeavyTruck => self.heavy_truck.speed_kph.abs(),
-                        ActiveTransportMode::Train => self.train_consist.speed_kph.abs(),
-                        ActiveTransportMode::Marine => self.marine_vessel.speed_knots * 1.852,
-                        ActiveTransportMode::Aviation => self.aircraft.true_airspeed_mps * 3.6,
-                    };
-                    let speed_factor = (1.0 - (speed_kph / 120.0).min(0.60)).clamp(0.40, 1.0);
+                let mut last_road_inputs = VehicleInputs::default();
 
-                    let mut road_inputs = VehicleInputs::default();
-                    if steer_left {
-                        road_inputs.steer = -0.65 * speed_factor;
-                    } else if steer_right {
-                        road_inputs.steer = 0.65 * speed_factor;
-                    }
-                    if self.pressed_keys.contains(&KeyCode::Space) {
-                        road_inputs.handbrake = true;
-                    }
+                if self.config.is_drive {
+                    let is_forward_key = is_gameplay
+                        && (self.pressed_keys.contains(&KeyCode::KeyW)
+                            || self.pressed_keys.contains(&KeyCode::ArrowUp));
+                    let is_reverse_or_brake_key = is_gameplay
+                        && (self.pressed_keys.contains(&KeyCode::KeyS)
+                            || self.pressed_keys.contains(&KeyCode::ArrowDown));
+                    let steer_left = is_gameplay
+                        && (self.pressed_keys.contains(&KeyCode::KeyA)
+                            || self.pressed_keys.contains(&KeyCode::ArrowLeft));
+                    let steer_right = is_gameplay
+                        && (self.pressed_keys.contains(&KeyCode::KeyD)
+                            || self.pressed_keys.contains(&KeyCode::ArrowRight));
+                    let is_handbrake = is_gameplay && self.pressed_keys.contains(&KeyCode::Space);
 
-                    // Step physics for active multimodal mode
-                    match self.active_transport_mode {
-                        ActiveTransportMode::Car => {
+                    while self.physics_accumulator >= PHYSICS_DT {
+                        self.previous_vehicle_pos = self.vehicle.position;
+                        self.previous_vehicle_orient = self.vehicle.orientation;
+
+                        let speed_kph = match self.active_transport_mode {
+                            ActiveTransportMode::Car => self.vehicle.speed_kph.abs(),
+                            ActiveTransportMode::Motorcycle => self.motorcycle.speed_kph.abs(),
+                            ActiveTransportMode::TransitBus => self.transit_bus.speed_kph.abs(),
+                            ActiveTransportMode::HeavyTruck => self.heavy_truck.speed_kph.abs(),
+                            ActiveTransportMode::Train => self.train_consist.speed_kph.abs(),
+                            ActiveTransportMode::Marine => self.marine_vessel.speed_knots * 1.852,
+                            ActiveTransportMode::Aviation => self.aircraft.true_airspeed_mps * 3.6,
+                        };
+                        let speed_factor = (1.0 - (speed_kph / 120.0).min(0.60)).clamp(0.40, 1.0);
+
+                        let target_steer = if !is_gameplay {
+                            0.0
+                        } else if steer_left {
+                            -0.65 * speed_factor
+                        } else if steer_right {
+                            0.65 * speed_factor
+                        } else {
+                            0.0
+                        };
+
+                        let steer_rate = if target_steer.abs() < self.smoothed_steer_input.abs()
+                            || target_steer == 0.0
+                        {
+                            5.0
+                        } else {
+                            3.5
+                        };
+                        let steer_delta = target_steer - self.smoothed_steer_input;
+                        let max_step = steer_rate * PHYSICS_DT;
+                        if steer_delta.abs() <= max_step {
+                            self.smoothed_steer_input = target_steer;
+                        } else {
+                            self.smoothed_steer_input += steer_delta.signum() * max_step;
+                        }
+
+                        let mut road_inputs = VehicleInputs {
+                            steer: self.smoothed_steer_input,
+                            ..Default::default()
+                        };
+
+                        if self.park_engaged || !is_gameplay {
+                            road_inputs.gear_mode = TransmissionMode::Park;
+                            road_inputs.brake = 1.0;
+                            road_inputs.handbrake = true;
+                            road_inputs.throttle = 0.0;
+                        } else {
                             let rot = glam::Mat3::from_quat(self.vehicle.orientation);
                             let forward = rot.col(2);
                             let forward_speed = self.vehicle.linear_velocity.dot(forward);
@@ -3433,208 +3535,168 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     road_inputs.throttle = 0.85;
                                     road_inputs.gear_mode = TransmissionMode::Reverse;
                                 }
-                            }
-
-                            self.vehicle.step(&road_inputs, gq, dt as f32);
-
-                            let ground_y =
-                                gq.elevation(self.vehicle.position.x, self.vehicle.position.z);
-                            let min_allowed_y = ground_y + self.vehicle.config.wheel_radius;
-                            if self.vehicle.position.y < min_allowed_y {
-                                self.vehicle.position.y = min_allowed_y;
-                                if self.vehicle.linear_velocity.y < 0.0 {
-                                    self.vehicle.linear_velocity.y = 0.0;
-                                }
-                            }
-                        }
-                        ActiveTransportMode::Motorcycle => {
-                            let rot = glam::Mat3::from_quat(self.motorcycle.orientation);
-                            let forward = rot.col(2);
-                            let forward_speed = self.motorcycle.linear_velocity.dot(forward);
-
-                            if is_forward_key {
-                                if forward_speed < -0.3 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                } else {
-                                    road_inputs.throttle = 1.0;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                }
-                            } else if is_reverse_or_brake_key {
-                                if forward_speed > 0.35 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                } else {
-                                    road_inputs.throttle = 0.85;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                }
-                            }
-
-                            self.motorcycle.step(&road_inputs, gq, dt as f32);
-                        }
-                        ActiveTransportMode::TransitBus => {
-                            let rot = glam::Mat3::from_quat(self.transit_bus.orientation);
-                            let forward = rot.col(2);
-                            let forward_speed = self.transit_bus.linear_velocity.dot(forward);
-
-                            if is_forward_key {
-                                if forward_speed < -0.3 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                } else {
-                                    road_inputs.throttle = 1.0;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                }
-                            } else if is_reverse_or_brake_key {
-                                if forward_speed > 0.35 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                } else {
-                                    road_inputs.throttle = 0.85;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                }
-                            }
-
-                            self.transit_bus.step(&road_inputs, gq, dt as f32);
-                        }
-                        ActiveTransportMode::HeavyTruck => {
-                            let rot = glam::Mat3::from_quat(self.heavy_truck.tractor_orientation);
-                            let forward = rot.col(2);
-                            let forward_speed = self.heavy_truck.linear_velocity.dot(forward);
-
-                            if is_forward_key {
-                                if forward_speed < -0.3 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                } else {
-                                    road_inputs.throttle = 1.0;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                }
-                            } else if is_reverse_or_brake_key {
-                                if forward_speed > 0.35 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                } else {
-                                    road_inputs.throttle = 0.85;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                }
-                            }
-
-                            self.heavy_truck.step(&road_inputs, gq, dt as f32);
-                        }
-                        ActiveTransportMode::Train => {
-                            if is_forward_key {
-                                self.train_consist.throttle =
-                                    (self.train_consist.throttle + 0.35 * dt as f32).min(1.0);
-                                self.train_consist.apply_service_brake(0.0);
-                            } else if is_reverse_or_brake_key {
-                                if self.train_consist.velocity_mps.abs() < 0.15
-                                    && self.train_consist.throttle < 0.05
-                                {
-                                    self.train_consist.reverser = -self.train_consist.reverser;
-                                } else {
-                                    self.train_consist.apply_service_brake(0.85);
-                                    self.train_consist.throttle =
-                                        (self.train_consist.throttle - 0.6 * dt as f32).max(0.0);
-                                }
                             } else {
-                                self.train_consist.apply_service_brake(0.0);
+                                road_inputs.throttle = 0.0;
+                                road_inputs.brake = 0.0;
+                                road_inputs.gear_mode = TransmissionMode::Drive;
                             }
 
-                            if self.pressed_keys.contains(&KeyCode::Space) {
-                                self.train_consist.trigger_emergency_brake();
+                            if is_handbrake {
+                                road_inputs.handbrake = true;
                             }
-
-                            self.train_consist.step(dt as f32);
-
-                            let forward =
-                                glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
-                            self.train_position +=
-                                forward * (self.train_consist.velocity_mps * dt as f32);
-                            let ground_y =
-                                gq.elevation(self.train_position.x, self.train_position.z);
-                            self.train_position.y = ground_y + 0.6;
                         }
-                        ActiveTransportMode::Marine => {
-                            let mut marine_inputs = MarineInputs::default();
-                            if is_forward_key {
-                                marine_inputs.throttle = 1.0;
-                            } else if is_reverse_or_brake_key {
-                                marine_inputs.throttle = -0.6;
-                            }
-                            if steer_left {
-                                marine_inputs.rudder = -1.0;
-                            } else if steer_right {
-                                marine_inputs.rudder = 1.0;
-                            }
 
-                            self.marine_elapsed_time += dt as f32;
-                            self.marine_vessel.step(
-                                &marine_inputs,
-                                self.marine_elapsed_time,
-                                dt as f32,
-                            );
+                        // Step physics for active multimodal mode
+                        match self.active_transport_mode {
+                            ActiveTransportMode::Car => {
+                                self.vehicle.step(&road_inputs, gq, PHYSICS_DT);
+
+                                let ground_y =
+                                    gq.elevation(self.vehicle.position.x, self.vehicle.position.z);
+                                let min_allowed_y = ground_y + self.vehicle.config.wheel_radius;
+                                if self.vehicle.position.y < min_allowed_y {
+                                    self.vehicle.position.y = min_allowed_y;
+                                    if self.vehicle.linear_velocity.y < 0.0 {
+                                        self.vehicle.linear_velocity.y = 0.0;
+                                    }
+                                }
+                            }
+                            ActiveTransportMode::Motorcycle => {
+                                self.motorcycle.step(&road_inputs, gq, PHYSICS_DT);
+                            }
+                            ActiveTransportMode::TransitBus => {
+                                self.transit_bus.step(&road_inputs, gq, PHYSICS_DT);
+                            }
+                            ActiveTransportMode::HeavyTruck => {
+                                self.heavy_truck.step(&road_inputs, gq, PHYSICS_DT);
+                            }
+                            ActiveTransportMode::Train => {
+                                if is_forward_key {
+                                    self.train_consist.throttle =
+                                        (self.train_consist.throttle + 0.35 * PHYSICS_DT).min(1.0);
+                                    self.train_consist.apply_service_brake(0.0);
+                                } else if is_reverse_or_brake_key {
+                                    if self.train_consist.velocity_mps.abs() < 0.15
+                                        && self.train_consist.throttle < 0.05
+                                    {
+                                        self.train_consist.reverser = -self.train_consist.reverser;
+                                    } else {
+                                        self.train_consist.apply_service_brake(0.85);
+                                        self.train_consist.throttle = (self.train_consist.throttle
+                                            - 0.6 * PHYSICS_DT)
+                                            .max(0.0);
+                                    }
+                                } else {
+                                    self.train_consist.apply_service_brake(0.0);
+                                }
+
+                                if is_handbrake {
+                                    self.train_consist.trigger_emergency_brake();
+                                }
+
+                                self.train_consist.step(PHYSICS_DT);
+
+                                let forward =
+                                    glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
+                                self.train_position +=
+                                    forward * (self.train_consist.velocity_mps * PHYSICS_DT);
+                                let ground_y =
+                                    gq.elevation(self.train_position.x, self.train_position.z);
+                                self.train_position.y = ground_y + 0.6;
+                            }
+                            ActiveTransportMode::Marine => {
+                                let mut marine_inputs = MarineInputs::default();
+                                if is_forward_key {
+                                    marine_inputs.throttle = 1.0;
+                                } else if is_reverse_or_brake_key {
+                                    marine_inputs.throttle = -0.6;
+                                }
+                                if steer_left {
+                                    marine_inputs.rudder = -1.0;
+                                } else if steer_right {
+                                    marine_inputs.rudder = 1.0;
+                                }
+
+                                self.marine_elapsed_time += PHYSICS_DT;
+                                self.marine_vessel.step(
+                                    &marine_inputs,
+                                    self.marine_elapsed_time,
+                                    PHYSICS_DT,
+                                );
+                            }
+                            ActiveTransportMode::Aviation => {
+                                let mut flight_inputs = FlightInputs {
+                                    gear_down: self.aircraft.altitude_msl_meters < 50.0
+                                        || !self.aircraft.is_airborne,
+                                    flaps: 0.25,
+                                    ..Default::default()
+                                };
+
+                                if is_forward_key {
+                                    flight_inputs.elevator = -0.7; // Pitch down
+                                } else if is_reverse_or_brake_key {
+                                    flight_inputs.elevator = 0.7; // Pitch up
+                                }
+
+                                if steer_left {
+                                    flight_inputs.aileron = -0.7; // Roll left
+                                } else if steer_right {
+                                    flight_inputs.aileron = 0.7; // Roll right
+                                }
+
+                                if self.pressed_keys.contains(&KeyCode::KeyQ) {
+                                    flight_inputs.rudder = -0.5;
+                                } else if self.pressed_keys.contains(&KeyCode::KeyE) {
+                                    flight_inputs.rudder = 0.5;
+                                }
+
+                                if self.pressed_keys.contains(&KeyCode::ShiftLeft)
+                                    || self.pressed_keys.contains(&KeyCode::ShiftRight)
+                                {
+                                    self.aircraft_throttle =
+                                        (self.aircraft_throttle + 0.3 * PHYSICS_DT).min(1.0);
+                                }
+                                if self.pressed_keys.contains(&KeyCode::ControlLeft)
+                                    || self.pressed_keys.contains(&KeyCode::ControlRight)
+                                {
+                                    self.aircraft_throttle =
+                                        (self.aircraft_throttle - 0.3 * PHYSICS_DT).max(0.0);
+                                }
+
+                                if is_handbrake {
+                                    flight_inputs.wheel_brakes = 1.0;
+                                }
+
+                                flight_inputs.throttle = self.aircraft_throttle;
+                                let ground_y = gq
+                                    .elevation(self.aircraft.position.x, self.aircraft.position.z);
+                                self.aircraft.step(&flight_inputs, ground_y, PHYSICS_DT);
+                            }
                         }
-                        ActiveTransportMode::Aviation => {
-                            let mut flight_inputs = FlightInputs {
-                                gear_down: self.aircraft.altitude_msl_meters < 50.0
-                                    || !self.aircraft.is_airborne,
-                                flaps: 0.25,
-                                ..Default::default()
-                            };
 
-                            if is_forward_key {
-                                flight_inputs.elevator = -0.7; // Pitch down
-                            } else if is_reverse_or_brake_key {
-                                flight_inputs.elevator = 0.7; // Pitch up
-                            }
-
-                            if steer_left {
-                                flight_inputs.aileron = -0.7; // Roll left
-                            } else if steer_right {
-                                flight_inputs.aileron = 0.7; // Roll right
-                            }
-
-                            if self.pressed_keys.contains(&KeyCode::KeyQ) {
-                                flight_inputs.rudder = -0.5;
-                            } else if self.pressed_keys.contains(&KeyCode::KeyE) {
-                                flight_inputs.rudder = 0.5;
-                            }
-
-                            if self.pressed_keys.contains(&KeyCode::ShiftLeft)
-                                || self.pressed_keys.contains(&KeyCode::ShiftRight)
-                            {
-                                self.aircraft_throttle =
-                                    (self.aircraft_throttle + 0.3 * dt as f32).min(1.0);
-                            }
-                            if self.pressed_keys.contains(&KeyCode::ControlLeft)
-                                || self.pressed_keys.contains(&KeyCode::ControlRight)
-                            {
-                                self.aircraft_throttle =
-                                    (self.aircraft_throttle - 0.3 * dt as f32).max(0.0);
-                            }
-
-                            if self.pressed_keys.contains(&KeyCode::Space) {
-                                flight_inputs.wheel_brakes = 1.0;
-                            }
-
-                            flight_inputs.throttle = self.aircraft_throttle;
-                            let ground_y =
-                                gq.elevation(self.aircraft.position.x, self.aircraft.position.z);
-                            self.aircraft.step(&flight_inputs, ground_y, dt as f32);
-                        }
+                        self.traffic_sim.step(PHYSICS_DT, gq);
+                        last_road_inputs = road_inputs;
+                        self.physics_accumulator -= PHYSICS_DT;
                     }
+                }
 
+                let alpha = (self.physics_accumulator / PHYSICS_DT).clamp(0.0, 1.0);
+                let render_pos = self.previous_vehicle_pos.lerp(self.vehicle.position, alpha);
+                let render_orient = self
+                    .previous_vehicle_orient
+                    .slerp(self.vehicle.orientation, alpha);
+
+                let velocity = if self.config.is_drive {
                     // Authoritative Multiplayer client input dispatch & prediction sync
                     if let Some(ref mut client) = self.multiplayer_client {
                         if client.state == realearth_networking::ConnectionState::Connected {
                             let input_frame = realearth_networking::ClientInputFrame {
                                 tick: client.server_tick + 1,
                                 delta_time: dt as f32,
-                                throttle: road_inputs.throttle,
-                                steer: road_inputs.steer,
-                                brake: road_inputs.brake,
-                                handbrake: road_inputs.handbrake,
+                                throttle: last_road_inputs.throttle,
+                                steer: last_road_inputs.steer,
+                                brake: last_road_inputs.brake,
+                                handbrake: last_road_inputs.handbrake,
                                 client_timestamp_ms: now_ms,
                             };
                             let _ = client.send_input(&input_frame);
@@ -3647,15 +3709,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                         }
                     }
 
-                    self.traffic_sim.step(dt as f32, gq);
-
                     let (active_pos, active_orient, active_speed_kph) =
                         match self.active_transport_mode {
-                            ActiveTransportMode::Car => (
-                                self.vehicle.position,
-                                self.vehicle.orientation,
-                                self.vehicle.speed_kph,
-                            ),
+                            ActiveTransportMode::Car => {
+                                (render_pos, render_orient, self.vehicle.speed_kph)
+                            }
                             ActiveTransportMode::Motorcycle => (
                                 self.motorcycle.position,
                                 self.motorcycle.orientation,
@@ -3761,8 +3819,13 @@ impl ApplicationHandler for InteractiveViewerApp {
                     // Update camera based on active transport mode
                     match self.active_transport_mode {
                         ActiveTransportMode::Car => {
-                            let (cam_pos, cam_yaw, cam_pitch) =
-                                self.vehicle_cam.update(&self.vehicle, dt as f32);
+                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
+                                render_pos,
+                                render_orient,
+                                5.5,
+                                2.2,
+                                dt as f32,
+                            );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -3890,39 +3953,41 @@ impl ApplicationHandler for InteractiveViewerApp {
                     };
                     let effective_move = move_speed * speed_mult;
 
-                    if self.pressed_keys.contains(&KeyCode::KeyW) {
-                        self.camera_ctrl
-                            .move_forward(effective_move, Some(&res.dem));
-                    }
-                    if self.pressed_keys.contains(&KeyCode::KeyS) {
-                        self.camera_ctrl
-                            .move_forward(-effective_move, Some(&res.dem));
-                    }
-                    if self.pressed_keys.contains(&KeyCode::KeyA) {
-                        self.camera_ctrl.strafe(-effective_move, Some(&res.dem));
-                    }
-                    if self.pressed_keys.contains(&KeyCode::KeyD) {
-                        self.camera_ctrl.strafe(effective_move, Some(&res.dem));
-                    }
-                    if self.pressed_keys.contains(&KeyCode::Space)
-                        || self.pressed_keys.contains(&KeyCode::KeyE)
-                    {
-                        self.camera_ctrl.move_vertical(effective_move);
-                    }
-                    if self.pressed_keys.contains(&KeyCode::KeyQ) {
-                        self.camera_ctrl.move_vertical(-effective_move);
-                    }
-                    if self.pressed_keys.contains(&KeyCode::ArrowLeft) {
-                        self.camera_ctrl.rotate(-rot_speed, 0.0);
-                    }
-                    if self.pressed_keys.contains(&KeyCode::ArrowRight) {
-                        self.camera_ctrl.rotate(rot_speed, 0.0);
-                    }
-                    if self.pressed_keys.contains(&KeyCode::ArrowUp) {
-                        self.camera_ctrl.rotate(0.0, rot_speed);
-                    }
-                    if self.pressed_keys.contains(&KeyCode::ArrowDown) {
-                        self.camera_ctrl.rotate(0.0, -rot_speed);
+                    if is_gameplay {
+                        if self.pressed_keys.contains(&KeyCode::KeyW) {
+                            self.camera_ctrl
+                                .move_forward(effective_move, Some(&res.dem));
+                        }
+                        if self.pressed_keys.contains(&KeyCode::KeyS) {
+                            self.camera_ctrl
+                                .move_forward(-effective_move, Some(&res.dem));
+                        }
+                        if self.pressed_keys.contains(&KeyCode::KeyA) {
+                            self.camera_ctrl.strafe(-effective_move, Some(&res.dem));
+                        }
+                        if self.pressed_keys.contains(&KeyCode::KeyD) {
+                            self.camera_ctrl.strafe(effective_move, Some(&res.dem));
+                        }
+                        if self.pressed_keys.contains(&KeyCode::Space)
+                            || self.pressed_keys.contains(&KeyCode::KeyE)
+                        {
+                            self.camera_ctrl.move_vertical(effective_move);
+                        }
+                        if self.pressed_keys.contains(&KeyCode::KeyQ) {
+                            self.camera_ctrl.move_vertical(-effective_move);
+                        }
+                        if self.pressed_keys.contains(&KeyCode::ArrowLeft) {
+                            self.camera_ctrl.rotate(-rot_speed, 0.0);
+                        }
+                        if self.pressed_keys.contains(&KeyCode::ArrowRight) {
+                            self.camera_ctrl.rotate(rot_speed, 0.0);
+                        }
+                        if self.pressed_keys.contains(&KeyCode::ArrowUp) {
+                            self.camera_ctrl.rotate(0.0, rot_speed);
+                        }
+                        if self.pressed_keys.contains(&KeyCode::ArrowDown) {
+                            self.camera_ctrl.rotate(0.0, -rot_speed);
+                        }
                     }
 
                     // Collision-aware ground clamping: prevents clipping below DEM terrain
@@ -3973,8 +4038,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 || self.vehicle.linear_velocity.dot(forward_vec) < -0.05;
 
                             let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
-                                position: self.vehicle.position,
-                                orientation: self.vehicle.orientation,
+                                position: render_pos,
+                                orientation: render_orient,
                                 color: match self.vehicle_visual_type {
                                     VehicleVisualType::SportsCoupe => [0.92, 0.12, 0.12, 1.0], // Cherry Red
                                     VehicleVisualType::Sedan => [0.15, 0.35, 0.85, 1.0], // Electric Blue
@@ -4805,15 +4870,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 if self.config.is_drive {
                                     match self.active_transport_mode {
                                         ActiveTransportMode::Car => {
-                                            let gear_str = match self.vehicle.current_gear {
-                                                -1 => "R",
-                                                0 => "N",
-                                                1 => "D1",
-                                                2 => "D2",
-                                                3 => "D3",
-                                                4 => "D4",
-                                                5 => "D5",
-                                                _ => "D",
+                                            let gear_str = if self.park_engaged {
+                                                "P"
+                                            } else {
+                                                match self.vehicle.current_gear {
+                                                    -1 => "R",
+                                                    0 => "N",
+                                                    1 => "D1",
+                                                    2 => "D2",
+                                                    3 => "D3",
+                                                    4 => "D4",
+                                                    5 => "D5",
+                                                    _ => "D",
+                                                }
                                             };
                                             let steer_deg =
                                                 self.vehicle.wheels[0].steer_angle.to_degrees();
@@ -5107,6 +5176,73 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         proc_mem.working_set_size_mb(),
                                         vram_mb,
                                     );
+
+                                    if self.config.is_drive
+                                        && self.active_transport_mode == ActiveTransportMode::Car
+                                    {
+                                        let rot_mat =
+                                            glam::Mat3::from_quat(self.vehicle.orientation);
+                                        let fwd = rot_mat.col(2);
+                                        let contacts = self
+                                            .vehicle
+                                            .wheels
+                                            .iter()
+                                            .filter(|w| w.in_contact)
+                                            .count();
+                                        let steer_deg =
+                                            self.vehicle.wheels[0].steer_angle.to_degrees();
+                                        let (g_elev, g_normal) = (
+                                            gq.elevation(
+                                                self.vehicle.position.x,
+                                                self.vehicle.position.z,
+                                            ),
+                                            gq.normal(
+                                                self.vehicle.position.x,
+                                                self.vehicle.position.z,
+                                            ),
+                                        );
+                                        let road_grade_pct =
+                                            (1.0 - g_normal.y.clamp(0.0, 1.0)).sqrt() * 100.0;
+                                        let gear_label = if self.park_engaged {
+                                            "PARK [P]"
+                                        } else {
+                                            match self.vehicle.current_gear {
+                                                -1 => "REVERSE",
+                                                0 => "NEUTRAL",
+                                                _ => "DRIVE",
+                                            }
+                                        };
+
+                                        let py = 16.0 + 95.0 + 8.0;
+                                        hud.add_rect(
+                                            16.0,
+                                            py,
+                                            480.0,
+                                            76.0,
+                                            [0.03, 0.04, 0.06, 0.85],
+                                        );
+                                        hud.add_rect_outline(
+                                            16.0,
+                                            py,
+                                            480.0,
+                                            76.0,
+                                            1.0,
+                                            [0.25, 0.50, 0.80, 0.5],
+                                        );
+                                        hud.add_text(
+                                            26.0,
+                                            py + 8.0,
+                                            1.0,
+                                            &format!(
+                                                "VEHICLE DYNAMICS TELEMETRY | Mode: {}",
+                                                gear_label
+                                            ),
+                                            [0.3, 0.85, 1.0, 1.0],
+                                        );
+                                        hud.add_text(26.0, py + 24.0, 0.9, &format!("Forward: [{:.3}, {:.3}, {:.3}] | Steer: {:>+5.1}° | Contacts: {}/4", fwd.x, fwd.y, fwd.z, steer_deg, contacts), [0.85, 0.90, 0.95, 1.0]);
+                                        hud.add_text(26.0, py + 40.0, 0.9, &format!("Speed: {:>5.1} km/h | Vel: [{:.2}, {:.2}, {:.2}] m/s", self.vehicle.speed_kph, self.vehicle.linear_velocity.x, self.vehicle.linear_velocity.y, self.vehicle.linear_velocity.z), [0.85, 0.90, 0.95, 1.0]);
+                                        hud.add_text(26.0, py + 56.0, 0.9, &format!("Ground Elev: {:.1}m | Road Grade: {:.1}% | Normal: [{:.2}, {:.2}, {:.2}]", g_elev, road_grade_pct, g_normal.x, g_normal.y, g_normal.z), [0.85, 0.85, 0.40, 1.0]);
+                                    }
                                 }
 
                                 // 7. Multiplayer Status Chip (Top Right)
@@ -5130,7 +5266,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 );
 
                                 // 8. Clean Keyboard Hint Footer
-                                let hint_str = "[W/S/A/D] Drive  |  [Esc] Pause  |  [N] Multiplayer  |  [J] Jobs  |  [G] Garage  |  [U] World Cities  |  [F3] Debug";
+                                let hint_str = "[W/S/A/D] Drive  |  [P] Park  |  [Esc] Pause  |  [N] Multiplayer  |  [J] Jobs  |  [G] Garage  |  [U] World Cities  |  [F3] Debug";
                                 let hint_w = hint_str.len() as f32 * 6.0 * 1.0;
                                 let hint_x = (width_f - hint_w) * 0.5;
                                 hud.add_rect(

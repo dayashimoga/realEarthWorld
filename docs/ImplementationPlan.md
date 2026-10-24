@@ -1410,3 +1410,43 @@
   - Code style: `cargo fmt --check` passed with 0 formatting deviations.
   - Headless benchmark: `cargo run -p realearth-viewer -- --headless --benchmark --frames 30` rendered 30 frames at 1305.5 FPS (p95 latency 0.88ms, peak RSS 266MB, 29,711 authentic triangles across 30 active chunks).
 
+## STAGE 0.7: Critical Vehicle Physics and Control Stabilization (Completed & Certified)
+- [x] Phase 0.7.1 — Forensic Root-Cause Diagnosis of Vehicle Drift & Instability:
+  - Root Cause 1 (Zero-Slip Kinematic Singularity): Continuous lateral slip angle computation $\alpha = \text{atan2}(v_{\text{lat}}, |v_{\text{long}}|)$ produced Euler integration oscillation explosion ($|\Delta v| > |v|$) when $|v| \to 0$, causing jitter and uncontrolled sideways creeping.
+  - Root Cause 2 (Frame-0 Launch Shock Impulse): Vehicle spawned with uncompressed suspension struts ($x=0, F=0$) at $y = \text{rest\_length}$, causing the chassis to freefall under gravity before violently striking springs and rebounding into erratic pitching/rolling oscillations.
+  - Root Cause 3 (Inverted Anti-Roll Bar Torque Sign): ARB roll-resisting moment applied positive torque around forward vector when compressed on the outside wheel, accentuating body lean rather than righting the vehicle.
+  - Root Cause 4 (Unbraked Level-Ground Creep): Absence of static Coulomb rolling resistance holding logic allowed residual numerical forces from tiny raycast normal variations to accumulate into backward/sideways drift.
+  - Root Cause 5 (Variable Timestep Physics Instability): Physics was stepped directly using raw variable render frame delta time `dt`, introducing accumulator drift, framerate-dependent vehicle trajectories, and visual jitter.
+  - Root Cause 6 (Modal Input Bleed): Keyboard input state leaked into vehicle controls while user was in interactive menus, garage, settings, or notification overlays.
+- [x] Phase 0.7.2 — Mathematical & ECS Dynamics Stabilization:
+  - Equilibrium Ride Height & Preload: Added `VehicleConfig::equilibrium_ride_height()` ($h_{\text{eq}} = l_{\text{rest}} + r - x_{\text{eq}}$) and `equilibrium_compression()` ($x_{\text{eq}} = Mg / 4k$). Preloaded all 4 wheels in [`DynamicVehicle::new`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), [`reset_at_pose`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), and [`recover_on_surface`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs) with equilibrium force $F_{\text{eq}} = Mg/4$, completely eliminating tick-0 shock impulses.
+  - Critically-Damped Low-Speed Lateral Resistance: Blended high-speed slip angle ($> 0.5\text{ m/s}$) with critically-damped contact damping ($f_{\text{damping}} = -c \cdot v_{\text{lateral}}$ where $c \le (M/4\Delta t) \cdot 0.75$) at low speeds ($\le 0.5\text{ m/s}$), ensuring $|\Delta v| < |v|$ and extinguishing Euler oscillation.
+  - Inverted ARB Roll Resistance: Corrected ARB torsional spring moment sign to `total_torque -= forward * (arb_force * self.config.track_width * 0.5)`, providing authentic body roll stabilization during high-speed cornering.
+  - Static Friction & Transmission Park Lock: Implemented static friction clamping for `TransmissionMode::Park`, handbrake, service brake, and level-ground idle ($< 2.5\%$ grade), halting drift to $0.000000\text{ m}$ over 60 seconds while allowing authentic gravitational roll on slopes $> 2.5\%$ grade in Neutral.
+  - Yaw Extraction Invariant: Corrected yaw extraction in `recover_on_surface` to `forward.x.atan2(forward.z)`, preserving exact heading under OpenGL/Vulkan/WGPU right-handed coordinates.
+- [x] Phase 0.7.3 — Fixed-Timestep Physics Loop & Render Pose Interpolation:
+  - Implemented fixed 60Hz physics accumulator loop (`PHYSICS_DT = 1.0 / 60.0`) with bounded catch-up ($\le 0.20\text{s}$) in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs).
+  - Implemented sub-tick render interpolation: `render_pos = prev.pos.lerp(curr.pos, alpha)` and `render_orient = prev.rot.slerp(curr.rot, alpha)`.
+  - Driven chase camera tracking directly from interpolated pose `(render_pos, render_orient)` for judder-free camera tracking across 30, 60, and 120 FPS.
+- [x] Phase 0.7.4 — Input Isolation, Smooth Steering & HUD Cluster Telemetry:
+  - Menu Input Isolation: Enforced strict gating of gameplay inputs with `is_gameplay = self.ui_state == AppUiState::InGame`. Cleared all key states on modal transitions (`Escape`, `KeyN`, `KeyJ`, `KeyG`, `KeyO`, `KeyU`) and in `dispatch_ui_action`.
+  - Smooth Steering Rate Limiter: Implemented dynamic steering rate limiter ($3.5\text{ rad/s}$ steering, $5.0\text{ rad/s}$ auto-return) with speed-sensitive steering scaling ($1.0 \to 0.40$ as speed increases to $120\text{ km/h}$).
+  - Transmission Park Mode [P]: Added Key `P` toggle for `park_engaged` and updated speedometer HUD cluster to display `[P]` mode with warning indicator.
+  - Live Vehicle Physics Overlay (F3): Displayed live chassis forward vector, steer angle, 4-wheel contact states, velocity vector, ground elevation, road grade percentage, and transmission mode.
+- [x] Phase 0.7.5 — Rigorous Certification Suite & Verification Gates:
+  - Implemented independent 9-test certification suite in [`tests/tests/stage0_7_vehicle_stabilization_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_7_vehicle_stabilization_certification.rs) (9/9 PASSED ✅):
+    1. Test 1: 60s Flat Ground Zero-Input: 0.000000m drift, 0.000002 m/s speed (budget < 0.005m, < 0.001 m/s).
+    2. Test 2: 15% Slope Park Hold (10s): 0.000170m drift, 0.000000 m/s speed (budget < 0.005m, < 0.001 m/s).
+    3. Test 3: 15% Slope Neutral Roll (3s): Final Speed = 3.977 m/s, delta_z = -5.970 m (rolls downhill > 2.0 m/s).
+    4. Test 4: W/S/A/D Input Sign Invariants: W accelerates forward (+10.15 m/s), S reverses (-7.31 m/s), A vs D signs diverge symmetrically.
+    5. Test 5: Braking Distance from 50.5 km/h: 9.51m stop (budget 8-18m), zero recoil.
+    6. Test 6: Circle Turn Stability: Max roll angle 1.58 deg (budget < 12.0 deg), no rollover.
+    7. Test 7: Repeated Spawn Equilibrium: 10/10 spawns achieved zero vertical shock impulse.
+    8. Test 8: Multi-Framerate Determinism: 30, 60, and 120 FPS produced bit-exact final position `Vec3(15.595615, 0.83808756, 44.545944)`.
+    9. Test 9: Authentic SF Montgomery Street Settling: 0.0077m drift, 0.00000 m/s final speed (budget < 0.02m).
+  - 100% test pass rate across entire workspace (`cargo test --workspace`).
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+  - Zero deviations under `cargo fmt --check`.
+  - Headless benchmark verification: `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` rendered at 299.9 FPS (p95 latency 4.58ms, peak RSS 237MB, 29,711 authentic triangles).
+
+

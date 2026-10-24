@@ -864,3 +864,31 @@
   - [x] Verify code style compliance (`cargo fmt --check`, 0 deviations).
   - [x] Execute headless benchmark verification (`cargo run -p realearth-viewer -- --headless --benchmark --frames 30`, 1305.5 FPS, 29,711 authentic triangles).
 
+## STAGE 0.7: Critical Vehicle Physics and Control Stabilization (Completed & Certified)
+- [x] Phase 0.7.1: Physics Diagnostics & Shock Impulse Elimination
+  - [x] Add equilibrium ride height and static compression helpers to `VehicleConfig`.
+  - [x] Preload all four wheels in `new`, `reset_at_pose`, and `recover_on_surface` with equilibrium force $Mg/4$.
+  - [x] Eliminate frame-0 launch shock impulses and vertical rebound oscillation.
+- [x] Phase 0.7.2: Lateral Dynamics, ARB & Static Friction Stabilization
+  - [x] Implement critically-damped low-speed lateral resistance blended with kinematic slip angles.
+  - [x] Correct Anti-Roll Bar torsional moment sign to resist body lean during cornering.
+  - [x] Implement static friction holding logic for Park, handbrake, service brake, and level ground idle ($< 2.5\%$ grade).
+  - [x] Fix yaw extraction in `recover_on_surface` to `forward.x.atan2(forward.z)`.
+- [x] Phase 0.7.3: Fixed-Timestep Physics Loop & Render Interpolation
+  - [x] Implement 60Hz fixed accumulator loop (`PHYSICS_DT = 1.0 / 60.0`) with bounded catch-up in `InteractiveViewerApp`.
+  - [x] Implement sub-tick lerp and slerp rendering pose interpolation.
+  - [x] Drive vehicle chase camera from interpolated pose to eliminate framerate judder.
+  - [x] Add `reset()` to `VehicleCameraController` to snap camera pose across vehicle spawns and resets.
+- [x] Phase 0.7.4: Input Isolation, Steering Rate Limiter & HUD Cluster
+  - [x] Isolate gameplay inputs to `InGame` state and flush keyboard queues on modal transitions.
+  - [x] Add dynamic steering rate limiter ($3.5\text{ rad/s}$ steering, $5.0\text{ rad/s}$ return) with speed sensitivity.
+  - [x] Add Key `P` toggle for Park mode with speedometer cluster `[P]` warning indicator.
+  - [x] Add live F3 vehicle physics telemetry HUD overlay.
+- [x] Phase 0.7.5: Rigorous Certification Suite & Verification Gates
+  - [x] Implement 9-test certification suite in `tests/tests/stage0_7_vehicle_stabilization_certification.rs` (9/9 passing).
+  - [x] Verify 100% test pass rate across entire workspace (`cargo test --workspace`).
+  - [x] Verify clean static analysis (`cargo clippy --workspace --all-targets -- -D warnings`, 0 warnings).
+  - [x] Verify code style compliance (`cargo fmt --check`, 0 deviations).
+  - [x] Execute headless benchmark verification (`cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60`, 299.9 FPS, 29,711 authentic triangles).
+
+

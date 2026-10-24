@@ -168,3 +168,7 @@ path = "tests/stage0_6_geographic_collision_and_spawning_certification.rs"
 [[test]]
 name = "stage0_6_r_world_visibility_certification"
 path = "tests/stage0_6_r_world_visibility_certification.rs"
+
+[[test]]
+name = "stage0_7_vehicle_stabilization_certification"
+path = "tests/stage0_7_vehicle_stabilization_certification.rs"

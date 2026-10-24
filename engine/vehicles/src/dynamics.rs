@@ -234,6 +234,25 @@ impl VehicleConfig {
             rolling_resistance_coeff: 0.020,
         }
     }
+
+    /// Computes the exact vertical clearance from ground contact to chassis geometric origin at static equilibrium.
+    pub fn equilibrium_ride_height(&self) -> f32 {
+        let weight = self.mass_kg * 9.81;
+        let per_wheel_force = weight * 0.25;
+        let eq_compression = (per_wheel_force / self.suspension_stiffness)
+            .clamp(0.01, self.suspension_rest_length * 0.85);
+        let strut_len = self.suspension_rest_length - eq_compression;
+        // Chassis origin Y = ground + wheel_radius + strut_len - com_height_offset
+        self.wheel_radius + strut_len - self.com_height_offset
+    }
+
+    /// Computes static equilibrium spring compression in meters per wheel.
+    pub fn equilibrium_compression(&self) -> f32 {
+        let weight = self.mass_kg * 9.81;
+        let per_wheel_force = weight * 0.25;
+        (per_wheel_force / self.suspension_stiffness)
+            .clamp(0.01, self.suspension_rest_length * 0.85)
+    }
 }
 
 /// Dynamic simulation state of an individual wheel.
@@ -318,12 +337,22 @@ impl DynamicVehicle {
         let half_l = config.wheelbase * 0.5;
         let anchor_y = config.com_height_offset;
 
-        let wheels = [
+        let eq_comp = config.equilibrium_compression();
+        let eq_force = config.mass_kg * 9.81 * 0.25;
+
+        let mut wheels = [
             WheelState::new(WheelIndex::FrontLeft, Vec3::new(-half_w, anchor_y, half_l)),
             WheelState::new(WheelIndex::FrontRight, Vec3::new(half_w, anchor_y, half_l)),
             WheelState::new(WheelIndex::RearLeft, Vec3::new(-half_w, anchor_y, -half_l)),
             WheelState::new(WheelIndex::RearRight, Vec3::new(half_w, anchor_y, -half_l)),
         ];
+
+        // Preload wheels with static equilibrium spring compression and force to eliminate frame-0 shock impulses
+        for wheel in &mut wheels {
+            wheel.compression = eq_comp;
+            wheel.normal_force_fz = eq_force;
+            wheel.in_contact = true;
+        }
 
         let orientation = Quat::from_rotation_y(initial_yaw);
 
@@ -337,7 +366,7 @@ impl DynamicVehicle {
             speed_kph: 0.0,
             engine_rpm: 800.0,
             current_gear: 1,
-            is_grounded: false,
+            is_grounded: true,
             is_overturned: false,
         }
     }
@@ -366,6 +395,7 @@ impl DynamicVehicle {
         let mut total_force = Vec3::new(0.0, -9.81 * self.config.mass_kg, 0.0); // Gravity
         let mut total_torque = Vec3::ZERO;
         let mut grounded_wheels = 0;
+        let mut avg_ground_normal = Vec3::ZERO;
 
         let max_ray_dist = self.config.suspension_rest_length + self.config.wheel_radius + 0.2;
 
@@ -377,6 +407,7 @@ impl DynamicVehicle {
             if let Some((hit_dist, normal)) =
                 ground.query_ground_contact(world_anchor, max_ray_dist)
             {
+                avg_ground_normal += normal;
                 let uncompressed_len =
                     self.config.suspension_rest_length + self.config.wheel_radius;
                 let current_compression = (uncompressed_len - hit_dist).max(0.0);
@@ -474,11 +505,25 @@ impl DynamicVehicle {
                 // Rolling resistance with smooth near-zero ramp
                 let rolling_res = self.config.rolling_resistance_coeff
                     * normal_force
-                    * (v_forward / 0.3).clamp(-1.0, 1.0);
+                    * (v_forward / 0.15).clamp(-1.0, 1.0);
                 f_long -= rolling_res;
 
-                // Lateral Cornering Force
-                let f_lat = -self.config.cornering_stiffness * wheel.slip_angle;
+                // Lateral Cornering & Traction Force
+                // At high speed (> 0.5 m/s), use kinematic slip angle.
+                // At low speed (<= 0.5 m/s), use stable critically-damped tire contact resistance
+                // that avoids numerical Euler oscillation explosion (|Delta v| < |v|).
+                let f_lat = if v_forward.abs() > 0.5 {
+                    -self.config.cornering_stiffness * wheel.slip_angle
+                } else {
+                    let quarter_mass = self.config.mass_kg * 0.25;
+                    let max_stable_damping = (quarter_mass / dt) * 0.75;
+                    let low_speed_damping =
+                        (self.config.cornering_stiffness * 0.25).min(max_stable_damping);
+                    let f_damping = -low_speed_damping * v_lateral;
+                    let f_slip = -self.config.cornering_stiffness * wheel.slip_angle;
+                    let alpha = (v_forward.abs() / 0.5).clamp(0.0, 1.0);
+                    (1.0 - alpha) * f_damping + alpha * f_slip
+                };
 
                 // Friction Circle limit: sqrt(Fx^2 + Fy^2) <= mu * Fz
                 let max_tire_friction = self.config.tire_friction_coeff * normal_force;
@@ -514,17 +559,23 @@ impl DynamicVehicle {
         }
 
         self.is_grounded = grounded_wheels >= 2;
+        let avg_normal = if grounded_wheels > 0 {
+            (avg_ground_normal / grounded_wheels as f32).normalize_or_zero()
+        } else {
+            Vec3::Y
+        };
+        let slope_grade = (avg_normal.x * avg_normal.x + avg_normal.z * avg_normal.z).sqrt();
 
         // Anti-roll bar (ARB) torsional spring forces: resists body roll during cornering
         if self.wheels[0].in_contact && self.wheels[1].in_contact {
             let front_roll_diff = self.wheels[0].compression - self.wheels[1].compression;
             let arb_force = front_roll_diff * 6500.0; // N/m ARB stiffness
-            total_torque += forward * (arb_force * self.config.track_width * 0.5);
+            total_torque -= forward * (arb_force * self.config.track_width * 0.5);
         }
         if self.wheels[2].in_contact && self.wheels[3].in_contact {
             let rear_roll_diff = self.wheels[2].compression - self.wheels[3].compression;
             let arb_force = rear_roll_diff * 5500.0;
-            total_torque += forward * (arb_force * self.config.track_width * 0.5);
+            total_torque -= forward * (arb_force * self.config.track_width * 0.5);
         }
 
         // Aerodynamic drag opposing velocity
@@ -539,14 +590,27 @@ impl DynamicVehicle {
         let acceleration = total_force * inv_mass;
         self.linear_velocity += acceleration * dt;
 
-        // Hill-hold static lock when stationary on slope with brake applied
-        if inputs.brake > 0.4
-            && inputs.throttle == 0.0
-            && inputs.gear_mode != TransmissionMode::Neutral
-            && self.linear_velocity.length() < 0.25
-        {
-            self.linear_velocity.x = 0.0;
-            self.linear_velocity.z = 0.0;
+        let speed = self.linear_velocity.length();
+        let is_nearly_stationary = speed < 0.25;
+
+        // Static friction holding logic: Park, handbrake, service brake, and level-ground idle
+        if is_nearly_stationary {
+            let is_park = inputs.gear_mode == TransmissionMode::Park;
+            let is_handbrake = inputs.handbrake && inputs.throttle == 0.0;
+            let is_service_brake = inputs.brake > 0.3 && inputs.throttle == 0.0;
+
+            // On flat ground with zero throttle, static rolling resistance holds the car motionless without drift
+            let is_flat_idle = inputs.throttle == 0.0
+                && inputs.steer.abs() < 0.05
+                && speed < 0.12
+                && grounded_wheels >= 2
+                && slope_grade < 0.025;
+
+            if is_park || is_handbrake || is_service_brake || is_flat_idle {
+                self.linear_velocity.x = 0.0;
+                self.linear_velocity.z = 0.0;
+                self.angular_velocity = Vec3::ZERO;
+            }
         }
 
         // Moment of Inertia approximation for cuboid chassis: I = (1/12) * m * (d1^2 + d2^2)
@@ -610,7 +674,7 @@ impl DynamicVehicle {
         self.engine_rpm = target_rpm.clamp(800.0, 6500.0);
     }
 
-    /// Flip recovery: resets the vehicle orientation upright onto the nearest ground surface.
+    /// Flip recovery: resets the vehicle orientation upright onto the nearest ground surface at equilibrium height.
     pub fn recover_on_surface(&mut self, ground_elevation: f32) {
         // Extract current yaw angle
         let rot_mat = Mat3::from_quat(self.orientation);
@@ -618,14 +682,27 @@ impl DynamicVehicle {
         let current_yaw = forward.x.atan2(forward.z);
 
         self.orientation = Quat::from_rotation_y(current_yaw);
-        self.position.y =
-            ground_elevation + self.config.wheel_radius + self.config.suspension_rest_length + 0.1;
+        self.position.y = ground_elevation + self.config.equilibrium_ride_height();
         self.linear_velocity = Vec3::ZERO;
         self.angular_velocity = Vec3::ZERO;
         self.is_overturned = false;
+
+        let eq_comp = self.config.equilibrium_compression();
+        let eq_force = self.config.mass_kg * 9.81 * 0.25;
+        for wheel in &mut self.wheels {
+            wheel.compression = eq_comp;
+            wheel.compression_velocity = 0.0;
+            wheel.normal_force_fz = eq_force;
+            wheel.steer_angle = 0.0;
+            wheel.angular_velocity = 0.0;
+            wheel.slip_angle = 0.0;
+            wheel.in_contact = true;
+            wheel.longitudinal_force_fx = 0.0;
+            wheel.lateral_force_fy = 0.0;
+        }
     }
 
-    /// Safe full reset: places vehicle at given position and yaw with zero velocities and level chassis.
+    /// Safe full reset: places vehicle at given position and yaw with zero velocities, level chassis, and equilibrium preload.
     pub fn reset_at_pose(&mut self, position: Vec3, yaw: f32) {
         self.position = position;
         self.orientation = Quat::from_rotation_y(yaw);
@@ -635,11 +712,17 @@ impl DynamicVehicle {
         self.speed_kph = 0.0;
         self.engine_rpm = 800.0;
         self.current_gear = 1;
+
+        let eq_comp = self.config.equilibrium_compression();
+        let eq_force = self.config.mass_kg * 9.81 * 0.25;
         for wheel in &mut self.wheels {
-            wheel.compression = 0.0;
+            wheel.compression = eq_comp;
             wheel.compression_velocity = 0.0;
-            wheel.normal_force_fz = 0.0;
-            wheel.in_contact = false;
+            wheel.normal_force_fz = eq_force;
+            wheel.steer_angle = 0.0;
+            wheel.angular_velocity = 0.0;
+            wheel.slip_angle = 0.0;
+            wheel.in_contact = true;
             wheel.longitudinal_force_fx = 0.0;
             wheel.lateral_force_fy = 0.0;
         }

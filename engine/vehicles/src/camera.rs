@@ -65,6 +65,13 @@ impl VehicleCameraController {
         };
     }
 
+    /// Resets the camera controller state, snapping to target vehicle pose on next update.
+    pub fn reset(&mut self) {
+        self.current_camera_pos = Vec3::ZERO;
+        self.current_yaw = 0.0;
+        self.current_pitch = -0.15;
+    }
+
     /// Computes desired camera position, yaw, and pitch from the active vehicle state.
     pub fn update(&mut self, vehicle: &DynamicVehicle, dt: f32) -> (Vec3, f32, f32) {
         let rot_mat = Mat3::from_quat(vehicle.orientation);
