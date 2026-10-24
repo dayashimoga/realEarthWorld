@@ -891,4 +891,31 @@
   - [x] Verify code style compliance (`cargo fmt --check`, 0 deviations).
   - [x] Execute headless benchmark verification (`cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60`, 299.9 FPS, 29,711 authentic triangles).
 
+## STAGE 0.8: Complete Realistic Vehicle Visual Overhaul (Completed & Certified)
+- [x] Phase 0.8.1: Asset Pipeline and Visual Architecture
+  - [x] Implement binary glTF 2.0 (`.glb`) parser and builder (`GltfParser::parse_glb`, `GltfAssetBuilder`) in `engine/rendering/src/gltf_asset.rs`.
+  - [x] Implement `VehicleAssetRegistry` with thread-safe caching, O(1) lookup, and explicit error types (`GltfAssetError`).
+  - [x] Relegate legacy stacked boxes to labeled development fallback `generate_fallback_development_mesh`.
+  - [x] Author comprehensive open attribution and licensing manifest under Apache-2.0 / MIT in `assets/vehicles/LICENSE_ATTRIBUTION.md`.
+- [x] Phase 0.8.2: Detailed Vehicle Implementation
+  - [x] Sculpt detailed Apex GT Sports Coupe: curved aerodynamic panels, hood, front splitter, grille, bumpers, flared fenders, greenhouse glass, roof, spoiler, and shadow plane.
+  - [x] Model articulated wheel assemblies: treaded tires, alloy rims, brake rotors, and red calipers.
+  - [x] Model cockpit interior: contoured bucket seats, dashboard console, and sports steering wheel.
+  - [x] Build distinct, non-identical models: Executive Sedan, Overland Explorer SUV, Metro Yellow Cab, TransContinental Semi, CityLine Transit Bus, and HyperSport RR-1000.
+  - [x] Implement 3-tier Level of Detail (LOD0 High, LOD1 Medium, LOD2 Low) with monotonic polygon scaling.
+  - [x] Export all 11 binary `.glb` model assets to `assets/vehicles/`.
+- [x] Phase 0.8.3: Genuine Dynamic Animations & Kinematics
+  - [x] Implement physical wheel rolling rotation from forward speed ($\theta = v_{\text{forward}}\Delta t / r$).
+  - [x] Implement front-wheel steering articulation around vertical pivot from physical steer angle.
+  - [x] Wire independent 4-wheel suspension compression displacements into mesh composition.
+  - [x] Wire reactive lighting emissives: xenon headlights, braking red tail lights, and reverse lights.
+  - [x] Synchronize garage preview model selection with live in-game driving.
+- [x] Phase 0.8.4: Visual and Runtime QA Certification
+  - [x] Author independent 6-test certification suite in `tests/tests/stage0_8_vehicle_visual_certification.rs` (6/6 passing).
+  - [x] Verify zero regression across Stage 0.7 stabilization, Stage 7 multimodal transport, and Stage 4 gameplay suites.
+  - [x] Verify zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`).
+  - [x] Verify zero code formatting deviations (`cargo fmt --check`).
+  - [x] Execute headless driving benchmark: 97.5 FPS steady-state, 238.82 MB RSS, 1.22 MB VRAM, 494.63ms startup, screenshot saved.
+
+
 

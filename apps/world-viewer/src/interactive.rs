@@ -42,8 +42,8 @@ use realearth_rendering::{
     generate_vehicle_mesh, CatalogHit, CatalogLayout, FloatingOriginCamera, GarageHit,
     GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh, JobBrowserHit, JobBrowserLayout,
     PauseMenuHit, PauseMenuLayout, RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout,
-    StartScreenHit, StartScreenLayout, TrafficSignalVisualState, VehicleMeshParams,
-    VehicleVisualType,
+    StartScreenHit, StartScreenLayout, TrafficSignalVisualState, VehicleLodLevel,
+    VehicleMeshParams, VehicleVisualType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::metrics::get_current_process_memory;
@@ -309,6 +309,7 @@ pub struct InteractiveViewerApp {
     previous_vehicle_orient: glam::Quat,
     smoothed_steer_input: f32,
     pub park_engaged: bool,
+    pub wheel_spin_angle: f32,
     traffic_sim: TrafficSimulation,
     vehicle_visual_type: VehicleVisualType,
     gameplay_bus: GameplayEventBus,
@@ -528,6 +529,7 @@ impl InteractiveViewerApp {
             physics_accumulator: 0.0,
             smoothed_steer_input: 0.0,
             park_engaged: false,
+            wheel_spin_angle: 0.0,
             traffic_sim: TrafficSimulation::new(),
             vehicle_visual_type: VehicleVisualType::SportsCoupe,
             gameplay_bus,
@@ -3560,15 +3562,38 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         self.vehicle.linear_velocity.y = 0.0;
                                     }
                                 }
+
+                                let rot = glam::Mat3::from_quat(self.vehicle.orientation);
+                                let forward = rot.col(2);
+                                let forward_speed = self.vehicle.linear_velocity.dot(forward);
+                                let wheel_r = self.vehicle.config.wheel_radius.max(0.1);
+                                self.wheel_spin_angle = (self.wheel_spin_angle
+                                    + (forward_speed * PHYSICS_DT) / wheel_r)
+                                    % (2.0 * std::f32::consts::PI);
                             }
                             ActiveTransportMode::Motorcycle => {
                                 self.motorcycle.step(&road_inputs, gq, PHYSICS_DT);
+                                let forward_speed = self.motorcycle.speed_kph / 3.6;
+                                let wheel_r = 0.31f32;
+                                self.wheel_spin_angle = (self.wheel_spin_angle
+                                    + (forward_speed * PHYSICS_DT) / wheel_r)
+                                    % (2.0 * std::f32::consts::PI);
                             }
                             ActiveTransportMode::TransitBus => {
                                 self.transit_bus.step(&road_inputs, gq, PHYSICS_DT);
+                                let forward_speed = self.transit_bus.speed_kph / 3.6;
+                                let wheel_r = 0.52f32;
+                                self.wheel_spin_angle = (self.wheel_spin_angle
+                                    + (forward_speed * PHYSICS_DT) / wheel_r)
+                                    % (2.0 * std::f32::consts::PI);
                             }
                             ActiveTransportMode::HeavyTruck => {
                                 self.heavy_truck.step(&road_inputs, gq, PHYSICS_DT);
+                                let forward_speed = self.heavy_truck.speed_kph / 3.6;
+                                let wheel_r = 0.52f32;
+                                self.wheel_spin_angle = (self.wheel_spin_angle
+                                    + (forward_speed * PHYSICS_DT) / wheel_r)
+                                    % (2.0 * std::f32::consts::PI);
                             }
                             ActiveTransportMode::Train => {
                                 if is_forward_key {
@@ -4055,6 +4080,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: is_braking,
                                 reverse_lights_on: is_in_reverse,
+                                wheel_spin_angle: self.wheel_spin_angle,
+                                wheel_compressions: [
+                                    self.vehicle.wheels[0].compression,
+                                    self.vehicle.wheels[1].compression,
+                                    self.vehicle.wheels[2].compression,
+                                    self.vehicle.wheels[3].compression,
+                                ],
+                                lod: VehicleLodLevel::Lod0High,
                             });
                             fleet_mesh.append(&player_mesh);
                         }
@@ -4069,6 +4102,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: is_braking,
                                 reverse_lights_on: false,
+                                wheel_spin_angle: self.wheel_spin_angle,
+                                wheel_compressions: [0.0; 4],
+                                lod: VehicleLodLevel::Lod0High,
                             });
                             fleet_mesh.append(&bike_mesh);
                         }
@@ -4083,6 +4119,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: is_braking,
                                 reverse_lights_on: false,
+                                wheel_spin_angle: self.wheel_spin_angle,
+                                wheel_compressions: [0.0; 4],
+                                lod: VehicleLodLevel::Lod0High,
                             });
                             fleet_mesh.append(&bus_mesh);
                         }
@@ -4097,6 +4136,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: is_braking,
                                 reverse_lights_on: false,
+                                wheel_spin_angle: self.wheel_spin_angle,
+                                wheel_compressions: [0.0; 4],
+                                lod: VehicleLodLevel::Lod0High,
                             });
                             fleet_mesh.append(&truck_mesh);
                         }
@@ -4112,6 +4154,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
                                     > 0.5,
                                 reverse_lights_on: self.train_consist.reverser == -1,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&loco_mesh);
 
@@ -4131,6 +4174,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
                                         > 0.5,
                                     reverse_lights_on: false,
+                                    ..Default::default()
                                 });
                                 fleet_mesh.append(&wagon_mesh);
                             }
@@ -4146,6 +4190,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: false,
                                 reverse_lights_on: false,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&ship_mesh);
                         }
@@ -4160,6 +4205,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 headlights_on: true,
                                 brake_lights_on: false,
                                 reverse_lights_on: false,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&plane_mesh);
                         }
@@ -4193,6 +4239,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                         headlights_on: true,
                         brake_lights_on: agent.speed_ms < 1.0,
                         reverse_lights_on: false,
+                        wheel_spin_angle: (agent.speed_ms * 2.5) % (2.0 * std::f32::consts::PI),
+                        wheel_compressions: [0.0; 4],
+                        lod: VehicleLodLevel::Lod1Medium,
                     });
                     fleet_mesh.append(&t_mesh);
                 }
@@ -4259,6 +4308,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             headlights_on: true,
                             brake_lights_on: remote.speed_kph < 2.0,
                             reverse_lights_on: false,
+                            ..Default::default()
                         });
                         fleet_mesh.append(&r_mesh);
                     }

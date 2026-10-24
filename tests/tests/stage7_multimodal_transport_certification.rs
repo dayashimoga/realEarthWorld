@@ -871,6 +871,7 @@ fn test_stage7_multimodal_3d_procedural_rendering_and_telemetry_hud() {
             brake_lights_on: true,
             reverse_lights_on: false,
             trailer_angle: 0.25, // Articulated trailer angle
+            ..Default::default()
         });
 
         assert!(
@@ -903,6 +904,7 @@ fn test_stage7_multimodal_3d_procedural_rendering_and_telemetry_hud() {
         brake_lights_on: false,
         reverse_lights_on: false,
         trailer_angle: 0.0,
+        ..Default::default()
     });
 
     let truck_mesh_articulated = generate_vehicle_mesh(&VehicleMeshParams {
@@ -915,6 +917,7 @@ fn test_stage7_multimodal_3d_procedural_rendering_and_telemetry_hud() {
         brake_lights_on: false,
         reverse_lights_on: false,
         trailer_angle: 0.5, // 0.5 rad articulation
+        ..Default::default()
     });
 
     assert_eq!(

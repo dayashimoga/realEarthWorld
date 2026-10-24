@@ -3,12 +3,14 @@
 pub mod camera;
 pub mod city_interactions_mesh;
 pub mod culling;
+pub mod gltf_asset;
 pub mod hud;
 pub mod preset;
 pub mod renderer;
 pub mod shaders;
 pub mod uniforms;
 pub mod vehicle_mesh;
+pub mod vehicle_models;
 
 pub use camera::FloatingOriginCamera;
 pub use city_interactions_mesh::{
@@ -16,6 +18,11 @@ pub use city_interactions_mesh::{
     TrafficSignalVisualState,
 };
 pub use culling::{Frustum, FrustumPlane};
+pub use gltf_asset::{
+    GltfAssetBuilder, GltfAssetError, GltfParser, LoadedVehicleModel, VehicleAlphaMode,
+    VehicleAssetRegistry, VehicleCameraAnchors, VehicleLodLevel, VehiclePbrMaterial,
+    VehicleSubmesh, VehicleSubmeshType,
+};
 pub use hud::{
     CatalogHit, CatalogLayout, GarageHit, GarageLayout, HudMesh, HudVertex, JobBrowserHit,
     JobBrowserLayout, PauseMenuHit, PauseMenuLayout, SettingsHit, SettingsLayout, StartScreenHit,
@@ -25,7 +32,15 @@ pub use preset::{GraphicsPresetLevel, GraphicsSettings};
 pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
 pub use shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};
 pub use uniforms::SceneUniforms;
-pub use vehicle_mesh::{generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType};
+pub use vehicle_mesh::{
+    generate_fallback_development_mesh, generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType,
+};
+pub use vehicle_models::{
+    build_apex_gt_sports_coupe, build_cityline_transit_bus, build_executive_sedan,
+    build_hypersport_rr1000, build_metro_yellow_cab, build_overland_explorer_suv,
+    build_transcontinental_semi, export_all_certified_models_to_glb_directory,
+    get_certified_vehicle_model, AutomotivePalette,
+};
 
 #[cfg(test)]
 mod tests {

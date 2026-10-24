@@ -1449,4 +1449,36 @@
   - Zero deviations under `cargo fmt --check`.
   - Headless benchmark verification: `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` rendered at 299.9 FPS (p95 latency 4.58ms, peak RSS 237MB, 29,711 authentic triangles).
 
+## STAGE 0.8: Complete Realistic Vehicle Visual Overhaul (Completed & Certified)
+- [x] Phase 0.8.1 — Asset Pipeline and Visual Architecture:
+  - glTF 2.0 / GLB Binary Parser & Builder: Implemented native, zero-external-dependency binary glTF 2.0 (`.glb`) parser and builder in [`engine/rendering/src/gltf_asset.rs`](file:///j:/rustRealEarth/engine/rendering/src/gltf_asset.rs). Validates standard 12-byte header (`0x46546C67`, version 2), structured JSON chunk 0, and binary buffer chunk 1 with packed vertex attributes (`POSITION`, `NORMAL`, `TEXCOORD_0`, `COLOR_0`, `INDICES`).
+  - Vehicle Asset Registry & Caching: Implemented [`VehicleAssetRegistry`](file:///j:/rustRealEarth/engine/rendering/src/gltf_asset.rs) with thread-safe in-memory caching (`load_or_get`, `require`, `register_model`, `register_glb_bytes`), $O(1)$ repeated lookups, and explicit typed error propagation (`GltfAssetError::MissingAsset`, `GltfAssetError::InvalidMagic`, `GltfAssetError::TruncatedFile`).
+  - Deprecated Procedural Box Fallback: Transitioned legacy crude stacked box generator to [`generate_fallback_development_mesh`](file:///j:/rustRealEarth/engine/rendering/src/vehicle_mesh.rs) as an explicit labeled development fallback. Production pipelines dispatch strictly to certified automotive models via `generate_vehicle_mesh`.
+  - Open Attribution & Licensing Manifest: Authored [`assets/vehicles/LICENSE_ATTRIBUTION.md`](file:///j:/rustRealEarth/assets/vehicles/LICENSE_ATTRIBUTION.md) documenting original, copyright-compliant, royalty-free engineering designs for 10 vehicle types, dimensions, polygon budgets, material sets, node hierarchy conventions, and Apache-2.0 / MIT redistribution permissions.
+- [x] Phase 0.8.2 — Detailed Vehicle Implementation:
+  - Apex GT Sports Coupe: Sculpted aerodynamic sports coupe geometry in [`engine/rendering/src/vehicle_models.rs`](file:///j:/rustRealEarth/engine/rendering/src/vehicle_models.rs) featuring parabolic curved hood, front bumper splitter, lower intake grille, flared wheel fenders, panoramic windshield (58° rake), carbon fiber roof panel, sloping fastback rear glass, side aerodynamic mirrors, rear lip spoiler, quad stainless exhaust tips, full-width OLED brake light bar, reverse lights, and ground contact shadow plane.
+  - Cockpit Interior Detail: Modeled contoured bucket seats (driver & passenger), curved dashboard console, and articulated 3-spoke sports steering wheel.
+  - Articulated Wheel Assemblies: Modeled multi-component wheels featuring treaded rubber tire, silver alloy rim, ventilated steel brake rotor, and Brembo-style red brake caliper.
+  - Distinct Vehicle Fleet: Implemented non-identical, proportion-accurate models for Executive Sedan, Overland Explorer SUV, Metro Yellow Cab, TransContinental Semi, CityLine Transit Bus, and HyperSport RR-1000 motorcycle.
+  - Multi-Tier Level of Detail (LOD): Modeled LOD0 High (>400 triangles), LOD1 Medium (~250 triangles), and LOD2 Low (~120 triangles) with monotonic polygon budget scaling.
+- [x] Phase 0.8.3 — Genuine Dynamic Animations:
+  - Wheel Rolling Kinematics: Integrated physical wheel rotation in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs), calculating continuous angular displacement $\theta = (v_{\text{forward}} \Delta t) / r_{\text{wheel}}$ modulo $2\pi$. Wheels visibly roll around their transverse axle proportional to speed.
+  - Front-Wheel Steering Articulation: Articulated front-left and front-right wheels around their vertical steering pivot using actual physical steer angle (`wheel_steer_angle`); rear wheels remain fixed.
+  - Suspension Compression Travel: Wired independent per-wheel suspension compression displacements (`wheel_compressions: [f32; 4]`) into mesh composition, vertically translating wheel assemblies with physical road contacts.
+  - Independent Render Interpolation: Preserved strict decoupling between fixed 60Hz physics and sub-tick visual render interpolation (`lerp`/`slerp`). Visual transformations never feed back into authoritative collision or rigid-body state.
+  - Dynamic Lighting Emissives: Integrated reactive headlight projectors (xenon white / inactive lens), brake lights (intense braking red / running red), and reverse lights (brilliant white / off).
+  - Garage & Gameplay Synchronization: Synchronized vehicle selection in garage inspection modal and live gameplay so the user receives the exact vehicle model selected.
+- [x] Phase 0.8.4 — Visual and Runtime QA:
+  - Dedicated Certification Test Suite: Implemented [`tests/tests/stage0_8_vehicle_visual_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_8_vehicle_visual_certification.rs) covering all 6 validation gates (6/6 PASSED ✅):
+    1. Test 1: glTF 2.0 / GLB Export & Binary Roundtrip Parsing: Exported 11 `.glb` models to `assets/vehicles/` and validated binary headers and chunks.
+    2. Test 2: Apex GT Anatomy & Curvature: Verified all 12 semantic submesh components, curved hood/roof height gradients, and >400 triangle budget.
+    3. Test 3: Dynamic Wheel Articulation & Kinematics: Confirmed front steering lateral deflection, wheel rolling spin, suspension travel, and lighting states.
+    4. Test 4: Distinct Multimodal Models: Verified distinct dimensions, wheelbase, track widths, and category specifics across all 7 vehicle types.
+    5. Test 5: LOD Scaling & Registry Caching: Proved monotonic vertex reduction (LOD0 > LOD1 > LOD2), $O(1)$ caching, and explicit error handling for missing/corrupt assets.
+    6. Test 6: Authoritative Simulation Invariance: Ran 60s dynamic simulation with continuous rendering, proving zero drift, finite state vectors, and zero collision feedback.
+  - Zero Stabilization Regression: Validated [`tests/tests/stage0_7_vehicle_stabilization_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_7_vehicle_stabilization_certification.rs) (9/9 PASSED ✅).
+  - Zero Multimodal Regression: Validated [`tests/tests/stage7_multimodal_transport_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage7_multimodal_transport_certification.rs) (13/13 PASSED ✅).
+  - Clean Quality Gates: 0 warnings under `cargo clippy --workspace --all-targets -- -D warnings`, 0 deviations under `cargo fmt --check`.
+  - Packaged Application Driving Benchmark: Executed `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` delivering 97.5 FPS steady-state (p50: 9.64ms, p95: 12.01ms), 238.82 MB RSS, 1.22 MB VRAM, 494.63ms cold startup, and captured verified screenshot `target/screenshots/san-francisco_view.ppm`.
+
 

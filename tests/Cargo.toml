@@ -172,3 +172,7 @@ path = "tests/stage0_6_r_world_visibility_certification.rs"
 [[test]]
 name = "stage0_7_vehicle_stabilization_certification"
 path = "tests/stage0_7_vehicle_stabilization_certification.rs"
+
+[[test]]
+name = "stage0_8_vehicle_visual_certification"
+path = "tests/stage0_8_vehicle_visual_certification.rs"

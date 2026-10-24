@@ -1144,6 +1144,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 brake_lights_on: false,
                 reverse_lights_on: is_in_reverse,
                 trailer_angle: 0.15,
+                wheel_compressions: [
+                    vehicle.wheels[0].compression,
+                    vehicle.wheels[1].compression,
+                    vehicle.wheels[2].compression,
+                    vehicle.wheels[3].compression,
+                ],
+                ..Default::default()
             });
             fleet_mesh.append(&player_mesh);
 
@@ -1162,6 +1169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         brake_lights_on: false,
                         reverse_lights_on: false,
                         trailer_angle: 0.0,
+                        ..Default::default()
                     });
                     fleet_mesh.append(&wagon_mesh);
                 }
@@ -1194,6 +1202,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     brake_lights_on: agent.speed_ms < 1.0,
                     reverse_lights_on: false,
                     trailer_angle: 0.0,
+                    ..Default::default()
                 });
                 fleet_mesh.append(&t_mesh);
             }
