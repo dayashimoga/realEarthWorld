@@ -838,3 +838,29 @@
     - `test_stage0_6_gpu_cache_invalidation_and_floating_origin`: PASSED (GPU cache purge & ECEF re-anchoring).
   - Clean workspace verification: `cargo test --workspace` (100% passing), `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings), and `cargo fmt --check` (0 deviations).
 
+## STAGE 0.6-R: Critical World Visibility Regression Recovery (Completed & Certified)
+- [x] Phase 0.6-R.1: Forensic Root-Cause Diagnosis
+  - [x] Identify root cause of overhead gray ceiling: Camera floating origin anchor mismatch with chunk package anchor altitude causing subterranean positioning and underside terrain backface rendering.
+  - [x] Identify root cause of initial vehicle hijack: Arbitrary first-node selection (Market Street node 20012, 1,362m away) without proximity constraints overriding initial camera on region load.
+  - [x] Identify root cause of camera yaw misalignment: Orthogonal `forward.x.atan2(forward.z)` formula in `VehicleCameraController`.
+  - [x] Identify root cause of synthetic route injection: Hardcoded fallback route with fabricated coordinates in `load_region`.
+- [x] Phase 0.6-R.2: Camera Floating Origin Synchronization
+  - [x] Synchronize `self.camera.set_anchor(package_anchor)` with chunk package anchor in `apps/world-viewer/src/interactive.rs`.
+  - [x] Store `package_anchor` in `RegionResources` and bind `DemGroundQuery` and Cartesian coordinates to `package_anchor`.
+  - [x] Preserve start screen landmark preview camera positioning above ground without forced vehicle override.
+- [x] Phase 0.6-R.3: Authentic Road Spawning & Chase Camera Realignment
+  - [x] Implement `find_road_spawn_candidate(target_coord, idx)` with authentic OSM road search within 300m of landmark (Montgomery St).
+  - [x] Calculate true road tangent heading, right lane offset ($0.45 \times \text{lane\_width}$), DEM elevation and surface normal slope checks.
+  - [x] Fix `VehicleCameraController` yaw calculation to `forward.z.atan2(forward.x)` in `engine/vehicles/src/camera.rs`.
+  - [x] Add unit test `test_vehicle_camera_cardinal_direction_alignment` asserting 4-cardinal direction alignment ($\ge 0.99$).
+  - [x] Decouple `prepare_initial_vehicle` from `execute_spawn_vehicle`.
+- [x] Phase 0.6-R.4: Atomic Region Loading & Elimination of Synthetic Guidance
+  - [x] Refactor `load_region` to verify new streamer and chunks before clearing GPU cache.
+  - [x] Remove hardcoded synthetic fallback route guidance from production paths.
+- [x] Phase 0.6-R.5: Multi-Tier Regression Certification
+  - [x] Implement automated regression gate suite (`tests/tests/stage0_6_r_world_visibility_certification.rs`) covering Tests A through H (8/8 passing).
+  - [x] Verify 100% test pass rate across entire workspace (`cargo test --workspace`).
+  - [x] Verify clean static analysis (`cargo clippy --workspace --all-targets -- -D warnings`, 0 warnings).
+  - [x] Verify code style compliance (`cargo fmt --check`, 0 deviations).
+  - [x] Execute headless benchmark verification (`cargo run -p realearth-viewer -- --headless --benchmark --frames 30`, 1305.5 FPS, 29,711 authentic triangles).
+

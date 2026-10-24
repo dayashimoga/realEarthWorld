@@ -1376,3 +1376,37 @@
     - `test_stage0_6_gpu_cache_invalidation_and_floating_origin`: PASSED (GPU cache purge & ECEF re-anchoring).
   - Clean workspace verification: `cargo test --workspace` (100% passing), `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings), and `cargo fmt --check` (0 deviations).
 
+## STAGE 0.6-R: Critical World Visibility Regression Recovery (Completed & Certified)
+- [x] Phase 0.6-R.1 — Root Cause Forensic Diagnosis:
+  - Root Cause 1 (Overhead Gray Ceiling): `self.camera.set_anchor(landmark.coord)` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs) anchored the camera at Transamerica elevation (`alt = 35.0m`), whereas the chunk package origin anchor was compiled at MSL (`alt = 0.0m`). This introduced a -35m vertical offset between the camera's local Cartesian coordinates and the terrain chunk meshes, positioning the camera underground where backface-culled terrain faces rendered overhead as an expansive gray ceiling.
+  - Root Cause 2 (Forced Underground Market Street Hijack): Loading San Francisco arbitrarily selected the first road node (Market Street node 20012, 1,362m away) without proximity or slope validation, and forcibly overrode the initial camera and user view into driving mode on region load.
+  - Root Cause 3 (Orthogonal Camera Yaw Direction): `VehicleCameraController` in [`engine/vehicles/src/camera.rs`](file:///j:/rustRealEarth/engine/vehicles/src/camera.rs) computed vehicle yaw using `forward.x.atan2(forward.z)` instead of standard `forward.z.atan2(forward.x)` in OpenGL/Vulkan/WGPU right-handed coordinates, pointing the chase camera sideways into adjacent structures rather than following behind the vehicle.
+  - Root Cause 4 (Synthetically Injected Route Guidance): `load_region` contained a hardcoded synthetic fallback route injecting fabricated Market, Montgomery, and Columbus coordinates when the navigation router failed to find a corridor.
+- [x] Phase 0.6-R.2 — Camera Origin Synchronization & Floating Anchor Alignment:
+  - Synchronized `self.camera.set_anchor(package_anchor)` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs) with the loaded chunk package's authentic geodetic anchor (`package_anchor: Wgs84Coord`).
+  - Stored `package_anchor` in `RegionResources` and bound local Cartesian conversions for `DemGroundQuery`, vehicle physics, and camera positioning to the package anchor.
+  - Maintained start screen skyline preview at landmark coordinates above ground without premature camera hijacking or underground displacement.
+- [x] Phase 0.6-R.3 — Authentic Proximity Road Spawning & Chase Camera Alignment:
+  - Implemented `find_road_spawn_candidate(target_coord, idx)` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs), querying genuine OSM road network segments within 300m of the anchor landmark (e.g. Montgomery Street, ~110m away).
+  - Calculated authentic road tangent yaw $\text{atan2}(dx, dz)$, offset vehicle into the right driving lane ($0.45 \times \text{lane\_width}$), sampled DEM surface elevation and normal, and verified ground slope $> 0.65$ before placement.
+  - Corrected vehicle camera yaw in [`engine/vehicles/src/camera.rs`](file:///j:/rustRealEarth/engine/vehicles/src/camera.rs) to `forward.z.atan2(forward.x)`, aligning camera forward vectors with vehicle heading across all four cardinal directions.
+  - Added unit test `test_vehicle_camera_cardinal_direction_alignment` asserting positive alignment ($> 0.99$) for North, South, East, and West headings.
+  - Decoupled `prepare_initial_vehicle(idx)` (initializing simulation vehicle quietly) from `execute_spawn_vehicle(idx)` (explicit user spawn action with chase camera activation).
+- [x] Phase 0.6-R.4 — Atomic Region Loading & Elimination of Synthetic Route Guidance:
+  - Refactored `load_region` to load the new streamer, verify chunks, and stage resources atomically before clearing GPU caches or resetting camera state.
+  - Removed all synthetic route fallbacks, preserving zero synthetic data masquerading as surveyed GIS.
+- [x] Phase 0.6-R.5 — Automated Regression Gates & Multi-Tier Certification:
+  - Authored dedicated regression gate test suite in [`tests/tests/stage0_6_r_world_visibility_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_6_r_world_visibility_certification.rs) implementing all 8 verification gates:
+    - Test A: Startup — San Francisco loads with genuine nonzero road (33 arterials), building (80 surveyed), and terrain geometry (>10k triangles).
+    - Test B: Camera — Street-level and aerial positions confirm camera is never underground; anchor matches package anchor; yaw correctly aligns with cardinal directions.
+    - Test C: Rendering — Real WGPU offscreen renderer renders active chunks and submits valid draw calls.
+    - Test D: Driving — Vehicle spawns on Montgomery Street, aligns along road tangent, and responds to W/S/A/D controls.
+    - Test E: Travel — Driving along corridor maintains chunk streaming and terrain elevation integrity.
+    - Test F: Region Switching — Safe atomic region switching across catalog regions without state corruption.
+    - Test G: Regression Comparison — Confirmed 100% of terrain normals point strictly upwards (+Y, zero inverted ceiling vertices) and >1000 road driving surface vertices face upwards.
+    - Test H: Packaged Executable — Validated binary integrity and application components.
+  - Full workspace test suite: 100% passing across all crates and integration tests.
+  - Static analysis: `cargo clippy --workspace --all-targets -- -D warnings` passed with 0 warnings.
+  - Code style: `cargo fmt --check` passed with 0 formatting deviations.
+  - Headless benchmark: `cargo run -p realearth-viewer -- --headless --benchmark --frames 30` rendered 30 frames at 1305.5 FPS (p95 latency 0.88ms, peak RSS 266MB, 29,711 authentic triangles across 30 active chunks).
+

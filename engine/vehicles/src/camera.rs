@@ -72,7 +72,9 @@ impl VehicleCameraController {
         let car_up = rot_mat.col(1);
         let car_right = rot_mat.col(0);
 
-        let target_yaw = car_forward.x.atan2(car_forward.z);
+        // Camera yaw convention aligns with camera.rs: front = (cos(yaw)*cos(pitch), sin(pitch), sin(yaw)*cos(pitch)).
+        // Therefore, horizontal forward (x, z) maps to yaw = z.atan2(x).
+        let target_yaw = car_forward.z.atan2(car_forward.x);
 
         match self.perspective {
             VehicleCameraPerspective::Chase => {
@@ -143,7 +145,7 @@ impl VehicleCameraController {
     ) -> (Vec3, f32, f32) {
         let rot_mat = Mat3::from_quat(orientation);
         let forward = rot_mat.col(2);
-        let target_yaw = forward.x.atan2(forward.z);
+        let target_yaw = forward.z.atan2(forward.x);
 
         match self.perspective {
             VehicleCameraPerspective::Chase => {
@@ -224,7 +226,44 @@ mod tests {
         assert!((pos.x - (10.0 - 0.38)).abs() < 1e-3);
         assert!((pos.y - (5.0 + 1.05)).abs() < 1e-3);
         assert!((pos.z - (20.0 + 0.15)).abs() < 1e-3);
-        assert!(yaw.abs() < 1e-3);
+        // When vehicle is pointing along +Z (North), camera yaw is +PI/2
+        assert!((yaw - std::f32::consts::FRAC_PI_2).abs() < 1e-3);
         assert!((pitch - (-0.06)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_vehicle_camera_cardinal_direction_alignment() {
+        let mut cam = VehicleCameraController::new(VehicleCameraPerspective::Chase);
+        // Test 4 cardinal directions
+        // 1. Vehicle facing North (+Z, yaw = 0.0) -> camera looks North (yaw = PI/2)
+        let veh_n = DynamicVehicle::new(VehicleConfig::default(), Vec3::ZERO, 0.0);
+        let (_, yaw_n, _) = cam.update(&veh_n, 0.016);
+        assert!((yaw_n - std::f32::consts::FRAC_PI_2).abs() < 1e-3);
+
+        // 2. Vehicle facing East (+X, yaw = PI/2) -> camera looks East (yaw = 0.0)
+        let mut cam_e = VehicleCameraController::new(VehicleCameraPerspective::Chase);
+        let veh_e = DynamicVehicle::new(
+            VehicleConfig::default(),
+            Vec3::ZERO,
+            std::f32::consts::FRAC_PI_2,
+        );
+        let (_, yaw_e, _) = cam_e.update(&veh_e, 0.016);
+        assert!(yaw_e.abs() < 1e-3);
+
+        // 3. Vehicle facing South (-Z, yaw = PI) -> camera looks South (yaw = -PI/2)
+        let mut cam_s = VehicleCameraController::new(VehicleCameraPerspective::Chase);
+        let veh_s = DynamicVehicle::new(VehicleConfig::default(), Vec3::ZERO, std::f32::consts::PI);
+        let (_, yaw_s, _) = cam_s.update(&veh_s, 0.016);
+        assert!((yaw_s - (-std::f32::consts::FRAC_PI_2)).abs() < 1e-3);
+
+        // 4. Vehicle facing West (-X, yaw = -PI/2) -> camera looks West (yaw = PI)
+        let mut cam_w = VehicleCameraController::new(VehicleCameraPerspective::Chase);
+        let veh_w = DynamicVehicle::new(
+            VehicleConfig::default(),
+            Vec3::ZERO,
+            -std::f32::consts::FRAC_PI_2,
+        );
+        let (_, yaw_w, _) = cam_w.update(&veh_w, 0.016);
+        assert!((yaw_w.abs() - std::f32::consts::PI).abs() < 1e-3);
     }
 }

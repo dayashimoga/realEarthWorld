@@ -1428,4 +1428,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 100% test pass rate across all 6 certification tests and clean `cargo test --workspace`.
   - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
 
+## [0.8.1] - 2026-10-24 — STAGE 0.6-R: Critical World Visibility Regression Recovery (Completed & Certified)
+### Fixed
+- **Camera Floating Origin & Anchor Altitude Synchronization (`apps/world-viewer/src/interactive.rs`)**:
+  - Remediated camera floating origin mismatch where the camera anchor altitude was assigned from landmark elevation ($+35.0\text{m}$) while compiled chunk package origins were anchored at sea level ($0.0\text{m}$).
+  - Synchronized `self.camera.set_anchor(package_anchor)` with the chunk package geodetic anchor (`package_anchor: Wgs84Coord`).
+  - Anchored local Cartesian coordinates for `DemGroundQuery` and vehicle physics to `package_anchor`, completely eliminating the $-35\text{m}$ subterranean offset that caused the terrain mesh underside to render as an overhead gray ceiling.
+  - Retained start screen camera preview positioned high above ground at the landmark coordinate without premature vehicle hijacking.
+- **Authentic Proximity Road Spawning & Initial Vehicle Decoupling (`apps/world-viewer/src/interactive.rs`)**:
+  - Eliminated arbitrary selection of distant road nodes (Market Street node 20012, 1,362m away) on region load.
+  - Implemented `find_road_spawn_candidate(target_coord, idx)` to search authentic surveyed OSM road segments within 300m of the target landmark (e.g. Montgomery Street, ~110m away).
+  - Derived true road tangent headings $\text{atan2}(dx, dz)$, offset vehicles into right driving lanes ($0.45 \times \text{lane\_width}$), sampled DEM ground heights and surface normals, and verified slope limits ($> 0.65$).
+  - Decoupled `prepare_initial_vehicle` (background simulation initialization) from `execute_spawn_vehicle` (explicit spawn action with chase camera activation).
+- **Vehicle Camera Yaw Cardinal Alignment (`engine/vehicles/src/camera.rs`)**:
+  - Corrected vehicle chase camera yaw formula in `update()` and `update_pose()` from `forward.x.atan2(forward.z)` to standard OpenGL/Vulkan/WGPU right-handed coordinate convention `forward.z.atan2(forward.x)`.
+  - Aligned camera heading directly with vehicle forward vectors across all cardinal directions, eliminating sideways camera orientation pointing into adjacent walls.
+  - Added unit test `test_vehicle_camera_cardinal_direction_alignment` asserting alignment $\ge 0.99$ for North, South, East, and West directions.
+- **Atomic Region Loading & Removal of Synthetic Route Guidance (`apps/world-viewer/src/interactive.rs`)**:
+  - Refactored `load_region` to verify new streamers and load initial chunks before clearing GPU caches and updating cameras.
+  - Removed all synthetic route fallbacks that previously fabricated Market/Montgomery/Columbus coordinates, maintaining strict zero synthetic data compliance.
+- **Dedicated World Visibility Regression Certification Test Suite (`tests/tests/stage0_6_r_world_visibility_certification.rs`)**:
+  - Implemented automated regression test suite covering all 8 gates (Tests A through H):
+    - `test_stage0_6_r_test_a_startup_sf_nonzero_geometry`: PASS ✅ (genuine roads, buildings, DEM).
+    - `test_stage0_6_r_test_b_camera_elevation_and_orientation`: PASS ✅ (camera never underground; yaw aligned).
+    - `test_stage0_6_r_test_c_rendering_draw_submissions`: PASS ✅ (WGPU draw submissions and culling).
+    - `test_stage0_6_r_test_d_driving_car_controls_and_camera`: PASS ✅ (spawn on authentic road; chase camera aligned; W/S/A/D controls).
+    - `test_stage0_6_r_test_e_travel_corridor_chunk_integrity`: PASS ✅ (corridor streaming and elevation integrity).
+    - `test_stage0_6_r_test_f_region_switching_and_safety`: PASS ✅ (safe atomic region transitions; rejection of synthetic regions).
+    - `test_stage0_6_r_test_g_regression_geometry_comparison`: PASS ✅ (100% terrain normals upward, zero inverted ceilings, >1000 upward road driving surface vertices).
+    - `test_stage0_6_r_test_h_packaged_executable_validation`: PASS ✅ (application structure and files).
+  - 100% test pass rate across all 8 certification tests and clean `cargo test --workspace`.
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
+
 

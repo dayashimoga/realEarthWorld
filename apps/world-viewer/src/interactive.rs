@@ -18,8 +18,10 @@ use realearth_gameplay::{
     save::CURRENT_SAVE_SCHEMA_VERSION, CareerType, GameSettings, GameplayEventBus, Job,
     JobCatalogGenerator, PlayerProfile, SaveData, SaveManager,
 };
+use realearth_geospatial::transforms::EnuConverter;
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::load_authentic_city;
+use realearth_ingestion::osm_types::HighwayType;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
 use realearth_ingestion::sample_chicago::create_chicago_dataset;
@@ -32,8 +34,8 @@ use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
 use realearth_ingestion::sample_seattle::create_seattle_dataset;
 use realearth_navigation::{
-    find_route, generate_turn_by_turn, ManeuverType, NavigationRoute, NavigationUpdate,
-    RoadNetworkGraph, RouteTracker, RoutingPreference, RuleOfTheRoad,
+    find_route, generate_turn_by_turn, ManeuverType, NavigationUpdate, RoadNetworkGraph,
+    RouteTracker, RoutingPreference, RuleOfTheRoad,
 };
 use realearth_rendering::{
     generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
@@ -56,6 +58,18 @@ use realearth_vehicles::{
     TransitBusModel, TransmissionMode, VehicleCameraController, VehicleCameraPerspective,
     VehicleConfig, VehicleInputs,
 };
+
+/// Verified authentic roadway spawn location candidate.
+#[derive(Debug, Clone)]
+pub struct RoadSpawnCandidate {
+    pub position: glam::Vec3,
+    pub yaw: f32,
+    pub surface_elevation: f32,
+    pub surface_normal: glam::Vec3,
+    pub road_name: String,
+    pub highway_type: HighwayType,
+    pub lane_width: f32,
+}
 
 /// Ground elevation query backed by geographic DEM bilinear interpolation.
 #[derive(Clone)]
@@ -197,6 +211,7 @@ struct RegionResources {
     _world_dir: PathBuf,
     region_name: &'static str,
     landmark: Landmark,
+    package_anchor: Wgs84Coord,
     dem: DemGrid,
     raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
     streamer: WorldStreamer,
@@ -676,10 +691,10 @@ impl InteractiveViewerApp {
         let veh_coord = if let Some(ref res) = self.region_resources {
             let meters_per_deg_lat = 111_320.0;
             let meters_per_deg_lon =
-                111_320.0 * res.landmark.coord.lat.to_radians().cos().abs().max(0.01);
+                111_320.0 * res.package_anchor.lat.to_radians().cos().abs().max(0.01);
             Wgs84Coord::new(
-                res.landmark.coord.lat + (self.vehicle.position.z as f64 / meters_per_deg_lat),
-                res.landmark.coord.lon + (self.vehicle.position.x as f64 / meters_per_deg_lon),
+                res.package_anchor.lat + (self.vehicle.position.z as f64 / meters_per_deg_lat),
+                res.package_anchor.lon + (self.vehicle.position.x as f64 / meters_per_deg_lon),
                 self.vehicle.position.y as f64,
             )
         } else {
@@ -1055,13 +1070,119 @@ impl InteractiveViewerApp {
         self.status_notification = Some((label, Instant::now()));
     }
 
-    /// Executes validated multimodal vehicle spawning on appropriate infrastructure with camera synchronization.
-    pub fn execute_spawn_vehicle(&mut self, idx: usize) -> Result<(), String> {
-        let landmark = self
+    /// Resolves an authentic, verified road-lane spawn candidate close to the target coordinate.
+    pub fn find_road_spawn_candidate(
+        &self,
+        target_coord: Wgs84Coord,
+        idx: usize,
+    ) -> Result<RoadSpawnCandidate, String> {
+        let res = self
             .region_resources
             .as_ref()
-            .map(|r| r.landmark)
-            .unwrap_or(Landmark::SAN_FRANCISCO_TRANSAMERICA);
+            .ok_or_else(|| "Region resources not loaded".to_string())?;
+        let gq = self
+            .ground_query
+            .as_ref()
+            .ok_or_else(|| "DEM ground query not available".to_string())?;
+        let package_anchor = res.package_anchor;
+        let conv = EnuConverter::new(package_anchor);
+
+        let is_heavy = idx == 4 || idx == 5; // Bus or Heavy Truck
+        let mut best_candidate: Option<(f64, RoadSpawnCandidate)> = None;
+
+        for road in &res.raw_roads {
+            if road.layer != 0 || road.is_tunnel {
+                continue;
+            }
+            if road.highway_type == HighwayType::Footway || road.highway_type == HighwayType::Path {
+                continue;
+            }
+            if is_heavy && road.lanes < 2 {
+                continue;
+            }
+            if road.geometry.len() < 2 {
+                continue;
+            }
+
+            for window in road.geometry.windows(2) {
+                let p1 = window[0];
+                let p2 = window[1];
+
+                let enu1 = conv.wgs84_to_enu(p1);
+                let enu2 = conv.wgs84_to_enu(p2);
+                let dx = (enu2.east - enu1.east) as f32;
+                let dz = (enu2.north - enu1.north) as f32;
+                let seg_len = (dx * dx + dz * dz).sqrt();
+                if seg_len < 3.0 {
+                    continue;
+                }
+
+                let tangent = (dx / seg_len, dz / seg_len);
+                let heading_yaw = tangent.0.atan2(tangent.1);
+
+                // Lane lateral offset perpendicular to tangent
+                let lane_width = road.highway_type.default_lane_width().max(2.8);
+                let right_normal = (tangent.1, -tangent.0);
+                let lateral_offset = lane_width * 0.45;
+
+                let mid_enu_x =
+                    ((enu1.east + enu2.east) * 0.5) as f32 + right_normal.0 * lateral_offset;
+                let mid_enu_z =
+                    ((enu1.north + enu2.north) * 0.5) as f32 + right_normal.1 * lateral_offset;
+
+                let elev = gq.elevation(mid_enu_x, mid_enu_z);
+                let normal = gq.normal(mid_enu_x, mid_enu_z);
+                if normal.y < 0.65 {
+                    // Excessive slope / cliff: skip segment
+                    continue;
+                }
+
+                // Distance squared to target coordinate
+                let target_enu = conv.wgs84_to_enu(target_coord);
+                let dist_sq = (mid_enu_x as f64 - target_enu.east).powi(2)
+                    + (mid_enu_z as f64 - target_enu.north).powi(2);
+
+                if best_candidate
+                    .as_ref()
+                    .is_none_or(|(best_dist, _)| dist_sq < *best_dist)
+                {
+                    let candidate = RoadSpawnCandidate {
+                        position: glam::Vec3::new(mid_enu_x, elev, mid_enu_z),
+                        yaw: heading_yaw,
+                        surface_elevation: elev,
+                        surface_normal: normal,
+                        road_name: road
+                            .name
+                            .clone()
+                            .unwrap_or_else(|| "City Street".to_string()),
+                        highway_type: road.highway_type,
+                        lane_width,
+                    };
+                    best_candidate = Some((dist_sq, candidate));
+                }
+            }
+        }
+
+        if let Some((_, candidate)) = best_candidate {
+            Ok(candidate)
+        } else {
+            Err(format!(
+                "No verified roadway geometry found within region for vehicle type {}",
+                idx
+            ))
+        }
+    }
+
+    /// Prepares vehicle models at the authentic ground surface without activating drive mode or moving camera.
+    pub fn prepare_initial_vehicle(&mut self, idx: usize) {
+        let (landmark, package_anchor) = if let Some(ref r) = self.region_resources {
+            (r.landmark, r.package_anchor)
+        } else {
+            (
+                Landmark::SAN_FRANCISCO_TRANSAMERICA,
+                Landmark::SAN_FRANCISCO_TRANSAMERICA.coord,
+            )
+        };
 
         let ground_y = if let Some(ref gq) = self.ground_query {
             gq.elevation(0.0, 0.0)
@@ -1069,45 +1190,32 @@ impl InteractiveViewerApp {
             0.0
         };
 
-        let meters_per_deg_lat = 111_139.0;
-        let meters_per_deg_lon = 111_139.0 * landmark.coord.lat.to_radians().cos().max(0.1);
-
-        // Find nearest road candidate or infrastructure alignment from raw roads
-        let maybe_road = self.region_resources.as_ref().and_then(|r| {
-            r.raw_roads.iter().find(|rd| {
-                rd.layer == 0
-                    && !rd.is_tunnel
-                    && match idx {
-                        4 | 5 => rd.lanes >= 2, // Bus or Heavy Truck prefers wider road
-                        7 => false,             // Train uses rail
-                        8 => false,             // Marine uses water
-                        9 => false,             // Aviation uses flight corridor
-                        _ => true,
-                    }
-            })
-        });
-
-        let (spawn_x, spawn_z, spawn_yaw) = if let Some(road) = maybe_road {
-            if road.geometry.len() >= 2 {
-                let p1 = road.geometry[0];
-                let p2 = road.geometry[1];
-                let x = (p1.lon - landmark.coord.lon) * meters_per_deg_lon;
-                let z = (p1.lat - landmark.coord.lat) * meters_per_deg_lat;
-                let dx = (p2.lon - p1.lon) * meters_per_deg_lon;
-                let dz = (p2.lat - p1.lat) * meters_per_deg_lat;
-                let yaw = dx.atan2(dz) as f32;
-                (x as f32, z as f32, yaw)
+        let (spawn_x, spawn_z, spawn_yaw, elev) = if idx <= 6 {
+            if let Ok(candidate) = self.find_road_spawn_candidate(landmark.coord, idx) {
+                (
+                    candidate.position.x,
+                    candidate.position.z,
+                    candidate.yaw,
+                    candidate.surface_elevation,
+                )
             } else {
-                (0.0, 15.0, landmark.yaw)
+                (0.0, 0.0, landmark.yaw, ground_y)
             }
+        } else if idx == 7 {
+            let conv = EnuConverter::new(package_anchor);
+            let lm_enu = conv.wgs84_to_enu(landmark.coord);
+            let e = if let Some(ref gq) = self.ground_query {
+                gq.elevation(lm_enu.east as f32, lm_enu.north as f32)
+            } else {
+                ground_y
+            };
+            (lm_enu.east as f32, lm_enu.north as f32, landmark.yaw, e)
+        } else if idx == 8 {
+            (250.0, -100.0, landmark.yaw, 0.5)
+        } else if idx == 9 {
+            (0.0, -200.0, landmark.yaw, ground_y + 350.0)
         } else {
-            (0.0, 15.0, landmark.yaw)
-        };
-
-        let elev = if let Some(ref gq) = self.ground_query {
-            gq.elevation(spawn_x, spawn_z)
-        } else {
-            ground_y
+            (0.0, 0.0, landmark.yaw, ground_y)
         };
 
         match idx {
@@ -1172,8 +1280,144 @@ impl InteractiveViewerApp {
             7 => {
                 self.active_transport_mode = ActiveTransportMode::Train;
                 self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
-                self.train_position = glam::Vec3::new(0.0, ground_y + 0.6, 25.0);
-                self.train_yaw = landmark.yaw;
+                self.train_position = glam::Vec3::new(spawn_x, elev + 0.6, spawn_z);
+                self.train_yaw = spawn_yaw;
+            }
+            8 => {
+                self.active_transport_mode = ActiveTransportMode::Marine;
+                self.vehicle_visual_type = VehicleVisualType::MarineVessel;
+                self.marine_vessel = MarineVessel::new_ferry(
+                    "Harbor Passenger Ferry",
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+            }
+            9 => {
+                self.active_transport_mode = ActiveTransportMode::Aviation;
+                self.vehicle_visual_type = VehicleVisualType::CommercialAirliner;
+                self.aircraft = AircraftFlight::new_airliner(
+                    "Commercial Airliner",
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+            }
+            _ => {}
+        }
+    }
+
+    /// Executes validated multimodal vehicle spawning on appropriate infrastructure with camera synchronization.
+    pub fn execute_spawn_vehicle(&mut self, idx: usize) -> Result<(), String> {
+        let (_landmark, package_anchor) = self
+            .region_resources
+            .as_ref()
+            .map(|r| (r.landmark, r.package_anchor))
+            .ok_or_else(|| "Region resources not loaded".to_string())?;
+
+        let gq = self
+            .ground_query
+            .as_ref()
+            .ok_or_else(|| "Ground query not available".to_string())?;
+
+        let ground_y = gq.elevation(0.0, 0.0);
+
+        let (spawn_x, spawn_z, spawn_yaw, elev) = if idx <= 6 {
+            let landmark_coord = self
+                .region_resources
+                .as_ref()
+                .map(|r| r.landmark.coord)
+                .unwrap_or(package_anchor);
+            let candidate = self.find_road_spawn_candidate(landmark_coord, idx)?;
+            (
+                candidate.position.x,
+                candidate.position.z,
+                candidate.yaw,
+                candidate.surface_elevation,
+            )
+        } else if idx == 7 {
+            // Rail
+            let landmark_coord = self
+                .region_resources
+                .as_ref()
+                .map(|r| r.landmark.coord)
+                .unwrap_or(package_anchor);
+            let conv = EnuConverter::new(package_anchor);
+            let lm_enu = conv.wgs84_to_enu(landmark_coord);
+            let e = gq.elevation(lm_enu.east as f32, lm_enu.north as f32);
+            (lm_enu.east as f32, lm_enu.north as f32, 0.0, e)
+        } else if idx == 8 {
+            // Marine
+            (250.0, -100.0, 0.0, 0.5)
+        } else if idx == 9 {
+            // Aviation
+            (0.0, -200.0, 0.0, ground_y + 350.0)
+        } else {
+            return Err(format!("Invalid vehicle fleet index: {}", idx));
+        };
+
+        match idx {
+            0 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::sports_coupe(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
+            }
+            1 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Sedan;
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::sedan(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
+            }
+            2 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Suv;
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::suv(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
+            }
+            3 => {
+                self.active_transport_mode = ActiveTransportMode::Car;
+                self.vehicle_visual_type = VehicleVisualType::Taxi;
+                self.vehicle = DynamicVehicle::new(
+                    VehicleConfig::taxi(),
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
+                );
+                self.vehicle.recover_on_surface(elev);
+            }
+            4 => {
+                self.active_transport_mode = ActiveTransportMode::TransitBus;
+                self.vehicle_visual_type = VehicleVisualType::TransitBus;
+                self.transit_bus =
+                    TransitBusModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
+            }
+            5 => {
+                self.active_transport_mode = ActiveTransportMode::HeavyTruck;
+                self.vehicle_visual_type = VehicleVisualType::HeavyTruck;
+                self.heavy_truck =
+                    HeavyTruckModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
+            }
+            6 => {
+                self.active_transport_mode = ActiveTransportMode::Motorcycle;
+                self.vehicle_visual_type = VehicleVisualType::Motorcycle;
+                self.motorcycle =
+                    MotorcycleModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
+            }
+            7 => {
+                self.active_transport_mode = ActiveTransportMode::Train;
+                self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
+                self.train_position = glam::Vec3::new(spawn_x, elev + 0.6, spawn_z);
+                self.train_yaw = spawn_yaw;
                 self.train_consist.velocity_mps = 0.0;
                 self.train_consist.speed_kph = 0.0;
                 self.train_consist.throttle = 0.0;
@@ -1187,8 +1431,8 @@ impl InteractiveViewerApp {
                 self.vehicle_visual_type = VehicleVisualType::MarineVessel;
                 self.marine_vessel = MarineVessel::new_ferry(
                     "Harbor Passenger Ferry",
-                    glam::Vec3::new(250.0, 0.5, -100.0),
-                    landmark.yaw,
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
                 );
             }
             9 => {
@@ -1196,12 +1440,12 @@ impl InteractiveViewerApp {
                 self.vehicle_visual_type = VehicleVisualType::CommercialAirliner;
                 self.aircraft = AircraftFlight::new_airliner(
                     "Commercial Airliner",
-                    glam::Vec3::new(0.0, ground_y + 350.0, -200.0),
-                    landmark.yaw,
+                    glam::Vec3::new(spawn_x, elev, spawn_z),
+                    spawn_yaw,
                 );
                 self.aircraft.linear_velocity =
-                    glam::Quat::from_rotation_y(landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
-                self.aircraft.altitude_msl_meters = ground_y + 350.0;
+                    glam::Quat::from_rotation_y(spawn_yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+                self.aircraft.altitude_msl_meters = elev;
                 self.aircraft.indicated_airspeed_knots = 145.0;
                 self.aircraft.is_airborne = true;
                 self.aircraft.is_stalled = false;
@@ -1257,8 +1501,10 @@ impl InteractiveViewerApp {
             ),
         };
 
-        let cam_lat = landmark.coord.lat + (cam_pos.z as f64 / meters_per_deg_lat);
-        let cam_lon = landmark.coord.lon + (cam_pos.x as f64 / meters_per_deg_lon);
+        let meters_per_deg_lat = 111_320.0;
+        let meters_per_deg_lon = 111_320.0 * package_anchor.lat.to_radians().cos().abs().max(0.01);
+        let cam_lat = package_anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
+        let cam_lon = package_anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
         self.camera_ctrl.coord = Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
         self.camera_ctrl.yaw = cam_yaw;
         self.camera_ctrl.pitch = cam_pitch;
@@ -1323,17 +1569,6 @@ impl InteractiveViewerApp {
             collision_critical_radius_meters: 250.0,
             ..Default::default()
         };
-
-        // Purge renderer persistent GPU chunk cache to avoid local coordinate key collision
-        if let Some(ref r) = self.renderer {
-            let cleared = r.clear_gpu_cache();
-            if cleared > 0 {
-                println!(
-                    "🧹 Cleared {} stale GPU chunk buffers from previous region",
-                    cleared
-                );
-            }
-        }
 
         let (world_dir, region_name, landmark, dem, raw_roads) = if let Some(city) =
             find_city_by_id(region_id)
@@ -1616,15 +1851,35 @@ impl InteractiveViewerApp {
             active_chunks.len()
         );
 
-        let ground_query = DemGroundQuery::new(dem.clone(), landmark.coord);
+        // Purge renderer persistent GPU chunk cache to avoid local coordinate key collision
+        if let Some(ref r) = self.renderer {
+            let cleared = r.clear_gpu_cache();
+            if cleared > 0 {
+                println!(
+                    "🧹 Cleared {} stale GPU chunk buffers from previous region",
+                    cleared
+                );
+            }
+        }
+
+        let package_anchor = active_chunks
+            .first()
+            .map(|c| c.header.anchor)
+            .unwrap_or(landmark.coord);
+
+        let ground_query = DemGroundQuery::new(dem.clone(), package_anchor);
+        let conv = EnuConverter::new(package_anchor);
+        let lm_enu = conv.wgs84_to_enu(landmark.coord);
+        let initial_elevation = ground_query.elevation(lm_enu.east as f32, lm_enu.north as f32);
 
         // Initialize Bevy ECS simulation world
-        let mut sim_world = RealEarthSimWorld::new(landmark.coord);
+        let mut sim_world = RealEarthSimWorld::new(package_anchor);
         for chunk in &active_chunks {
+            let enu_c = conv.wgs84_to_enu(chunk.header.bounds.center());
             let center = glam::Vec3::new(
-                0.0,
+                enu_c.east as f32,
                 (chunk.header.min_elevation + chunk.header.max_elevation) * 0.5,
-                0.0,
+                enu_c.north as f32,
             );
             sim_world.spawn_chunk_entity(
                 chunk.header.chunk_x,
@@ -1641,21 +1896,42 @@ impl InteractiveViewerApp {
         }
 
         // Initialize vehicle and multimodal fleet at ground surface
-        let initial_elevation = ground_query.elevation(0.0, 0.0);
         self.vehicle = DynamicVehicle::new(
             VehicleConfig::default(),
-            glam::Vec3::new(0.0, initial_elevation, 0.0),
+            glam::Vec3::new(lm_enu.east as f32, initial_elevation, lm_enu.north as f32),
             landmark.yaw,
         );
         self.vehicle.recover_on_surface(initial_elevation);
 
-        self.motorcycle =
-            MotorcycleModel::new(glam::Vec3::new(3.0, initial_elevation, 0.0), landmark.yaw);
-        self.transit_bus =
-            TransitBusModel::new(glam::Vec3::new(-5.0, initial_elevation, 0.0), landmark.yaw);
-        self.heavy_truck =
-            HeavyTruckModel::new(glam::Vec3::new(8.0, initial_elevation, 0.0), landmark.yaw);
-        self.train_position = glam::Vec3::new(0.0, initial_elevation + 0.6, 20.0);
+        self.motorcycle = MotorcycleModel::new(
+            glam::Vec3::new(
+                lm_enu.east as f32 + 3.0,
+                initial_elevation,
+                lm_enu.north as f32,
+            ),
+            landmark.yaw,
+        );
+        self.transit_bus = TransitBusModel::new(
+            glam::Vec3::new(
+                lm_enu.east as f32 - 5.0,
+                initial_elevation,
+                lm_enu.north as f32,
+            ),
+            landmark.yaw,
+        );
+        self.heavy_truck = HeavyTruckModel::new(
+            glam::Vec3::new(
+                lm_enu.east as f32 + 8.0,
+                initial_elevation,
+                lm_enu.north as f32,
+            ),
+            landmark.yaw,
+        );
+        self.train_position = glam::Vec3::new(
+            lm_enu.east as f32,
+            initial_elevation + 0.6,
+            lm_enu.north as f32 + 20.0,
+        );
         self.train_yaw = landmark.yaw;
         self.marine_vessel = MarineVessel::new_ferry(
             "Harbor Passenger Ferry",
@@ -1692,93 +1968,51 @@ impl InteractiveViewerApp {
                 );
             }
 
-            // Populate Navigation Route from Landmark
+            // Populate Navigation Route from Landmark if genuine route exists
             let start_coord = landmark.coord;
             let dest_coord = Wgs84Coord::new(
                 landmark.coord.lat + 0.005,
                 landmark.coord.lon + 0.004,
                 landmark.coord.alt,
             );
-            if let Ok(route) = find_route(
+            match find_route(
                 &road_graph,
                 start_coord,
                 dest_coord,
                 RoutingPreference::FastestTime,
             ) {
-                let guidance = generate_turn_by_turn(&route, &road_graph);
-                self.route_tracker = Some(RouteTracker::new(route, guidance));
-            } else {
-                let p0 = landmark.coord;
-                let p1 = Wgs84Coord::new(
-                    landmark.coord.lat + 0.002,
-                    landmark.coord.lon,
-                    landmark.coord.alt,
-                );
-                let p2 = Wgs84Coord::new(
-                    landmark.coord.lat + 0.004,
-                    landmark.coord.lon + 0.003,
-                    landmark.coord.alt,
-                );
-                let p3 = Wgs84Coord::new(
-                    landmark.coord.lat + 0.007,
-                    landmark.coord.lon + 0.003,
-                    landmark.coord.alt,
-                );
-                let route = NavigationRoute {
-                    waypoints: vec![p0, p1, p2, p3],
-                    total_distance_meters: 850.0,
-                    estimated_duration_seconds: 65.0,
-                    edge_way_ids: vec![1001, 1002, 1003],
-                    road_names: vec![
-                        "Market St".to_string(),
-                        "Montgomery St".to_string(),
-                        "Columbus Ave".to_string(),
-                    ],
-                };
-                let guidance = generate_turn_by_turn(&route, &road_graph);
-                self.route_tracker = Some(RouteTracker::new(route, guidance));
+                Ok(route) => {
+                    let guidance = generate_turn_by_turn(&route, &road_graph);
+                    self.route_tracker = Some(RouteTracker::new(route, guidance));
+                }
+                Err(e) => {
+                    println!(
+                        "ℹ️ Road navigation unavailable between {:?} and {:?}: {:?}",
+                        start_coord, dest_coord, e
+                    );
+                    self.route_tracker = None;
+                }
             }
         } else {
-            let empty_graph = RoadNetworkGraph::new();
-            let p0 = landmark.coord;
-            let p1 = Wgs84Coord::new(
-                landmark.coord.lat + 0.002,
-                landmark.coord.lon,
-                landmark.coord.alt,
-            );
-            let p2 = Wgs84Coord::new(
-                landmark.coord.lat + 0.004,
-                landmark.coord.lon + 0.003,
-                landmark.coord.alt,
-            );
-            let p3 = Wgs84Coord::new(
-                landmark.coord.lat + 0.007,
-                landmark.coord.lon + 0.003,
-                landmark.coord.alt,
-            );
-            let route = NavigationRoute {
-                waypoints: vec![p0, p1, p2, p3],
-                total_distance_meters: 850.0,
-                estimated_duration_seconds: 65.0,
-                edge_way_ids: vec![1001, 1002, 1003],
-                road_names: vec![
-                    "Market St".to_string(),
-                    "Montgomery St".to_string(),
-                    "Columbus Ave".to_string(),
-                ],
-            };
-            let guidance = generate_turn_by_turn(&route, &empty_graph);
-            self.route_tracker = Some(RouteTracker::new(route, guidance));
+            self.route_tracker = None;
         }
 
         // Add intersection traffic lights, stop lines, and procedural pedestrians
-        let tl_pos = glam::Vec3::new(6.0, initial_elevation, 60.0);
+        let tl_pos = glam::Vec3::new(
+            lm_enu.east as f32 + 6.0,
+            initial_elevation,
+            lm_enu.north as f32 + 60.0,
+        );
         let tl = TrafficLight::new(101, tl_pos);
         self.traffic_sim.add_traffic_light(tl);
         self.traffic_sim.add_stop_line(IntersectionStopLine {
             id: 201,
             traffic_light_id: 101,
-            position: glam::Vec3::new(0.0, initial_elevation, 45.0),
+            position: glam::Vec3::new(
+                lm_enu.east as f32,
+                initial_elevation,
+                lm_enu.north as f32 + 45.0,
+            ),
             is_ns_direction: true,
         });
 
@@ -1786,16 +2020,32 @@ impl InteractiveViewerApp {
         let ped1 = PedestrianAgent::new(
             501,
             vec![
-                glam::Vec3::new(-7.0, initial_elevation, 55.0),
-                glam::Vec3::new(7.0, initial_elevation, 55.0),
+                glam::Vec3::new(
+                    lm_enu.east as f32 - 7.0,
+                    initial_elevation,
+                    lm_enu.north as f32 + 55.0,
+                ),
+                glam::Vec3::new(
+                    lm_enu.east as f32 + 7.0,
+                    initial_elevation,
+                    lm_enu.north as f32 + 55.0,
+                ),
             ],
             1.2,
         );
         let mut ped2 = PedestrianAgent::new(
             502,
             vec![
-                glam::Vec3::new(7.5, initial_elevation, 25.0),
-                glam::Vec3::new(7.5, initial_elevation, 85.0),
+                glam::Vec3::new(
+                    lm_enu.east as f32 + 7.5,
+                    initial_elevation,
+                    lm_enu.north as f32 + 25.0,
+                ),
+                glam::Vec3::new(
+                    lm_enu.east as f32 + 7.5,
+                    initial_elevation,
+                    lm_enu.north as f32 + 85.0,
+                ),
             ],
             1.35,
         );
@@ -1831,8 +2081,8 @@ impl InteractiveViewerApp {
             let _ = job.accept(&self.player_profile, &self.gameplay_bus);
         }
 
-        // Reposition camera floating origin anchor to landmark coordinates
-        self.camera.set_anchor(landmark.coord);
+        // Reposition camera floating origin anchor to package anchor coordinates
+        self.camera.set_anchor(package_anchor);
         self.camera_ctrl.coord = landmark.coord;
         self.camera_ctrl.yaw = landmark.yaw;
         self.camera_ctrl.pitch = landmark.pitch;
@@ -1844,13 +2094,20 @@ impl InteractiveViewerApp {
             _world_dir: world_dir,
             region_name,
             landmark,
+            package_anchor,
             dem,
             raw_roads,
             streamer,
         });
 
-        // Authoritatively spawn current active vehicle at the new region's verified coordinates
-        let _ = self.execute_spawn_vehicle(self.garage_selected_idx);
+        // Initialize vehicle: spawn if in drive mode, otherwise prepare initial vehicle preview without hijacking camera
+        if self.config.is_drive {
+            if let Err(e) = self.execute_spawn_vehicle(self.garage_selected_idx) {
+                eprintln!("⚠️ Failed to spawn vehicle on region load: {}", e);
+            }
+        } else {
+            self.prepare_initial_vehicle(self.garage_selected_idx);
+        }
 
         self.status_notification = Some((
             format!("📍 Region: {} loaded at {}", region_name, landmark.name),
@@ -3112,7 +3369,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                 }
 
                 // 3. Fixed-timestep simulation & Camera / Vehicle updates
-                let anchor = res.landmark.coord;
+                let anchor = res.package_anchor;
                 let meters_per_deg_lat = 111_320.0;
                 let meters_per_deg_lon = 111_320.0 * anchor.lat.to_radians().cos().abs().max(0.01);
 
