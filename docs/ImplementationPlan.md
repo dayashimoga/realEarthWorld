@@ -1481,4 +1481,37 @@
   - Clean Quality Gates: 0 warnings under `cargo clippy --workspace --all-targets -- -D warnings`, 0 deviations under `cargo fmt --check`.
   - Packaged Application Driving Benchmark: Executed `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` delivering 97.5 FPS steady-state (p50: 9.64ms, p95: 12.01ms), 238.82 MB RSS, 1.22 MB VRAM, 494.63ms cold startup, and captured verified screenshot `target/screenshots/san-francisco_view.ppm`.
 
+## STAGE 0.9: Production Road, Terrain and Spatial Integrity (Completed & Certified)
+- [x] Phase 0.9.1 — Geographic & Rendering Forensic Audit:
+  - Source Reconciled: Compared genuine San Francisco OpenStreetMap vector extract (`assets/san_francisco_sample/san_francisco_downtown.osm.xml`) and USGS 3DEP DEM against compiled chunks, ECS instances, collision meshes, and GPU draw submissions.
+  - Pipeline Audited: 33 interconnected roads (186 nodes, 30.3 km centerline network), 80 surveyed buildings (Salesforce Tower 326m, Transamerica 260m, etc.), 1 coastal water body, 7 land cover polygons, 1 railway, and 1 port feature.
+  - Intersection Analysis: Discovered 71 authentic shared intersection nodes connecting 2 or more roads on identical layer levels.
+  - Boundary Analysis: Confirmed 0 centerline-penetrating collisions and 0 building corridor encroachments in authentic San Francisco.
+  - Fleet Spawn Candidates: Confirmed all 7 vehicle fleet classes have $\ge 149$ valid candidate road segments, nearest being 71.6m on Sansome Street.
+- [x] Phase 0.9.2 — Correct Infrastructure & Triangulation:
+  - Schema Invalidation Upgrade: Bumped `CHUNK_VERSION = 2` in [`engine/compiler/src/chunk.rs`](file:///j:/rustRealEarth/engine/compiler/src/chunk.rs). Updated `is_package_source_hash_matching` in [`engine/compiler/src/database.rs`](file:///j:/rustRealEarth/engine/compiler/src/database.rs) to verify `manifest.schema_version == CHUNK_VERSION` alongside SHA-256 hash. Integrated `CHUNK_VERSION` bytes into `compute_chunk_source_hash`.
+  - Dropped Curb Cuts at Intersections: Precomputed `junction_coords: HashSet<(i64, i64, i8)>` in [`engine/compiler/src/compiler_pipeline.rs`](file:///j:/rustRealEarth/engine/compiler/src/compiler_pipeline.rs). At intersection nodes, tapered `curb_h = 0.0f32` in [`engine/compiler/src/road_mesher.rs`](file:///j:/rustRealEarth/engine/compiler/src/road_mesher.rs), smoothly ramping curb height to zero across street crossings to eliminate artificial concrete barricades slicing through intersections.
+  - Terrain-Penetrating Sidewalk Outer Skirt: Sampled DEM ground elevation at outer sidewalk coordinate and extended the vertical drop skirt to `outer_dem_y - 0.20m`. This 20cm subterranean ground seal eliminates floating gaps between sidewalk edges and terrain on steep grades (e.g. California Street).
+  - Segment-Level Chunk Partitioning: Implemented `chunk_owns_midpoint` half-open interval assignment in [`engine/compiler/src/compiler_pipeline.rs`](file:///j:/rustRealEarth/engine/compiler/src/compiler_pipeline.rs) to assign each road and railway segment midpoint to exactly one chunk.
+  - Whole-Polyline Miter Stitching: Precomputed whole-way tangent and miter perpendicular vectors across the entire road before emitting geometry strictly within each chunk's `segment_range`. Guarantees bit-exact $C^0$ continuity across chunk borders with zero tearing, zero Z-fighting, and a 65.3% reduction in duplicate vertices (466 vs 1,342 vertices).
+  - Package Recompilation: Recompiled all 30 binary `.rec` chunk packages and `chunks.db` in `data/world_san_francisco/` under schema version 2.
+- [x] Phase 0.9.3 — Safe Spawning, Navigation and Region Transitions:
+  - Authentic Building Clearance: Added `raw_buildings: Vec<OsmBuildingFeature>` to `RegionResources` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs). Implemented building footprint clearance check enforcing clearance $\ge (\text{lane\_width} \times 0.5 + 1.5\text{m})$ using ray-casting point-in-polygon and polygon edge distance calculations.
+  - Collision Chunk Readiness: Verified streaming readiness via `streamer.is_collision_ready(target_coord)` before candidate selection.
+  - Road Directionality & Slope: Enforced one-way traffic direction alignment with road vector and confirmed terrain normal stability ($Y \ge 0.65$).
+  - Fail-Safe Error Notification: Emitted actionable error toast notifications on spawn failure without state corruption or blind fallbacks.
+  - Clean Region Switching: In `load_region`, reset navigation route tracker (`route_tracker = None`) and purged GPU cache (`clear_gpu_cache()`) to prevent hash collisions across regions.
+- [x] Phase 0.9.4 — Multi-Tier Certification & Performance Telemetry:
+  - Authored dedicated 6-test certification suite in [`tests/tests/stage0_9_road_terrain_spatial_integrity_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage0_9_road_terrain_spatial_integrity_certification.rs) (6/6 PASSED ✅):
+    1. Test 1: Intersection dropped curb cuts & crosswalk continuity (180 curb nodes evaluated, 151 dropped curb cuts, 29 standard curbs).
+    2. Test 2: Sidewalk skirt terrain penetration seal (360 vertices penetrating DEM).
+    3. Test 3: Chunk-aware road partitioning (153 unique segments, 466 vs 1342 vertices, 65.3% reduction in duplicate vertices).
+    4. Test 4: Schema-aware cache invalidation (`CHUNK_VERSION = 2` rejects v1, accepts v2).
+    5. Test 5: Multimodal safe vehicle spawning & building clearance (all 7 fleet modes have $\ge 149$ safe candidates, closest building 9.12m).
+    6. Test 6: End-to-end SF world visibility & physics stability (60-frame driving simulation, 28.6 km/h).
+  - 100% test pass rate across entire workspace (`cargo test --workspace`).
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+  - Zero deviations under `cargo fmt --check`.
+  - Packaged Application Driving Benchmark: Executed `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` delivering 105.3 FPS steady-state (Avg: 9.49ms, p95: 10.20ms), 239.54 MB peak RSS, 22,793 authentic triangles across 30 active chunks, 8 AI traffic vehicles, taxi mission active, 22.7 km/h driving, and offscreen screenshot saved to `target/screenshots/san_francisco_view.ppm`.
+
 

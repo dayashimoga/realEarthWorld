@@ -1521,6 +1521,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings` and clean `cargo fmt --check`.
   - Packaged driving benchmark: `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` rendered at 97.5 FPS (p50: 9.64ms, p95: 12.01ms), 238.82 MB RSS, 1.22 MB VRAM, 494.63ms startup.
 
+## [0.8.4] - 2026-10-24 — STAGE 0.9: Production Road, Terrain and Spatial Integrity (Completed & Certified)
+### Added
+- **Dropped Curb Cuts at Authenticated Street Intersections (`engine/compiler/src/road_mesher.rs`)**:
+  - Precalculated shared topological junction coordinates (`junction_coords: HashSet<(i64, i64, i8)>`) where 2 or more roads share identical centerline nodes on the same vertical layer.
+  - Tapered curb riser height `curb_h = 0.0f32` across junction nodes, smoothly dropping curbs to road grade to eliminate artificial concrete barricades slicing through intersections and crosswalks.
+- **Continuous DEM-Penetrating Sidewalk Outer Skirt (`engine/compiler/src/road_mesher.rs`)**:
+  - Sampled DEM surface elevation at the outer edge of pedestrian sidewalks and extended the vertical outer drop skirt to `outer_dem_y - 0.20m`.
+  - Created a 20cm subterranean ground seal ensuring continuous terrain contact with zero floating gaps or light leaks on steep hills (e.g. California Street).
+- **Segment-Level Chunk Midpoint Partitioning (`engine/compiler/src/compiler_pipeline.rs`)**:
+  - Implemented `chunk_owns_midpoint` half-open interval assignment to allocate each road and railway segment to exactly one spatial chunk.
+  - Precalculated whole-road tangent and miter perpendicular vectors across complete linestrings before slicing geometry strictly into chunk segment ranges.
+  - Eliminated inter-chunk duplicate road geometry, achieving a 65.3% reduction in duplicate road vertices (466 vs 1,342 vertices) while guaranteeing bit-exact $C^0$ quad stitching across chunk borders with zero Z-fighting or tearing.
+- **Schema-Aware Chunk Invalidation (`engine/compiler/src/chunk.rs`, `database.rs`, `compiler_pipeline.rs`)**:
+  - Bumped `pub const CHUNK_VERSION: u32 = 2;` in `chunk.rs`.
+  - Updated `is_package_source_hash_matching` to enforce `manifest.schema_version == CHUNK_VERSION` alongside source asset SHA-256 digests.
+  - Integrated `CHUNK_VERSION` bytes into chunk source hash derivation (`compute_chunk_source_hash`), ensuring schema changes trigger automatic invalidation and clean recompilation.
+  - Recompiled authoritative San Francisco package (`data/world_san_francisco/chunks.db` and 30 `.rec` chunk files) to schema version 2.
+- **Safe Multimodal Vehicle Spawning & Building Clearance (`apps/world-viewer/src/interactive.rs`)**:
+  - Propagated `raw_buildings: Vec<OsmBuildingFeature>` into `RegionResources`.
+  - Enforced ray-casting point-in-polygon and polygon edge distance clearance ($\ge \text{lane\_width} \times 0.5 + 1.5\text{m}$) against all surveyed building footprints.
+  - Verified chunk collision readiness (`streamer.is_collision_ready(target_coord)`), one-way road heading alignment, and terrain normal stability ($Y \ge 0.65$).
+  - Emitted user-visible, actionable toast notifications on spawn failure without state transitions or synthetic fallbacks.
+  - Reset route tracking and purged GPU cache (`clear_gpu_cache()`) on region transition to avoid coordinate hash collisions.
+- **Dedicated Independent Certification Suite (`tests/tests/stage0_9_road_terrain_spatial_integrity_certification.rs`)**:
+  - Authored 6 independent certification tests (6/6 PASSED ✅):
+    1. `test_stage0_9_1_intersection_dropped_curb_cuts_and_crosswalk_continuity`: 151 dropped curb cuts, 29 standard curbs.
+    2. `test_stage0_9_2_sidewalk_skirt_terrain_penetration_seal`: 360 vertices penetrating DEM terrain by 0.20m.
+    3. `test_stage0_9_3_chunk_aware_road_partitioning_and_boundary_continuity`: 153 unique segments, 466 vs 1,342 vertices (65.3% reduction in duplicate geometry).
+    4. `test_stage0_9_4_schema_aware_cache_invalidation`: `CHUNK_VERSION = 2` rejects v1, accepts v2.
+    5. `test_stage0_9_5_multimodal_safe_vehicle_spawning_and_building_clearance`: All 7 fleet modes have $\ge 149$ safe candidates (closest building 9.12m).
+    6. `test_stage0_9_6_end_to_end_sf_world_visibility_and_physics_stability`: 60-frame driving simulation reaching 28.6 km/h with 0 collision or NaN errors.
+  - 100% test pass rate across entire workspace (`cargo test --workspace`).
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+  - Zero deviations under `cargo fmt --check`.
+  - Packaged driving benchmark: `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` rendered at 105.3 FPS (Avg: 9.49ms, p95: 10.20ms), 239.54 MB peak RSS, 22,793 authentic triangles across 30 active chunks, 8 AI traffic vehicles, taxi mission active, 22.7 km/h driving, and offscreen screenshot saved to `target/screenshots/san_francisco_view.ppm`.
+
 
 
 

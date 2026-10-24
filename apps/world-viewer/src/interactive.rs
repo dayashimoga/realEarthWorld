@@ -214,6 +214,7 @@ struct RegionResources {
     package_anchor: Wgs84Coord,
     dem: DemGrid,
     raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
+    raw_buildings: Vec<realearth_ingestion::osm_types::OsmBuildingFeature>,
     streamer: WorldStreamer,
 }
 
@@ -1155,6 +1156,109 @@ impl InteractiveViewerApp {
                     continue;
                 }
 
+                // Verify collision chunk is loaded and ready
+                let mid_wgs84 = conv.enu_to_wgs84(realearth_shared::coordinates::EnuCoord::new(
+                    mid_enu_x as f64,
+                    mid_enu_z as f64,
+                    elev as f64,
+                ));
+                if !res.streamer.is_collision_ready(mid_wgs84) {
+                    continue;
+                }
+
+                // Building footprint collision and clearance check (>= lane_width * 0.5 + 1.5m)
+                let mut building_conflict = false;
+                let req_clearance = (lane_width * 0.5 + 1.5) as f64;
+                let lat_margin = 35.0 / 111_000.0;
+                let cos_lat = mid_wgs84.lat.to_radians().cos().abs().max(0.1);
+                let lon_margin = 35.0 / (111_000.0 * cos_lat);
+
+                for b in &res.raw_buildings {
+                    if b.outer_ring.len() < 3 {
+                        continue;
+                    }
+                    let mut b_min_lat = f64::MAX;
+                    let mut b_max_lat = f64::MIN;
+                    let mut b_min_lon = f64::MAX;
+                    let mut b_max_lon = f64::MIN;
+                    for pt in &b.outer_ring {
+                        b_min_lat = b_min_lat.min(pt.lat);
+                        b_max_lat = b_max_lat.max(pt.lat);
+                        b_min_lon = b_min_lon.min(pt.lon);
+                        b_max_lon = b_max_lon.max(pt.lon);
+                    }
+
+                    if mid_wgs84.lat < b_min_lat - lat_margin
+                        || mid_wgs84.lat > b_max_lat + lat_margin
+                        || mid_wgs84.lon < b_min_lon - lon_margin
+                        || mid_wgs84.lon > b_max_lon + lon_margin
+                    {
+                        continue;
+                    }
+
+                    // Convert building ring to local ENU
+                    let enu_ring: Vec<(f64, f64)> = b
+                        .outer_ring
+                        .iter()
+                        .map(|pt| {
+                            let e = conv.wgs84_to_enu(*pt);
+                            (e.east, e.north)
+                        })
+                        .collect();
+
+                    let cand_px = mid_enu_x as f64;
+                    let cand_pz = mid_enu_z as f64;
+
+                    // Point-in-polygon ray casting
+                    let mut inside = false;
+                    let n = enu_ring.len();
+                    for i in 0..n {
+                        let j = (i + n - 1) % n;
+                        let (xi, zi) = enu_ring[i];
+                        let (xj, zj) = enu_ring[j];
+                        if ((zi > cand_pz) != (zj > cand_pz))
+                            && (cand_px < (xj - xi) * (cand_pz - zi) / (zj - zi) + xi)
+                        {
+                            inside = !inside;
+                        }
+                    }
+
+                    if inside {
+                        building_conflict = true;
+                        break;
+                    }
+
+                    // Edge clearance check
+                    for i in 0..n {
+                        let j = (i + 1) % n;
+                        let (x1, z1) = enu_ring[i];
+                        let (x2, z2) = enu_ring[j];
+                        let dx = x2 - x1;
+                        let dz = z2 - z1;
+                        let len_sq = dx * dx + dz * dz;
+                        let t = if len_sq > 1e-6 {
+                            (((cand_px - x1) * dx + (cand_pz - z1) * dz) / len_sq).clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        };
+                        let proj_x = x1 + t * dx;
+                        let proj_z = z1 + t * dz;
+                        let edge_dist_sq = (cand_px - proj_x).powi(2) + (cand_pz - proj_z).powi(2);
+                        if edge_dist_sq < req_clearance * req_clearance {
+                            building_conflict = true;
+                            break;
+                        }
+                    }
+
+                    if building_conflict {
+                        break;
+                    }
+                }
+
+                if building_conflict {
+                    continue;
+                }
+
                 // Distance squared to target coordinate
                 let target_enu = conv.wgs84_to_enu(target_coord);
                 let dist_sq = (mid_enu_x as f64 - target_enu.east).powi(2)
@@ -1185,7 +1289,8 @@ impl InteractiveViewerApp {
             Ok(candidate)
         } else {
             Err(format!(
-                "No verified roadway geometry found within region for vehicle type {}",
+                "No verified roadway geometry found with safe building clearance (>= {:.1}m) and ready collision chunks for vehicle type {}",
+                2.8 * 0.5 + 1.5,
                 idx
             ))
         }
@@ -1603,7 +1708,7 @@ impl InteractiveViewerApp {
             ..Default::default()
         };
 
-        let (world_dir, region_name, landmark, dem, raw_roads) = if let Some(city) =
+        let (world_dir, region_name, landmark, dem, raw_roads, raw_buildings) = if let Some(city) =
             find_city_by_id(region_id)
         {
             let (raw, dem, meta) = load_authentic_city(city.id)?;
@@ -1625,7 +1730,7 @@ impl InteractiveViewerApp {
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
-            (dir, city.name, landmark, dem, raw.roads)
+            (dir, city.name, landmark, dem, raw.roads, raw.buildings)
         } else if region_id.contains("mysuru") {
             let dir = resolve_world_package_dir("mysuru");
             let dem = DemGrid::create_mysuru_dem(64, 64);
@@ -1646,6 +1751,7 @@ impl InteractiveViewerApp {
                 Landmark::MYSURU_PALACE,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("chennai") {
             let dir = resolve_world_package_dir("chennai");
@@ -1667,6 +1773,7 @@ impl InteractiveViewerApp {
                 Landmark::CHENNAI_CENTRAL,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("hyderabad") {
             let dir = resolve_world_package_dir("hyderabad");
@@ -1688,6 +1795,7 @@ impl InteractiveViewerApp {
                 Landmark::HYDERABAD_CHARMINAR,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("corridor") {
             let dir = resolve_world_package_dir("corridors");
@@ -1709,6 +1817,7 @@ impl InteractiveViewerApp {
                 Landmark::CORRIDOR_KAVERI_BRIDGE,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("bengaluru") || region_id == "in" {
             let dir = resolve_world_package_dir("bengaluru");
@@ -1730,6 +1839,7 @@ impl InteractiveViewerApp {
                 Landmark::BENGALURU_VIDHANA_SOUDHA,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("nyc") || region_id.contains("new-york") {
             let dir = resolve_world_package_dir("new_york");
@@ -1751,6 +1861,7 @@ impl InteractiveViewerApp {
                 Landmark::NEW_YORK_ONE_WTC,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("la") || region_id.contains("los-angeles") {
             let dir = resolve_world_package_dir("los_angeles");
@@ -1772,6 +1883,7 @@ impl InteractiveViewerApp {
                 Landmark::LOS_ANGELES_WILSHIRE_GRAND,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("chicago") {
             let dir = resolve_world_package_dir("chicago");
@@ -1793,6 +1905,7 @@ impl InteractiveViewerApp {
                 Landmark::CHICAGO_WILLIS_TOWER,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("seattle") {
             let dir = resolve_world_package_dir("seattle");
@@ -1814,6 +1927,7 @@ impl InteractiveViewerApp {
                 Landmark::SEATTLE_SPACE_NEEDLE,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else if region_id.contains("miami") {
             let dir = resolve_world_package_dir("miami");
@@ -1835,6 +1949,7 @@ impl InteractiveViewerApp {
                 Landmark::MIAMI_BRICKELL_PANORAMA,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         } else {
             let dir = resolve_world_package_dir("san_francisco");
@@ -1871,6 +1986,7 @@ impl InteractiveViewerApp {
                 Landmark::SAN_FRANCISCO_TRANSAMERICA,
                 dem,
                 raw.roads,
+                raw.buildings,
             )
         };
 
@@ -2135,6 +2251,7 @@ impl InteractiveViewerApp {
             package_anchor,
             dem,
             raw_roads,
+            raw_buildings,
             streamer,
         });
 

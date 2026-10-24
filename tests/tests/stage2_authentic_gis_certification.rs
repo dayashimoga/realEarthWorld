@@ -159,13 +159,45 @@ fn test_stage2_source_hash_cache_invalidation() {
         .expect("Query failed")
         .expect("Manifest must exist for san_francisco_package");
 
+    // If on-disk package schema is older than current compiler CHUNK_VERSION, recompile package
+    if manifest.schema_version != realearth_compiler::CHUNK_VERSION {
+        println!(
+            "📦 Schema upgrade detected (v{} -> v{}): Recompiling San Francisco world package...",
+            manifest.schema_version,
+            realearth_compiler::CHUNK_VERSION
+        );
+        let (raw, dem, meta) = load_authentic_city("san-francisco").expect("Failed to load SF");
+        let (val, _) = validate_dataset(&raw);
+        let options = realearth_compiler::CompilerOptions {
+            chunk_size_meters: 500.0,
+            terrain_grid_resolution: 16,
+            package_name: "san_francisco_package".to_string(),
+            source_asset_sha256: Some(meta.source_osm_sha256),
+            ..Default::default()
+        };
+        realearth_compiler::compile_world_package(&val, &dem, &pkg_dir, &options)
+            .expect("Recompilation failed");
+    }
+
+    let db = ChunkDatabase::open(&db_path).expect("Failed to open chunks.db");
+    let manifest = db
+        .get_package_manifest("san_francisco_package")
+        .expect("Query failed")
+        .expect("Manifest must exist for san_francisco_package");
+
     let source_hash = manifest
         .source_asset_sha256
+        .clone()
         .expect("source_asset_sha256 must be populated in package_manifest table");
     assert_eq!(
         source_hash.len(),
         64,
         "source_asset_sha256 must be a 64-character SHA-256 hex string"
+    );
+    assert_eq!(
+        manifest.schema_version,
+        realearth_compiler::CHUNK_VERSION,
+        "Manifest schema version must match current CHUNK_VERSION"
     );
 
     // Verify matching hash validates

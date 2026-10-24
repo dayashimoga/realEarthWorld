@@ -21,7 +21,10 @@ pub use packager::{
     pack_chunk_to_bytes, read_chunk_file, unpack_chunk_from_bytes, write_chunk_file,
 };
 pub use regional_catalog::{PackageManifest, PackageState, RegionalCatalog};
-pub use road_mesher::{mesh_road, mesh_road_infrastructure};
+pub use road_mesher::{
+    mesh_road, mesh_road_infrastructure, mesh_road_infrastructure_with_options,
+    mesh_road_with_options, RoadMeshingOptions,
+};
 pub use terrain_mesher::mesh_terrain;
 pub use vegetation_mesher::mesh_vegetation;
 pub use water_mesher::mesh_water;

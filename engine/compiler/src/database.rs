@@ -329,10 +329,14 @@ impl ChunkDatabase {
         }
     }
 
-    /// Returns true if the package manifest exists and its recorded source_asset_sha256 matches expected_hash.
+    /// Returns true if the package manifest exists and its recorded source_asset_sha256 matches expected_hash
+    /// and its recorded schema_version matches the current CHUNK_VERSION.
     pub fn is_package_source_hash_matching(&self, package_name: &str, expected_hash: &str) -> bool {
         match self.get_package_manifest(package_name) {
-            Ok(Some(manifest)) => manifest.source_asset_sha256.as_deref() == Some(expected_hash),
+            Ok(Some(manifest)) => {
+                manifest.source_asset_sha256.as_deref() == Some(expected_hash)
+                    && manifest.schema_version == crate::chunk::CHUNK_VERSION
+            }
             _ => false,
         }
     }

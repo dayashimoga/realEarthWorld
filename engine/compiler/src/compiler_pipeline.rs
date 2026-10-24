@@ -5,7 +5,9 @@ use crate::chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUN
 use crate::database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 use crate::mesh::ChunkMesh;
 use crate::packager::write_chunk_file;
-use crate::road_mesher::{mesh_road, mesh_road_infrastructure};
+use crate::road_mesher::{
+    mesh_road, mesh_road_infrastructure_with_options, mesh_road_with_options, RoadMeshingOptions,
+};
 use crate::terrain_mesher::mesh_terrain;
 use crate::vegetation_mesher::mesh_vegetation;
 use crate::water_mesher::mesh_water;
@@ -15,6 +17,7 @@ use realearth_shared::bounds::GeoBounds;
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::errors::Result;
 use realearth_validation::pipeline::ValidatedDataset;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 /// Summary statistics of a compilation run.
@@ -59,6 +62,8 @@ pub fn compute_chunk_source_hash(
     dem: &DemGrid,
 ) -> String {
     let mut hasher_input = Vec::new();
+    // Include binary chunk schema version to ensure schema changes invalidate stale chunk cache
+    hasher_input.extend_from_slice(&CHUNK_VERSION.to_le_bytes());
 
     // 1. Buildings intersecting chunk bounds
     for b in &dataset.buildings {
@@ -188,6 +193,24 @@ pub fn compile_world_package(
     let package_anchor = bounds.center();
     let package_converter = EnuConverter::new(package_anchor);
 
+    // Precompute authentic intersection junction coordinates across all roads on identical vertical layers
+    let mut node_counts: HashMap<(i64, i64, i8), usize> = HashMap::new();
+    for r in &dataset.roads {
+        for coord in &r.geometry {
+            let key = (
+                (coord.lat * 1e7).round() as i64,
+                (coord.lon * 1e7).round() as i64,
+                r.layer,
+            );
+            *node_counts.entry(key).or_insert(0) += 1;
+        }
+    }
+    let junction_coords: HashSet<(i64, i64, i8)> = node_counts
+        .into_iter()
+        .filter(|&(_, count)| count >= 2)
+        .map(|(k, _)| k)
+        .collect();
+
     for cy in 0..num_chunks_y {
         let chunk_max_lat = bounds.max_lat - (cy as f64) * chunk_d_lat;
         let chunk_min_lat = (chunk_max_lat - chunk_d_lat).max(bounds.min_lat);
@@ -253,29 +276,92 @@ pub fn compile_world_package(
                 }
             }
 
-            // 3. Roads Mesh
+            let is_last_x = cx == num_chunks_x - 1;
+            let is_last_y = cy == num_chunks_y - 1;
+
+            let chunk_owns_midpoint = |coord: &Wgs84Coord| -> bool {
+                let lat_in = if is_last_y {
+                    coord.lat >= chunk_bounds.min_lat && coord.lat <= chunk_bounds.max_lat
+                } else {
+                    coord.lat > chunk_bounds.min_lat && coord.lat <= chunk_bounds.max_lat
+                };
+                if !lat_in {
+                    return false;
+                }
+                if is_last_x {
+                    coord.lon >= chunk_bounds.min_lon && coord.lon <= chunk_bounds.max_lon
+                } else {
+                    coord.lon >= chunk_bounds.min_lon && coord.lon < chunk_bounds.max_lon
+                }
+            };
+
+            // 3. Roads Mesh (Partitioned seamlessly by segment ownership with dropped curb cuts)
             let mut road_mesh = ChunkMesh::default();
             for r in &dataset.roads {
-                // Check if road geometry intersects chunk bounds
-                let mut intersects = false;
-                for pt in &r.geometry {
-                    if chunk_bounds.contains(pt) {
-                        intersects = true;
-                        break;
+                if r.geometry.len() < 2 {
+                    continue;
+                }
+                let mut runs: Vec<(usize, usize)> = Vec::new();
+                let mut current_run: Option<(usize, usize)> = None;
+
+                for s in 0..(r.geometry.len() - 1) {
+                    let mid_lat = (r.geometry[s].lat + r.geometry[s + 1].lat) * 0.5;
+                    let mid_lon = (r.geometry[s].lon + r.geometry[s + 1].lon) * 0.5;
+                    let mid_coord = Wgs84Coord::new(mid_lat, mid_lon, 0.0);
+
+                    if chunk_owns_midpoint(&mid_coord) {
+                        match current_run {
+                            Some((start, _)) => current_run = Some((start, s)),
+                            None => current_run = Some((s, s)),
+                        }
+                    } else if let Some(run) = current_run.take() {
+                        runs.push(run);
                     }
                 }
+                if let Some(run) = current_run.take() {
+                    runs.push(run);
+                }
 
-                if intersects {
-                    let m = mesh_road(r, &chunk_converter, dem);
+                for (s_start, s_end) in runs {
+                    let opt = RoadMeshingOptions {
+                        segment_range: Some((s_start, s_end)),
+                        junction_coords: Some(&junction_coords),
+                    };
+                    let m = mesh_road_with_options(r, &chunk_converter, dem, &opt);
                     road_mesh.append(&m);
-                    let infra = mesh_road_infrastructure(r, &chunk_converter, dem);
+                    let infra =
+                        mesh_road_infrastructure_with_options(r, &chunk_converter, dem, &opt);
                     road_mesh.append(&infra);
                 }
             }
 
             // 3b. Railways Mesh
             for r in &dataset.railways {
-                if r.geometry.iter().any(|pt| chunk_bounds.contains(pt)) {
+                if r.geometry.len() < 2 {
+                    continue;
+                }
+                let mut runs: Vec<(usize, usize)> = Vec::new();
+                let mut current_run: Option<(usize, usize)> = None;
+
+                for s in 0..(r.geometry.len() - 1) {
+                    let mid_lat = (r.geometry[s].lat + r.geometry[s + 1].lat) * 0.5;
+                    let mid_lon = (r.geometry[s].lon + r.geometry[s + 1].lon) * 0.5;
+                    let mid_coord = Wgs84Coord::new(mid_lat, mid_lon, 0.0);
+
+                    if chunk_owns_midpoint(&mid_coord) {
+                        match current_run {
+                            Some((start, _)) => current_run = Some((start, s)),
+                            None => current_run = Some((s, s)),
+                        }
+                    } else if let Some(run) = current_run.take() {
+                        runs.push(run);
+                    }
+                }
+                if let Some(run) = current_run.take() {
+                    runs.push(run);
+                }
+
+                if !runs.is_empty() {
                     let pseudo_road = realearth_ingestion::osm_types::OsmRoadFeature {
                         way_id: r.way_id,
                         name: r.name.clone(),
@@ -288,8 +374,14 @@ pub fn compile_world_package(
                         is_bridge: r.is_bridge,
                         is_tunnel: r.is_tunnel,
                     };
-                    let m = mesh_road(&pseudo_road, &chunk_converter, dem);
-                    road_mesh.append(&m);
+                    for (s_start, s_end) in runs {
+                        let opt = RoadMeshingOptions {
+                            segment_range: Some((s_start, s_end)),
+                            junction_coords: None,
+                        };
+                        let m = mesh_road_with_options(&pseudo_road, &chunk_converter, dem, &opt);
+                        road_mesh.append(&m);
+                    }
                 }
             }
 

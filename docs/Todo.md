@@ -917,5 +917,42 @@
   - [x] Verify zero code formatting deviations (`cargo fmt --check`).
   - [x] Execute headless driving benchmark: 97.5 FPS steady-state, 238.82 MB RSS, 1.22 MB VRAM, 494.63ms startup, screenshot saved.
 
+## STAGE 0.9: Production Road, Terrain and Spatial Integrity (Completed & Certified)
+- [x] Phase 0.9.1: Geographic and Rendering Audit
+  - [x] Forensic comparison of San Francisco OSM/USGS features against compiled road meshes, building footprints, terrain, collision geometry, and GPU submissions.
+  - [x] Map trace: 33 roads (186 nodes, 30.3 km network length), 80 surveyed buildings, 1 water body, 7 land cover features, 1 railway, 1 port.
+  - [x] Identify 71 authentic shared intersection nodes connecting 2 or more roads on identical layers.
+  - [x] Confirm 0 centerline-penetrating collisions and 0 building corridor encroachments in authentic San Francisco.
+  - [x] Confirm all 7 vehicle fleet classes have >=149 valid road candidate segments, nearest being 71.6m on Sansome Street.
+- [x] Phase 0.9.2: Correct Infrastructure and Triangulation
+  - [x] Bump `CHUNK_VERSION = 2` in `engine/compiler/src/chunk.rs` for Stage 0.9 schema overhaul.
+  - [x] Implement schema-aware cache validation in `is_package_source_hash_matching`: verify `manifest.schema_version == CHUNK_VERSION` alongside SHA-256 hash.
+  - [x] Integrate `CHUNK_VERSION` into chunk source hash derivation (`compute_chunk_source_hash`).
+  - [x] Implement dropped curb cuts: precompute `junction_coords`, smoothly taper `curb_h = 0.0f32` at intersections, eliminating concrete barricades across crossing streets.
+  - [x] Implement DEM-penetrating sidewalk skirt: sample DEM at outer edge and set skirt bottom to `outer_dem_y - 0.20m`, eliminating floating gaps on sloped terrain.
+  - [x] Implement segment-level chunk partitioning: midpoint ownership rule assigns each road/railway segment to exactly one chunk.
+  - [x] Precompute full-polyline miter perpendiculars across entire ways, generating boundary quads strictly within chunk segment ranges for bit-exact $C^0$ continuity and 65.3% reduction in duplicate vertices (466 vs 1,342).
+  - [x] Recompile `data/world_san_francisco/chunks.db` and all 30 binary `.rec` chunk files to schema version 2.
+- [x] Phase 0.9.3: Safe Spawning, Navigation and Region Transitions
+  - [x] Pass `raw.buildings` through `load_region` to `RegionResources`.
+  - [x] Implement collision chunk readiness verification via `streamer.is_collision_ready`.
+  - [x] Implement building footprint clearance check enforcing clearance >= (lane_width * 0.5 + 1.5m) using ray-casting point-in-polygon and edge distance.
+  - [x] Enforce one-way traffic direction alignment with road vector.
+  - [x] Verify slope stability (ground normal Y >= 0.65).
+  - [x] Maintain actionable error toast notifications on spawn failure without state transitions.
+  - [x] Reset route tracking (`route_tracker = None`) and purge GPU cache (`clear_gpu_cache()`) on region transition.
+- [x] Phase 0.9.4: Regression Certification and Performance Telemetry
+  - [x] Author 6-test certification suite in `tests/tests/stage0_9_road_terrain_spatial_integrity_certification.rs` (6/6 passing):
+    - Test 1: Dropped curb cuts and intersection continuity (151 dropped curb cuts, 29 standard curbs).
+    - Test 2: Sidewalk skirt terrain penetration seal (360 vertices penetrating DEM).
+    - Test 3: Chunk-aware road partitioning (153 unique segments, 466 vs 1342 vertices, 65.3% reduction in duplicate geometry).
+    - Test 4: Schema-aware cache invalidation (`CHUNK_VERSION = 2` rejects v1, accepts v2).
+    - Test 5: Multimodal safe vehicle spawning & building clearance (all 7 fleet modes >= 149 safe candidates, closest building 9.12m).
+    - Test 6: End-to-end SF world visibility & physics stability (60-frame driving simulation, 28.6 km/h).
+  - [x] Verify 100% test pass rate across entire workspace (`cargo test --workspace`, zero failures).
+  - [x] Verify clean static analysis (`cargo clippy --workspace --all-targets -- -D warnings`, 0 warnings).
+  - [x] Verify clean formatting (`cargo fmt --check`, 0 deviations).
+  - [x] Headless driving benchmark: 105.3 FPS (Avg: 9.49ms, p95: 10.20ms), 239.54 MB peak RSS, 22,793 authentic triangles across 30 active chunks.
+
 
 

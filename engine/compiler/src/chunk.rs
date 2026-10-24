@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 /// Magic bytes header for Real Earth Chunk files.
 pub const CHUNK_MAGIC: &[u8; 4] = b"RECH";
-/// Current binary schema version.
-pub const CHUNK_VERSION: u32 = 1;
+/// Current binary schema version (v2 for Stage 0.9 Road & Spatial Integrity Overhaul).
+pub const CHUNK_VERSION: u32 = 2;
 
 /// Chunk file header with spatial bounds and index properties.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
