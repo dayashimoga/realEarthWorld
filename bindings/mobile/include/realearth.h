@@ -96,7 +96,22 @@ int32_t realearth_resize_surface(int32_t width, int32_t height);
 int32_t realearth_destroy_surface(void);
 
 /**
+ * Mobile runtime status enum values:
+ * 0 = Active GPU swapchain (ANativeWindow / CAMetalLayer)
+ * 1 = Blocked pending native swapchain (host toolchain required)
+ * 2 = Uninitialized
+ */
+int32_t realearth_mobile_runtime_status(void);
+
+/**
+ * Returns human-readable status disclosure string.
+ */
+const char* realearth_mobile_status_string(void);
+
+/**
  * Ticks one render pass on the attached surface.
+ * Notice: Presentation requires linking ANativeWindow/CAMetalLayer.
+ * On desktop/host builds, this diagnostic stub increments frame count for backwards compatibility.
  */
 int32_t realearth_render_frame(void);
 

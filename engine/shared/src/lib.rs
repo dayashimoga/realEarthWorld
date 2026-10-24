@@ -15,7 +15,8 @@ pub use metrics::{
 };
 pub use region::RegionProfile;
 pub use us_catalog::{
-    all_interstate_corridors, all_us_cities, cities_by_priority, find_city_by_id, search_cities,
-    CityCoverageReport, CityPriorityTier, CoverageLevel, DataSourceProvenance, InterstateCorridor,
-    UsCityDefinition, US_CITY_CATALOG, US_INTERSTATE_CORRIDORS,
+    all_interstate_corridors, all_us_cities, cities_by_data_tier, cities_by_priority,
+    find_city_by_id, search_cities, tier1_benchmark_cities, tier2_definition_cities,
+    CatalogDataTier, CityCoverageReport, CityPriorityTier, CoverageLevel, DataSourceProvenance,
+    InterstateCorridor, UsCityDefinition, US_CITY_CATALOG, US_INTERSTATE_CORRIDORS,
 };

@@ -33,6 +33,7 @@ public final class RealEarthEngine {
     public static native int nativeSurfaceChanged(Surface surface, int width, int height);
     public static native int nativeSurfaceDestroyed();
     public static native int nativeRenderFrame();
+    public static native int nativeGetRuntimeStatus();
 
     // Mobile hardware adaptation
     public static native int nativeSetThermalThrottle(float targetFps);

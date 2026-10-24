@@ -18,6 +18,437 @@ impl HudVertex {
     }
 }
 
+/// 2D Screen-space bounding rectangle for responsive layout and mouse hit-testing.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UiRect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl UiRect {
+    pub const fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+        Self { x, y, w, h }
+    }
+
+    /// Evaluates if screen-space physical coordinates (px, py) fall within this rectangle.
+    #[inline]
+    pub fn contains(&self, px: f32, py: f32) -> bool {
+        px >= self.x && px <= (self.x + self.w) && py >= self.y && py <= (self.y + self.h)
+    }
+
+    /// Returns the exact center point (cx, cy) of this rectangle.
+    #[inline]
+    pub fn center(&self) -> (f32, f32) {
+        (self.x + self.w * 0.5, self.y + self.h * 0.5)
+    }
+}
+
+/// Visual feedback state for interactive UI buttons and list items.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiButtonVisualState {
+    Normal,
+    Focused,
+    Hovered,
+    Pressed,
+    Disabled,
+}
+
+impl UiButtonVisualState {
+    pub fn resolve(focused: bool, hovered: bool, pressed: bool, enabled: bool) -> Self {
+        if !enabled {
+            Self::Disabled
+        } else if pressed {
+            Self::Pressed
+        } else if hovered {
+            Self::Hovered
+        } else if focused {
+            Self::Focused
+        } else {
+            Self::Normal
+        }
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Start / Home screen.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StartScreenLayout {
+    pub menu_card: UiRect,
+    pub option_rects: Vec<UiRect>,
+    pub quick_roam_btn: UiRect,
+    pub close_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartScreenHit {
+    Option(usize),
+    QuickRoam,
+    Close,
+}
+
+impl StartScreenLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, options_count: usize) -> Self {
+        let menu_x = 60.0;
+        let menu_y = screen_h * 0.22;
+        let menu_w = (screen_w * 0.45).clamp(380.0, 520.0);
+        let item_h = 44.0;
+        let spacing = 8.0;
+
+        let mut option_rects = Vec::with_capacity(options_count);
+        for i in 0..options_count {
+            let iy = menu_y + (i as f32) * (item_h + spacing);
+            option_rects.push(UiRect::new(menu_x, iy, menu_w, item_h));
+        }
+
+        let total_h = (item_h + spacing) * options_count as f32 - spacing;
+        let menu_card = UiRect::new(menu_x - 16.0, menu_y - 16.0, menu_w + 32.0, total_h + 32.0);
+
+        // Quick roam floating button
+        let quick_roam_btn = UiRect::new(menu_x, screen_h * 0.08 + 58.0, 320.0, 30.0);
+        let close_btn = UiRect::new(screen_w - 44.0, 16.0, 28.0, 28.0);
+
+        Self {
+            menu_card,
+            option_rects,
+            quick_roam_btn,
+            close_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<StartScreenHit> {
+        if self.close_btn.contains(px, py) {
+            return Some(StartScreenHit::Close);
+        }
+        if self.quick_roam_btn.contains(px, py) {
+            return Some(StartScreenHit::QuickRoam);
+        }
+        for (i, rect) in self.option_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(StartScreenHit::Option(i));
+            }
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Simulation Pause Menu.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PauseMenuLayout {
+    pub modal_rect: UiRect,
+    pub option_rects: Vec<UiRect>,
+    pub resume_btn: UiRect,
+    pub close_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PauseMenuHit {
+    Option(usize),
+    Resume,
+    Close,
+}
+
+impl PauseMenuLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, options_count: usize) -> Self {
+        let modal_w = (screen_w - 40.0).min(520.0);
+        let modal_h = (screen_h - 40.0).min(500.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let list_y = my + 72.0;
+        let item_h = 34.0;
+        let spacing = 6.0;
+
+        let mut option_rects = Vec::with_capacity(options_count);
+        for i in 0..options_count {
+            let iy = list_y + (i as f32) * (item_h + spacing);
+            option_rects.push(UiRect::new(mx + 16.0, iy, modal_w - 32.0, item_h));
+        }
+
+        let resume_btn = UiRect::new(mx + modal_w - 140.0, my + 8.0, 100.0, 26.0);
+        let close_btn = UiRect::new(mx + modal_w - 34.0, my + 9.0, 24.0, 24.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            option_rects,
+            resume_btn,
+            close_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<PauseMenuHit> {
+        for (i, rect) in self.option_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(PauseMenuHit::Option(i));
+            }
+        }
+        if self.resume_btn.contains(px, py) {
+            return Some(PauseMenuHit::Resume);
+        }
+        if self.close_btn.contains(px, py) {
+            return Some(PauseMenuHit::Close);
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Job & Contract Browser modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct JobBrowserLayout {
+    pub modal_rect: UiRect,
+    pub item_rects: Vec<UiRect>,
+    pub start_idx: usize,
+    pub visible_count: usize,
+    pub accept_btn: UiRect,
+    pub back_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobBrowserHit {
+    JobItem(usize),
+    AcceptContract,
+    Back,
+}
+
+impl JobBrowserLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, selected_idx: usize, total_jobs: usize) -> Self {
+        let modal_w = (screen_w - 40.0).min(820.0);
+        let modal_h = (screen_h - 40.0).min(540.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let header_y = my + 50.0;
+        let list_y = header_y + 28.0;
+        let item_h = 38.0;
+        let max_visible = 8;
+        let start_idx = if selected_idx >= max_visible / 2 {
+            (selected_idx + 1)
+                .saturating_sub(max_visible)
+                .min(total_jobs.saturating_sub(max_visible))
+        } else {
+            0
+        };
+        let visible_count = total_jobs.saturating_sub(start_idx).min(max_visible);
+
+        let mut item_rects = Vec::with_capacity(visible_count);
+        for i in 0..visible_count {
+            let iy = list_y + i as f32 * (item_h + 3.0);
+            item_rects.push(UiRect::new(mx + 12.0, iy, modal_w - 24.0, item_h));
+        }
+
+        let footer_y = my + modal_h - 36.0;
+        let accept_btn = UiRect::new(mx + modal_w - 240.0, footer_y + 4.0, 140.0, 28.0);
+        let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            item_rects,
+            start_idx,
+            visible_count,
+            accept_btn,
+            back_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<JobBrowserHit> {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(JobBrowserHit::JobItem(self.start_idx + i));
+            }
+        }
+        if self.accept_btn.contains(px, py) {
+            return Some(JobBrowserHit::AcceptContract);
+        }
+        if self.back_btn.contains(px, py) {
+            return Some(JobBrowserHit::Back);
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Vehicle Garage modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GarageLayout {
+    pub modal_rect: UiRect,
+    pub item_rects: Vec<UiRect>,
+    pub select_btn: UiRect,
+    pub back_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GarageHit {
+    VehicleItem(usize),
+    SelectAndSpawn,
+    Back,
+}
+
+impl GarageLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, vehicle_count: usize) -> Self {
+        let modal_w = (screen_w - 40.0).min(780.0);
+        let modal_h = (screen_h - 40.0).min(520.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let header_y = my + 50.0;
+        let list_y = header_y + 28.0;
+        let item_h = 36.0;
+
+        let mut item_rects = Vec::with_capacity(vehicle_count);
+        for i in 0..vehicle_count {
+            let iy = list_y + i as f32 * (item_h + 3.0);
+            item_rects.push(UiRect::new(mx + 12.0, iy, modal_w - 24.0, item_h));
+        }
+
+        let footer_y = my + modal_h - 36.0;
+        let select_btn = UiRect::new(mx + modal_w - 240.0, footer_y + 4.0, 140.0, 28.0);
+        let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            item_rects,
+            select_btn,
+            back_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<GarageHit> {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(GarageHit::VehicleItem(i));
+            }
+        }
+        if self.select_btn.contains(px, py) {
+            return Some(GarageHit::SelectAndSpawn);
+        }
+        if self.back_btn.contains(px, py) {
+            return Some(GarageHit::Back);
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Settings Preferences modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SettingsLayout {
+    pub modal_rect: UiRect,
+    pub item_rects: Vec<UiRect>,
+    pub back_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsHit {
+    SettingItem(usize),
+    Back,
+}
+
+impl SettingsLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, settings_count: usize) -> Self {
+        let modal_w = (screen_w - 40.0).min(680.0);
+        let modal_h = (screen_h - 40.0).min(460.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let list_y = my + 56.0;
+        let item_h = 42.0;
+
+        let mut item_rects = Vec::with_capacity(settings_count);
+        for i in 0..settings_count {
+            let iy = list_y + i as f32 * (item_h + 4.0);
+            item_rects.push(UiRect::new(mx + 16.0, iy, modal_w - 32.0, item_h));
+        }
+
+        let footer_y = my + modal_h - 36.0;
+        let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            item_rects,
+            back_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<SettingsHit> {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(SettingsHit::SettingItem(i));
+            }
+        }
+        if self.back_btn.contains(px, py) {
+            return Some(SettingsHit::Back);
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the 38 US Cities Catalog modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CatalogLayout {
+    pub modal_rect: UiRect,
+    pub item_rects: Vec<UiRect>,
+    pub start_idx: usize,
+    pub visible_count: usize,
+    pub warp_btn: UiRect,
+    pub back_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CatalogHit {
+    CityItem(usize),
+    WarpCity,
+    Back,
+}
+
+impl CatalogLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, selected_idx: usize, total_cities: usize) -> Self {
+        let modal_w = (screen_w - 40.0).min(780.0);
+        let modal_h = (screen_h - 40.0).min(520.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let header_y = my + 52.0;
+        let list_y = header_y + 28.0;
+        let item_h = 36.0;
+        let max_visible = 10;
+        let start_idx = if selected_idx >= max_visible / 2 {
+            (selected_idx + 1)
+                .saturating_sub(max_visible)
+                .min(total_cities.saturating_sub(max_visible))
+        } else {
+            0
+        };
+        let visible_count = total_cities.saturating_sub(start_idx).min(max_visible);
+
+        let mut item_rects = Vec::with_capacity(visible_count);
+        for i in 0..visible_count {
+            let iy = list_y + i as f32 * (item_h + 2.0);
+            item_rects.push(UiRect::new(mx + 10.0, iy, modal_w - 20.0, item_h));
+        }
+
+        let footer_y = my + modal_h - 36.0;
+        let warp_btn = UiRect::new(mx + modal_w - 240.0, footer_y + 4.0, 140.0, 28.0);
+        let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            item_rects,
+            start_idx,
+            visible_count,
+            warp_btn,
+            back_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<CatalogHit> {
+        for (i, rect) in self.item_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(CatalogHit::CityItem(self.start_idx + i));
+            }
+        }
+        if self.warp_btn.contains(px, py) {
+            return Some(CatalogHit::WarpCity);
+        }
+        if self.back_btn.contains(px, py) {
+            return Some(CatalogHit::Back);
+        }
+        None
+    }
+}
+
 /// Dynamic 2D mesh container for HUD panels, gauges, text, and telemetry indicators.
 #[derive(Debug, Clone, Default)]
 pub struct HudMesh {
@@ -365,7 +796,7 @@ impl HudMesh {
         }
     }
 
-    /// Adds a centered modal dialog window with backdrop dimming.
+    /// Adds a centered modal dialog window with responsive translucent glass backdrop.
     pub fn add_modal(
         &mut self,
         screen_w: f32,
@@ -375,15 +806,15 @@ impl HudMesh {
         title: &str,
         accent_color: [f32; 4],
     ) -> (f32, f32) {
-        // Fullscreen backdrop dimming
-        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.0, 0.0, 0.0, 0.70]);
+        // Translucent backdrop dimming (reveals vibrant 3D simulation behind modals)
+        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.0, 0.0, 0.0, 0.30]);
 
         // Centered window
         let x = (screen_w - w) * 0.5;
         let y = (screen_h - h) * 0.5;
 
-        // Dark glass window body
-        self.add_rect(x, y, w, h, [0.07, 0.09, 0.14, 0.95]);
+        // Dark translucent glass window body
+        self.add_rect(x, y, w, h, [0.06, 0.08, 0.13, 0.85]);
         self.add_rect_outline(x, y, w, h, 2.0, [0.3, 0.45, 0.65, 0.8]);
 
         // Top title bar with accent line
@@ -402,8 +833,34 @@ impl HudMesh {
         selected_idx: usize,
         cities: &[(&str, &str, &str, &str, f32, bool, &str)],
     ) {
-        let modal_w = (screen_w - 40.0).min(780.0);
-        let modal_h = (screen_h - 40.0).min(520.0);
+        self.add_city_catalog_modal_interactive(
+            screen_w,
+            screen_h,
+            selected_idx,
+            None,
+            None,
+            None,
+            None,
+            cities,
+        );
+    }
+
+    /// Adds an interactive city catalog browser modal window with list navigation and pointer feedback.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_city_catalog_modal_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        hovered_idx: Option<usize>,
+        pressed_idx: Option<usize>,
+        hovered_btn: Option<CatalogHit>,
+        pressed_btn: Option<CatalogHit>,
+        cities: &[(&str, &str, &str, &str, f32, bool, &str)],
+    ) {
+        let layout = CatalogLayout::compute(screen_w, screen_h, selected_idx, cities.len());
+        let modal_w = layout.modal_rect.w;
+        let modal_h = layout.modal_rect.h;
         let (mx, my) = self.add_modal(
             screen_w,
             screen_h,
@@ -458,28 +915,26 @@ impl HudMesh {
             [0.6, 0.75, 0.9, 1.0],
         );
 
-        // List viewport: show up to 10 cities centered around selected_idx
         let list_y = header_y + 28.0;
         let item_h = 36.0;
-        let max_visible = 10;
-        let start_idx = if selected_idx >= max_visible / 2 {
-            (selected_idx + 1)
-                .saturating_sub(max_visible)
-                .min(cities.len().saturating_sub(max_visible))
-        } else {
-            0
-        };
-        let visible_cities = &cities[start_idx..cities.len().min(start_idx + max_visible)];
+        let start_idx = layout.start_idx;
+        let visible_cities = &cities[start_idx..cities.len().min(start_idx + layout.visible_count)];
 
         for (i, &(_id, name, state, landmark, elev_max, has_port, priority_str)) in
             visible_cities.iter().enumerate()
         {
             let actual_idx = start_idx + i;
             let is_sel = actual_idx == selected_idx;
+            let is_hovered = hovered_idx == Some(actual_idx);
+            let is_pressed = pressed_idx == Some(actual_idx);
             let iy = list_y + i as f32 * (item_h + 2.0);
 
-            let (row_bg, border_col) = if is_sel {
-                ([0.18, 0.32, 0.52, 0.95], [0.35, 0.8, 1.0, 1.0])
+            let (row_bg, border_col) = if is_pressed {
+                ([0.22, 0.42, 0.70, 0.98], [0.55, 0.95, 1.0, 1.0])
+            } else if is_hovered {
+                ([0.18, 0.36, 0.60, 0.95], [0.45, 0.90, 1.0, 1.0])
+            } else if is_sel {
+                ([0.14, 0.28, 0.48, 0.90], [0.35, 0.8, 1.0, 1.0])
             } else {
                 ([0.08, 0.11, 0.16, 0.80], [0.20, 0.25, 0.35, 0.4])
             };
@@ -490,12 +945,12 @@ impl HudMesh {
                 iy,
                 modal_w - 20.0,
                 item_h,
-                if is_sel { 1.5 } else { 0.5 },
+                if is_sel || is_hovered { 1.5 } else { 0.5 },
                 border_col,
             );
 
             // Selection indicator
-            if is_sel {
+            if is_sel || is_hovered {
                 self.add_rect(mx + 10.0, iy, 4.0, item_h, [0.0, 0.85, 1.0, 1.0]);
             }
 
@@ -515,7 +970,7 @@ impl HudMesh {
                 iy + 10.0,
                 1.2,
                 name,
-                if is_sel {
+                if is_sel || is_hovered {
                     [1.0, 1.0, 1.0, 1.0]
                 } else {
                     [0.85, 0.9, 0.95, 1.0]
@@ -571,10 +1026,46 @@ impl HudMesh {
         self.add_text(
             mx + 20.0,
             footer_y + 11.0,
-            1.1,
-            "NAVIGATE: [↑/↓] or [W/S]  |  LOAD & WARP: [Enter]  |  CLOSE: [U] or [Esc]  |  38 US CITIES ACTIVE",
+            1.05,
+            "NAVIGATE: [↑/↓] or Scroll  |  LOAD: [Enter] / Click",
             [0.35, 0.85, 1.0, 1.0],
         );
+
+        // Clickable Warp Button
+        let wb = layout.warp_btn;
+        let is_wb_hovered = hovered_btn == Some(CatalogHit::WarpCity);
+        let is_wb_pressed = pressed_btn == Some(CatalogHit::WarpCity);
+        let (wb_bg, wb_border) = if is_wb_pressed {
+            ([0.15, 0.50, 0.35, 0.98], [0.4, 1.0, 0.7, 1.0])
+        } else if is_wb_hovered {
+            ([0.12, 0.42, 0.28, 0.95], [0.3, 0.95, 0.6, 1.0])
+        } else {
+            ([0.08, 0.28, 0.20, 0.85], [0.2, 0.75, 0.45, 0.7])
+        };
+        self.add_rect(wb.x, wb.y, wb.w, wb.h, wb_bg);
+        self.add_rect_outline(wb.x, wb.y, wb.w, wb.h, 1.0, wb_border);
+        self.add_text(
+            wb.x + 12.0,
+            wb.y + 7.0,
+            1.1,
+            "▶ WARP TO CITY",
+            [0.3, 1.0, 0.6, 1.0],
+        );
+
+        // Clickable Back Button
+        let bb = layout.back_btn;
+        let is_bb_hovered = hovered_btn == Some(CatalogHit::Back);
+        let is_bb_pressed = pressed_btn == Some(CatalogHit::Back);
+        let (bb_bg, bb_border) = if is_bb_pressed {
+            ([0.35, 0.15, 0.15, 0.98], [1.0, 0.5, 0.5, 1.0])
+        } else if is_bb_hovered {
+            ([0.28, 0.12, 0.12, 0.95], [0.95, 0.4, 0.4, 1.0])
+        } else {
+            ([0.16, 0.08, 0.08, 0.85], [0.70, 0.3, 0.3, 0.7])
+        };
+        self.add_rect(bb.x, bb.y, bb.w, bb.h, bb_bg);
+        self.add_rect_outline(bb.x, bb.y, bb.w, bb.h, 1.0, bb_border);
+        self.add_text(bb.x + 10.0, bb.y + 7.0, 1.1, "◀ BACK", [1.0, 0.6, 0.6, 1.0]);
     }
 
     /// Adds a compact glassmorphic multiplayer status chip in the top right.
@@ -872,51 +1363,60 @@ impl HudMesh {
         player_wallet: f64,
         completed_jobs: u32,
     ) {
-        // Fullscreen dark gradient backdrop
-        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.03, 0.04, 0.07, 0.94]);
-
-        // Decorative background geometry accent stripes
-        self.add_line(
-            0.0,
-            screen_h * 0.18,
+        self.add_start_screen_interactive(
             screen_w,
-            screen_h * 0.18,
-            1.5,
-            [0.15, 0.40, 0.70, 0.3],
+            screen_h,
+            selected_opt,
+            None,
+            None,
+            None,
+            None,
+            options,
+            player_name,
+            player_wallet,
+            completed_jobs,
+            true,
         );
-        self.add_line(
-            0.0,
-            screen_h * 0.88,
-            screen_w,
-            screen_h * 0.88,
-            1.0,
-            [0.15, 0.40, 0.70, 0.2],
-        );
+    }
 
-        // Left decorative accent bar
-        self.add_rect(
-            40.0,
-            screen_h * 0.22,
-            4.0,
-            screen_h * 0.60,
-            [0.0, 0.85, 1.0, 0.8],
-        );
+    /// Adds a modern, responsive, non-obstructive start / home screen interface with full interactive pointer feedback.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_start_screen_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_opt: usize,
+        hovered_opt: Option<usize>,
+        pressed_opt: Option<usize>,
+        hovered_btn: Option<StartScreenHit>,
+        pressed_btn: Option<StartScreenHit>,
+        options: &[(&str, &str)],
+        player_name: &str,
+        player_wallet: f64,
+        completed_jobs: u32,
+        continue_enabled: bool,
+    ) {
+        let layout = StartScreenLayout::compute(screen_w, screen_h, options.len());
+
+        // Top translucent header banner (preserves unobstructed 3D scene view)
+        self.add_rect(0.0, 0.0, screen_w, 92.0, [0.03, 0.05, 0.08, 0.35]);
+        self.add_line(0.0, 92.0, screen_w, 92.0, 1.0, [0.15, 0.40, 0.70, 0.4]);
 
         // Title Header
         let title_x = 60.0;
-        let title_y = screen_h * 0.08;
+        let title_y = screen_h * 0.04;
         self.add_text(
             title_x,
             title_y,
-            3.2,
+            3.0,
             "REAL EARTH WORLD",
             [1.0, 1.0, 1.0, 1.0],
         );
         self.add_text(
             title_x,
-            title_y + 34.0,
-            1.25,
-            "HIGH-FIDELITY PLANETARY SIMULATION & COMPLETE GAMEPLAY PLATFORM",
+            title_y + 32.0,
+            1.15,
+            "HIGH-FIDELITY PLANETARY SIMULATION & MULTIMODAL GAMEPLAY",
             [0.2, 0.85, 1.0, 0.9],
         );
 
@@ -924,10 +1424,10 @@ impl HudMesh {
         let profile_w = 340.0;
         let profile_x = screen_w - profile_w - 40.0;
         let profile_y = title_y;
-        self.add_panel(profile_x, profile_y, profile_w, 56.0, [0.2, 0.9, 0.5, 1.0]);
+        self.add_panel(profile_x, profile_y, profile_w, 54.0, [0.2, 0.9, 0.5, 0.9]);
         self.add_text(
             profile_x + 14.0,
-            profile_y + 10.0,
+            profile_y + 8.0,
             1.15,
             player_name,
             [1.0, 1.0, 1.0, 1.0],
@@ -935,149 +1435,217 @@ impl HudMesh {
         let stats_str = format!("WALLET: ${:.2}  |  JOBS: {}", player_wallet, completed_jobs);
         self.add_text(
             profile_x + 14.0,
-            profile_y + 30.0,
+            profile_y + 28.0,
             1.0,
             &stats_str,
             [1.0, 0.85, 0.2, 1.0],
         );
 
-        // Menu Card
-        let menu_x = 60.0;
-        let menu_y = screen_h * 0.22;
-        let menu_w = (screen_w * 0.45).clamp(380.0, 520.0);
-        let item_h = 44.0;
-        let spacing = 8.0;
+        // Menu Card Translucent Panel
+        let card = layout.menu_card;
+        self.add_rect(card.x, card.y, card.w, card.h, [0.04, 0.06, 0.10, 0.60]);
+        self.add_rect_outline(card.x, card.y, card.w, card.h, 1.5, [0.20, 0.35, 0.55, 0.7]);
+
+        // Left decorative accent bar on menu card
+        self.add_rect(card.x, card.y, 4.0, card.h, [0.0, 0.85, 1.0, 0.8]);
+
+        // Quick Roam prominent banner button (below title)
+        let qr = layout.quick_roam_btn;
+        let is_qr_pressed = pressed_btn == Some(StartScreenHit::QuickRoam);
+        let is_qr_hovered = hovered_btn == Some(StartScreenHit::QuickRoam);
+        let (qr_bg, qr_border) = if is_qr_pressed {
+            ([0.18, 0.55, 0.35, 0.98], [0.4, 1.0, 0.7, 1.0])
+        } else if is_qr_hovered {
+            ([0.14, 0.46, 0.30, 0.95], [0.3, 0.95, 0.6, 1.0])
+        } else {
+            ([0.08, 0.30, 0.20, 0.80], [0.2, 0.75, 0.45, 0.7])
+        };
+        self.add_rect(qr.x, qr.y, qr.w, qr.h, qr_bg);
+        self.add_rect_outline(
+            qr.x,
+            qr.y,
+            qr.w,
+            qr.h,
+            if is_qr_hovered { 1.5 } else { 1.0 },
+            qr_border,
+        );
+        self.add_text(
+            qr.x + 12.0,
+            qr.y + 8.0,
+            1.15,
+            "▶ FREE ROAM SIMULATION [CLICK / ESC]",
+            [0.35, 1.0, 0.65, 1.0],
+        );
 
         for (i, &(label, sub)) in options.iter().enumerate() {
-            let iy = menu_y + (i as f32) * (item_h + spacing);
-            let is_sel = i == selected_opt;
+            let rect = layout.option_rects[i];
+            let is_disabled = i == 0 && !continue_enabled;
+            let is_pressed = pressed_opt == Some(i) && !is_disabled;
+            let is_hovered = hovered_opt == Some(i) && !is_disabled;
+            let is_sel = selected_opt == i && !is_disabled;
 
-            let (bg, border, text_col, sub_col) = if is_sel {
+            let (bg, border, text_col, sub_col) = if is_disabled {
                 (
-                    [0.15, 0.32, 0.55, 0.98],
-                    [0.3, 0.85, 1.0, 1.0],
+                    [0.05, 0.07, 0.10, 0.50],
+                    [0.18, 0.22, 0.30, 0.4],
+                    [0.45, 0.50, 0.55, 0.6],
+                    [0.35, 0.40, 0.45, 0.5],
+                )
+            } else if is_pressed {
+                (
+                    [0.22, 0.45, 0.75, 0.98],
+                    [0.55, 0.95, 1.0, 1.0],
                     [1.0, 1.0, 1.0, 1.0],
-                    [0.8, 0.95, 1.0, 1.0],
+                    [0.9, 0.98, 1.0, 1.0],
+                )
+            } else if is_hovered {
+                (
+                    [0.18, 0.38, 0.65, 0.95],
+                    [0.45, 0.92, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                    [0.85, 0.95, 1.0, 1.0],
+                )
+            } else if is_sel {
+                (
+                    [0.14, 0.30, 0.50, 0.90],
+                    [0.35, 0.85, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                    [0.80, 0.92, 1.0, 1.0],
                 )
             } else {
                 (
-                    [0.07, 0.09, 0.14, 0.85],
+                    [0.07, 0.09, 0.14, 0.75],
                     [0.20, 0.28, 0.40, 0.5],
-                    [0.85, 0.90, 0.95, 0.9],
-                    [0.55, 0.65, 0.75, 0.7],
+                    [0.88, 0.92, 0.96, 0.95],
+                    [0.55, 0.65, 0.75, 0.75],
                 )
             };
 
-            self.add_rect(menu_x, iy, menu_w, item_h, bg);
+            self.add_rect(rect.x, rect.y, rect.w, rect.h, bg);
             self.add_rect_outline(
-                menu_x,
-                iy,
-                menu_w,
-                item_h,
-                if is_sel { 2.0 } else { 1.0 },
+                rect.x,
+                rect.y,
+                rect.w,
+                rect.h,
+                if is_pressed || is_hovered || is_sel {
+                    2.0
+                } else {
+                    1.0
+                },
                 border,
             );
 
-            if is_sel {
-                self.add_rect(menu_x, iy, 5.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+            if is_sel || is_hovered {
+                self.add_rect(rect.x, rect.y, 5.0, rect.h, [0.0, 0.9, 1.0, 1.0]);
                 self.add_text(
-                    menu_x + menu_w - 24.0,
-                    iy + 14.0,
+                    rect.x + rect.w - 24.0,
+                    rect.y + 14.0,
                     1.4,
                     ">",
                     [0.0, 0.9, 1.0, 1.0],
                 );
             }
 
-            self.add_text(menu_x + 20.0, iy + 12.0, 1.4, label, text_col);
-            if !sub.is_empty() {
-                self.add_text(menu_x + 20.0, iy + 28.0, 0.95, sub, sub_col);
+            let display_label = if is_disabled {
+                "CONTINUE CAREER (NO SAVE FOUND)"
+            } else {
+                label
+            };
+            let display_sub = if is_disabled {
+                "No saved progress on disk — select Free Roam or Contracts"
+            } else {
+                sub
+            };
+
+            self.add_text(rect.x + 20.0, rect.y + 12.0, 1.35, display_label, text_col);
+            if !display_sub.is_empty() {
+                self.add_text(rect.x + 20.0, rect.y + 28.0, 0.95, display_sub, sub_col);
             }
         }
 
-        // Right Info Card / Feature Highlights
-        let info_x = menu_x + menu_w + 40.0;
+        // Right Info Card / Feature Highlights (Translucent)
+        let info_x = card.x + card.w + 32.0;
         let info_w = (screen_w - info_x - 40.0).max(300.0);
-        let info_h = (item_h + spacing) * options.len() as f32 - spacing;
+        let info_h = card.h;
         if info_w >= 280.0 {
-            self.add_panel(info_x, menu_y, info_w, info_h, [0.15, 0.55, 0.95, 1.0]);
+            self.add_panel(info_x, card.y, info_w, info_h, [0.15, 0.55, 0.95, 0.8]);
             self.add_text(
                 info_x + 18.0,
-                menu_y + 16.0,
+                card.y + 16.0,
                 1.3,
                 "SAN FRANCISCO PILOT & 38 US CITIES",
                 [1.0, 1.0, 1.0, 1.0],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 38.0,
+                card.y + 38.0,
                 1.0,
                 "• Real surveyed USGS 3DEP topography & OSM road networks",
-                [0.8, 0.88, 0.95, 0.9],
+                [0.85, 0.90, 0.95, 0.95],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 56.0,
+                card.y + 56.0,
                 1.0,
                 "• Taxi, courier, heavy freight & free-roam careers",
-                [0.8, 0.88, 0.95, 0.9],
+                [0.85, 0.90, 0.95, 0.95],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 74.0,
+                card.y + 74.0,
                 1.0,
                 "• 10 multimodal vehicles: Cars, Bus, Truck, Train, Plane, Boat",
-                [0.8, 0.88, 0.95, 0.9],
+                [0.85, 0.90, 0.95, 0.95],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 92.0,
+                card.y + 92.0,
                 1.0,
                 "• IDM autonomous traffic simulation & traffic signals",
-                [0.8, 0.88, 0.95, 0.9],
+                [0.85, 0.90, 0.95, 0.95],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 110.0,
+                card.y + 110.0,
                 1.0,
                 "• Full garage upgrades, earnings, achievements & quicksave",
-                [0.8, 0.88, 0.95, 0.9],
+                [0.85, 0.90, 0.95, 0.95],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 135.0,
+                card.y + 135.0,
                 1.0,
                 "Active City: San Francisco Bay Area (CA)",
                 [0.2, 0.9, 0.5, 1.0],
             );
             self.add_text(
                 info_x + 18.0,
-                menu_y + 152.0,
+                card.y + 152.0,
                 1.0,
                 "Surveyed Anchor: Transamerica Pyramid (37.7952 N, 122.4028 W)",
-                [0.65, 0.75, 0.85, 0.8],
+                [0.70, 0.80, 0.90, 0.9],
             );
         }
 
-        // Footer Bar
+        // Translucent Footer Bar
         let footer_y = screen_h - 48.0;
-        self.add_rect(0.0, footer_y, screen_w, 48.0, [0.05, 0.07, 0.11, 0.98]);
+        self.add_rect(0.0, footer_y, screen_w, 48.0, [0.04, 0.06, 0.09, 0.55]);
         self.add_line(
             0.0,
             footer_y,
             screen_w,
             footer_y,
             1.0,
-            [0.20, 0.30, 0.45, 0.6],
+            [0.20, 0.30, 0.45, 0.5],
         );
         self.add_text(
             40.0,
             footer_y + 16.0,
             1.15,
-            "CONTROLS: [W/S] or [↑/↓] Select  |  [Enter] Confirm  |  [Esc] Quick Exit  |  [F3] Toggle Dev Overlay",
+            "CONTROLS: Mouse Click / [↑/↓] Select  |  [Enter] Confirm  |  [Esc] Quick Free Roam / Exit  |  [F3] Dev Overlay",
             [0.35, 0.85, 1.0, 1.0],
         );
-        let ver_str = "v1.0.0-STAGE6-CERTIFIED";
+        let ver_str = "v1.0.0-STAGE1-RESTORED";
         let ver_w = ver_str.len() as f32 * 6.0 * 1.05;
         self.add_text(
             screen_w - ver_w - 40.0,
@@ -1097,8 +1665,36 @@ impl HudMesh {
         options: &[&str],
         city_name: &str,
     ) {
-        let modal_w = (screen_w - 40.0).min(520.0);
-        let modal_h = (screen_h - 40.0).min(500.0);
+        self.add_pause_menu_interactive(
+            screen_w,
+            screen_h,
+            selected_opt,
+            None,
+            None,
+            None,
+            None,
+            options,
+            city_name,
+        );
+    }
+
+    /// Adds a modern centered pause menu window with responsive backdrop and pointer feedback.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_pause_menu_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_opt: usize,
+        hovered_opt: Option<usize>,
+        pressed_opt: Option<usize>,
+        hovered_btn: Option<PauseMenuHit>,
+        pressed_btn: Option<PauseMenuHit>,
+        options: &[&str],
+        city_name: &str,
+    ) {
+        let layout = PauseMenuLayout::compute(screen_w, screen_h, options.len());
+        let modal_w = layout.modal_rect.w;
+        let modal_h = layout.modal_rect.h;
         let (mx, my) = self.add_modal(
             screen_w,
             screen_h,
@@ -1108,52 +1704,102 @@ impl HudMesh {
             [0.2, 0.7, 1.0, 1.0],
         );
 
+        // Header Action: Resume Button
+        let rb = layout.resume_btn;
+        let is_rb_pressed = pressed_btn == Some(PauseMenuHit::Resume);
+        let is_rb_hovered = hovered_btn == Some(PauseMenuHit::Resume);
+        let (rb_bg, rb_border) = if is_rb_pressed {
+            ([0.18, 0.55, 0.35, 0.98], [0.4, 1.0, 0.7, 1.0])
+        } else if is_rb_hovered {
+            ([0.14, 0.45, 0.30, 0.95], [0.3, 0.95, 0.6, 1.0])
+        } else {
+            ([0.08, 0.28, 0.20, 0.85], [0.2, 0.75, 0.45, 0.7])
+        };
+        self.add_rect(rb.x, rb.y, rb.w, rb.h, rb_bg);
+        self.add_rect_outline(rb.x, rb.y, rb.w, rb.h, 1.0, rb_border);
+        self.add_text(
+            rb.x + 10.0,
+            rb.y + 6.0,
+            1.05,
+            "▶ RESUME",
+            [0.35, 1.0, 0.65, 1.0],
+        );
+
+        // Header Action: Close [X] Button
+        let cb = layout.close_btn;
+        let is_cb_hovered = hovered_btn == Some(PauseMenuHit::Close);
+        let (cb_bg, cb_border) = if is_cb_hovered {
+            ([0.35, 0.15, 0.15, 0.95], [1.0, 0.5, 0.5, 1.0])
+        } else {
+            ([0.18, 0.08, 0.08, 0.80], [0.6, 0.3, 0.3, 0.6])
+        };
+        self.add_rect(cb.x, cb.y, cb.w, cb.h, cb_bg);
+        self.add_rect_outline(cb.x, cb.y, cb.w, cb.h, 1.0, cb_border);
+        self.add_text(cb.x + 8.0, cb.y + 6.0, 1.1, "X", [1.0, 0.7, 0.7, 1.0]);
+
         // Subtitle with active location
         self.add_text(
             mx + 18.0,
             my + 50.0,
             1.05,
-            &format!("ACTIVE REGION: {}  |  PRESS [ESC] TO RESUME", city_name),
+            &format!(
+                "ACTIVE REGION: {}  |  PRESS [ESC] OR CLICK TO RESUME",
+                city_name
+            ),
             [0.4, 0.85, 1.0, 0.9],
         );
 
-        let list_y = my + 72.0;
-        let item_h = 34.0;
-        let spacing = 6.0;
-
         for (i, &opt) in options.iter().enumerate() {
-            let iy = list_y + (i as f32) * (item_h + spacing);
+            let rect = layout.option_rects[i];
             let is_sel = i == selected_opt;
+            let is_hovered = hovered_opt == Some(i);
+            let is_pressed = pressed_opt == Some(i);
 
-            let (bg, border, text_col) = if is_sel {
+            let (bg, border, text_col) = if is_pressed {
                 (
-                    [0.18, 0.35, 0.58, 0.98],
+                    [0.22, 0.45, 0.75, 0.98],
+                    [0.55, 0.95, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                )
+            } else if is_hovered {
+                (
+                    [0.18, 0.38, 0.65, 0.95],
+                    [0.45, 0.92, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                )
+            } else if is_sel {
+                (
+                    [0.15, 0.30, 0.52, 0.95],
                     [0.35, 0.85, 1.0, 1.0],
                     [1.0, 1.0, 1.0, 1.0],
                 )
             } else {
                 (
-                    [0.08, 0.11, 0.17, 0.85],
+                    [0.08, 0.11, 0.17, 0.80],
                     [0.22, 0.28, 0.38, 0.5],
                     [0.85, 0.90, 0.95, 0.9],
                 )
             };
 
-            self.add_rect(mx + 16.0, iy, modal_w - 32.0, item_h, bg);
+            self.add_rect(rect.x, rect.y, rect.w, rect.h, bg);
             self.add_rect_outline(
-                mx + 16.0,
-                iy,
-                modal_w - 32.0,
-                item_h,
-                if is_sel { 1.5 } else { 0.5 },
+                rect.x,
+                rect.y,
+                rect.w,
+                rect.h,
+                if is_pressed || is_hovered || is_sel {
+                    1.5
+                } else {
+                    0.5
+                },
                 border,
             );
 
-            if is_sel {
-                self.add_rect(mx + 16.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
+            if is_sel || is_hovered {
+                self.add_rect(rect.x, rect.y, 4.0, rect.h, [0.0, 0.9, 1.0, 1.0]);
             }
 
-            self.add_text(mx + 28.0, iy + 10.0, 1.25, opt, text_col);
+            self.add_text(rect.x + 16.0, rect.y + 10.0, 1.25, opt, text_col);
         }
 
         // Footer
@@ -1164,7 +1810,7 @@ impl HudMesh {
             mx + 18.0,
             footer_y + 10.0,
             1.05,
-            "[↑/↓] Navigate  |  [Enter] Select  |  [Esc] Resume Simulation",
+            "[↑/↓] or Scroll Navigate  |  Click / [Enter] Select  |  [Esc] Resume",
             [0.35, 0.85, 1.0, 1.0],
         );
     }
@@ -1179,8 +1825,36 @@ impl HudMesh {
         jobs: &[(&str, &str, &str, &str, f64, f64, u32, &str, bool)],
         active_job_id: Option<&str>,
     ) {
-        let modal_w = (screen_w - 40.0).min(820.0);
-        let modal_h = (screen_h - 40.0).min(540.0);
+        self.add_job_browser_modal_interactive(
+            screen_w,
+            screen_h,
+            selected_idx,
+            None,
+            None,
+            None,
+            None,
+            jobs,
+            active_job_id,
+        );
+    }
+
+    /// Adds an interactive dispatch and career contract browser modal with hover/pressed feedback and buttons.
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    pub fn add_job_browser_modal_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        hovered_idx: Option<usize>,
+        pressed_idx: Option<usize>,
+        hovered_btn: Option<JobBrowserHit>,
+        pressed_btn: Option<JobBrowserHit>,
+        jobs: &[(&str, &str, &str, &str, f64, f64, u32, &str, bool)],
+        active_job_id: Option<&str>,
+    ) {
+        let layout = JobBrowserLayout::compute(screen_w, screen_h, selected_idx, jobs.len());
+        let modal_w = layout.modal_rect.w;
+        let modal_h = layout.modal_rect.h;
         let (mx, my) = self.add_modal(
             screen_w,
             screen_h,
@@ -1242,28 +1916,26 @@ impl HudMesh {
             [0.6, 0.75, 0.9, 1.0],
         );
 
-        // Job list viewport (up to 8 items visible)
         let list_y = header_y + 28.0;
         let item_h = 38.0;
-        let max_visible = 8;
-        let start_idx = if selected_idx >= max_visible / 2 {
-            (selected_idx + 1)
-                .saturating_sub(max_visible)
-                .min(jobs.len().saturating_sub(max_visible))
-        } else {
-            0
-        };
-        let visible_jobs = &jobs[start_idx..jobs.len().min(start_idx + max_visible)];
+        let start_idx = layout.start_idx;
+        let visible_jobs = &jobs[start_idx..jobs.len().min(start_idx + layout.visible_count)];
 
         for (i, &(id, career, title, _route, dist_km, payout, xp, _diff, can_accept)) in
             visible_jobs.iter().enumerate()
         {
             let actual_idx = start_idx + i;
             let is_sel = actual_idx == selected_idx;
+            let is_hovered = hovered_idx == Some(actual_idx);
+            let is_pressed = pressed_idx == Some(actual_idx);
             let is_active = active_job_id == Some(id);
             let iy = list_y + i as f32 * (item_h + 3.0);
 
-            let (bg, border) = if is_sel {
+            let (bg, border) = if is_pressed {
+                ([0.24, 0.45, 0.75, 0.98], [0.55, 0.95, 1.0, 1.0])
+            } else if is_hovered {
+                ([0.20, 0.38, 0.65, 0.95], [0.45, 0.90, 1.0, 1.0])
+            } else if is_sel {
                 ([0.18, 0.35, 0.55, 0.98], [0.35, 0.85, 1.0, 1.0])
             } else if is_active {
                 ([0.10, 0.28, 0.20, 0.90], [0.2, 0.85, 0.5, 0.8])
@@ -1277,11 +1949,11 @@ impl HudMesh {
                 iy,
                 modal_w - 24.0,
                 item_h,
-                if is_sel { 1.5 } else { 0.5 },
+                if is_sel || is_hovered { 1.5 } else { 0.5 },
                 border,
             );
 
-            if is_sel {
+            if is_sel || is_hovered {
                 self.add_rect(mx + 12.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
             }
 
@@ -1353,7 +2025,7 @@ impl HudMesh {
         if selected_idx < jobs.len() {
             let (_id, career, title, route, dist_km, payout, xp, diff, _can_accept) =
                 jobs[selected_idx];
-            let prev_y = list_y + max_visible as f32 * (item_h + 3.0) + 6.0;
+            let prev_y = list_y + layout.visible_count as f32 * (item_h + 3.0) + 6.0;
             let prev_h = modal_h - (prev_y - my) - 42.0;
             if prev_h >= 50.0 {
                 self.add_rect(
@@ -1405,10 +2077,46 @@ impl HudMesh {
         self.add_text(
             mx + 20.0,
             footer_y + 11.0,
-            1.1,
-            "NAVIGATE: [↑/↓] or [W/S]  |  ACCEPT CONTRACT: [Enter]  |  CLOSE: [J], [Tab], or [Esc]",
+            1.05,
+            "[↑/↓] or Scroll Navigate  |  Click Item to Select",
             [0.35, 0.85, 1.0, 1.0],
         );
+
+        // Clickable Accept Contract Button
+        let ab = layout.accept_btn;
+        let is_ab_hovered = hovered_btn == Some(JobBrowserHit::AcceptContract);
+        let is_ab_pressed = pressed_btn == Some(JobBrowserHit::AcceptContract);
+        let (ab_bg, ab_border) = if is_ab_pressed {
+            ([0.18, 0.55, 0.35, 0.98], [0.4, 1.0, 0.7, 1.0])
+        } else if is_ab_hovered {
+            ([0.14, 0.45, 0.30, 0.95], [0.3, 0.95, 0.6, 1.0])
+        } else {
+            ([0.08, 0.28, 0.20, 0.85], [0.2, 0.75, 0.45, 0.7])
+        };
+        self.add_rect(ab.x, ab.y, ab.w, ab.h, ab_bg);
+        self.add_rect_outline(ab.x, ab.y, ab.w, ab.h, 1.0, ab_border);
+        self.add_text(
+            ab.x + 12.0,
+            ab.y + 7.0,
+            1.1,
+            "▶ ACCEPT CONTRACT",
+            [0.3, 1.0, 0.6, 1.0],
+        );
+
+        // Clickable Back Button
+        let bb = layout.back_btn;
+        let is_bb_hovered = hovered_btn == Some(JobBrowserHit::Back);
+        let is_bb_pressed = pressed_btn == Some(JobBrowserHit::Back);
+        let (bb_bg, bb_border) = if is_bb_pressed {
+            ([0.35, 0.15, 0.15, 0.98], [1.0, 0.5, 0.5, 1.0])
+        } else if is_bb_hovered {
+            ([0.28, 0.12, 0.12, 0.95], [0.95, 0.4, 0.4, 1.0])
+        } else {
+            ([0.16, 0.08, 0.08, 0.85], [0.70, 0.3, 0.3, 0.7])
+        };
+        self.add_rect(bb.x, bb.y, bb.w, bb.h, bb_bg);
+        self.add_rect_outline(bb.x, bb.y, bb.w, bb.h, 1.0, bb_border);
+        self.add_text(bb.x + 10.0, bb.y + 7.0, 1.1, "◀ BACK", [1.0, 0.6, 0.6, 1.0]);
     }
 
     /// Adds a modern interactive vehicle garage and fleet inspection modal.
@@ -1419,8 +2127,34 @@ impl HudMesh {
         selected_idx: usize,
         vehicles: &[(&str, &str, &str, f32, f32, f32, bool)],
     ) {
-        let modal_w = (screen_w - 40.0).min(780.0);
-        let modal_h = (screen_h - 40.0).min(520.0);
+        self.add_garage_modal_interactive(
+            screen_w,
+            screen_h,
+            selected_idx,
+            None,
+            None,
+            None,
+            None,
+            vehicles,
+        );
+    }
+
+    /// Adds an interactive vehicle garage and fleet inspection modal with pointer feedback.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_garage_modal_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        hovered_idx: Option<usize>,
+        pressed_idx: Option<usize>,
+        hovered_btn: Option<GarageHit>,
+        pressed_btn: Option<GarageHit>,
+        vehicles: &[(&str, &str, &str, f32, f32, f32, bool)],
+    ) {
+        let layout = GarageLayout::compute(screen_w, screen_h, vehicles.len());
+        let modal_w = layout.modal_rect.w;
+        let modal_h = layout.modal_rect.h;
         let (mx, my) = self.add_modal(
             screen_w,
             screen_h,
@@ -1488,10 +2222,16 @@ impl HudMesh {
         for (i, &(name, cat, drive, mass, _hp, top_speed, is_active)) in vehicles.iter().enumerate()
         {
             let is_sel = i == selected_idx;
+            let is_hovered = hovered_idx == Some(i);
+            let is_pressed = pressed_idx == Some(i);
             let iy = list_y + i as f32 * (item_h + 3.0);
 
-            let (bg, border) = if is_sel {
-                ([0.22, 0.32, 0.50, 0.98], [0.4, 0.85, 1.0, 1.0])
+            let (bg, border) = if is_pressed {
+                ([0.28, 0.38, 0.60, 0.98], [0.6, 0.95, 1.0, 1.0])
+            } else if is_hovered {
+                ([0.22, 0.34, 0.55, 0.95], [0.45, 0.90, 1.0, 1.0])
+            } else if is_sel {
+                ([0.20, 0.30, 0.48, 0.98], [0.4, 0.85, 1.0, 1.0])
             } else if is_active {
                 ([0.15, 0.25, 0.35, 0.90], [0.3, 0.75, 0.9, 0.7])
             } else {
@@ -1504,11 +2244,11 @@ impl HudMesh {
                 iy,
                 modal_w - 24.0,
                 item_h,
-                if is_sel { 1.5 } else { 0.5 },
+                if is_sel || is_hovered { 1.5 } else { 0.5 },
                 border,
             );
 
-            if is_sel {
+            if is_sel || is_hovered {
                 self.add_rect(mx + 12.0, iy, 4.0, item_h, [1.0, 0.5, 0.1, 1.0]);
             }
 
@@ -1545,10 +2285,46 @@ impl HudMesh {
         self.add_text(
             mx + 20.0,
             footer_y + 11.0,
-            1.1,
-            "NAVIGATE: [↑/↓] or [W/S]  |  SELECT & SPAWN: [Enter]  |  CLOSE: [G] or [Esc]",
+            1.05,
+            "[↑/↓] or Scroll Navigate  |  Click Item to Inspect",
             [1.0, 0.65, 0.2, 1.0],
         );
+
+        // Clickable Select & Spawn Button
+        let sb = layout.select_btn;
+        let is_sb_hovered = hovered_btn == Some(GarageHit::SelectAndSpawn);
+        let is_sb_pressed = pressed_btn == Some(GarageHit::SelectAndSpawn);
+        let (sb_bg, sb_border) = if is_sb_pressed {
+            ([0.35, 0.25, 0.10, 0.98], [1.0, 0.7, 0.3, 1.0])
+        } else if is_sb_hovered {
+            ([0.28, 0.20, 0.08, 0.95], [1.0, 0.6, 0.2, 1.0])
+        } else {
+            ([0.20, 0.12, 0.05, 0.85], [0.8, 0.45, 0.1, 0.7])
+        };
+        self.add_rect(sb.x, sb.y, sb.w, sb.h, sb_bg);
+        self.add_rect_outline(sb.x, sb.y, sb.w, sb.h, 1.0, sb_border);
+        self.add_text(
+            sb.x + 12.0,
+            sb.y + 7.0,
+            1.1,
+            "▶ SPAWN VEHICLE",
+            [1.0, 0.75, 0.3, 1.0],
+        );
+
+        // Clickable Back Button
+        let bb = layout.back_btn;
+        let is_bb_hovered = hovered_btn == Some(GarageHit::Back);
+        let is_bb_pressed = pressed_btn == Some(GarageHit::Back);
+        let (bb_bg, bb_border) = if is_bb_pressed {
+            ([0.35, 0.15, 0.15, 0.98], [1.0, 0.5, 0.5, 1.0])
+        } else if is_bb_hovered {
+            ([0.28, 0.12, 0.12, 0.95], [0.95, 0.4, 0.4, 1.0])
+        } else {
+            ([0.16, 0.08, 0.08, 0.85], [0.70, 0.3, 0.3, 0.7])
+        };
+        self.add_rect(bb.x, bb.y, bb.w, bb.h, bb_bg);
+        self.add_rect_outline(bb.x, bb.y, bb.w, bb.h, 1.0, bb_border);
+        self.add_text(bb.x + 10.0, bb.y + 7.0, 1.1, "◀ BACK", [1.0, 0.6, 0.6, 1.0]);
     }
 
     /// Adds a modern settings and user preferences modal.
@@ -1559,8 +2335,34 @@ impl HudMesh {
         selected_idx: usize,
         settings: &[(&str, &str, &str)],
     ) {
-        let modal_w = (screen_w - 40.0).min(680.0);
-        let modal_h = (screen_h - 40.0).min(460.0);
+        self.add_settings_modal_interactive(
+            screen_w,
+            screen_h,
+            selected_idx,
+            None,
+            None,
+            None,
+            None,
+            settings,
+        );
+    }
+
+    /// Adds an interactive settings and preferences modal with pointer feedback.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_settings_modal_interactive(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        hovered_idx: Option<usize>,
+        pressed_idx: Option<usize>,
+        hovered_btn: Option<SettingsHit>,
+        pressed_btn: Option<SettingsHit>,
+        settings: &[(&str, &str, &str)],
+    ) {
+        let layout = SettingsLayout::compute(screen_w, screen_h, settings.len());
+        let modal_w = layout.modal_rect.w;
+        let modal_h = layout.modal_rect.h;
         let (mx, my) = self.add_modal(
             screen_w,
             screen_h,
@@ -1575,9 +2377,15 @@ impl HudMesh {
 
         for (i, &(name, val, desc)) in settings.iter().enumerate() {
             let is_sel = i == selected_idx;
+            let is_hovered = hovered_idx == Some(i);
+            let is_pressed = pressed_idx == Some(i);
             let iy = list_y + i as f32 * (item_h + 4.0);
 
-            let (bg, border) = if is_sel {
+            let (bg, border) = if is_pressed {
+                ([0.24, 0.42, 0.65, 0.98], [0.55, 0.95, 1.0, 1.0])
+            } else if is_hovered {
+                ([0.20, 0.36, 0.58, 0.95], [0.45, 0.90, 1.0, 1.0])
+            } else if is_sel {
                 ([0.18, 0.32, 0.52, 0.98], [0.35, 0.85, 1.0, 1.0])
             } else {
                 ([0.08, 0.11, 0.16, 0.85], [0.20, 0.25, 0.35, 0.4])
@@ -1589,11 +2397,11 @@ impl HudMesh {
                 iy,
                 modal_w - 32.0,
                 item_h,
-                if is_sel { 1.5 } else { 0.5 },
+                if is_sel || is_hovered { 1.5 } else { 0.5 },
                 border,
             );
 
-            if is_sel {
+            if is_sel || is_hovered {
                 self.add_rect(mx + 16.0, iy, 4.0, item_h, [0.0, 0.9, 1.0, 1.0]);
             }
 
@@ -1610,7 +2418,7 @@ impl HudMesh {
                 val_w,
                 24.0,
                 1.0,
-                if is_sel {
+                if is_sel || is_hovered {
                     [0.35, 0.85, 1.0, 1.0]
                 } else {
                     [0.3, 0.4, 0.5, 0.5]
@@ -1626,10 +2434,25 @@ impl HudMesh {
         self.add_text(
             mx + 20.0,
             footer_y + 11.0,
-            1.1,
-            "NAVIGATE: [↑/↓] or [W/S]  |  CYCLE VALUE: [Enter]  |  CLOSE: [O] or [Esc]",
+            1.05,
+            "[↑/↓] or Scroll  |  Click Item to Cycle Value",
             [0.35, 0.85, 1.0, 1.0],
         );
+
+        // Clickable Back Button
+        let bb = layout.back_btn;
+        let is_bb_hovered = hovered_btn == Some(SettingsHit::Back);
+        let is_bb_pressed = pressed_btn == Some(SettingsHit::Back);
+        let (bb_bg, bb_border) = if is_bb_pressed {
+            ([0.35, 0.15, 0.15, 0.98], [1.0, 0.5, 0.5, 1.0])
+        } else if is_bb_hovered {
+            ([0.28, 0.12, 0.12, 0.95], [0.95, 0.4, 0.4, 1.0])
+        } else {
+            ([0.16, 0.08, 0.08, 0.85], [0.70, 0.3, 0.3, 0.7])
+        };
+        self.add_rect(bb.x, bb.y, bb.w, bb.h, bb_bg);
+        self.add_rect_outline(bb.x, bb.y, bb.w, bb.h, 1.0, bb_border);
+        self.add_text(bb.x + 10.0, bb.y + 7.0, 1.1, "◀ BACK", [1.0, 0.6, 0.6, 1.0]);
     }
 
     /// Adds an interactive boarding/loading dwell progress card when vehicle is stopped at objective.

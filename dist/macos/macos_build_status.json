@@ -1,0 +1,16 @@
+{
+    "Platform": "macOS",
+    "Status": "BLOCKED_PENDING_TOOLCHAIN",
+    "Reason": "macOS targets (aarch64-apple-darwin, x86_64-apple-darwin), lipo, and hdiutil not installed on Windows host",
+    "AppBundleValid": true,
+    "AppBundleLocation": "dist/macos/RealEarth.app",
+    "TarballValid": true,
+    "TarballLocation": "dist/macos/realearth-macos-universal.tar.gz",
+    "NativeMachOBinary": false,
+    "RequiredTools": [
+        "aarch64-apple-darwin / x86_64-apple-darwin toolchain",
+        "lipo",
+        "hdiutil"
+    ],
+    "ReproductionCommand": "cargo build --target aarch64-apple-darwin --release && hdiutil create -volname RealEarth -srcfolder dist/macos/RealEarth.app -ov -format UDZO dist/macos/RealEarth-macOS.dmg"
+}

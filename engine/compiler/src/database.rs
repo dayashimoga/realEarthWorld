@@ -31,6 +31,7 @@ pub struct ManifestMetadataRecord {
     pub version: u32,
     pub schema_version: u32,
     pub created_at: String,
+    pub source_asset_sha256: Option<String>,
 }
 
 /// Chunk checksum, source dependency hash, and neighbor connectivity metadata.
@@ -94,7 +95,8 @@ impl ChunkDatabase {
                 max_lon REAL NOT NULL,
                 version INTEGER NOT NULL,
                 schema_version INTEGER NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                source_asset_sha256 TEXT
             );
 
             CREATE TABLE IF NOT EXISTS chunk_metadata (
@@ -112,6 +114,12 @@ impl ChunkDatabase {
             ",
         )
         .map_err(|e| RealEarthError::Compilation(format!("SQLite init schema error: {}", e)))?;
+
+        // Backward compatibility migration for pre-existing databases without source_asset_sha256
+        let _ = conn.execute(
+            "ALTER TABLE package_manifest ADD COLUMN source_asset_sha256 TEXT",
+            [],
+        );
 
         Ok(Self { conn })
     }
@@ -250,8 +258,9 @@ impl ChunkDatabase {
                 "INSERT OR REPLACE INTO package_manifest (
                     package_name, crs_epsg,
                     min_lat, max_lat, min_lon, max_lon,
-                    version, schema_version, created_at
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    version, schema_version, created_at,
+                    source_asset_sha256
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     manifest.package_name,
                     manifest.crs_epsg,
@@ -262,6 +271,7 @@ impl ChunkDatabase {
                     manifest.version,
                     manifest.schema_version,
                     manifest.created_at,
+                    manifest.source_asset_sha256,
                 ],
             )
             .map_err(|e| {
@@ -278,7 +288,7 @@ impl ChunkDatabase {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT package_name, crs_epsg, min_lat, max_lat, min_lon, max_lon, version, schema_version, created_at
+                "SELECT package_name, crs_epsg, min_lat, max_lat, min_lon, max_lon, version, schema_version, created_at, source_asset_sha256
                  FROM package_manifest WHERE package_name = ?1",
             )
             .map_err(|e| RealEarthError::Compilation(format!("SQLite prepare manifest query error: {}", e)))?;
@@ -294,6 +304,7 @@ impl ChunkDatabase {
                 let ver: u32 = row.get(6)?;
                 let s_ver: u32 = row.get(7)?;
                 let created: String = row.get(8)?;
+                let source_hash: Option<String> = row.get(9).ok();
 
                 Ok(ManifestMetadataRecord {
                     package_name: name,
@@ -302,6 +313,7 @@ impl ChunkDatabase {
                     version: ver,
                     schema_version: s_ver,
                     created_at: created,
+                    source_asset_sha256: source_hash,
                 })
             })
             .map_err(|e| {
@@ -314,6 +326,14 @@ impl ChunkDatabase {
             Ok(Some(manifest))
         } else {
             Ok(None)
+        }
+    }
+
+    /// Returns true if the package manifest exists and its recorded source_asset_sha256 matches expected_hash.
+    pub fn is_package_source_hash_matching(&self, package_name: &str, expected_hash: &str) -> bool {
+        match self.get_package_manifest(package_name) {
+            Ok(Some(manifest)) => manifest.source_asset_sha256.as_deref() == Some(expected_hash),
+            _ => false,
         }
     }
 

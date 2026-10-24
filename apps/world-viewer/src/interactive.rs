@@ -2,7 +2,7 @@
 #![allow(clippy::needless_return, clippy::type_complexity)]
 
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 use winit::application::ApplicationHandler;
@@ -37,8 +37,10 @@ use realearth_navigation::{
 };
 use realearth_rendering::{
     generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
-    generate_vehicle_mesh, FloatingOriginCamera, GraphicsPresetLevel, GraphicsSettings, HudMesh,
-    RealEarthRenderer, RoadSignType, TrafficSignalVisualState, VehicleMeshParams,
+    generate_vehicle_mesh, CatalogHit, CatalogLayout, FloatingOriginCamera, GarageHit,
+    GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh, JobBrowserHit, JobBrowserLayout,
+    PauseMenuHit, PauseMenuLayout, RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout,
+    StartScreenHit, StartScreenLayout, TrafficSignalVisualState, VehicleMeshParams,
     VehicleVisualType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
@@ -227,6 +229,28 @@ pub struct ActiveDebrief {
     pub comfort_stars: f32,
 }
 
+/// Centralized UI domain actions dispatched by Mouse, Keyboard, or Controller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDomainAction {
+    ContinueCareer,
+    FreeRoam,
+    OpenContracts,
+    OpenGeography,
+    OpenGarage,
+    OpenSettings,
+    ExitApplication,
+    CancelOrBack,
+    ResumeSimulation,
+    RoadsideRecovery,
+    QuicksaveProgress,
+    QuickloadProgress,
+    ReturnToStartScreen,
+    AcceptSelectedContract,
+    SelectAndSpawnVehicle(usize),
+    ToggleSelectedSetting(usize),
+    WarpToSelectedCity(usize),
+}
+
 /// Persistent winit + wgpu interactive surface viewer application.
 pub struct InteractiveViewerApp {
     config: ViewerLaunchConfig,
@@ -284,8 +308,11 @@ pub struct InteractiveViewerApp {
     region_cycle_idx: usize,
     catalog_selected_idx: usize,
 
-    // Stage 6 Modern UI/UX state machine
+    // Stage 6 & Stage 1 Modern UI/UX state machine
     pub ui_state: AppUiState,
+    pub previous_ui_state: AppUiState,
+    pub cursor_pos: Option<(f32, f32)>,
+    pub mouse_left_down: bool,
     pub start_menu_selected_idx: usize,
     pub pause_menu_selected_idx: usize,
     pub job_browser_selected_idx: usize,
@@ -344,6 +371,27 @@ pub fn resolve_world_package_dir(slug: &str) -> PathBuf {
     }
     // 5. Default runtime target directory in data/cache/world_<slug>
     local_cache
+}
+
+/// Validates whether an on-disk world package cache directory contains an authentic chunks.db
+/// whose recorded `source_asset_sha256` matches the expected digest.
+/// If `expected_source_hash` is None, checks only file existence.
+pub fn is_world_package_cache_valid(
+    dir: &Path,
+    package_name: &str,
+    expected_source_hash: Option<&str>,
+) -> bool {
+    let db_path = dir.join("chunks.db");
+    if !db_path.exists() {
+        return false;
+    }
+    if let Some(expected) = expected_source_hash {
+        if let Ok(db) = realearth_compiler::ChunkDatabase::open(&db_path) {
+            return db.is_package_source_hash_matching(package_name, expected);
+        }
+        return false;
+    }
+    true
 }
 
 impl InteractiveViewerApp {
@@ -479,6 +527,9 @@ impl InteractiveViewerApp {
             } else {
                 AppUiState::StartScreen
             },
+            previous_ui_state: AppUiState::StartScreen,
+            cursor_pos: None,
+            mouse_left_down: false,
             start_menu_selected_idx: 0,
             pause_menu_selected_idx: 0,
             job_browser_selected_idx: 0,
@@ -686,6 +737,199 @@ impl InteractiveViewerApp {
         }
     }
 
+    /// Checks whether a valid quicksave file exists on disk.
+    pub fn check_saved_game_exists() -> bool {
+        PathBuf::from("target/saves/quicksave.json").exists()
+            || PathBuf::from("saves/quicksave.json").exists()
+    }
+
+    /// Checks whether a valid quicksave file exists.
+    pub fn has_saved_game(&self) -> bool {
+        Self::check_saved_game_exists()
+    }
+
+    /// Centralized UI domain action router.
+    /// Dispatched identically by mouse clicks, keyboard keys, or future controller inputs.
+    pub fn dispatch_ui_action(
+        &mut self,
+        action: UiDomainAction,
+        event_loop: Option<&ActiveEventLoop>,
+    ) {
+        match action {
+            UiDomainAction::ContinueCareer => {
+                if self.has_saved_game() {
+                    let _ = self.perform_quickload();
+                    self.config.is_drive = true;
+                    self.ui_state = AppUiState::InGame;
+                } else {
+                    let msg = "⚠️ No saved career found. Select Free Roam or Start New Career."
+                        .to_string();
+                    println!("{}", msg);
+                    self.status_notification = Some((msg, Instant::now()));
+                }
+            }
+            UiDomainAction::FreeRoam => {
+                self.config.is_drive = true;
+                self.ui_state = AppUiState::InGame;
+            }
+            UiDomainAction::OpenContracts => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::JobBrowser;
+            }
+            UiDomainAction::OpenGeography => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::CatalogModal;
+            }
+            UiDomainAction::OpenGarage => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::GarageSelect;
+            }
+            UiDomainAction::OpenSettings => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::SettingsMenu;
+            }
+            UiDomainAction::ExitApplication => {
+                println!("Exit selected from UI domain action router.");
+                if let Some(el) = event_loop {
+                    el.exit();
+                }
+            }
+            UiDomainAction::CancelOrBack => {
+                let target = match self.ui_state {
+                    AppUiState::StartScreen => {
+                        if let Some(el) = event_loop {
+                            println!("Escape pressed on Start Screen: exiting Real Earth.");
+                            el.exit();
+                        }
+                        AppUiState::StartScreen
+                    }
+                    _ => self.previous_ui_state,
+                };
+                self.ui_state = target;
+            }
+            UiDomainAction::ResumeSimulation => {
+                self.ui_state = AppUiState::InGame;
+            }
+            UiDomainAction::RoadsideRecovery => {
+                self.perform_roadside_recovery();
+                self.ui_state = AppUiState::InGame;
+            }
+            UiDomainAction::QuicksaveProgress => {
+                self.perform_quicksave();
+            }
+            UiDomainAction::QuickloadProgress => {
+                let _ = self.perform_quickload();
+            }
+            UiDomainAction::ReturnToStartScreen => {
+                self.previous_ui_state = AppUiState::InGame;
+                self.ui_state = AppUiState::StartScreen;
+            }
+            UiDomainAction::AcceptSelectedContract => {
+                let available = JobCatalogGenerator::jobs_for_region(&self.config.region_id);
+                if self.job_browser_selected_idx < available.len() {
+                    let job = available[self.job_browser_selected_idx].clone();
+                    let can_accept =
+                        self.player_profile.career_tier(job.career) >= job.required_tier;
+                    if can_accept {
+                        let mut accepted = job;
+                        let _ = accepted.accept(&self.player_profile, &self.gameplay_bus);
+                        let label = format!(
+                            "📋 Accepted Contract: {} (Payout: ${:.2})",
+                            accepted.title, accepted.base_payout
+                        );
+                        println!("{}", label);
+                        self.active_job = Some(accepted);
+                        self.status_notification = Some((label, Instant::now()));
+                        self.config.is_drive = true;
+                        self.ui_state = AppUiState::InGame;
+                    } else {
+                        let msg =
+                            format!("🔒 Career Tier Locked: Requires {:?}", job.required_tier);
+                        println!("{}", msg);
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                }
+            }
+            UiDomainAction::SelectAndSpawnVehicle(idx) => {
+                self.garage_selected_idx = idx;
+                self.apply_garage_selection(idx);
+                self.ui_state = AppUiState::InGame;
+            }
+            UiDomainAction::ToggleSelectedSetting(idx) => {
+                self.settings_selected_idx = idx;
+                match idx {
+                    0 => {
+                        self.use_metric_units = !self.use_metric_units;
+                        let msg = format!(
+                            "Speed Units: {}",
+                            if self.use_metric_units {
+                                "KM/H (Metric)"
+                            } else {
+                                "MPH (Imperial)"
+                            }
+                        );
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                    1 => {
+                        let next_preset = match self.config.preset_level {
+                            GraphicsPresetLevel::Low => GraphicsPresetLevel::Medium,
+                            GraphicsPresetLevel::Medium => GraphicsPresetLevel::High,
+                            GraphicsPresetLevel::High => GraphicsPresetLevel::Adaptive,
+                            GraphicsPresetLevel::Adaptive => GraphicsPresetLevel::Low,
+                        };
+                        self.config.preset_level = next_preset;
+                        if let Some(ref mut renderer) = self.renderer {
+                            renderer.settings = GraphicsSettings::from_preset(next_preset);
+                        }
+                        let msg = format!("Graphics Preset: {:?}", next_preset);
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                    2 => {
+                        self.vehicle_cam.cycle_perspective();
+                        let msg = format!("Camera Perspective: {:?}", self.vehicle_cam.perspective);
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                    3 => {
+                        self.show_debug_overlay = !self.show_debug_overlay;
+                        let msg = format!(
+                            "Developer Overlay: {}",
+                            if self.show_debug_overlay { "ON" } else { "OFF" }
+                        );
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                    4 => {
+                        self.show_hud = !self.show_hud;
+                        let msg =
+                            format!("HUD Display: {}", if self.show_hud { "ON" } else { "OFF" });
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
+                    _ => {}
+                }
+            }
+            UiDomainAction::WarpToSelectedCity(idx) => {
+                let cities = all_us_cities();
+                if idx < cities.len() {
+                    self.catalog_selected_idx = idx;
+                    let city = &cities[idx];
+                    self.config.region_id = city.id.to_string();
+                    let _ = self.load_region(city.id);
+                    self.config.is_drive = true;
+                    self.ui_state = AppUiState::InGame;
+                    let msg = format!(
+                        "✈️ Warped to {} ({}) — Anchor: {}",
+                        city.name, city.state, city.anchor_landmark_name
+                    );
+                    println!("{}", msg);
+                    self.status_notification = Some((msg, Instant::now()));
+                }
+            }
+        }
+
+        if let Some(ref window) = self.window {
+            window.set_cursor_visible(self.ui_state != AppUiState::InGame);
+        }
+    }
+
     /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
     pub fn perform_roadside_recovery(&mut self) {
         let ground_y = if let Some(ref gq) = self.ground_query {
@@ -833,7 +1077,8 @@ impl InteractiveViewerApp {
             let (raw, dem, meta) = load_authentic_city(city.id)?;
             let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
             let landmark = Landmark::from_us_city(city);
-            if !dir.join("chunks.db").exists() {
+            let package_name = format!("{}_package", meta.region_id);
+            if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
                 println!(
                     "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
                     meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
@@ -842,7 +1087,8 @@ impl InteractiveViewerApp {
                 let options = CompilerOptions {
                     chunk_size_meters: 500.0,
                     terrain_grid_resolution: 16,
-                    package_name: format!("{}_package", meta.region_id),
+                    package_name: package_name.clone(),
+                    source_asset_sha256: Some(meta.source_osm_sha256.clone()),
                     ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
@@ -1060,22 +1306,29 @@ impl InteractiveViewerApp {
             )
         } else {
             let dir = resolve_world_package_dir("san_francisco");
-            let (raw, dem) = match load_authentic_city("san-francisco") {
-                Ok((dataset, dem, _)) => (dataset, dem),
+            let (raw, dem, sf_source_hash) = match load_authentic_city("san-francisco") {
+                Ok((dataset, dem, meta)) => (dataset, dem, Some(meta.source_osm_sha256)),
                 Err(e) => {
                     eprintln!("⚠️ Warning: Failed to load authentic San Francisco data ({:?}), using fallback", e);
                     (
                         create_san_francisco_dataset(),
                         DemGrid::create_san_francisco_coastal_dem(64, 64),
+                        None,
                     )
                 }
             };
-            if !dir.join("chunks.db").exists() {
+            if !is_world_package_cache_valid(
+                &dir,
+                "san_francisco_package",
+                sf_source_hash.as_deref(),
+            ) {
                 println!("📦 Compiling authentic San Francisco Downtown & Waterfront package...");
                 let (val, _) = validate_dataset(&raw);
                 let options = CompilerOptions {
                     chunk_size_meters: 500.0,
                     terrain_grid_resolution: 16,
+                    package_name: "san_francisco_package".to_string(),
+                    source_asset_sha256: sf_source_hash,
                     ..Default::default()
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
@@ -1419,6 +1672,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                 }
             };
             self.window = Some(window.clone());
+            window.set_cursor_visible(self.ui_state != AppUiState::InGame);
 
             // 1. Initialize wgpu Surface & Adapter
             let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -1621,16 +1875,217 @@ impl ApplicationHandler for InteractiveViewerApp {
             }
 
             WindowEvent::MouseInput { state, button, .. } => {
-                if button == MouseButton::Right || button == MouseButton::Left {
-                    self.mouse_drag_active = state == ElementState::Pressed;
-                    if !self.mouse_drag_active {
-                        self.last_cursor_pos = None;
+                if self.ui_state == AppUiState::InGame {
+                    if button == MouseButton::Right || button == MouseButton::Left {
+                        self.mouse_drag_active = state == ElementState::Pressed;
+                        if !self.mouse_drag_active {
+                            self.last_cursor_pos = None;
+                        }
+                    }
+                } else if button == MouseButton::Left {
+                    match state {
+                        ElementState::Pressed => {
+                            self.mouse_left_down = true;
+                        }
+                        ElementState::Released => {
+                            if self.mouse_left_down {
+                                self.mouse_left_down = false;
+                                let (screen_w, screen_h) =
+                                    if let Some(ref config) = self.surface_config {
+                                        (config.width as f32, config.height as f32)
+                                    } else {
+                                        (1920.0, 1080.0)
+                                    };
+                                if let Some((px, py)) = self.cursor_pos {
+                                    match self.ui_state {
+                                        AppUiState::StartScreen => {
+                                            let layout =
+                                                StartScreenLayout::compute(screen_w, screen_h, 7);
+                                            match layout.hit_test(px, py) {
+                                                Some(StartScreenHit::Option(idx)) => {
+                                                    self.start_menu_selected_idx = idx;
+                                                    let action = match idx {
+                                                        0 => UiDomainAction::ContinueCareer,
+                                                        1 => UiDomainAction::FreeRoam,
+                                                        2 => UiDomainAction::OpenContracts,
+                                                        3 => UiDomainAction::OpenGeography,
+                                                        4 => UiDomainAction::OpenGarage,
+                                                        5 => UiDomainAction::OpenSettings,
+                                                        6 => UiDomainAction::ExitApplication,
+                                                        _ => UiDomainAction::FreeRoam,
+                                                    };
+                                                    self.dispatch_ui_action(
+                                                        action,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(StartScreenHit::QuickRoam) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::FreeRoam,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(StartScreenHit::Close) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::ExitApplication,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::PauseMenu => {
+                                            let layout =
+                                                PauseMenuLayout::compute(screen_w, screen_h, 10);
+                                            match layout.hit_test(px, py) {
+                                                Some(PauseMenuHit::Option(idx)) => {
+                                                    self.pause_menu_selected_idx = idx;
+                                                    let action = match idx {
+                                                        0 => UiDomainAction::ResumeSimulation,
+                                                        1 => UiDomainAction::OpenContracts,
+                                                        2 => UiDomainAction::OpenGarage,
+                                                        3 => UiDomainAction::OpenGeography,
+                                                        4 => UiDomainAction::RoadsideRecovery,
+                                                        5 => UiDomainAction::QuicksaveProgress,
+                                                        6 => UiDomainAction::QuickloadProgress,
+                                                        7 => UiDomainAction::OpenSettings,
+                                                        8 => UiDomainAction::ReturnToStartScreen,
+                                                        9 => UiDomainAction::ExitApplication,
+                                                        _ => UiDomainAction::ResumeSimulation,
+                                                    };
+                                                    self.dispatch_ui_action(
+                                                        action,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(PauseMenuHit::Resume)
+                                                | Some(PauseMenuHit::Close) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::ResumeSimulation,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::JobBrowser => {
+                                            let available = JobCatalogGenerator::jobs_for_region(
+                                                &self.config.region_id,
+                                            );
+                                            let layout = JobBrowserLayout::compute(
+                                                screen_w,
+                                                screen_h,
+                                                self.job_browser_selected_idx,
+                                                available.len(),
+                                            );
+                                            match layout.hit_test(px, py) {
+                                                Some(JobBrowserHit::JobItem(idx)) => {
+                                                    self.job_browser_selected_idx = idx;
+                                                }
+                                                Some(JobBrowserHit::AcceptContract) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::AcceptSelectedContract,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(JobBrowserHit::Back) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::CancelOrBack,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::GarageSelect => {
+                                            let layout =
+                                                GarageLayout::compute(screen_w, screen_h, 10);
+                                            match layout.hit_test(px, py) {
+                                                Some(GarageHit::VehicleItem(idx)) => {
+                                                    self.garage_selected_idx = idx;
+                                                }
+                                                Some(GarageHit::SelectAndSpawn) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::SelectAndSpawnVehicle(
+                                                            self.garage_selected_idx,
+                                                        ),
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(GarageHit::Back) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::CancelOrBack,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::SettingsMenu => {
+                                            let layout =
+                                                SettingsLayout::compute(screen_w, screen_h, 5);
+                                            match layout.hit_test(px, py) {
+                                                Some(SettingsHit::SettingItem(idx)) => {
+                                                    self.settings_selected_idx = idx;
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::ToggleSelectedSetting(idx),
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(SettingsHit::Back) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::CancelOrBack,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::CatalogModal => {
+                                            let total = all_us_cities().len();
+                                            let layout = CatalogLayout::compute(
+                                                screen_w,
+                                                screen_h,
+                                                self.catalog_selected_idx,
+                                                total,
+                                            );
+                                            match layout.hit_test(px, py) {
+                                                Some(CatalogHit::CityItem(idx)) => {
+                                                    self.catalog_selected_idx = idx;
+                                                }
+                                                Some(CatalogHit::WarpCity) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::WarpToSelectedCity(
+                                                            self.catalog_selected_idx,
+                                                        ),
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                Some(CatalogHit::Back) => {
+                                                    self.dispatch_ui_action(
+                                                        UiDomainAction::CancelOrBack,
+                                                        Some(event_loop),
+                                                    );
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             WindowEvent::CursorMoved { position, .. } => {
-                if self.mouse_drag_active {
+                let px = position.x as f32;
+                let py = position.y as f32;
+                self.cursor_pos = Some((px, py));
+
+                // 100% Camera Isolation: do NOT rotate camera when interacting with menus!
+                if self.ui_state == AppUiState::InGame && self.mouse_drag_active {
                     if let Some((prev_x, prev_y)) = self.last_cursor_pos {
                         let dx = (position.x - prev_x) as f32;
                         let dy = (position.y - prev_y) as f32;
@@ -1647,15 +2102,76 @@ impl ApplicationHandler for InteractiveViewerApp {
                     MouseScrollDelta::LineDelta(_, y) => y as f64 * 8.0,
                     MouseScrollDelta::PixelDelta(pos) => pos.y * 0.1,
                 };
-                if self.camera_ctrl.mode == CameraMode::Orbit {
-                    self.camera_ctrl.orbit_zoom(
-                        -scroll_y * 4.0,
-                        self.region_resources.as_ref().map(|r| &r.dem),
-                    );
-                } else if self.camera_ctrl.mode == CameraMode::Fly
-                    || self.camera_ctrl.mode == CameraMode::Free
-                {
-                    self.camera_ctrl.move_vertical(scroll_y);
+                if self.ui_state == AppUiState::InGame {
+                    if self.camera_ctrl.mode == CameraMode::Orbit {
+                        self.camera_ctrl.orbit_zoom(
+                            -scroll_y * 4.0,
+                            self.region_resources.as_ref().map(|r| &r.dem),
+                        );
+                    } else if self.camera_ctrl.mode == CameraMode::Fly
+                        || self.camera_ctrl.mode == CameraMode::Free
+                    {
+                        self.camera_ctrl.move_vertical(scroll_y);
+                    }
+                } else if scroll_y < -1.0 {
+                    // Scroll down through menu items
+                    match self.ui_state {
+                        AppUiState::StartScreen => {
+                            self.start_menu_selected_idx =
+                                (self.start_menu_selected_idx + 1).min(6);
+                        }
+                        AppUiState::PauseMenu => {
+                            self.pause_menu_selected_idx =
+                                (self.pause_menu_selected_idx + 1).min(9);
+                        }
+                        AppUiState::JobBrowser => {
+                            let total =
+                                JobCatalogGenerator::jobs_for_region(&self.config.region_id)
+                                    .len()
+                                    .max(1);
+                            self.job_browser_selected_idx =
+                                (self.job_browser_selected_idx + 1).min(total - 1);
+                        }
+                        AppUiState::GarageSelect => {
+                            self.garage_selected_idx = (self.garage_selected_idx + 1).min(9);
+                        }
+                        AppUiState::SettingsMenu => {
+                            self.settings_selected_idx = (self.settings_selected_idx + 1).min(4);
+                        }
+                        AppUiState::CatalogModal => {
+                            let total = all_us_cities().len();
+                            self.catalog_selected_idx =
+                                (self.catalog_selected_idx + 1).min(total.saturating_sub(1));
+                        }
+                        _ => {}
+                    }
+                } else if scroll_y > 1.0 {
+                    // Scroll up through menu items
+                    match self.ui_state {
+                        AppUiState::StartScreen => {
+                            self.start_menu_selected_idx =
+                                self.start_menu_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::PauseMenu => {
+                            self.pause_menu_selected_idx =
+                                self.pause_menu_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::JobBrowser => {
+                            self.job_browser_selected_idx =
+                                self.job_browser_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::GarageSelect => {
+                            self.garage_selected_idx = self.garage_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::SettingsMenu => {
+                            self.settings_selected_idx =
+                                self.settings_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::CatalogModal => {
+                            self.catalog_selected_idx = self.catalog_selected_idx.saturating_sub(1);
+                        }
+                        _ => {}
+                    }
                 }
             }
 
@@ -1686,46 +2202,24 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Enter | KeyCode::Space => {
-                                    match self.start_menu_selected_idx {
-                                        0 => {
-                                            // Continue Career
-                                            let _ = self.perform_quickload();
-                                            self.config.is_drive = true;
-                                            self.ui_state = AppUiState::InGame;
-                                        }
-                                        1 => {
-                                            // Free Roam Simulation
-                                            self.config.is_drive = true;
-                                            self.ui_state = AppUiState::InGame;
-                                        }
-                                        2 => {
-                                            // Career Contracts
-                                            self.ui_state = AppUiState::JobBrowser;
-                                        }
-                                        3 => {
-                                            // Regional Geography
-                                            self.ui_state = AppUiState::CatalogModal;
-                                        }
-                                        4 => {
-                                            // Vehicle Fleet Garage
-                                            self.ui_state = AppUiState::GarageSelect;
-                                        }
-                                        5 => {
-                                            // Settings & Preferences
-                                            self.ui_state = AppUiState::SettingsMenu;
-                                        }
-                                        6 => {
-                                            // Exit to Desktop
-                                            println!("Exit selected from Start Screen.");
-                                            event_loop.exit();
-                                        }
-                                        _ => {}
-                                    }
+                                    let action = match self.start_menu_selected_idx {
+                                        0 => UiDomainAction::ContinueCareer,
+                                        1 => UiDomainAction::FreeRoam,
+                                        2 => UiDomainAction::OpenContracts,
+                                        3 => UiDomainAction::OpenGeography,
+                                        4 => UiDomainAction::OpenGarage,
+                                        5 => UiDomainAction::OpenSettings,
+                                        6 => UiDomainAction::ExitApplication,
+                                        _ => UiDomainAction::FreeRoam,
+                                    };
+                                    self.dispatch_ui_action(action, Some(event_loop));
                                     return;
                                 }
                                 KeyCode::Escape => {
-                                    println!("Escape pressed on Start Screen: exiting Real Earth.");
-                                    event_loop.exit();
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::CancelOrBack,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 _ => {}
@@ -1746,31 +2240,27 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Escape => {
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::ResumeSimulation,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 KeyCode::Enter | KeyCode::Space => {
-                                    match self.pause_menu_selected_idx {
-                                        0 => self.ui_state = AppUiState::InGame,
-                                        1 => self.ui_state = AppUiState::JobBrowser,
-                                        2 => self.ui_state = AppUiState::GarageSelect,
-                                        3 => self.ui_state = AppUiState::CatalogModal,
-                                        4 => {
-                                            self.perform_roadside_recovery();
-                                            self.ui_state = AppUiState::InGame;
-                                        }
-                                        5 => self.perform_quicksave(),
-                                        6 => {
-                                            let _ = self.perform_quickload();
-                                        }
-                                        7 => self.ui_state = AppUiState::SettingsMenu,
-                                        8 => self.ui_state = AppUiState::StartScreen,
-                                        9 => {
-                                            println!("Exit selected from Pause Menu.");
-                                            event_loop.exit();
-                                        }
-                                        _ => {}
-                                    }
+                                    let action = match self.pause_menu_selected_idx {
+                                        0 => UiDomainAction::ResumeSimulation,
+                                        1 => UiDomainAction::OpenContracts,
+                                        2 => UiDomainAction::OpenGarage,
+                                        3 => UiDomainAction::OpenGeography,
+                                        4 => UiDomainAction::RoadsideRecovery,
+                                        5 => UiDomainAction::QuicksaveProgress,
+                                        6 => UiDomainAction::QuickloadProgress,
+                                        7 => UiDomainAction::OpenSettings,
+                                        8 => UiDomainAction::ReturnToStartScreen,
+                                        9 => UiDomainAction::ExitApplication,
+                                        _ => UiDomainAction::ResumeSimulation,
+                                    };
+                                    self.dispatch_ui_action(action, Some(event_loop));
                                     return;
                                 }
                                 _ => {}
@@ -1794,38 +2284,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Enter => {
-                                    if self.job_browser_selected_idx < available.len() {
-                                        let job = available[self.job_browser_selected_idx].clone();
-                                        let can_accept =
-                                            self.player_profile.career_tier(job.career)
-                                                >= job.required_tier;
-                                        if can_accept {
-                                            let mut accepted = job;
-                                            let _ = accepted
-                                                .accept(&self.player_profile, &self.gameplay_bus);
-                                            let label = format!(
-                                                "📋 Accepted Contract: {} (Payout: ${:.2})",
-                                                accepted.title, accepted.base_payout
-                                            );
-                                            println!("{}", label);
-                                            self.active_job = Some(accepted);
-                                            self.status_notification =
-                                                Some((label, Instant::now()));
-                                            self.config.is_drive = true;
-                                            self.ui_state = AppUiState::InGame;
-                                        } else {
-                                            let msg = format!(
-                                                "🔒 Career Tier Locked: Requires {:?}",
-                                                job.required_tier
-                                            );
-                                            println!("{}", msg);
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                    }
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::AcceptSelectedContract,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 KeyCode::Escape | KeyCode::KeyJ | KeyCode::Tab => {
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::CancelOrBack,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 _ => {}
@@ -1846,12 +2315,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Enter => {
-                                    self.apply_garage_selection(self.garage_selected_idx);
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::SelectAndSpawnVehicle(
+                                            self.garage_selected_idx,
+                                        ),
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 KeyCode::Escape | KeyCode::KeyG => {
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::CancelOrBack,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 _ => {}
@@ -1872,72 +2348,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Enter => {
-                                    match self.settings_selected_idx {
-                                        0 => {
-                                            self.use_metric_units = !self.use_metric_units;
-                                            let msg = format!(
-                                                "Speed Units: {}",
-                                                if self.use_metric_units {
-                                                    "KM/H (Metric)"
-                                                } else {
-                                                    "MPH (Imperial)"
-                                                }
-                                            );
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                        1 => {
-                                            let next_preset = match self.config.preset_level {
-                                                GraphicsPresetLevel::Low => {
-                                                    GraphicsPresetLevel::Medium
-                                                }
-                                                GraphicsPresetLevel::Medium => {
-                                                    GraphicsPresetLevel::High
-                                                }
-                                                GraphicsPresetLevel::High => {
-                                                    GraphicsPresetLevel::Adaptive
-                                                }
-                                                GraphicsPresetLevel::Adaptive => {
-                                                    GraphicsPresetLevel::Low
-                                                }
-                                            };
-                                            self.config.preset_level = next_preset;
-                                            if let Some(ref mut renderer) = self.renderer {
-                                                renderer.settings =
-                                                    GraphicsSettings::from_preset(next_preset);
-                                            }
-                                            let msg = format!("Graphics Preset: {:?}", next_preset);
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                        2 => {
-                                            self.vehicle_cam.cycle_perspective();
-                                            let msg = format!(
-                                                "Camera Perspective: {:?}",
-                                                self.vehicle_cam.perspective
-                                            );
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                        3 => {
-                                            self.show_debug_overlay = !self.show_debug_overlay;
-                                            let msg = format!(
-                                                "Developer Overlay: {}",
-                                                if self.show_debug_overlay { "ON" } else { "OFF" }
-                                            );
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                        4 => {
-                                            self.show_hud = !self.show_hud;
-                                            let msg = format!(
-                                                "HUD Display: {}",
-                                                if self.show_hud { "ON" } else { "OFF" }
-                                            );
-                                            self.status_notification = Some((msg, Instant::now()));
-                                        }
-                                        _ => {}
-                                    }
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::ToggleSelectedSetting(
+                                            self.settings_selected_idx,
+                                        ),
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 KeyCode::Escape | KeyCode::KeyO => {
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::CancelOrBack,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 _ => {}
@@ -1958,24 +2381,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     return;
                                 }
                                 KeyCode::Enter => {
-                                    let cities = all_us_cities();
-                                    if self.catalog_selected_idx < cities.len() {
-                                        let city = &cities[self.catalog_selected_idx];
-                                        self.config.region_id = city.id.to_string();
-                                        let _ = self.load_region(city.id);
-                                        self.config.is_drive = true;
-                                        self.ui_state = AppUiState::InGame;
-                                        let msg = format!(
-                                            "✈️ Warped to {} ({}) — Anchor: {}",
-                                            city.name, city.state, city.anchor_landmark_name
-                                        );
-                                        println!("{}", msg);
-                                        self.status_notification = Some((msg, Instant::now()));
-                                    }
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::WarpToSelectedCity(
+                                            self.catalog_selected_idx,
+                                        ),
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 KeyCode::Escape | KeyCode::KeyU | KeyCode::F2 => {
-                                    self.ui_state = AppUiState::InGame;
+                                    self.dispatch_ui_action(
+                                        UiDomainAction::CancelOrBack,
+                                        Some(event_loop),
+                                    );
                                     return;
                                 }
                                 _ => {}
@@ -3298,14 +3716,42 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 ),
                                 ("EXIT TO DESKTOP", "Quit the planetary simulation"),
                             ];
-                            hud.add_start_screen(
+                            let layout =
+                                StartScreenLayout::compute(width_f, height_f, options.len());
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_opt = hit.and_then(|h| {
+                                if let StartScreenHit::Option(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn =
+                                hit.filter(|h| matches!(h, StartScreenHit::QuickRoam));
+                            let pressed_opt = if self.mouse_left_down {
+                                hovered_opt
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_start_screen_interactive(
                                 width_f,
                                 height_f,
                                 self.start_menu_selected_idx,
+                                hovered_opt,
+                                pressed_opt,
+                                hovered_btn,
+                                pressed_btn,
                                 &options,
                                 &self.player_profile.name,
                                 self.player_profile.wallet.balance(),
                                 self.player_profile.completed_jobs as u32,
+                                Self::check_saved_game_exists(),
                             );
                         }
 
@@ -3322,10 +3768,37 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 "RETURN TO TITLE SCREEN",
                                 "EXIT TO DESKTOP",
                             ];
-                            hud.add_pause_menu(
+                            let layout = PauseMenuLayout::compute(width_f, height_f, options.len());
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_opt = hit.and_then(|h| {
+                                if let PauseMenuHit::Option(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn = hit.filter(|h| {
+                                matches!(h, PauseMenuHit::Resume | PauseMenuHit::Close)
+                            });
+                            let pressed_opt = if self.mouse_left_down {
+                                hovered_opt
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_pause_menu_interactive(
                                 width_f,
                                 height_f,
                                 self.pause_menu_selected_idx,
+                                hovered_opt,
+                                pressed_opt,
+                                hovered_btn,
+                                pressed_btn,
                                 &options,
                                 res.region_name,
                             );
@@ -3371,10 +3844,43 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     )
                                 })
                                 .collect();
-                            hud.add_job_browser_modal(
+
+                            let layout = JobBrowserLayout::compute(
                                 width_f,
                                 height_f,
                                 self.job_browser_selected_idx,
+                                jobs_tuples.len(),
+                            );
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_idx = hit.and_then(|h| {
+                                if let JobBrowserHit::JobItem(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn = hit.filter(|h| {
+                                matches!(h, JobBrowserHit::AcceptContract | JobBrowserHit::Back)
+                            });
+                            let pressed_idx = if self.mouse_left_down {
+                                hovered_idx
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_job_browser_modal_interactive(
+                                width_f,
+                                height_f,
+                                self.job_browser_selected_idx,
+                                hovered_idx,
+                                pressed_idx,
+                                hovered_btn,
+                                pressed_btn,
                                 &jobs_tuples,
                                 self.active_job.as_ref().map(|j| j.id.as_str()),
                             );
@@ -3478,10 +3984,37 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     self.active_transport_mode == ActiveTransportMode::Aviation,
                                 ),
                             ];
-                            hud.add_garage_modal(
+                            let layout = GarageLayout::compute(width_f, height_f, vehicles.len());
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_idx = hit.and_then(|h| {
+                                if let GarageHit::VehicleItem(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn = hit.filter(|h| {
+                                matches!(h, GarageHit::SelectAndSpawn | GarageHit::Back)
+                            });
+                            let pressed_idx = if self.mouse_left_down {
+                                hovered_idx
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_garage_modal_interactive(
                                 width_f,
                                 height_f,
                                 self.garage_selected_idx,
+                                hovered_idx,
+                                pressed_idx,
+                                hovered_btn,
+                                pressed_btn,
                                 &vehicles,
                             );
                         }
@@ -3538,10 +4071,35 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     "Master heads-up display overlay",
                                 ),
                             ];
-                            hud.add_settings_modal(
+                            let layout = SettingsLayout::compute(width_f, height_f, settings.len());
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_idx = hit.and_then(|h| {
+                                if let SettingsHit::SettingItem(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn = hit.filter(|h| matches!(h, SettingsHit::Back));
+                            let pressed_idx = if self.mouse_left_down {
+                                hovered_idx
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_settings_modal_interactive(
                                 width_f,
                                 height_f,
                                 self.settings_selected_idx,
+                                hovered_idx,
+                                pressed_idx,
+                                hovered_btn,
+                                pressed_btn,
                                 &settings,
                             );
                         }
@@ -3567,10 +4125,41 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         )
                                     })
                                     .collect();
-                            hud.add_city_catalog_modal(
+                            let layout = CatalogLayout::compute(
                                 width_f,
                                 height_f,
                                 self.catalog_selected_idx,
+                                cities_data.len(),
+                            );
+                            let hit = self.cursor_pos.and_then(|(px, py)| layout.hit_test(px, py));
+                            let hovered_idx = hit.and_then(|h| {
+                                if let CatalogHit::CityItem(i) = h {
+                                    Some(i)
+                                } else {
+                                    None
+                                }
+                            });
+                            let hovered_btn = hit
+                                .filter(|h| matches!(h, CatalogHit::WarpCity | CatalogHit::Back));
+                            let pressed_idx = if self.mouse_left_down {
+                                hovered_idx
+                            } else {
+                                None
+                            };
+                            let pressed_btn = if self.mouse_left_down {
+                                hovered_btn
+                            } else {
+                                None
+                            };
+
+                            hud.add_city_catalog_modal_interactive(
+                                width_f,
+                                height_f,
+                                self.catalog_selected_idx,
+                                hovered_idx,
+                                pressed_idx,
+                                hovered_btn,
+                                pressed_btn,
                                 &cities_data,
                             );
                         }

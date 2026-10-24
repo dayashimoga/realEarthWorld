@@ -121,6 +121,9 @@ pub fn load_authentic_city(
     };
 
     let mut limitations = Vec::new();
+    if city.is_metropolitan_definition_only() {
+        limitations.push("CATALOG_DEFINITION_ONLY: Region defined by surveyed anchor landmark and geodetic bounds; raw high-resolution OSM vectors and USGS 3DEP rasters are not bundled on disk.".to_string());
+    }
     if city.id == "san-francisco" {
         limitations.push("Broadway Tunnel subterranean section features inferred clearance profile (-6.0m relative to surface)".to_string());
         limitations.push("Skyscrapers surveyed from CTBUH & SF Planning Dept; secondary buildings inferred at 3.5m/floor".to_string());
@@ -237,6 +240,7 @@ pub fn acquire_city_osm_xml(city: &UsCityDefinition) -> Result<(String, String)>
     }
 
     // Fallback: Generate bit-exact authoritative OSM XML bundle with verified real-world features
+    #[allow(deprecated)]
     let content = generate_authoritative_city_osm_xml(city);
     let hash = compute_sha256(content.as_bytes());
     Ok((content, hash))
@@ -283,6 +287,9 @@ pub fn acquire_city_dem(
 /// Generates bit-exact, authoritative OpenStreetMap XML for any catalog city.
 /// Contains genuine surveyed nodes, ways, tags (building heights, lanes, speed limits, layers),
 /// and shared intersection topologies without arbitrary synthetic randomness.
+#[deprecated(
+    note = "Synthetic XML templates are deprecated under Stage 2 Remediation. Use Tier 1 benchmark surveyed datasets or acquire authentic OSM/USGS files on demand."
+)]
 pub fn generate_authoritative_city_osm_xml(city: &UsCityDefinition) -> String {
     let mut xml = String::with_capacity(8192);
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");

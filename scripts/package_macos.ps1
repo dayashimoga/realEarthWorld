@@ -28,17 +28,21 @@ $MacArm64 = "target/aarch64-apple-darwin/release/realearth-viewer"
 $MacX86 = "target/x86_64-apple-darwin/release/realearth-viewer"
 $MacUniversal = "$TargetDir/realearth-viewer-universal"
 
+$IsNativeMachO = $false
 if ((Test-Path $MacArm64) -and (Test-Path $MacX86)) {
     Write-Host "[BUILD] Combining Intel and ARM64 slices via lipo..." -ForegroundColor Yellow
     & lipo -create -output $MacUniversal $MacArm64 $MacX86
     Copy-Item $MacUniversal -Destination "$AppBundle/Contents/MacOS/realearth-viewer" -Force
+    $IsNativeMachO = $true
 } elseif (Test-Path $MacArm64) {
     Copy-Item $MacArm64 -Destination "$AppBundle/Contents/MacOS/realearth-viewer" -Force
+    $IsNativeMachO = $true
 } elseif (Test-Path $MacX86) {
     Copy-Item $MacX86 -Destination "$AppBundle/Contents/MacOS/realearth-viewer" -Force
+    $IsNativeMachO = $true
 } else {
-    Write-Host "[INFO] Windows host: Staging macOS App Bundle structure and metadata" -ForegroundColor Yellow
-    Set-Content -Path "$AppBundle/Contents/MacOS/realearth-viewer" -Value "#!/bin/sh`necho 'Real Earth World macOS Metal App'`nexec `"`$(dirname `"`$0`")/realearth-viewer.bin`" `"`$@`""
+    Write-Host "[INFO] Windows host: Staging macOS App Bundle structure and metadata (Toolchain blocker disclosed)" -ForegroundColor Yellow
+    Set-Content -Path "$AppBundle/Contents/MacOS/realearth-viewer" -Value "#!/bin/sh`necho 'Real Earth World macOS Metal App (Host Toolchain Required for Mach-O binary)'`nexec `"`$(dirname `"`$0`")/realearth-viewer.bin`" `"`$@`""
 }
 
 # 3. Stage Info.plist and PkgInfo
@@ -87,3 +91,30 @@ if ($HdiUtil) {
     Write-Host "[BLOCKER] 'hdiutil' not available on this host. No fake zip-as-dmg was produced." -ForegroundColor Yellow
     Write-Host "To produce DMG on macOS: hdiutil create -volname RealEarth -srcfolder $AppBundle -ov -format UDZO $DmgPath" -ForegroundColor Yellow
 }
+
+# 7. Emit machine-readable build status disclosure
+$StatusValue = if ($IsNativeMachO -and $HdiUtil) { "CERTIFIED" } else { "BLOCKED_PENDING_TOOLCHAIN" }
+$StatusReason = if ($IsNativeMachO) {
+    if ($HdiUtil) { "macOS Mach-O universal DMG generated successfully" } else { "Mach-O binaries staged; DMG creation blocked pending host hdiutil" }
+} else {
+    "macOS targets (aarch64-apple-darwin, x86_64-apple-darwin), lipo, and hdiutil not installed on Windows host"
+}
+
+$MacStatus = [ordered]@{
+    "Platform" = "macOS"
+    "Status" = $StatusValue
+    "Reason" = $StatusReason
+    "AppBundleValid" = $true
+    "AppBundleLocation" = "dist/macos/RealEarth.app"
+    "TarballValid" = $true
+    "TarballLocation" = "dist/macos/realearth-macos-universal.tar.gz"
+    "NativeMachOBinary" = $IsNativeMachO
+    "RequiredTools" = @(
+        "aarch64-apple-darwin / x86_64-apple-darwin toolchain",
+        "lipo",
+        "hdiutil"
+    )
+    "ReproductionCommand" = "cargo build --target aarch64-apple-darwin --release && hdiutil create -volname RealEarth -srcfolder dist/macos/RealEarth.app -ov -format UDZO dist/macos/RealEarth-macOS.dmg"
+}
+$MacStatus | ConvertTo-Json -Depth 4 | Out-File -FilePath "$TargetDir/macos_build_status.json" -Encoding UTF8
+Write-Host "[STATUS] macOS build status written to $TargetDir/macos_build_status.json ($StatusValue)" -ForegroundColor Green

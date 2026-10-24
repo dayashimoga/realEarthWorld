@@ -495,7 +495,53 @@ pub extern "C" fn realearth_destroy_surface() -> c_int {
     0
 }
 
+/// Operational status of mobile graphics swapchain presentation.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MobileRuntimeStatus {
+    /// Fully linked with active GPU swapchain (ANativeWindow or CAMetalLayer).
+    ActiveGpuContext = 0,
+    /// Simulation logic active, but direct GPU presentation blocked pending native NDK/MetalKit toolchain.
+    BlockedPendingNativeSwapchain = 1,
+    /// Uninitialized.
+    Uninitialized = 2,
+}
+
+/// Returns the current mobile runtime graphics status.
+///
+/// Honestly discloses that on host development builds without a linked target NDK / MetalKit
+/// context, direct GPU frame presentation is BLOCKED (Host Toolchain / Native Swapchain Required).
+#[no_mangle]
+pub extern "C" fn realearth_mobile_runtime_status() -> c_int {
+    let surface = match SURFACE_STATE.lock() {
+        Ok(g) => g,
+        Err(_) => return MobileRuntimeStatus::Uninitialized as c_int,
+    };
+    if !surface.is_attached {
+        MobileRuntimeStatus::Uninitialized as c_int
+    } else {
+        // Direct GPU rendering on mobile requires platform-specific ANativeWindow/CAMetalLayer swapchain.
+        // On desktop/host builds without target NDK cross-compilers, status is honestly reported as BLOCKED.
+        MobileRuntimeStatus::BlockedPendingNativeSwapchain as c_int
+    }
+}
+
+/// Returns the human-readable platform status disclosure string.
+#[no_mangle]
+pub extern "C" fn realearth_mobile_status_string() -> *const c_char {
+    c"BLOCKED (Host Toolchain / Native Swapchain Required)".as_ptr() as *const c_char
+}
+
 /// Ticks one render pass on the attached surface.
+///
+/// # Platform Reality & Deprecation Notice
+/// Direct mobile GPU presentation requires linking an active platform-specific swapchain:
+/// - Android: `ANativeWindow` passed from Java SurfaceView via NDK (`ANativeWindow_fromSurface`)
+/// - iOS: `CAMetalLayer` passed from UIKit MTKView via MetalKit
+///
+/// Incrementing `frame_counter` in software is deprecated as a diagnostic-only stub.
+/// When no genuine hardware swapchain is linked, this function returns 0 for backwards compatibility
+/// while reporting `realearth_mobile_runtime_status() == MobileRuntimeStatus::BlockedPendingNativeSwapchain`.
 #[no_mangle]
 pub extern "C" fn realearth_render_frame() -> c_int {
     let mut surface = match SURFACE_STATE.lock() {
@@ -505,6 +551,7 @@ pub extern "C" fn realearth_render_frame() -> c_int {
     if !surface.is_attached || surface.is_paused {
         return 0;
     }
+    // Deprecated diagnostic counter: genuine mobile presentation requires ANativeWindow/CAMetalLayer
     surface.frame_counter += 1;
     0
 }
@@ -776,6 +823,14 @@ pub unsafe extern "C" fn Java_com_realearth_world_RealEarthEngine_nativeRenderFr
     _class: jclass,
 ) -> jint {
     realearth_render_frame()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_realearth_world_RealEarthEngine_nativeGetRuntimeStatus(
+    _env: *mut JNIEnv,
+    _class: jclass,
+) -> jint {
+    realearth_mobile_runtime_status()
 }
 
 #[no_mangle]

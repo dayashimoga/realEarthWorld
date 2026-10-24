@@ -16,7 +16,11 @@ pub use city_interactions_mesh::{
     TrafficSignalVisualState,
 };
 pub use culling::{Frustum, FrustumPlane};
-pub use hud::{HudMesh, HudVertex};
+pub use hud::{
+    CatalogHit, CatalogLayout, GarageHit, GarageLayout, HudMesh, HudVertex, JobBrowserHit,
+    JobBrowserLayout, PauseMenuHit, PauseMenuLayout, SettingsHit, SettingsLayout, StartScreenHit,
+    StartScreenLayout, UiButtonVisualState, UiRect,
+};
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};
 pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
 pub use shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};

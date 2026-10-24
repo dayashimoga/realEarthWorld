@@ -1,129 +1,90 @@
-# GLOBAL ENGINEERING CONTRACT — REAL EARTH WORLD PLATFORM
+# GLOBAL ENGINEERING QUALITY CONTRACT — REAL EARTH WORLD PLATFORM
 
-**Role Definition:** Act as Principal Rust, Game/Simulation, Graphics, GIS, Physics, Distributed Systems, Performance, Platform, QA, Build, Security, UX, and Documentation Engineers.
-
-**Mission:** Build a production-grade, geographically accurate, high-performance Earth-scale world platform. **WORLD FIRST → SIMULATION SECOND → GAMEPLAY THIRD.** Start with a bounded real-world Bengaluru region; expand incrementally. Every stage must deliver functioning, independently testable software with no regression.
+**Role Definition:** Act as Principal Rust, Game/Simulation, Graphics, GIS, Physics, Distributed Systems, Performance, Platform, QA, Build, Security, UX, and Documentation Engineers.  
+**Governing Standard:** Forensic Integrity, Source-Grounded GIS, Independent Test Oracles, and Zero Fabrication.  
+**Status:** BINDING ARCHITECTURAL CONTRACT (Updated Stage 0 Foundation)  
 
 ---
 
-## 1. Mandatory Stack
+## 1. Prime Directive: Truth in Engineering
 
-- **Core Language & Toolchain:** Rust Stable; `cargo test`, `Criterion`, `cargo-llvm-cov`, `Clippy`, `rustfmt`.
-- **Rendering & Simulation:** `wgpu` rendering; `Bevy ECS`; `Rapier3D` physics.
+1. **Anti-Fabrication Invariant**: Never fabricate geographic facts, runtime capabilities, test outcomes, or platform readiness. Procedural generation, synthetic templates, mock stubs, and in-memory test arrays are strictly forbidden in production pipelines and certification suites.
+2. **Revocation of Unverified Certification**: The platform must never be declared production-ready while major capabilities (e.g. real metropolitan GIS datasets, responsive mouse UI controls, native mobile GPU swapchains) remain stubs, mock fallbacks, or non-functional components.
+3. **Evidence-Based Traceability**: Every requirement in `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json` must be backed by genuine, executable, observable source code and tests. Deficiencies must be honestly categorized as `BROKEN`, `LOW-QUALITY`, `PARTIAL`, or `BLOCKED`.
+
+---
+
+## 2. Mandatory Architectural Stack
+
+- **Core Language & Toolchain:** Rust Stable (`2021` edition); `cargo test`, `Criterion`, `cargo-llvm-cov`, `Clippy` (`-D warnings`), `rustfmt`.
+- **Rendering & Presentation:** `wgpu` (WebGPU on DX12/Metal/Vulkan); `winit` for window management, event dispatch, and input routing.
+- **Simulation & ECS:** `Bevy ECS` decoupled from rendering; `Rapier3D` for rigid-body physics, raycast suspension, and terrain heightfield collision.
 - **Asynchronous Execution & Concurrency:** `Tokio` asynchronous runtime; `Rayon` data parallelism.
-- **Data & Serialization:** `FlatBuffers` versioned schemas; `SQLite` indexing/metadata; compressed binary world chunks (`zstd`).
-- **Geographic Data Sources:** OpenStreetMap roads/buildings; Copernicus/NASA DEM; licensed land-cover datasets.
-- **Networking:** Optional QUIC networking (`realearth-network`).
-- **CI/CD & Containers:** GitHub Actions; Podman/Docker development workflows.
-- **Dependency Policy:** Pin compatible dependencies and commit lockfiles.
+- **Data & Serialization:** Versioned schemas; `SQLite` indexing/metadata with WAL mode concurrency; compressed binary world chunks (`bincode` + `zstd`).
+- **Geographic Data Sources:** Real OpenStreetMap vector data (ODbL 1.0); USGS 3DEP / Copernicus DEM rasters (Public Domain / CC0); licensed land cover.
+- **Networking:** Optional authoritative UDP networking (`realearth-networking`) with client-side prediction and server reconciliation.
 
 ---
 
-## 2. Architecture
+## 3. Strict Architectural Invariants
 
-Implement isolated layers:
-
-$$\text{Data Acquisition} \longrightarrow \text{GIS Normalization} \longrightarrow \text{Validation/Repair} \longrightarrow \text{World Compiler} \longrightarrow \text{Binary Chunk Storage} \longrightarrow \text{Streaming} \longrightarrow \text{Rendering/Navigation/Simulation} \longrightarrow \text{Optional Gameplay} \longrightarrow \text{Optional Multiplayer}$$
-
-### Strict Architectural Invariants:
-1. **Headless Execution:** World compiler and simulation must run headlessly without any window, display server, or GPU display dependency.
-2. **Decoupled Graphics:** Rendering must never own simulation, geographic validation, or gameplay logic.
-3. **Independent Replaceability:** Physics, graphics, navigation, gameplay, and networking must remain independently replaceable without cross-cutting rewrites.
-4. **Optional Features:** Networking and gameplay are optional dependencies.
-5. **Deterministic Foundation:** Use explicit APIs, immutable snapshots where appropriate, versioned schemas, deterministic operations, bounded work queues, structured errors, and traceable state transitions.
-6. **Extensible Entity Systems:** Support future cars, motorcycles, trucks, buses, trains, ships, and aircraft without architectural rewrites.
+1. **Headless Execution Invariance**: The world compiler, GIS validation pipeline, navigation router, and physics simulation must execute headlessly with zero display server, window handle, or GPU presentation dependency.
+2. **Decoupled Graphics & Presentation**: The rendering engine (`realearth-rendering`) must never own simulation, geographic validation, or gameplay logic. Simulation state must be queryable without rendering.
+3. **Decoupled User Interface & Responsive Input**: The UI system must provide hit-testing, mouse click handling, hover state updates, and keyboard accessibility. Menus must never block or obscure the underlying 3D world behind opaque barriers without user dismissal.
+4. **Independent Replaceability**: Physics, graphics, navigation, gameplay, and networking must remain independently replaceable without cross-cutting rewrites.
+5. **Deterministic Foundation**: Use explicit APIs, immutable snapshots where appropriate, versioned schemas, deterministic simulation steps, bounded work queues, structured errors, and traceable state transitions.
 
 ---
 
-## 3. Geographic Truth
+## 4. Geographic Truth & Provenance Mandates
 
-1. **Provenance & Coordinate Precision:** Use real, licensed, provenance-tracked GIS data. Preserve WGS84 references, appropriate projected coordinates (e.g. UTM Zone 43N for Bengaluru), global ECEF/local ENU transformations, double-precision geographic positions (`f64`), floating origin camera systems, vertical datum metadata (ellipsoid vs EGM96 geoid), and accurate elevation/scale.
-2. **Feature Preservation:** Preserve real roads, intersections, turn restrictions, bridges, flyovers, tunnels, buildings, railways, airports, ports, rivers, water bodies, terrain, vegetation zones, highways, and inter-city connections.
-3. **No Fabrication Rule:** Never fabricate geographic facts. Procedural appearance, textures, vegetation, and missing-height approximations are permitted only as explicitly labeled visual/inferred data, never falsely represented as surveyed reality.
-4. **Topological Invariance:** Validate topology, elevation, footprints, seams, graph connectivity, collision, and provenance before publishing world packages. Treat grade-separated road crossings correctly (e.g., bridges/overpasses must maintain vertical clearance and never collapse into planar junctions). Repair only when safe, traceable, confidence-aware, and reversible; otherwise report/quarantine defects.
-
----
-
-## 4. Performance
-
-1. **Initial Bengaluru MVP:** First usable frame under 2 seconds from a locally cached compiled package, under 1 GB process RAM, 60 FPS ($16.67\text{ ms/frame}$) on documented reference hardware.
-2. **Planetary Scaling Targets:** 100K and 1M managed objects at 60 FPS; 10M managed objects through adaptive streaming and hierarchical LOD. Do not equate managed objects with simultaneously visible/simulated objects.
-3. **Telemetry & Profiling:** Measure CPU/GPU utilization, GPU memory, RSS, startup, p50/p95/p99 frame times, streaming stalls, cache performance, draw calls, and geometry complexity.
-4. **Budget Management:** Target $16.67\text{ ms/frame}$ for 60 FPS. Optimize based on profiling; avoid blocking I/O, unbounded caches, excess allocation, lock contention, and redundant GPU work.
-5. **Reproducibility:** Define hardware, resolution, graphics preset, dataset, release profile, reproducible benchmark scenes, and statistically meaningful regression tolerances.
+1. **Source-Grounded GIS**: Use real, licensed, provenance-tracked GIS data. Preserve WGS84 coordinates, appropriate projected coordinates (UTM), global ECEF/local ENU transformations, double-precision geographic positions (`f64`), floating origin camera systems, and vertical datums (NAVD88).
+2. **No Mock Synthesis in Production**: Do not generate synthetic 2-building or 3-road XML strings and falsely label them "authoritative". Missing geographic regions must be explicitly cataloged as `CATALOG_DEFINITION_ONLY` until raw OSM/DEM files are acquired on disk.
+3. **Source-Hash Cache Invalidation**: The world compilation pipeline must store source asset SHA-256 digests in package manifests. Startup routines must verify that compiled chunk databases match the current raw asset hashes; any discrepancy must trigger automated recompilation.
+4. **Topological Invariance**: Validate polygon winding, grade separations, elevation limits, and network connectivity. Overpasses and bridges (Layer 1) must maintain vertical clearance and never collapse into planar road junctions.
 
 ---
 
-## 5. Repository Structure
+## 5. Performance & Telemetry Standards
 
-Cargo workspace organized into explicit crates:
-- `engine/{ingestion,geospatial,validation,compiler,streaming,rendering,simulation,vehicles,navigation,network,shared}`
-- `apps/world-viewer`
-- `tools`, `tests`, `benchmarks`, `assets`, `data/manifests`, `data/schemas`, `scripts`
-- `docs` and `docs/adr`
-- `.github/workflows`
-
-Clear crate boundaries with typed interfaces.
-
----
-
-## 6. CI/CD and Artifacts
-
-- **Seven Workflows:** `build.yml`, `test.yml`, `coverage.yml`, `benchmark.yml`, `security.yml`, `docs.yml`, and `release.yml`.
-- **Quality Gates:** Formatting (`cargo fmt --check`), static analysis (`cargo clippy -- -D warnings`), unit/integration/GIS/headless tests, dependency/security checks, documentation validation (`cargo doc`), coverage and controlled performance regression tests.
-- **Cross-Platform Target Matrix:** Windows x64, Linux x64, and macOS arm64/x64 binaries. Native runners for GPU/Desktop validation; containerize development and headless tooling whenever feasible.
-- **Automated Provenance:** Upload executables, checksums, build provenance, test results, coverage, benchmarks, GIS validation, security, performance reports, and documentation.
-- **Script Suite:** Idempotent one-command setup, bringup, teardown, build, test, run, benchmark, cleanup, and teardown scripts with no unnecessary local installs.
+1. **Measured vs Synthetic Metrics**: Frame pacing, latency, memory RSS, and GPU allocations must be measured against real OS clocks (`std::time::Instant`) and genuine process memory APIs. Never test performance by populating hardcoded mock arrays (`vec![48.5; 10]`).
+2. **Presentation vs Throughput Separation**: Clearly distinguish presented windowed FPS (VSync-bounded, 60 Hz) from unthrottled offscreen compute throughput.
+3. **Resource Budgets on Reference Hardware**:
+   - Cold startup: $\le 2.0\text{ seconds}$ from compiled local chunk cache.
+   - Working set memory: $\le 1024\text{ MB}$ RSS.
+   - Steady-state frame time: $\le 16.67\text{ ms}$ (60 FPS) at High graphics preset on documented reference desktop hardware.
+4. **Telemetry Transparency**: The application must report real-time presented FPS, frame time variance, active chunk count, resident memory, and frustum-culled triangle counts.
 
 ---
 
-## 7. Quality Gates
+## 6. Testing Strategy & Independent Oracles
 
-- Core testable code coverage $\ge 90\%$; report line/branch coverage and justified exclusions.
-- 100% pass rate for required tests.
-- Zero required formatting/lint violations.
-- Zero unapproved critical/high security vulnerabilities.
-- No undisclosed correctness, FPS, latency, memory, or GPU regressions.
-- Unit, integration, property/fuzz, geospatial, rendering, physics, streaming, end-to-end, platform, and soak testing as applicable.
-- Real data validation and genuine executable smoke tests.
-- No fake success, placeholders, silent skips, or simulated evidence presented as production validation.
-- Honestly separate PASS, FAIL, BLOCKED, NOT TESTED, and HARDWARE-REQUIRED status.
-
----
-
-## 8. Documentation
-
-Maintain:
-`TechnicalRequirements.md`, `TechnicalArchitecture.md`, `ImplementationPlan.md`, `CodeUnderstanding.md`, `GISStrategy.md`, `ValidationStrategy.md`, `WorldStreamingStrategy.md`, `PerformanceStrategy.md`, `TestingStrategy.md`, `DataSourcesAndLicenses.md`, `SetupAndConfiguration.md`, `UserGuide.md`, `Troubleshooting.md`, `Changelog.md`, `Todo.md`, plus ADRs and ASCII/Mermaid architecture diagrams.
-
-`ImplementationPlan`, `Changelog`, and `Todo` must preserve history append-only. Document requirements-to-code-to-test traceability, actual status, decisions, limitations, and configuration.
+1. **Mandatory Quality Gates**:
+   - Core testable code coverage $\ge 90\%$; report line and branch coverage.
+   - 100% pass rate for required tests.
+   - Zero Clippy warnings under `-D warnings` and zero formatting deviations.
+   - Zero unapproved security vulnerabilities under `cargo audit`.
+2. **Independent Test Oracles**: Tests must validate against independent mathematical equations, external surveyed ground truth, or genuine physical simulations. Assertions on internal stub return codes (e.g. `assert_eq!(stub(), 0)`) are strictly forbidden.
+3. **Executable Failure Verification**: Every reported defect must be accompanied by an executable regression test that fails against the defective code and passes only when properly remediated.
+4. **Platform-Specific Truth**: Packaging tests must verify genuine binary formats (ELF headers for Linux, Mach-O headers for macOS, PE headers for Windows). When cross-compilation toolchains are absent on the build host, the status must be honestly recorded as `BLOCKED (Host Toolchain Required)`.
 
 ---
 
-## 9. Execution Rules
+## 7. Documentation & Append-Only History
 
-For EACH stage:
-1. Audit the existing repository, completed features, dependencies, known defects, and regression risks.
-2. Update requirements, ADRs, implementation plan, and append-only TODO before coding.
-3. Implement phases sequentially, completing actual executable vertical slices.
-4. Write meaningful tests and benchmarks; ensure independent module boundaries.
-5. Verify actual behavior using real data; measure performance and memory.
-6. Preserve all existing working features; fix defects before adding dependent functionality.
-7. Re-run relevant and full regression suites.
-8. Update documentation, changelog, coverage, benchmarks, and evidence.
-9. Generate a certification matrix: requirement, source, test, environment, dataset, expected/actual, evidence, result, limitations.
-10. Finish with completed, failed, blocked, pending, performance results, downloadable CI artifacts, and next-stage readiness.
-
-**Never claim implementation, execution, or production certification without verifiable evidence. Never move to the next stage with unresolved blocking acceptance criteria.**
-
-**Priorities:** Geographic Accuracy → Data Integrity → Functional Correctness → Stability → Memory → Streaming → FPS → Visual Fidelity → Features → Multiplayer → Planetary Scale.
+1. **Append-Only Tracking**: All changes to `ImplementationPlan.md`, `Changelog.md`, and `Todo.md` must be strictly append-only. Historical stages, decisions, and past audit findings must be preserved for forensic accountability.
+2. **Architectural Decision Records (ADRs)**: Every significant architectural shift or remediation stage must be documented with a numbered ADR in `docs/adr/`.
+3. **Continuous Maintenance**: Maintain up-to-date documentation: `TechnicalRequirements.md`, `TechnicalArchitecture.md`, `GISStrategy.md`, `ValidationStrategy.md`, `UserGuide.md`, `Troubleshooting.md`, `RootCauseAnalysis.md`, `GapAnalysis.md`, and `RemediationPlan.md`.
 
 ---
 
-## 10. Forensic Audit & Anti-Fabrication Invariants (Phase 0 Mandate)
+## 8. Execution Directives for Subsequent Stages
 
-1. **No False Production Readiness:** The platform must NEVER be declared production-ready while major capabilities (e.g. mobile GPU presentation, real 38-city GIS ingestion, live multiplayer networking) remain stubs, synthetic fallbacks, or disconnected components.
-2. **Behavioral vs Internal Assumption Testing:** Tests must never assert solely on internal stub return codes (e.g. asserting `stub_call() == 0`). Tests must validate genuine physical, numerical, graphical, or network outcomes.
-3. **Traceability Ledger:** Every feature must be cataloged in `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json` with an explicit status (`VERIFIED`, `LOW-QUALITY`, `PARTIAL`, `BROKEN`, `MISSING`, `BLOCKED`, `UNTESTED`) and severity (`P0`–`P3`).
-4. **Append-Only History:** All changes to `ImplementationPlan.md`, `Todo.md`, and `Changelog.md` must be strictly append-only, preserving historical context and forensic accountability.
-
+For EVERY subsequent development or remediation stage:
+1. **Audit Dependencies**: Read this contract, verify actual code behavior, and audit existing defects before modifying code.
+2. **Update Tracking**: Append stage goals and tasks to `ImplementationPlan.md`, `Changelog.md`, and `Todo.md` before coding.
+3. **Implement Vertical Slices**: Complete functioning, independently testable implementations.
+4. **Write Real Tests**: Implement executable tests with independent oracles that verify real-world correctness.
+5. **Measure Real Metrics**: Measure performance and memory using real system timers.
+6. **No Regressions**: Verify that existing working functionality remains intact.
+7. **Honest Reporting**: Update `docs/FeatureQualityMatrix.md` and `docs/FeatureQualityMatrix.json`. If a capability cannot be completed due to missing external prerequisites, report it honestly as `BLOCKED`.

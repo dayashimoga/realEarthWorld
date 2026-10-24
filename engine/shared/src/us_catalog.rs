@@ -25,6 +25,15 @@ pub enum CityPriorityTier {
     Priority3Extended,
 }
 
+/// Catalog data tier distinguishing benchmark surveyed regions with bundled GIS from on-demand definitions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum CatalogDataTier {
+    /// Tier 1: Surveyed Benchmark Region with fully bundled real OSM vector & USGS 3DEP elevation rasters on disk.
+    Tier1BenchmarkSurveyed,
+    /// Tier 2: Metropolitan Definition with geodetic bounds, surveyed skyscraper anchors, and airport coordinates for on-demand acquisition.
+    Tier2MetropolitanDefinition,
+}
+
 /// Geographic scope and coverage level of an audited city region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CoverageLevel {
@@ -103,9 +112,20 @@ pub struct UsCityDefinition {
     pub major_interstates: &'static [&'static str],
     pub has_maritime_port: bool,
     pub coverage_level: CoverageLevel,
+    pub data_tier: CatalogDataTier,
 }
 
 impl UsCityDefinition {
+    /// Returns true if this region is a Tier 1 benchmark surveyed region with authentic bundled assets.
+    pub fn is_benchmark_surveyed(&self) -> bool {
+        self.data_tier == CatalogDataTier::Tier1BenchmarkSurveyed
+    }
+
+    /// Returns true if this region is defined for on-demand acquisition rather than pre-bundled on disk.
+    pub fn is_metropolitan_definition_only(&self) -> bool {
+        self.data_tier == CatalogDataTier::Tier2MetropolitanDefinition
+    }
+
     /// Converts this definition into an active runtime `RegionProfile`.
     pub fn to_region_profile(&self) -> RegionProfile {
         RegionProfile::new(
@@ -170,6 +190,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-80", "I-280", "US-101"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier1BenchmarkSurveyed,
     },
     UsCityDefinition {
         id: "los-angeles",
@@ -190,6 +211,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-5", "I-10", "I-110", "US-101"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "san-diego",
@@ -210,6 +232,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-5", "I-8", "I-15"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "new-york",
@@ -230,6 +253,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-95", "I-78", "I-87", "I-278"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "chicago",
@@ -250,6 +274,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-90", "I-94", "I-55", "I-290"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "houston",
@@ -270,6 +295,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-10", "I-45", "I-610"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "dallas",
@@ -290,6 +316,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-30", "I-35E", "I-45", "US-75"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "washington-dc",
@@ -310,6 +337,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-95", "I-66", "I-395", "I-495"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "miami",
@@ -330,6 +358,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-95", "I-395", "US-1"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "seattle",
@@ -350,6 +379,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-5", "I-90", "SR-99"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     // ------------------------------------------------------------------------
     // PRIORITY 2: ADDITIONAL MAJOR METROPOLITAN COVERAGE (15 CITIES)
@@ -373,6 +403,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-90", "I-93", "US-1"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "philadelphia",
@@ -393,6 +424,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-95", "I-76", "I-676"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "phoenix",
@@ -413,6 +445,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-10", "I-17", "Loop-101", "Loop-202"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "denver",
@@ -433,6 +466,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-25", "I-70", "I-76", "US-6"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "atlanta",
@@ -453,6 +487,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-20", "I-75", "I-85", "I-285"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "detroit",
@@ -473,6 +508,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-75", "I-94", "I-96", "I-375"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "minneapolis",
@@ -493,6 +529,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-35W", "I-94", "I-394"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "austin",
@@ -513,6 +550,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-35", "US-183", "Loop-1"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "san-antonio",
@@ -533,6 +571,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-10", "I-35", "I-37"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "las-vegas",
@@ -553,6 +592,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-15", "I-515", "US-95"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ExtendedCity,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "portland",
@@ -573,6 +613,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-5", "I-84", "I-405"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "sacramento",
@@ -593,6 +634,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-5", "I-80", "US-50"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "charlotte",
@@ -613,6 +655,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-77", "I-85", "I-277"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "orlando",
@@ -633,6 +676,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-4", "FL-408", "FL-528"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "tampa",
@@ -653,6 +697,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-4", "I-75", "I-275"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     // ------------------------------------------------------------------------
     // PRIORITY 3: EXTENDED US CITIES (13 CITIES)
@@ -676,6 +721,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-24", "I-40", "I-65"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "new-orleans",
@@ -696,6 +742,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-10", "I-610", "US-90"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "baltimore",
@@ -716,6 +763,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-95", "I-83", "I-395", "I-695"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "pittsburgh",
@@ -736,6 +784,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-279", "I-376", "I-579"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "cleveland",
@@ -756,6 +805,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-71", "I-77", "I-90"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "columbus",
@@ -776,6 +826,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-70", "I-71", "I-670"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "indianapolis",
@@ -796,6 +847,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-65", "I-70", "I-74", "I-465"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "jacksonville",
@@ -816,6 +868,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-10", "I-95", "I-295"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "kansas-city",
@@ -836,6 +889,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-35", "I-70", "I-29", "I-435"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "st-louis",
@@ -856,6 +910,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-44", "I-55", "I-64", "I-70"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "salt-lake-city",
@@ -876,6 +931,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["I-15", "I-80", "I-215"],
         has_maritime_port: false,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "honolulu",
@@ -896,6 +952,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["H-1", "H-201", "Nimitz Hwy"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
     UsCityDefinition {
         id: "anchorage",
@@ -916,6 +973,7 @@ pub static US_CITY_CATALOG: &[UsCityDefinition] = &[
         major_interstates: &["AK-1 (Glenn Hwy)", "Seward Hwy"],
         has_maritime_port: true,
         coverage_level: CoverageLevel::ValidatedCityCore,
+        data_tier: CatalogDataTier::Tier2MetropolitanDefinition,
     },
 ];
 
@@ -1077,4 +1135,28 @@ pub fn cities_by_priority(tier: CityPriorityTier) -> Vec<&'static UsCityDefiniti
 /// Returns all interstate corridors defined in the catalog.
 pub fn all_interstate_corridors() -> &'static [InterstateCorridor] {
     US_INTERSTATE_CORRIDORS
+}
+
+/// Returns all Tier 1 benchmark surveyed cities with fully authentic bundled GIS assets.
+pub fn tier1_benchmark_cities() -> Vec<&'static UsCityDefinition> {
+    US_CITY_CATALOG
+        .iter()
+        .filter(|c| c.is_benchmark_surveyed())
+        .collect()
+}
+
+/// Returns all Tier 2 metropolitan definition cities (defined for on-demand acquisition).
+pub fn tier2_definition_cities() -> Vec<&'static UsCityDefinition> {
+    US_CITY_CATALOG
+        .iter()
+        .filter(|c| c.is_metropolitan_definition_only())
+        .collect()
+}
+
+/// Returns all cities belonging to the given data tier.
+pub fn cities_by_data_tier(tier: CatalogDataTier) -> Vec<&'static UsCityDefinition> {
+    US_CITY_CATALOG
+        .iter()
+        .filter(|c| c.data_tier == tier)
+        .collect()
 }

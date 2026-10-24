@@ -36,6 +36,7 @@ pub struct CompilerOptions {
     pub incremental: bool,
     pub crs_epsg: i32,
     pub package_name: String,
+    pub source_asset_sha256: Option<String>,
 }
 
 impl Default for CompilerOptions {
@@ -46,6 +47,7 @@ impl Default for CompilerOptions {
             incremental: false,
             crs_epsg: 4326,
             package_name: "world_package".to_string(),
+            source_asset_sha256: None,
         }
     }
 }
@@ -475,6 +477,7 @@ pub fn compile_world_package(
         version: 1,
         schema_version: CHUNK_VERSION,
         created_at: "2026-10-22T00:00:00Z".to_string(),
+        source_asset_sha256: options.source_asset_sha256.clone(),
     })?;
 
     Ok(stats)

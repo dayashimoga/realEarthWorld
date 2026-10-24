@@ -23,6 +23,7 @@ glam.workspace = true
 tempfile = "3.17"
 tokio.workspace = true
 zstd = "0.13"
+serde_json.workspace = true
 
 [[test]]
 name = "five_platform_application_parity"
@@ -135,3 +136,27 @@ path = "tests/stage8_regional_catalog_and_corridors_certification.rs"
 [[test]]
 name = "stage9_authoritative_multiplayer_certification"
 path = "tests/stage9_authoritative_multiplayer_certification.rs"
+
+[[test]]
+name = "forensic_validation_suite"
+path = "tests/forensic_validation_suite.rs"
+
+[[test]]
+name = "stage1_ui_interaction_certification"
+path = "tests/stage1_ui_interaction_certification.rs"
+
+[[test]]
+name = "stage2_authentic_gis_certification"
+path = "tests/stage2_authentic_gis_certification.rs"
+
+[[test]]
+name = "stage3_visual_fidelity_certification"
+path = "tests/stage3_visual_fidelity_certification.rs"
+
+[[test]]
+name = "stage4_mobile_packaging_truth_certification"
+path = "tests/stage4_mobile_packaging_truth_certification.rs"
+
+[[test]]
+name = "stage5_production_reconciliation_certification"
+path = "tests/stage5_production_reconciliation_certification.rs"

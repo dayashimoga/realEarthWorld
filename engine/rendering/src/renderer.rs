@@ -524,6 +524,7 @@ impl RealEarthRenderer {
         let rel_pos = camera.relative_pos_f32();
         let elapsed_time = self.start_time.elapsed().as_secs_f32();
 
+        let fog_start = (settings.view_distance_meters as f32 * 0.30).max(300.0);
         let uniforms = SceneUniforms {
             view_proj: view_proj.to_cols_array_2d(),
             camera_pos: [rel_pos.x, rel_pos.y, rel_pos.z, 1.0],
@@ -532,7 +533,7 @@ impl RealEarthRenderer {
             ambient_light: [0.22, 0.24, 0.28, 1.0],
             fog_params: [
                 settings.fog_density,
-                100.0,
+                fog_start,
                 settings.view_distance_meters as f32,
                 0.0,
             ],

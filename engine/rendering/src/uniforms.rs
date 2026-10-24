@@ -23,7 +23,7 @@ impl Default for SceneUniforms {
             sun_direction: [0.0, 1.0, 0.0, 0.0],
             sun_color_intensity: [1.0, 0.98, 0.92, 1.0],
             ambient_light: [0.22, 0.24, 0.28, 1.0],
-            fog_params: [0.0002, 100.0, 4000.0, 0.0],
+            fog_params: [0.0001, 800.0, 4000.0, 0.0],
             material_params: [0.8, 1.0, 0.0, 0.0],
         }
     }

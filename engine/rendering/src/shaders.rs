@@ -135,13 +135,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Concrete sidewalk pavement slabs (expansion joints every 2 meters)
     if (is_sidewalk) {
         let slab_joint = fract(in.uv.y / 2.0);
-        if (slab_joint < 0.04) {
+        let lateral_joint = fract(in.uv.x / 1.5);
+        if (slab_joint < 0.04 || lateral_joint < 0.035) {
             base_color = base_color * 0.78; // Dark scored joint line
         }
     }
 
     // =========================================================================
-    // 2. ARCHITECTURAL REALISM: PBR Facades, Windows, and Interior Night Glow
+    // 2. ARCHITECTURAL REALISM: PBR Facades, Windows, Cornices and Night Glow
     // =========================================================================
     let is_vertical_facade = abs(normal.y) < 0.25;
 
@@ -162,6 +163,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let glass_tint = vec3<f32>(0.16, 0.28, 0.38);
             base_color = mix(glass_tint, glass_tint + night_glow, 1.0 - day_factor);
         }
+
+        // Horizontal spandrel band dividing mechanical registers
+        if (floor_coord < 0.20) {
+            base_color = base_color * 0.75;
+        }
     }
 
     // Granite / Stone Facade (555 California, Civic, classic commercial)
@@ -181,6 +187,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let dark_glass = vec3<f32>(0.12, 0.16, 0.22);
             base_color = mix(dark_glass, dark_glass + night_glow, 1.0 - day_factor);
         }
+
+        // Belt course / architectural cornice every 3 floors (~10.8m)
+        let cornice_coord = fract(in.uv.y / 10.8);
+        if (cornice_coord < 0.07) {
+            base_color = base_color * 1.15; // Projecting stone cornice highlight
+        } else if (cornice_coord < 0.11) {
+            base_color = base_color * 0.70; // Cornice cast shadow groove
+        }
     }
 
     // Brick Masonry (SOMA lofts, residential)
@@ -193,6 +207,41 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         if (b_y < 0.10 || b_x < 0.06) {
             base_color = vec3<f32>(0.75, 0.72, 0.68); // Light gray mortar joint
         }
+        // Punched residential windows
+        let rw_y = fract(in.uv.y / 3.2);
+        let rw_x = fract(in.uv.x / 2.6);
+        if (rw_y > 0.30 && rw_y < 0.80 && rw_x > 0.25 && rw_x < 0.75) {
+            let night_glow = vec3<f32>(0.95, 0.82, 0.45) * (1.0 - day_factor) * 0.80;
+            let win_glass = vec3<f32>(0.14, 0.18, 0.22);
+            base_color = mix(win_glass, win_glass + night_glow, 1.0 - day_factor);
+        }
+        // Decorative brick soldier course / lintel above windows
+        if (rw_y >= 0.80 && rw_y < 0.88 && rw_x > 0.20 && rw_x < 0.80) {
+            base_color = base_color * 0.80;
+        }
+    }
+
+    // Civic Concrete / Architectural Brutalism (alpha 0.86)
+    if (is_vertical_facade && abs(alpha_tag - 0.86) < 0.015) {
+        let panel_h = 1.8;
+        let panel_w = 3.6;
+        let p_y = fract(in.uv.y / panel_h);
+        let p_x = fract(in.uv.x / panel_w);
+        // Formwork panel joint lines
+        if (p_y < 0.03 || p_x < 0.02) {
+            base_color = base_color * 0.80; // Dark recessed joint
+        }
+        // Form-tie circular indents
+        let tie_y = min(abs(p_y - 0.25), abs(p_y - 0.75));
+        let tie_x = min(abs(p_x - 0.20), abs(p_x - 0.80));
+        if (tie_y < 0.03 && tie_x < 0.02) {
+            base_color = base_color * 0.65; // Tie hole depression
+        }
+        // Architectural horizontal reveal belt
+        let belt = fract(in.uv.y / 7.2);
+        if (belt < 0.05) {
+            base_color = base_color * 0.75;
+        }
     }
 
     // Victorian Painted Wood Siding (Nob Hill, Russian Hill)
@@ -200,6 +249,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let clapboard = fract(in.uv.y / 0.35);
         if (clapboard < 0.12) {
             base_color = base_color * 0.75; // Clapboard horizontal shadow groove
+        }
+        // Victorian window trim with decorative header
+        let vw_y = fract(in.uv.y / 3.4);
+        let vw_x = fract(in.uv.x / 2.2);
+        if (vw_y > 0.28 && vw_y < 0.82 && vw_x > 0.24 && vw_x < 0.76) {
+            let night_glow = vec3<f32>(1.0, 0.90, 0.60) * (1.0 - day_factor) * 0.85;
+            let win_glass = vec3<f32>(0.15, 0.20, 0.26);
+            base_color = mix(win_glass, win_glass + night_glow, 1.0 - day_factor);
+        } else if ((vw_y >= 0.24 && vw_y <= 0.86 && (vw_x < 0.24 || vw_x > 0.76)) ||
+                   (vw_y >= 0.82 && vw_y <= 0.92 && vw_x >= 0.20 && vw_x <= 0.80)) {
+            base_color = vec3<f32>(0.92, 0.92, 0.90); // White painted ornamental casing/pediment
         }
     }
 
@@ -250,8 +310,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let fog_end = uniforms.fog_params.z;
     let fog_density = uniforms.fog_params.x;
 
-    let linear_fog = clamp((dist - fog_start) / max(fog_end - fog_start, 1.0), 0.0, 1.0);
-    let exp_fog = 1.0 - exp(-dist * fog_density);
+    // Smooth distance-based fog preventing close-range horizon washout
+    let eff_dist = max(dist - fog_start, 0.0);
+    let linear_fog = clamp(eff_dist / max(fog_end - fog_start, 1.0), 0.0, 1.0);
+    let exp_fog = 1.0 - exp(-eff_dist * fog_density);
     let fog_factor = clamp(max(linear_fog, exp_fog), 0.0, 1.0);
 
     // Sky color palette matching solar elevation
@@ -271,6 +333,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let t = clamp((-sun_elevation - 0.15) / 0.25, 0.0, 1.0);
         sky_fog_color = mix(twilight_sky, night_sky, t);
     }
+
+    // Solar disc flare and atmospheric Rayleigh halo
+    let sun_align = max(dot(view_dir, sun_dir), 0.0);
+    let sun_halo = pow(sun_align, 64.0) * 0.35 * day_factor;
+    sky_fog_color = sky_fog_color + uniforms.sun_color_intensity.rgb * sun_halo;
 
     // Procedural cumulus cloud layer in sky background
     let cloud_p = in.world_pos.xz * 0.00015 + vec2<f32>(anim_time * 0.002, anim_time * 0.001);

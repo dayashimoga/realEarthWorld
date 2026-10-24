@@ -388,7 +388,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (raw, dem, meta) = load_authentic_city(city.id)?;
         let dir = crate::interactive::resolve_world_package_dir(&meta.region_id.replace('-', "_"));
         let landmark = Landmark::from_us_city(city);
-        if !dir.join("chunks.db").exists() {
+        let package_name = format!("{}_package", meta.region_id);
+        if !crate::interactive::is_world_package_cache_valid(
+            &dir,
+            &package_name,
+            Some(&meta.source_osm_sha256),
+        ) {
             println!(
                 "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
                 meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
@@ -397,7 +402,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let options = CompilerOptions {
                 chunk_size_meters: 500.0,
                 terrain_grid_resolution: 16,
-                package_name: format!("{}_package", meta.region_id),
+                package_name: package_name.clone(),
+                source_asset_sha256: Some(meta.source_osm_sha256.clone()),
                 ..Default::default()
             };
             compile_world_package(&val, &dem, &dir, &options)?;
@@ -612,22 +618,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
     } else {
         let dir = crate::interactive::resolve_world_package_dir("san_francisco");
-        let (raw, dem) = match load_authentic_city("san-francisco") {
-            Ok((dataset, dem, _)) => (dataset, dem),
+        let (raw, dem, sf_source_hash) = match load_authentic_city("san-francisco") {
+            Ok((dataset, dem, meta)) => (dataset, dem, Some(meta.source_osm_sha256)),
             Err(e) => {
                 eprintln!("⚠️ Warning: Failed to load authentic San Francisco data ({:?}), using fallback", e);
                 (
                     create_san_francisco_dataset(),
                     DemGrid::create_san_francisco_coastal_dem(64, 64),
+                    None,
                 )
             }
         };
-        if !dir.join("chunks.db").exists() {
+        if !crate::interactive::is_world_package_cache_valid(
+            &dir,
+            "san_francisco_package",
+            sf_source_hash.as_deref(),
+        ) {
             println!("📦 Compiling authentic San Francisco Downtown & Waterfront package...");
             let (val, _) = validate_dataset(&raw);
             let options = CompilerOptions {
                 chunk_size_meters: 500.0,
                 terrain_grid_resolution: 16,
+                package_name: "san_francisco_package".to_string(),
+                source_asset_sha256: sf_source_hash,
                 ..Default::default()
             };
             compile_world_package(&val, &dem, &dir, &options)?;

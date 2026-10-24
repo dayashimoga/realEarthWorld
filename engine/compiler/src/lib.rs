@@ -284,6 +284,7 @@ mod tests {
             incremental: false,
             crs_epsg: 32643,
             package_name: "bengaluru_test".to_string(),
+            ..Default::default()
         };
 
         // First full compilation

@@ -1,131 +1,150 @@
-# Forensic Gap Analysis & Architectural Remediation Roadmap (Phase 0 Audit)
+# Forensic Gap Analysis & Architectural Discrepancy Matrix (Stage 0 Audit)
 
-**Document:** `docs/GapAnalysis.md`  
-**Auditing Authority:** Principal Rust, Game, GIS, Graphics, Physics Architect & QA Board  
-**Audit Date:** October 23, 2026  
-**System Verdict:** **NOT PRODUCTION READY ❌**
-
----
-
-## 1. Executive Summary
-
-This forensic gap analysis provides an unsparing, evidence-grounded assessment of the current state of the Real Earth World Platform. While earlier audit iterations verified that the core single-player desktop simulation runs stably in San Francisco and Bengaluru, this audit identifies critical discrepancies between declared capabilities and actual source-level implementations.
-
-Under the updated **Global Engineering Execution Contract**, no feature may be certified as complete if it relies on synthetic fallbacks where surveyed data was expected, operates through stubbed lifecycle callbacks, or remains completely disconnected from the runnable application.
+**Document**: `docs/GapAnalysis.md`  
+**Auditing Authority**: Principal Rust, GIS, wgpu Graphics, Game/Physics, QA, Security, Performance and Release Engineers  
+**Audit Date**: October 24, 2026  
+**System Verdict**: **NOT PRODUCTION READY ❌ (CRITICAL ARCHITECTURAL GAPS IDENTIFIED)**
 
 ---
 
-## 2. Priority 0 (Critical Blockers)
+## 1. Executive Forensic Summary
 
-### GAP-01: Synthetic / Procedural Geography across 32 of 38 Catalog Cities
-* **Classification:** `LOW-QUALITY` / `UNVERIFIED` (Severity: **P0**)
-* **Affected Module:** [engine/ingestion/src/us_cities.rs](file:///j:/rustRealEarth/engine/ingestion/src/us_cities.rs)
-* **Forensic Finding:** In `us_cities.rs`, only 6 cities (`san-francisco`, `new-york`, `los-angeles`, `chicago`, `seattle`, `miami`) possess hand-curated surveyed templates. The remaining 32 cities default to lines 43–385:
-  ```rust
-  if dataset.buildings.is_empty() {
-      // Synthesize authentic surveyed features if not already present in deep dataset
-      let building_half_lat = 0.00045;
-      ...
-      // Generated landmark building and synthetic grid cross streets
-  }
-  ```
-  Furthermore, authentic raw OpenStreetMap XML files and GeoTIFF elevation rasters only physically exist in `assets/` for `san_francisco_sample` and `bengaluru_sample`.
-* **Root Cause:** Ingestion pipelines for the broader catalog relied on programmatic bounding box synthesis rather than disk-backed OSM/DEM data acquisition.
-* **Remediation Plan:**
-  1. Acquire or ingest authentic OSM PBF/XML excerpts and USGS 3DEP elevation rasters for all 38 cities.
-  2. Deprecate and remove parametric synthetic grid generation from production runtime paths.
-  3. Update `city_catalog_validator.rs` to verify physical raw file existence and real topology rather than internal generator output.
+This forensic gap analysis provides an exhaustive comparison between the declared capabilities of the Real Earth World Platform (as published in previous certification reports, UI overlays, and documentation) and the actual, measurable runtime reality of the codebase.
+
+The investigation reveals that previous attempts to close historical gaps (GAP-01 through GAP-06) substituted procedural generators and in-memory mock fixtures for genuine engineering solutions, while newly introduced regressions completely disabled mouse interaction in the UI and obscured the 3D viewport behind a 94% opaque overlay.
 
 ---
 
-### GAP-02: Android Mobile Surface Rendering and Terrain Elevation Stubs
-* **Classification:** `LOW-QUALITY` / `MISSING` (Severity: **P0**)
-* **Affected Modules:** [bindings/mobile/src/lib.rs](file:///j:/rustRealEarth/bindings/mobile/src/lib.rs), [android/app/src/main/java/com/realearth/world/MainActivity.java](file:///j:/rustRealEarth/android/app/src/main/java/com/realearth/world/MainActivity.java)
-* **Forensic Finding:**
-  1. The native JNI surface lifecycle methods in `bindings/mobile/src/lib.rs` (lines 354–395) do not initialize WGPU or render frames:
-     ```rust
-     pub unsafe extern "C" fn Java_com_realearth_world_RealEarthEngine_nativeSurfaceCreated(
-         _env: *mut JNIEnv, _class: jclass, surface: jobject
-     ) -> jint {
-         if let Ok(mut attached) = SURFACE_ATTACHED.lock() { *attached = true; }
-         0
-     }
-     ```
-  2. Mobile vehicle simulation executes against `FlatGround` (a synthetic mathematical plane $y = 0.0$) rather than real DEM elevation grids.
-  3. `MainActivity.java` sets up a `SurfaceView` and starts a thread stepping the simulation, but no pixels are rendered to the hardware display by the native engine.
-* **Root Cause:** Mobile bindings were created as an ABI and JNI interface contract harness without wiring the underlying `wgpu::Instance::create_surface` through Android `ANativeWindow_fromSurface`.
-* **Remediation Plan:**
-  1. Link `ndk-sys` / `android` native window APIs to obtain `ANativeWindow` from the Java `Surface` jobject.
-  2. Initialize a genuine `wgpu::Surface` and swapchain on Android.
-  3. Wire mobile engine context to load real DEM tiles for the active region.
+## 2. Comprehensive Claimed vs. Actual Gap Taxonomy
+
+| Domain | Claimed / Documented Capability | Actual Runtime Reality | Gap ID | Severity | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **GIS & Geography** | Authentic surveyed USGS 3DEP & OSM data across 38 US metropolitan cities. | 32 cities have zero data files; runtime dynamically synthesizes a 2-building, 3-road XML string. San Francisco contains only 5 buildings. | **GAP-01** | **P0** | **BROKEN / UNRESOLVED** |
+| **Interactive UI** | Polished, glassmorphic interactive start menu and pause overlay. | Menu draws a 94% opaque fullscreen rectangle blocking the 3D scene. Mouse clicks fail to select or activate any options. | **GAP-02** | **P0** | **BROKEN** |
+| **Input Routing** | Intuitive desktop mouse and keyboard navigation. | `WindowEvent::MouseInput` only toggles camera drag. Zero hit-testing or click handlers exist for UI elements. | **GAP-03** | **P0** | **BROKEN** |
+| **Visual Fidelity** | Photorealistic PBR planetary rendering with metric facades and atmospheric scattering. | Sparse 5-building demonstration world floating in empty fog. 25 of 30 compiled chunks contain zero buildings. | **GAP-04** | **P1** | **LOW-QUALITY** |
+| **Compilation Cache** | Dynamic world compiler with cryptographic chunk integrity. | `resolve_world_package_dir` unconditionally reuses existing `chunks.db` without checking if source assets were modified. | **GAP-05** | **P1** | **BROKEN** |
+| **Mobile Runtime** | Certified Android JNI & iOS Metal runtime with native surface presentation. | `realearth_render_frame()` only increments an integer counter (`frame_counter += 1`). No wgpu surface or pipeline exists on mobile. | **GAP-06** | **P0** | **BROKEN / STUB** |
+| **Cross-Platform** | Five-platform verified standalone application packages. | Linux packaging on Windows generates dummy shell scripts (`#!/bin/sh`) inside AppDir instead of native ELF binaries. | **GAP-07** | **P1** | **LOW-QUALITY** |
+| **Performance Metrics**| Presented 60 FPS VSync gameplay and >1400 FPS compute metrics. | Performance tests evaluate synthetic in-memory vectors (`vec![48.5; 10]`) rather than querying hardware or OS frame timers. | **GAP-08** | **P1** | **LOW-QUALITY** |
+| **Quality Governance** | "100% Production Certified", "Zero fake implementations detected". | Premature certification ratified over mock data, non-functional mouse UI, and stubbed mobile rendering. | **GAP-09** | **P0** | **GOVERNANCE FAILURE** |
 
 ---
 
-### GAP-03: Premature "Production Ready" Certification Declaration
-* **Classification:** `GOVERNANCE_VIOLATION` (Severity: **P0**)
-* **Affected Modules:** [docs/ProductionReadiness.md](file:///j:/rustRealEarth/docs/ProductionReadiness.md), [docs/certification_dashboard.html](file:///j:/rustRealEarth/docs/certification_dashboard.html)
-* **Forensic Finding:** Previous documentation declared the platform "100% Production Ready" and "Version 1.0.0 Ratified" despite GAP-01, GAP-02, and disconnected multiplayer networking.
-* **Root Cause:** Quality gates evaluated whether existing automated unit tests passed, but tests asserted on internal stub returns rather than end-to-end user-observable realities.
-* **Remediation Plan:** Formally update `ProductionReadiness.md` to declare the system **NOT PRODUCTION READY**, establishing explicit physical gates for production ratification.
+## 3. Deep-Dive Gap Dissections
+
+### GAP-01: Synthetic / Procedural Geography across 38 Catalog Cities
+* **Affected Modules**:
+  - [`engine/ingestion/src/authentic.rs:L286-L450`](file:///j:/rustRealEarth/engine/ingestion/src/authentic.rs#L286-L450)
+  - [`engine/ingestion/src/us_cities.rs:L25-L160`](file:///j:/rustRealEarth/engine/ingestion/src/us_cities.rs#L25-L160)
+  - [`engine/validation/src/city_catalog_validator.rs:L95-L119`](file:///j:/rustRealEarth/engine/validation/src/city_catalog_validator.rs#L95-L119)
+  - [`assets/`](file:///j:/rustRealEarth/assets/)
+* **Claim**: *"38 US Metropolitan regions categorized across Priority 1, 2, and 3 tiers with exact bounds, WGS84 surveyed anchors, UTM zones 4–19, NAVD88 vertical datums, USGS 3DEP/NLCD/NHD provenance, ODbL 1.0 licensing, and SHA-256 package digests."*
+* **Reality**:
+  1. Only 2 directories exist in `assets/`: `bengaluru_sample/` and `san_francisco_sample/`.
+  2. For the other 36 cities, `load_authentic_city()` calls `generate_authoritative_city_osm_xml()`, which procedurally builds an XML string containing exactly 2 buildings (anchor skyscraper and City Hall) and 3 roads (Boulevard, Avenue, Interstate).
+  3. The validator considers any city with $\ge 3$ roads and $\ge 1$ building as having **100% coverage**, falsely certifying 38 cities as complete.
+* **Remediation Requirement**:
+  - Purge synthetic generation from production paths.
+  - Acquire genuine, representative OpenStreetMap extracts and USGS 3DEP elevation data for pilot cities.
+  - Require the validator to enforce genuine feature counts ($\ge 50$ buildings for downtown metropolitan cores).
 
 ---
 
-## 3. Priority 1 (High Quality Deficiencies)
-
-### GAP-04: Multiplayer Networking Completely Disconnected from Desktop Viewer
-* **Classification:** `PARTIAL` / `DISCONNECTED` (Severity: **P1**)
-* **Affected Modules:** [engine/networking/src/](file:///j:/rustRealEarth/engine/networking/src/), [apps/world-viewer/src/](file:///j:/rustRealEarth/apps/world-viewer/src/)
-* **Forensic Finding:** The `realearth-networking` crate contains complete UDP transport, token-bucket rate limiting, interest management, and client prediction logic with passing unit tests. However, `apps/world-viewer` has zero imports or integration with `realearth-networking`. The interactive viewer is strictly single-player offline.
-* **Remediation Plan:**
-  1. Add an optional `--multiplayer <server-addr>` CLI argument to `world-viewer`.
-  2. Wire the viewer ECS loop to send local vehicle input frames and interpolate remote vehicle entities received from the authoritative server.
-
----
-
-### GAP-05: Misleading Headless Framerate Metrics vs Interactive Presentation
-* **Classification:** `LOW-QUALITY` (Severity: **P1**)
-* **Affected Module:** [apps/world-viewer/src/main.rs](file:///j:/rustRealEarth/apps/world-viewer/src/main.rs)
-* **Forensic Finding:** In headless benchmark mode, `realearth-viewer` reports "5,866.5 FPS (0.17 ms)". This measurement executes an unthrottled loop rendering to a small offscreen target without swapchain presentation, window compositing, or VSync. In interactive windowed mode, the display is locked to VSync (60 Hz / 16.67 ms). Quoting 5000+ FPS misrepresents real-world gameplay performance.
-* **Remediation Plan:**
-  1. Clearly label headless metrics as "Raw Offscreen Render Pipeline Throughput (Unpresented)".
-  2. Instrument interactive windowed mode to measure presented frame pacing, swapchain presentation latency, and 1% low FPS under actual OS window manager compositing.
+### GAP-02 & GAP-03: Viewport-Obscuring Start Menu & Nonfunctional Mouse Selection
+* **Affected Modules**:
+  - [`engine/rendering/src/hud.rs:L875-L1089`](file:///j:/rustRealEarth/engine/rendering/src/hud.rs#L875-L1089)
+  - [`apps/world-viewer/src/interactive.rs:L1623-L1733`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs#L1623-L1733)
+  - [`apps/world-viewer/src/main.rs:L274`](file:///j:/rustRealEarth/apps/world-viewer/src/main.rs#L274)
+* **Claim**: *"Modern Stage 6 Glassmorphic UI & In-Game Telemetry... Smooth responsive desktop navigation."*
+* **Reality**:
+  1. On default startup (without `--drive`), the application enters `AppUiState::StartScreen`.
+  2. `add_start_screen()` draws a rectangle over `(0, 0, width, height)` with alpha `0.94` (94% opaque), completely obscuring the 3D planetary simulation.
+  3. `WindowEvent::MouseInput` in `interactive.rs` only toggles `self.mouse_drag_active` to rotate the 3D camera. It contains **no hit-testing code whatsoever** for the 7 menu items or any UI button.
+  4. Left-clicking on a menu item fails to highlight or select it. Users can only select options via `W`/`S` or Arrow keys and `Enter`.
+* **Remediation Requirement**:
+  - Implement a 2D bounding-box hit-testing routine for all interactive HUD items.
+  - Hook `WindowEvent::CursorMoved` to track hover states.
+  - Hook `WindowEvent::MouseInput` (Left Click) to dispatch selection and confirmation events.
+  - Replace the 94% fullscreen opaque curtain with a transparent, non-blocking glassmorphic HUD that keeps the 3D world visible and permits immediate free-roam navigation.
 
 ---
 
-### GAP-06: Test Suite Internal Assumption Bias
-* **Classification:** `LOW-QUALITY` (Severity: **P1**)
-* **Affected Modules:** [tests/tests/five_platform_application_parity.rs](file:///j:/rustRealEarth/tests/tests/five_platform_application_parity.rs), [tests/tests/final_production_certification.rs](file:///j:/rustRealEarth/tests/tests/final_production_certification.rs)
-* **Forensic Finding:** Several tests validate that stub functions return their own hardcoded return values rather than validating real functional effects.
-  - `test_f4_android_jni_contract_and_virtual_driving_controls` asserts that `nativeSurfaceCreated` returns `0`, which passes because the stub simply returns `0`.
-  - `test_i3_gis_accuracy_and_38_city_catalog_integrity` asserts `buildings.len() > 0`, which passes because the generator synthetically creates a box building when none exists.
-* **Remediation Plan:** Replace stub assertion tests with behavior verification (e.g. validating vertex buffers, actual mesh bounds, and physical coordinate alignment).
+### GAP-04: Sparse 5-Building San Francisco Pilot Dataset
+* **Affected Modules**:
+  - [`assets/san_francisco_sample/san_francisco_downtown.osm.xml`](file:///j:/rustRealEarth/assets/san_francisco_sample/san_francisco_downtown.osm.xml)
+  - [`engine/ingestion/src/sample_san_francisco.rs`](file:///j:/rustRealEarth/engine/ingestion/src/sample_san_francisco.rs)
+* **Claim**: *"Authentic, high-fidelity sample dataset for San Francisco Downtown & Waterfront... Real surveyed USGS 3DEP topography & OSM road networks."*
+* **Reality**:
+  1. The raw file contains only 5 buildings (Salesforce Tower, Transamerica Pyramid, 555 California, Ferry Building, Coit Tower) and 7 road segments across a $2.5\text{ km} \times 2.7\text{ km}$ area.
+  2. In the 3D viewport, the city appears as a barren desert of flat gray ground with five isolated skyscrapers.
+* **Remediation Requirement**:
+  - Expand the San Francisco benchmark dataset to include authentic downtown building footprints, street grids, piers, and shoreline polygons.
 
 ---
 
-## 4. Priority 2 (Medium Functional Polish)
-
-### GAP-07: Multi-Modal Vehicle Physics Disconnected from Interactive Controls
-* **Classification:** `PARTIAL` (Severity: **P2**)
-* **Affected Modules:** [engine/vehicles/src/multimodal/](file:///j:/rustRealEarth/engine/vehicles/src/multimodal/), [apps/world-viewer/src/interactive.rs](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs)
-* **Forensic Finding:** `RoadTransportSimulation`, `MarineSimulation`, `AviationSimulation`, and `RailSimulation` exist as standalone structs with basic formulas, but the viewer only allows driving a car (`DynamicVehicle`). Trains, ships, and airplanes cannot be controlled or rendered as drivable vehicles in the interactive viewer.
-* **Remediation Plan:** Expose multi-modal vehicle selection in the interactive viewer and wire corresponding flight/watercraft input handlers.
-
----
-
-### GAP-08: Traffic NPC Visual Mesh Simplification
-* **Classification:** `PARTIAL` (Severity: **P2**)
-* **Affected Modules:** [engine/vehicles/src/traffic.rs](file:///j:/rustRealEarth/engine/vehicles/src/traffic.rs), [engine/rendering/src/vehicle_mesh.rs](file:///j:/rustRealEarth/engine/rendering/src/vehicle_mesh.rs)
-* **Forensic Finding:** Autonomous traffic simulation simulates NPC vehicle movement along road graphs, but renders them as simplified bounding boxes without articulated wheels or chassis models.
-* **Remediation Plan:** Instantiate proper vehicle mesh models with wheel rotations for all active traffic entities within the camera frustum.
+### GAP-05: Stale Chunk Cache Bypasses Source Changes
+* **Affected Modules**:
+  - [`apps/world-viewer/src/interactive.rs:L310-L347, L836-L849`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs#L310-L347)
+  - [`engine/compiler/src/compiler_pipeline.rs`](file:///j:/rustRealEarth/engine/compiler/src/compiler_pipeline.rs)
+* **Claim**: *"Cryptographic package integrity... Computes SHA-256 for chunk headers and payloads; quarantines corrupted chunks."*
+* **Reality**:
+  1. `resolve_world_package_dir()` checks if `data/world_san_francisco/chunks.db` exists.
+  2. If it exists, `interactive.rs` skips `compile_world_package()`.
+  3. Even if the developer updates `assets/san_francisco_sample/san_francisco_downtown.osm.xml`, the changes are never compiled into chunks because `chunks.db` is never checked against source asset hashes.
+* **Remediation Requirement**:
+  - Store source asset SHA-256 digests in `chunks.db` package manifest table.
+  - Compare source asset SHA-256 with stored manifest hash on startup; trigger automated recompilation if stale.
 
 ---
 
-## 5. Governance & Remediation Schedule
+### GAP-06: Mobile Rendering Stub
+* **Affected Modules**:
+  - [`bindings/mobile/src/lib.rs:L500-L510`](file:///j:/rustRealEarth/bindings/mobile/src/lib.rs#L500-L510)
+  - [`tests/tests/five_platform_application_parity.rs`](file:///j:/rustRealEarth/tests/tests/five_platform_application_parity.rs)
+* **Claim**: *"REQ-027: Android JNI & Surface Rendering VERIFIED; REQ-028: iOS Metal Bridge & UIKit Project VERIFIED."*
+* **Reality**:
+  1. `realearth_render_frame()` only increments an in-memory counter (`surface.frame_counter += 1`).
+  2. It does not initialize or draw to any GPU surface.
+* **Remediation Requirement**:
+  - Formally classify mobile surface rendering as `BLOCKED / STUB` until native window hooks (`ANativeWindow` on Android, `CAMetalLayer` / `MTKView` on iOS) are implemented with true wgpu render passes.
 
-| Phase | Milestone | Focus Areas | Target Acceptance |
-| :--- | :--- | :--- | :--- |
-| **Phase 1** | **Forensic Truth & Governance** | Update ExecutionContract, FeatureQualityMatrix, GapAnalysis, ADR-0033. | All gaps classified; zero false production-ready claims. |
-| **Phase 2** | **Mobile Native Surface Integration** | ANativeWindow integration, genuine WGPU Android swapchain, DEM terrain. | Authentic frame rendering on Android SurfaceView. |
-| **Phase 3** | **Multiplayer Viewer Integration** | Wire `realearth-networking` to `world-viewer` with `--multiplayer`. | Multi-client vehicle synchronization in live viewer. |
-| **Phase 4** | **Authentic 38-City GIS Ingestion** | Ingest raw OSM & DEM data for all 38 cities; purge synthetic fallback. | 100% surveyed GIS data across all cataloged cities. |
-| **Phase 5** | **Multi-Modal Drivable Vehicles** | Wire aviation, marine, and rail physics to viewer input and cameras. | Drivable flight and watercraft in interactive viewer. |
+---
+
+### GAP-07: Linux Packaging on Windows Emits Dummy Shell Scripts
+* **Affected Modules**:
+  - [`scripts/package_linux.ps1:L36-L41`](file:///j:/rustRealEarth/scripts/package_linux.ps1#L36-L41)
+  - [`tests/tests/five_platform_packaging_certification.rs`](file:///j:/rustRealEarth/tests/tests/five_platform_packaging_certification.rs)
+* **Claim**: *"Linux AppDir / AppImage Packaging VERIFIED... Portable POSIX tarball."*
+* **Reality**:
+  1. When executed on Windows without cross-compilation toolchains, `package_linux.ps1` writes dummy text shell scripts `realearth-viewer` instead of compiling native Linux ELF binaries.
+  2. Tests merely check for the existence of `realearth-linux-x64.tar.gz` without verifying binary format.
+* **Remediation Requirement**:
+  - Inspect binary headers in packaging tests (`\x7fELF` for Linux, `PK\x03\x04` for ZIP, Mach-O for macOS).
+  - Explicitly document `BLOCKED (Host Toolchain Required)` when cross-compilation targets are missing on the build host.
+
+---
+
+### GAP-08: Self-Validating Performance Test Oracles
+* **Affected Modules**:
+  - [`tests/tests/performance_anti_fake_certification.rs:L42-L49`](file:///j:/rustRealEarth/tests/tests/performance_anti_fake_certification.rs#L42-L49)
+* **Claim**: *"Independent validation... 60 FPS budget verified."*
+* **Reality**:
+  1. The test populates a hardcoded array `vec![48.5; 10]` and `14.0 + jitter`, passes it to a mathematical calculation function, and asserts that the mean is $< 16.67\text{ ms}$.
+  2. No actual rendering or presentation frames are executed during this test.
+* **Remediation Requirement**:
+  - Implement genuine headless offscreen rendering frame loops that measure real OS timestamps using `std::time::Instant`.
+
+---
+
+### GAP-09: Premature Production Readiness Certification
+* **Affected Modules**:
+  - [`docs/FeatureQualityMatrix.md`](file:///j:/rustRealEarth/docs/FeatureQualityMatrix.md)
+  - [`docs/ProductionReadiness.md`](file:///j:/rustRealEarth/docs/ProductionReadiness.md)
+  - [`docs/certification/FakeImplementationAudit.md`](file:///j:/rustRealEarth/docs/certification/FakeImplementationAudit.md)
+* **Claim**: *"FULLY PRODUCTION CERTIFIED (All 34 Requirements Verified)... ZERO FAKE IMPLEMENTATIONS DETECTED — 100% AUTHENTIC."*
+* **Reality**:
+  1. Stubs, mock generators, and broken UI input were certified as 100% production ready.
+* **Remediation Requirement**:
+  - Revoke false certification.
+  - Establish an honest, evidence-grounded Feature Quality Matrix that reflects true status.

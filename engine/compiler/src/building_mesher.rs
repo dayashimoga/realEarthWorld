@@ -154,7 +154,131 @@ fn mesh_standard_building(
         indices.push(base_idx + 2);
         indices.push(base_idx + 1);
 
-        // 2. Rooftop Parapet Lip (0.8m vertical parapet along roof perimeter)
+        // 2. Architectural Cornice Moulding (0.30m outward projecting cornice below roof parapet)
+        if building_height >= 8.0 {
+            let cornice_overhang = 0.30f32;
+            let cornice_h = 0.40f32;
+            let c_bot_y = roof_elev - cornice_h;
+            let c_top_y = roof_elev;
+
+            let cp0 = p0 + normal * cornice_overhang;
+            let cp1 = p1 + normal * cornice_overhang;
+            let cornice_color = [
+                wall_color[0] * 0.90,
+                wall_color[1] * 0.90,
+                wall_color[2] * 0.90,
+                wall_color[3],
+            ];
+
+            // 2A. Underside / Soffit (normal facing down -Y)
+            let soffit_base = vertices.len() as u32;
+            let down_norm = [0.0, -1.0, 0.0];
+            vertices.push(Vertex::new(
+                [p0.x, c_bot_y, p0.z],
+                down_norm,
+                [u0, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, c_bot_y, p1.z],
+                down_norm,
+                [u1, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp1.x, c_bot_y, cp1.z],
+                down_norm,
+                [u1, cornice_overhang],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp0.x, c_bot_y, cp0.z],
+                down_norm,
+                [u0, cornice_overhang],
+                cornice_color,
+            ));
+            indices.extend_from_slice(&[
+                soffit_base,
+                soffit_base + 1,
+                soffit_base + 2,
+                soffit_base,
+                soffit_base + 2,
+                soffit_base + 3,
+            ]);
+
+            // 2B. Front vertical face (normal facing outward norm_arr)
+            let front_base = vertices.len() as u32;
+            vertices.push(Vertex::new(
+                [cp0.x, c_bot_y, cp0.z],
+                norm_arr,
+                [u0, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp1.x, c_bot_y, cp1.z],
+                norm_arr,
+                [u1, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp1.x, c_top_y, cp1.z],
+                norm_arr,
+                [u1, cornice_h],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp0.x, c_top_y, cp0.z],
+                norm_arr,
+                [u0, cornice_h],
+                cornice_color,
+            ));
+            indices.extend_from_slice(&[
+                front_base,
+                front_base + 3,
+                front_base + 2,
+                front_base,
+                front_base + 2,
+                front_base + 1,
+            ]);
+
+            // 2C. Top coping wash (normal facing up +Y)
+            let top_base = vertices.len() as u32;
+            let up_norm = [0.0, 1.0, 0.0];
+            vertices.push(Vertex::new(
+                [cp0.x, c_top_y, cp0.z],
+                up_norm,
+                [u0, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [cp1.x, c_top_y, cp1.z],
+                up_norm,
+                [u1, 0.0],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, c_top_y, p1.z],
+                up_norm,
+                [u1, cornice_overhang],
+                cornice_color,
+            ));
+            vertices.push(Vertex::new(
+                [p0.x, c_top_y, p0.z],
+                up_norm,
+                [u0, cornice_overhang],
+                cornice_color,
+            ));
+            indices.extend_from_slice(&[
+                top_base,
+                top_base + 3,
+                top_base + 2,
+                top_base,
+                top_base + 2,
+                top_base + 1,
+            ]);
+        }
+
+        // 3. Rooftop Parapet Lip (0.8m vertical parapet along roof perimeter)
         let parapet_top = roof_elev + 0.8;
         let parapet_base = vertices.len() as u32;
         let pv0 = Vertex::new([p0.x, roof_elev, p0.z], norm_arr, [u0, 0.0], roof_color);
@@ -176,7 +300,7 @@ fn mesh_standard_building(
         indices.push(parapet_base + 1);
     }
 
-    // 3. Triangulate flat roof using earcut
+    // 4. Triangulate flat roof using earcut
     let mut flat_coords: Vec<f64> = Vec::with_capacity((enu_pts.len() - 1) * 2);
     for pt in enu_pts.iter().take(enu_pts.len() - 1) {
         flat_coords.push(pt.x as f64);
@@ -206,7 +330,7 @@ fn mesh_standard_building(
         }
     }
 
-    // 4. Rooftop Mechanical Penthouse / HVAC Infrastructure for buildings > 16m
+    // 5. Rooftop Mechanical Infrastructure: Penthouse, HVAC Chillers & Communications Mast
     if building_height > 16.0 && enu_pts.len() >= 5 {
         let center_x = enu_pts
             .iter()
@@ -228,87 +352,82 @@ fn mesh_standard_building(
         let ph_top = roof_elev + ph_height;
         let ph_color = [0.46, 0.48, 0.52, 0.70]; // Mechanical steel/gray (alpha 0.70)
 
-        let ph_corners = [
+        // 5A. Central Mechanical Penthouse
+        add_box_mesh(
+            &mut vertices,
+            &mut indices,
             Vec3::new(center_x - ph_half_w, ph_bottom, center_z - ph_half_l),
-            Vec3::new(center_x + ph_half_w, ph_bottom, center_z - ph_half_l),
-            Vec3::new(center_x + ph_half_w, ph_bottom, center_z + ph_half_l),
-            Vec3::new(center_x - ph_half_w, ph_bottom, center_z + ph_half_l),
-        ];
+            Vec3::new(center_x + ph_half_w, ph_top, center_z + ph_half_l),
+            ph_color,
+        );
 
-        // 4 vertical walls of penthouse
-        let ph_normals = [
-            [0.0, 0.0, -1.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [-1.0, 0.0, 0.0],
-        ];
-
-        for i in 0..4 {
-            let next = (i + 1) % 4;
-            let c0 = ph_corners[i];
-            let c1 = ph_corners[next];
-            let n = ph_normals[i];
-
-            let b_idx = vertices.len() as u32;
-            vertices.push(Vertex::new(
-                [c0.x, ph_bottom, c0.z],
-                n,
-                [0.0, 0.0],
-                ph_color,
-            ));
-            vertices.push(Vertex::new(
-                [c1.x, ph_bottom, c1.z],
-                n,
-                [1.0, 0.0],
-                ph_color,
-            ));
-            vertices.push(Vertex::new([c1.x, ph_top, c1.z], n, [1.0, 1.0], ph_color));
-            vertices.push(Vertex::new([c0.x, ph_top, c0.z], n, [0.0, 1.0], ph_color));
-
-            indices.push(b_idx);
-            indices.push(b_idx + 3);
-            indices.push(b_idx + 2);
-
-            indices.push(b_idx);
-            indices.push(b_idx + 2);
-            indices.push(b_idx + 1);
+        // 5B. HVAC Chiller & Air Handler Pods for commercial/residential buildings > 25m
+        if building_height > 25.0 {
+            let chiller_color = [0.42, 0.44, 0.48, 0.70];
+            // Chiller Unit 1 (East flank)
+            add_box_mesh(
+                &mut vertices,
+                &mut indices,
+                Vec3::new(center_x + ph_half_w + 1.2, ph_bottom, center_z - 2.5),
+                Vec3::new(center_x + ph_half_w + 4.2, ph_bottom + 1.8, center_z + 0.5),
+                chiller_color,
+            );
+            // Chiller Unit 2 (West flank)
+            add_box_mesh(
+                &mut vertices,
+                &mut indices,
+                Vec3::new(center_x - ph_half_w - 4.2, ph_bottom, center_z - 0.5),
+                Vec3::new(center_x - ph_half_w - 1.2, ph_bottom + 1.8, center_z + 2.5),
+                chiller_color,
+            );
         }
 
-        // Penthouse roof
-        let r_idx = vertices.len() as u32;
-        let up_norm = [0.0, 1.0, 0.0];
-        vertices.push(Vertex::new(
-            [ph_corners[0].x, ph_top, ph_corners[0].z],
-            up_norm,
-            [0.0, 0.0],
-            ph_color,
-        ));
-        vertices.push(Vertex::new(
-            [ph_corners[1].x, ph_top, ph_corners[1].z],
-            up_norm,
-            [1.0, 0.0],
-            ph_color,
-        ));
-        vertices.push(Vertex::new(
-            [ph_corners[2].x, ph_top, ph_corners[2].z],
-            up_norm,
-            [1.0, 1.0],
-            ph_color,
-        ));
-        vertices.push(Vertex::new(
-            [ph_corners[3].x, ph_top, ph_corners[3].z],
-            up_norm,
-            [0.0, 1.0],
-            ph_color,
-        ));
+        // 5C. Slender Telecommunications / Lightning Antenna Mast for high-rises >= 50m
+        if building_height >= 50.0 {
+            let mast_height = if building_height >= 100.0 {
+                16.0f32
+            } else {
+                10.0f32
+            };
+            let mast_r = 0.35f32;
+            let mast_color = [0.75, 0.76, 0.80, 0.70]; // Galvanized steel mast
+            let apex = Vec3::new(center_x, ph_top + mast_height, center_z);
 
-        indices.push(r_idx);
-        indices.push(r_idx + 2);
-        indices.push(r_idx + 1);
+            let corners = [
+                Vec3::new(center_x - mast_r, ph_top, center_z - mast_r),
+                Vec3::new(center_x + mast_r, ph_top, center_z - mast_r),
+                Vec3::new(center_x + mast_r, ph_top, center_z + mast_r),
+                Vec3::new(center_x - mast_r, ph_top, center_z + mast_r),
+            ];
 
-        indices.push(r_idx);
-        indices.push(r_idx + 3);
-        indices.push(r_idx + 2);
+            let normals = [
+                [0.0, 0.1, -1.0],
+                [1.0, 0.1, 0.0],
+                [0.0, 0.1, 1.0],
+                [-1.0, 0.1, 0.0],
+            ];
+
+            for i in 0..4 {
+                let next = (i + 1) % 4;
+                let c0 = corners[i];
+                let c1 = corners[next];
+                let n = normals[i];
+
+                let b_idx = vertices.len() as u32;
+                vertices.push(Vertex::new([c0.x, c0.y, c0.z], n, [0.0, 0.0], mast_color));
+                vertices.push(Vertex::new([c1.x, c1.y, c1.z], n, [1.0, 0.0], mast_color));
+                vertices.push(Vertex::new(
+                    [apex.x, apex.y, apex.z],
+                    n,
+                    [0.5, mast_height],
+                    mast_color,
+                ));
+
+                indices.push(b_idx);
+                indices.push(b_idx + 2);
+                indices.push(b_idx + 1);
+            }
+        }
     }
 
     ChunkMesh::new(vertices, indices)
@@ -968,4 +1087,157 @@ fn mesh_coit_tower(
     }
 
     ChunkMesh::new(vertices, indices)
+}
+
+/// Helper to append a 5-sided 3D box (4 walls + top roof) to vertex and index buffers.
+fn add_box_mesh(
+    vertices: &mut Vec<Vertex>,
+    indices: &mut Vec<u32>,
+    min: Vec3,
+    max: Vec3,
+    color: [f32; 4],
+) {
+    let dx = max.x - min.x;
+    let dy = max.y - min.y;
+    let dz = max.z - min.z;
+
+    // -Z (South)
+    let b = vertices.len() as u32;
+    vertices.push(Vertex::new(
+        [min.x, min.y, min.z],
+        [0.0, 0.0, -1.0],
+        [0.0, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, min.y, min.z],
+        [0.0, 0.0, -1.0],
+        [dx, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, min.z],
+        [0.0, 0.0, -1.0],
+        [dx, dy],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, max.y, min.z],
+        [0.0, 0.0, -1.0],
+        [0.0, dy],
+        color,
+    ));
+    indices.extend_from_slice(&[b, b + 3, b + 2, b, b + 2, b + 1]);
+
+    // +Z (North)
+    let b = vertices.len() as u32;
+    vertices.push(Vertex::new(
+        [max.x, min.y, max.z],
+        [0.0, 0.0, 1.0],
+        [0.0, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, min.y, max.z],
+        [0.0, 0.0, 1.0],
+        [dx, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, max.y, max.z],
+        [0.0, 0.0, 1.0],
+        [dx, dy],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, max.z],
+        [0.0, 0.0, 1.0],
+        [0.0, dy],
+        color,
+    ));
+    indices.extend_from_slice(&[b, b + 3, b + 2, b, b + 2, b + 1]);
+
+    // -X (West)
+    let b = vertices.len() as u32;
+    vertices.push(Vertex::new(
+        [min.x, min.y, max.z],
+        [-1.0, 0.0, 0.0],
+        [0.0, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, min.y, min.z],
+        [-1.0, 0.0, 0.0],
+        [dz, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, max.y, min.z],
+        [-1.0, 0.0, 0.0],
+        [dz, dy],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, max.y, max.z],
+        [-1.0, 0.0, 0.0],
+        [0.0, dy],
+        color,
+    ));
+    indices.extend_from_slice(&[b, b + 3, b + 2, b, b + 2, b + 1]);
+
+    // +X (East)
+    let b = vertices.len() as u32;
+    vertices.push(Vertex::new(
+        [max.x, min.y, min.z],
+        [1.0, 0.0, 0.0],
+        [0.0, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, min.y, max.z],
+        [1.0, 0.0, 0.0],
+        [dz, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, max.z],
+        [1.0, 0.0, 0.0],
+        [dz, dy],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, min.z],
+        [1.0, 0.0, 0.0],
+        [0.0, dy],
+        color,
+    ));
+    indices.extend_from_slice(&[b, b + 3, b + 2, b, b + 2, b + 1]);
+
+    // +Y (Roof / Top)
+    let b = vertices.len() as u32;
+    vertices.push(Vertex::new(
+        [min.x, max.y, min.z],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, min.z],
+        [0.0, 1.0, 0.0],
+        [dx, 0.0],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [max.x, max.y, max.z],
+        [0.0, 1.0, 0.0],
+        [dx, dz],
+        color,
+    ));
+    vertices.push(Vertex::new(
+        [min.x, max.y, max.z],
+        [0.0, 1.0, 0.0],
+        [0.0, dz],
+        color,
+    ));
+    indices.extend_from_slice(&[b, b + 3, b + 2, b, b + 2, b + 1]);
 }

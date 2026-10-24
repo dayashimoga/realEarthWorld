@@ -267,14 +267,73 @@ pub fn mesh_road_infrastructure(
         let curb_h = 0.16f32;
 
         for side in &[-1.0f32, 1.0f32] {
-            let start_v_idx = vertices.len() as u32;
             let mut cum_dist = 0.0f32;
 
+            // 1A. Vertical Concrete Curb Riser (connecting road asphalt edge to top of curb)
+            let riser_base_idx = vertices.len() as u32;
             for i in 0..n {
-                if i > 0 {
-                    cum_dist += (centerlines[i] - centerlines[i - 1]).length();
-                }
+                let road_edge = if *side > 0.0 {
+                    left_edge_pts[i]
+                } else {
+                    right_edge_pts[i]
+                };
+                let (miter, factor) = miter_perps[i];
+                let out_dir = miter * (*side * factor);
+                let curb_top = road_edge + Vec3::new(0.0, curb_h, 0.0);
 
+                let v = if i > 0 {
+                    cum_dist += (centerlines[i] - centerlines[i - 1]).length();
+                    cum_dist * 0.5
+                } else {
+                    0.0
+                };
+
+                let street_norm = if out_dir.length_squared() > 1e-4 {
+                    -out_dir.normalize()
+                } else {
+                    -Vec3::X
+                };
+                let street_norm_arr = [street_norm.x, 0.0, street_norm.z];
+
+                vertices.push(Vertex::new(
+                    [road_edge.x, road_edge.y, road_edge.z],
+                    street_norm_arr,
+                    [0.0, v],
+                    sidewalk_color,
+                ));
+                vertices.push(Vertex::new(
+                    [curb_top.x, curb_top.y, curb_top.z],
+                    street_norm_arr,
+                    [curb_h, v],
+                    sidewalk_color,
+                ));
+            }
+
+            for i in 0..(n - 1) {
+                let base = riser_base_idx + (i * 2) as u32;
+                if *side > 0.0 {
+                    indices.push(base);
+                    indices.push(base + 1);
+                    indices.push(base + 2);
+
+                    indices.push(base + 1);
+                    indices.push(base + 3);
+                    indices.push(base + 2);
+                } else {
+                    indices.push(base);
+                    indices.push(base + 2);
+                    indices.push(base + 1);
+
+                    indices.push(base + 1);
+                    indices.push(base + 2);
+                    indices.push(base + 3);
+                }
+            }
+
+            // 1B. Sidewalk Top Deck (horizontal walking surface with scored expansion joints)
+            let deck_base_idx = vertices.len() as u32;
+            cum_dist = 0.0;
+            for i in 0..n {
                 let road_edge = if *side > 0.0 {
                     left_edge_pts[i]
                 } else {
@@ -286,7 +345,13 @@ pub fn mesh_road_infrastructure(
                 let curb_top = road_edge + Vec3::new(0.0, curb_h, 0.0);
                 let sidewalk_outer = curb_top + out_dir * sidewalk_w;
 
-                let v = cum_dist * 0.5;
+                let v = if i > 0 {
+                    cum_dist += (centerlines[i] - centerlines[i - 1]).length();
+                    cum_dist * 0.5
+                } else {
+                    0.0
+                };
+
                 vertices.push(Vertex::new(
                     [curb_top.x, curb_top.y, curb_top.z],
                     up_norm,
@@ -302,7 +367,7 @@ pub fn mesh_road_infrastructure(
             }
 
             for i in 0..(n - 1) {
-                let base = start_v_idx + (i * 2) as u32;
+                let base = deck_base_idx + (i * 2) as u32;
                 if *side > 0.0 {
                     indices.push(base);
                     indices.push(base + 3);
@@ -319,6 +384,75 @@ pub fn mesh_road_infrastructure(
                     indices.push(base);
                     indices.push(base + 3);
                     indices.push(base + 2);
+                }
+            }
+
+            // 1C. Outer Sidewalk Drop (vertical drop face sealing to terrain grade)
+            let drop_base_idx = vertices.len() as u32;
+            cum_dist = 0.0;
+            for i in 0..n {
+                let road_edge = if *side > 0.0 {
+                    left_edge_pts[i]
+                } else {
+                    right_edge_pts[i]
+                };
+                let (miter, factor) = miter_perps[i];
+                let out_dir = miter * (*side * factor);
+
+                let curb_top = road_edge + Vec3::new(0.0, curb_h, 0.0);
+                let sidewalk_outer = curb_top + out_dir * sidewalk_w;
+                let sidewalk_outer_bot = sidewalk_outer - Vec3::new(0.0, curb_h + 0.10, 0.0);
+
+                let v = if i > 0 {
+                    cum_dist += (centerlines[i] - centerlines[i - 1]).length();
+                    cum_dist * 0.5
+                } else {
+                    0.0
+                };
+
+                let out_norm = if out_dir.length_squared() > 1e-4 {
+                    out_dir.normalize()
+                } else {
+                    Vec3::X
+                };
+                let out_norm_arr = [out_norm.x, 0.0, out_norm.z];
+
+                vertices.push(Vertex::new(
+                    [sidewalk_outer.x, sidewalk_outer.y, sidewalk_outer.z],
+                    out_norm_arr,
+                    [0.0, v],
+                    sidewalk_color,
+                ));
+                vertices.push(Vertex::new(
+                    [
+                        sidewalk_outer_bot.x,
+                        sidewalk_outer_bot.y,
+                        sidewalk_outer_bot.z,
+                    ],
+                    out_norm_arr,
+                    [curb_h + 0.10, v],
+                    sidewalk_color,
+                ));
+            }
+
+            for i in 0..(n - 1) {
+                let base = drop_base_idx + (i * 2) as u32;
+                if *side > 0.0 {
+                    indices.push(base);
+                    indices.push(base + 1);
+                    indices.push(base + 2);
+
+                    indices.push(base + 1);
+                    indices.push(base + 3);
+                    indices.push(base + 2);
+                } else {
+                    indices.push(base);
+                    indices.push(base + 2);
+                    indices.push(base + 1);
+
+                    indices.push(base + 1);
+                    indices.push(base + 2);
+                    indices.push(base + 3);
                 }
             }
         }

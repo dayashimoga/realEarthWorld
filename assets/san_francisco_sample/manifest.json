@@ -1,118 +1,124 @@
 {
-  "name": "San Francisco Downtown & Waterfront Benchmark Region",
-  "version": "1.0.0",
-  "country": "US",
-  "state": "CA",
-  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0) / NOAA CUSP",
-  "datum": {
-    "horizontal": "WGS84 (EPSG:4326)",
-    "vertical": "NAVD88 (GEOID18/EGM96)",
-    "projected": "UTM Zone 10N (EPSG:32610)"
-  },
-  "bbox": {
-    "min_lat": 37.7800,
-    "max_lat": 37.8050,
-    "min_lon": -122.4150,
-    "max_lon": -122.3880
-  },
   "anchor": {
-    "name": "Transamerica Pyramid",
+    "elevation_m": 10.0,
     "lat": 37.7952,
     "lon": -122.4028,
-    "elevation_m": 10.0
+    "name": "Transamerica Pyramid"
   },
-  "sources": [
-    {
-      "name": "OpenStreetMap San Francisco Downtown Extract",
-      "provider": "OpenStreetMap Contributors",
-      "license": "ODbL 1.0",
-      "sha256": "1550e36d289ad285a3695a21cd8b9a8ce6c343827882e4ac66160995b4cd8e1f"
-    },
-    {
-      "name": "USGS 3DEP 1/3 Arc-Second Coastal Elevation Model",
-      "provider": "USGS",
-      "license": "Public Domain / CC0 Compatible",
-      "filename": "usgs_3dep_san_francisco.bin",
-      "sha256": "f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1",
-      "elevation_range_msl": [0.0, 115.0],
-      "vertical_datum": "NAVD88",
-      "grid_dimensions": [64, 64]
-    },
-    {
-      "name": "USGS National Land Cover Database (NLCD)",
-      "provider": "USGS / MRLC",
-      "license": "Public Domain"
-    },
-    {
-      "name": "NOAA Shoreline Data",
-      "provider": "NOAA National Ocean Service",
-      "license": "Public Domain"
-    }
-  ],
-  "landmarks": [
-    {
-      "name": "Salesforce Tower",
-      "lat": 37.7897,
-      "lon": -122.3972,
-      "height_m": 326.0,
-      "levels": 61,
-      "type": "commercial"
-    },
-    {
-      "name": "Transamerica Pyramid",
-      "lat": 37.7952,
-      "lon": -122.4028,
-      "height_m": 260.0,
-      "levels": 48,
-      "type": "commercial"
-    },
-    {
-      "name": "555 California Street",
-      "lat": 37.7928,
-      "lon": -122.4038,
-      "height_m": 237.0,
-      "levels": 52,
-      "type": "commercial"
-    },
-    {
-      "name": "San Francisco Ferry Building",
-      "lat": 37.7955,
-      "lon": -122.3937,
-      "height_m": 75.0,
-      "levels": 3,
-      "type": "civic"
-    },
-    {
-      "name": "Coit Tower (Telegraph Hill)",
-      "lat": 37.8024,
-      "lon": -122.4058,
-      "height_m": 64.0,
-      "levels": 3,
-      "type": "civic"
-    }
-  ],
+  "bbox": {
+    "max_lat": 37.805,
+    "max_lon": -122.388,
+    "min_lat": 37.78,
+    "min_lon": -122.415
+  },
+  "country": "US",
+  "datum": {
+    "horizontal": "WGS84 (EPSG:4326)",
+    "projected": "UTM Zone 10N (EPSG:32610)",
+    "vertical": "NAVD88 (GEOID18/EGM96)"
+  },
   "grade_separations": [
     {
-      "name": "Interstate 80 Bay Bridge Approach",
-      "layer": 1,
       "is_bridge": true,
       "lanes": 5,
+      "layer": 1,
+      "name": "Interstate 80 Bay Bridge Approach",
       "speed_limit_mph": 50
     },
     {
-      "name": "Broadway Tunnel (Russian Hill)",
-      "layer": -1,
       "is_tunnel": true,
       "lanes": 4,
+      "layer": -1,
+      "name": "Broadway Tunnel (Russian Hill)",
       "speed_limit_mph": 35
     }
   ],
   "hydrography": [
     {
-      "name": "San Francisco Bay",
-      "type": "bay",
       "is_coastline": true,
-      "surface_elevation_msl": 0.0
+      "name": "San Francisco Bay",
+      "surface_elevation_msl": 0.0,
+      "type": "bay"
     }
-  ]
+  ],
+  "landmarks": [
+    {
+      "height_m": 326.0,
+      "lat": 37.7897,
+      "levels": 61,
+      "lon": -122.3972,
+      "name": "Salesforce Tower",
+      "type": "commercial"
+    },
+    {
+      "height_m": 260.0,
+      "lat": 37.7952,
+      "levels": 48,
+      "lon": -122.4028,
+      "name": "Transamerica Pyramid",
+      "type": "commercial"
+    },
+    {
+      "height_m": 237.0,
+      "lat": 37.7928,
+      "levels": 52,
+      "lon": -122.4038,
+      "name": "555 California Street",
+      "type": "commercial"
+    },
+    {
+      "height_m": 75.0,
+      "lat": 37.7955,
+      "levels": 3,
+      "lon": -122.3937,
+      "name": "San Francisco Ferry Building",
+      "type": "civic"
+    },
+    {
+      "height_m": 64.0,
+      "lat": 37.8024,
+      "levels": 3,
+      "lon": -122.4058,
+      "name": "Coit Tower (Telegraph Hill)",
+      "type": "civic"
+    }
+  ],
+  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0) / NOAA CUSP",
+  "name": "San Francisco Downtown & Waterfront Benchmark Region",
+  "sources": [
+    {
+      "license": "ODbL 1.0",
+      "name": "OpenStreetMap San Francisco Downtown Extract",
+      "provider": "OpenStreetMap Contributors",
+      "sha256": "7bd75f00e616fac37705319ad04f3ec6a4514f189979f106f9880507fa195632"
+    },
+    {
+      "elevation_range_msl": [
+        0.0,
+        115.0
+      ],
+      "filename": "usgs_3dep_san_francisco.bin",
+      "grid_dimensions": [
+        64,
+        64
+      ],
+      "license": "Public Domain / CC0 Compatible",
+      "name": "USGS 3DEP 1/3 Arc-Second Coastal Elevation Model",
+      "provider": "USGS",
+      "sha256": "f94339c8d9ad72a85bd01a83a21f29932b67b00d1f82ddba046c0cdbab3f0ed1",
+      "vertical_datum": "NAVD88"
+    },
+    {
+      "license": "Public Domain",
+      "name": "USGS National Land Cover Database (NLCD)",
+      "provider": "USGS / MRLC"
+    },
+    {
+      "license": "Public Domain",
+      "name": "NOAA Shoreline Data",
+      "provider": "NOAA National Ocean Service"
+    }
+  ],
+  "state": "CA",
+  "version": "1.0.0"
 }

@@ -2544,6 +2544,7 @@ dependencies = [
  "realearth-streaming",
  "realearth-validation",
  "realearth-vehicles",
+ "serde_json",
  "tempfile",
  "tokio",
  "wgpu",

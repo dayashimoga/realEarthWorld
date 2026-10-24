@@ -1,0 +1,15 @@
+{
+    "Platform": "Linux",
+    "Status": "BLOCKED_PENDING_TOOLCHAIN",
+    "Reason": "Linux target (x86_64-unknown-linux-gnu) cross-compiler and appimagetool not installed on Windows host",
+    "AppDirValid": true,
+    "AppDirLocation": "dist/linux/RealEarth.AppDir",
+    "TarballValid": true,
+    "TarballLocation": "dist/linux/realearth-linux-x64.tar.gz",
+    "NativeElfBinary": false,
+    "RequiredTools": [
+        "x86_64-unknown-linux-gnu toolchain",
+        "appimagetool"
+    ],
+    "ReproductionCommand": "cargo build --target x86_64-unknown-linux-gnu --release && appimagetool dist/linux/RealEarth.AppDir dist/linux/RealEarth-x86_64.AppImage"
+}

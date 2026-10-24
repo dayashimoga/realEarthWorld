@@ -126,6 +126,7 @@ fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, 
         if let Ok((dataset, dem, _)) = realearth_ingestion::load_authentic_city(city.id) {
             let (xml, _) = realearth_ingestion::authentic::acquire_city_osm_xml(city)
                 .unwrap_or_else(|_| {
+                    #[allow(deprecated)]
                     (
                         realearth_ingestion::authentic::generate_authoritative_city_osm_xml(city),
                         String::new(),
@@ -165,7 +166,8 @@ fn resolve_region(region_str: &str) -> (IngestedDataset, DemGrid, &'static str, 
     } else if r.contains("sf") || r.contains("san-francisco") {
         let city = realearth_shared::us_catalog::find_city_by_id("san-francisco").unwrap();
         let (dataset, dem, _) = realearth_ingestion::load_authentic_city("san-francisco").unwrap();
-        let xml = realearth_ingestion::authentic::generate_authoritative_city_osm_xml(city);
+        let (xml, _) =
+            realearth_ingestion::authentic::acquire_city_osm_xml(city).unwrap_or_default();
         (dataset, dem, "San Francisco Downtown (US)", xml)
     } else if r.contains("nyc") || r.contains("new-york") || r.contains("manhattan") {
         (

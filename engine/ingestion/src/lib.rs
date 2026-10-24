@@ -35,6 +35,7 @@ pub mod us_cities;
 pub use acquisition::{
     compute_sha256, verify_checksum, AcquisitionEngine, RegionAcquisitionManifest,
 };
+#[allow(deprecated)]
 pub use authentic::{
     acquire_city_dem, build_authentic_us_dem, generate_authoritative_city_osm_xml,
     load_authentic_city, AuthenticRegionMetadata, SourceProvenance,

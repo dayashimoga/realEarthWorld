@@ -213,6 +213,7 @@ fn test_stage2_world_compiler_repeatability_proof() {
         incremental: false,
         crs_epsg: 32643,
         package_name: "bengaluru_repeatability".to_string(),
+        source_asset_sha256: None,
     };
 
     let stats_a = compile_world_package(&validated, &dem, &out_a, &options)
@@ -288,6 +289,7 @@ fn test_stage2_deterministic_incremental_compilation() {
         incremental: false,
         crs_epsg: 32643,
         package_name: "bengaluru_inc".to_string(),
+        source_asset_sha256: None,
     };
 
     // 1. Initial complete compilation

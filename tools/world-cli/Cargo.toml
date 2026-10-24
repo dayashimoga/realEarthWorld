@@ -8,6 +8,10 @@ license.workspace = true
 name = "realearth-cli"
 path = "src/main.rs"
 
+[[bin]]
+name = "generate-sf-gis"
+path = "src/bin/generate_sf_gis.rs"
+
 [dependencies]
 realearth-shared = { path = "../../engine/shared" }
 realearth-geospatial = { path = "../../engine/geospatial" }
