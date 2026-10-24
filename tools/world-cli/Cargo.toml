@@ -3,6 +3,7 @@ name = "realearth-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+default-run = "realearth-cli"
 
 [[bin]]
 name = "realearth-cli"
