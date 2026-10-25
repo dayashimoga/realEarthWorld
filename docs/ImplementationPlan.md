@@ -1551,4 +1551,33 @@
     - Authentic Geometry: 49,799 triangles across 30 active chunks.
     - Verified Screenshot: Written to `target/screenshots/san_francisco_view.ppm`.
 
+## STAGE 1.1: Complete Driving Game Experience and UX Overhaul (Completed & Certified)
+- [x] Phase 1.1.1 — Polished Game UI and Adaptive Dynamic Camera:
+  - Proportional Vector Typography: Implemented ASCII 32..=126 stroke definitions in [`engine/rendering/src/typography.rs`](file:///j:/rustRealEarth/engine/rendering/src/typography.rs) with zero heap allocations (`[GlyphSegment; 12]`), antialiased outer alpha fringes, subtle drop shadows, and 4 font size presets (`Hero`, `Title`, `Body`, `Caption`).
+  - Adaptive Driving HUD: Added `add_speedometer_cluster_assisted` in [`engine/rendering/src/hud.rs`](file:///j:/rustRealEarth/engine/rendering/src/hud.rs) with dynamic speed color ramp (white $\to$ amber $\to$ crimson), transmission gear badge, tachometer gauge, steer angle readout, and driving assist status chips (`[ABS]`, `[TCS]`, `[ESC]`, `[P-BRAKE]`).
+  - Location Pill & Contextual Prompts: Implemented `add_location_pill` (compass cardinal heading, city district, street name) and `add_contextual_action_prompt` in [`engine/rendering/src/hud.rs`](file:///j:/rustRealEarth/engine/rendering/src/hud.rs).
+  - HUD Collision Resolution: Repositioned status notification banner from bottom footer to top-center ($y = 78.0$ or $18.0$) to prevent overlapping with bottom action prompt ($y = \text{height} - 60.0$) and control footer ($y = \text{height} - 24.0$).
+  - Dynamic Camera & Ground Clamping: In [`engine/vehicles/src/camera.rs`](file:///j:/rustRealEarth/engine/vehicles/src/camera.rs), added `compute_fov_degrees(speed_kph)` scaling FOV smoothly from $60.0^\circ$ at rest to $72.0^\circ$ at $160\text{ km/h}$, lateral steering lookahead offset, and terrain elevation clamping in `update_with_ground` and `update_pose_with_ground` preventing ground penetration across multimodal modes.
+- [x] Phase 1.1.2 — Garage Customization, Assists Physics & Acoustic Synthesis:
+  - 7-Color Paint Palette: In [`engine/rendering/src/hud.rs`](file:///j:/rustRealEarth/engine/rendering/src/hud.rs), defined `GARAGE_PAINT_PALETTE` (Midnight Obsidian, Pure Alpine White, Guards Red, Deep Metallic Sapphire, British Racing Green, Liquid Silver, Sunburst Yellow) with interactive swatches and hit-testing in `add_garage_modal_interactive_with_color`.
+  - Driving Assists Physics: In [`engine/vehicles/src/dynamics.rs`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), added `abs_enabled`, `tcs_enabled`, `esc_enabled`, and `steering_sensitivity` to `VehicleConfig`. Implemented speed-sensitive steering attenuation ($> 12\text{ m/s}$), ABS slip threshold modulation maintaining peak tire grip ($0.96\mu F_z$) with low-speed disengagement ($< 2.5\text{ m/s}$) for firm stopping, TCS engine drive slip limiting, and ESC restorative yaw torque counteracting spin divergence.
+  - Pure Rust Mathematical Acoustic Synthesis: In [`engine/gameplay/src/audio.rs`](file:///j:/rustRealEarth/engine/gameplay/src/audio.rs), implemented `VehicleAudioEngine` synthesizing engine RPM harmonics, turbo whine, tire scrub/squeal, brake squeal, aerodynamic wind roar with turbulence, collision impulse boom, dual-tone horn, and UI sound chimes (`UiSoundCue`), generating interleaved 44.1 kHz 16-bit stereo PCM buffers with zero external C/OS server dependencies.
+- [x] Phase 1.1.3 — Missions, Traffic & Save Schema Persistence:
+  - Career Dispatch & Waypoint Navigation: Validated taxi and courier contracts across authentic San Francisco road topology with accurate GPS navigation routing.
+  - Passenger Dwell Cycle: Implemented dwell timer, boarding countdown, and mission payout transition upon complete stop at pickup/drop-off destinations.
+  - Save/Load Schema Persistence: In [`engine/gameplay/src/save.rs`](file:///j:/rustRealEarth/engine/gameplay/src/save.rs), extended `GameSettings` with `abs_enabled`, `tcs_enabled`, `esc_enabled`, and `custom_vehicle_color: Option<[f32; 4]>` with serde backward compatibility and atomic disk serialization.
+- [x] Phase 1.1.4 — Comprehensive Certification & Verification Gates:
+  - Authored dedicated 6-part certification suite in [`tests/tests/stage1_1_driving_gameplay_and_ux_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage1_1_driving_gameplay_and_ux_certification.rs) (6/6 PASSED ✅):
+    1. Test 1: Proportional vector typography character metrics, multi-line bounds, and drop shadows.
+    2. Test 2: Dynamic camera speed FOV scaling ($60^\circ \to 72^\circ$), steering lookahead, and terrain clamping.
+    3. Test 3: Vehicle garage 7-color palette customization, interactive hit-testing, and specifications summary.
+    4. Test 4: Pure Rust vehicle acoustic synthesizer, engine harmonics, skid acoustics, and PCM buffer output.
+    5. Test 5: Driving assists (ABS slip threshold modulation, TCS traction limiting, ESC yaw stabilization).
+    6. Test 6: Complete end-to-end playable dispatch journey, passenger dwell, and atomic quicksave/quickload persistence.
+  - Workspace Quality Gates:
+    - 100% test pass rate across entire workspace (`cargo test --workspace`, zero failures).
+    - Zero compiler warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+    - Zero formatting deviations under `cargo fmt --check`.
+
+
 

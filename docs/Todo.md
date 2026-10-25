@@ -980,3 +980,25 @@
   - [x] Capture verified 1280x720 framebuffer screenshot to `target/screenshots/san_francisco_view.ppm`.
   - [x] Author comprehensive 6-test certification suite in `tests/tests/stage1_0_city_and_environmental_realism_certification.rs` (6/6 passing).
   - [x] 100% test pass rate across workspace (`cargo test --workspace`), zero warnings under `cargo clippy`, zero formatting deviations (`cargo fmt --check`).
+
+## STAGE 1.1: Complete Driving Game Experience and UX Overhaul (Completed & Certified)
+- [x] Phase 1.1.1: Polished Game UI and Adaptive Camera Experience
+  - [x] Implement proportional vector typography in `engine/rendering/src/typography.rs` with proportional widths, character metrics, 4 font scales (Hero, Title, Body, Caption), regular/bold weights, antialiasing fringes, and drop shadows with zero heap allocations.
+  - [x] Overhaul driving HUD in `engine/rendering/src/hud.rs`: integrated speed color ramp, active driving assist badges ([ABS], [TCS], [ESC], [P-BRAKE]), tachometer RPM gauge, steer angle readout, location pill with compass heading, and contextual interaction prompts.
+  - [x] Relocate notification toasts to top-center ($y = 78.0$ or $18.0$) to eliminate visual collisions with bottom navigation prompt and control hints.
+  - [x] Enhance `VehicleCameraController` in `engine/vehicles/src/camera.rs` with speed-aware dynamic FOV widening ($60^\circ \to 72^\circ$), steering lookahead angle offset, and ground elevation clamping preventing terrain clipping.
+- [x] Phase 1.1.2: Vehicle Garage Customization and Driving Experience
+  - [x] Expand vehicle garage layout with 7 authentic automotive gloss paint swatches (`GARAGE_PAINT_PALETTE`) with interactive mouse hit-testing (`GarageHit::ColorOption`) and Left/Right arrow cycling.
+  - [x] Display real-time vehicle specifications (Drivetrain, Peak Power, Curb Weight, Top Speed, Acceleration) in the garage modal.
+  - [x] Implement active driving assists in `engine/vehicles/src/dynamics.rs`: ABS slip threshold modulation, TCS torque limiting on slip, speed-sensitive steering angle attenuation, and ESC corrective yaw torque restoring stability.
+  - [x] Develop pure Rust mathematical acoustic synthesis engine in `engine/gameplay/src/audio.rs` (`VehicleAudioEngine`): engine RPM harmonics, turbo whine, tire scrub/squeal, brake squeal, aerodynamic wind roar, collision impulse boom, dual-tone horn, and UI sound cues with stereo 44.1 kHz PCM generation.
+- [x] Phase 1.1.3: Playable Missions, Passenger Dwell, and Career Progression
+  - [x] Validate reachable San Francisco dispatch jobs with pickup and drop-off waypoint navigation.
+  - [x] Implement complete passenger dwell cycle (dwell duration, countdown, and automatic contract completion upon vehicle standstill).
+  - [x] Extend `GameSettings` in `engine/gameplay/src/save.rs` with `abs_enabled`, `tcs_enabled`, `esc_enabled`, and `custom_vehicle_color: Option<[f32; 4]>` supporting atomic quicksave and quickload serialization.
+- [x] Phase 1.1.4: Complete Quality Certification and Verification Gates
+  - [x] Author comprehensive 6-part certification suite in `tests/tests/stage1_1_driving_gameplay_and_ux_certification.rs` (6/6 PASSED ✅).
+  - [x] Verify 100% test pass rate across entire workspace (`cargo test --workspace`, zero failures).
+  - [x] Verify zero warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+  - [x] Verify zero deviations under `cargo fmt --check`.
+

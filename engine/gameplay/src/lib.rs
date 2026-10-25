@@ -6,6 +6,7 @@
 //! Completely decoupled from rendering, display servers, or physical geometry mutations.
 
 pub mod achievements;
+pub mod audio;
 pub mod career;
 pub mod destinations;
 pub mod economy;
@@ -19,6 +20,9 @@ pub mod save;
 
 // Primary re-exports
 pub use achievements::{Achievement, AchievementRegistry};
+pub use audio::{
+    AudioMixerOutput, AudioTelemetry, UiSoundCue, VehicleAudioEngine, VehicleAudioPreset,
+};
 pub use career::{CareerType, ReputationTier};
 pub use destinations::{JobCatalogGenerator, SurveyedDestinations};
 pub use economy::{EconomyConfig, EconomyError, Transaction, TransactionCategory, Wallet};

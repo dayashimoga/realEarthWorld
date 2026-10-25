@@ -1,5 +1,6 @@
 //! 2D Screen-space HUD and telemetry overlay graphics pipeline.
 
+use crate::typography::{FontSize, FontWeight};
 use bytemuck::{Pod, Zeroable};
 
 /// 2D HUD Vertex in pixel screen-space coordinates.
@@ -265,10 +266,23 @@ impl JobBrowserLayout {
 }
 
 /// Responsive layout definitions and bounding boxes for the Vehicle Garage modal.
+/// Curated palette of 7 gloss automotive paint colors for garage vehicle customization.
+pub const GARAGE_PAINT_PALETTE: [(&str, [f32; 4]); 7] = [
+    ("Obsidian Black", [0.10, 0.10, 0.12, 1.0]),
+    ("Alpine White", [0.95, 0.95, 0.98, 1.0]),
+    ("Guards Red", [0.88, 0.12, 0.12, 1.0]),
+    ("Racing Blue", [0.12, 0.40, 0.88, 1.0]),
+    ("Solar Gold", [0.94, 0.76, 0.16, 1.0]),
+    ("Emerald Green", [0.08, 0.62, 0.32, 1.0]),
+    ("Titanium Silver", [0.65, 0.68, 0.72, 1.0]),
+];
+
+/// Responsive layout definitions and bounding boxes for the Vehicle Garage modal.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GarageLayout {
     pub modal_rect: UiRect,
     pub item_rects: Vec<UiRect>,
+    pub color_rects: Vec<UiRect>,
     pub select_btn: UiRect,
     pub back_btn: UiRect,
 }
@@ -276,6 +290,7 @@ pub struct GarageLayout {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GarageHit {
     VehicleItem(usize),
+    ColorOption(usize),
     SelectAndSpawn,
     Back,
 }
@@ -300,9 +315,20 @@ impl GarageLayout {
         let select_btn = UiRect::new(mx + modal_w - 240.0, footer_y + 4.0, 140.0, 28.0);
         let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
 
+        // 7 Color swatch chips in bottom bar to the left of action buttons
+        let chip_size = 20.0;
+        let chip_spacing = 6.0;
+        let colors_start_x = mx + 20.0;
+        let mut color_rects = Vec::with_capacity(GARAGE_PAINT_PALETTE.len());
+        for c in 0..GARAGE_PAINT_PALETTE.len() {
+            let cx = colors_start_x + (c as f32) * (chip_size + chip_spacing);
+            color_rects.push(UiRect::new(cx, footer_y + 8.0, chip_size, chip_size));
+        }
+
         Self {
             modal_rect: UiRect::new(mx, my, modal_w, modal_h),
             item_rects,
+            color_rects,
             select_btn,
             back_btn,
         }
@@ -312,6 +338,11 @@ impl GarageLayout {
         for (i, rect) in self.item_rects.iter().enumerate() {
             if rect.contains(px, py) {
                 return Some(GarageHit::VehicleItem(i));
+            }
+        }
+        for (i, rect) in self.color_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(GarageHit::ColorOption(i));
             }
         }
         if self.select_btn.contains(px, py) {
@@ -622,7 +653,7 @@ impl HudMesh {
         }
     }
 
-    /// Renders a multi-line ASCII string.
+    /// Renders a multi-line string using proportional, antialiased vector typography.
     pub fn add_text(
         &mut self,
         start_x: f32,
@@ -631,20 +662,44 @@ impl HudMesh {
         text: &str,
         color: [f32; 4],
     ) {
-        let mut cur_x = start_x;
-        let mut cur_y = start_y;
-        let char_w = 6.0 * scale;
-        let line_h = 9.0 * scale;
+        let size_px = (scale * 13.5).max(9.0);
+        let weight = if scale >= 1.5 {
+            crate::typography::FontWeight::Bold
+        } else {
+            crate::typography::FontWeight::Regular
+        };
+        crate::typography::render_proportional_text(
+            self, start_x, start_y, text, size_px, color, weight, true,
+        );
+    }
 
-        for ch in text.chars() {
-            if ch == '\n' {
-                cur_x = start_x;
-                cur_y += line_h;
-            } else {
-                self.add_char(cur_x, cur_y, scale, ch, color);
-                cur_x += char_w;
-            }
-        }
+    /// Renders proportional anti-aliased vector typography with explicit font size, weight, and shadow.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_text_proportional(
+        &mut self,
+        start_x: f32,
+        start_y: f32,
+        text: &str,
+        size_px: f32,
+        color: [f32; 4],
+        weight: crate::typography::FontWeight,
+        drop_shadow: bool,
+    ) {
+        crate::typography::render_proportional_text(
+            self,
+            start_x,
+            start_y,
+            text,
+            size_px,
+            color,
+            weight,
+            drop_shadow,
+        );
+    }
+
+    /// Evaluates text dimensions (width, height) in screen pixels.
+    pub fn measure_text_proportional(&self, text: &str, size_px: f32) -> (f32, f32) {
+        crate::typography::measure_proportional_text(text, size_px)
     }
 
     /// Convenience: adds a stylish semi-transparent panel with a bright accent top border.
@@ -1646,7 +1701,7 @@ impl HudMesh {
             [0.35, 0.85, 1.0, 1.0],
         );
         let ver_str = "v1.0.0-STAGE1-RESTORED";
-        let ver_w = ver_str.len() as f32 * 6.0 * 1.05;
+        let (ver_w, _) = self.measure_text_proportional(ver_str, 1.05 * 13.5);
         self.add_text(
             screen_w - ver_w - 40.0,
             footer_y + 16.0,
@@ -2152,6 +2207,33 @@ impl HudMesh {
         pressed_btn: Option<GarageHit>,
         vehicles: &[(&str, &str, &str, f32, f32, f32, bool)],
     ) {
+        self.add_garage_modal_interactive_with_color(
+            screen_w,
+            screen_h,
+            selected_idx,
+            0,
+            hovered_idx,
+            pressed_idx,
+            hovered_btn,
+            pressed_btn,
+            vehicles,
+        );
+    }
+
+    /// Adds an interactive vehicle garage modal with custom paint palette selection.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_garage_modal_interactive_with_color(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_idx: usize,
+        selected_color_idx: usize,
+        hovered_idx: Option<usize>,
+        pressed_idx: Option<usize>,
+        hovered_btn: Option<GarageHit>,
+        pressed_btn: Option<GarageHit>,
+        vehicles: &[(&str, &str, &str, f32, f32, f32, bool)],
+    ) {
         let layout = GarageLayout::compute(screen_w, screen_h, vehicles.len());
         let modal_w = layout.modal_rect.w;
         let modal_h = layout.modal_rect.h;
@@ -2278,17 +2360,44 @@ impl HudMesh {
             self.add_text(mx + 720.0, iy + 10.0, 1.0, stat_str, stat_col);
         }
 
-        // Footer
-        let footer_y = my + modal_h - 36.0;
-        self.add_rect(mx, footer_y, modal_w, 36.0, [0.08, 0.10, 0.15, 0.98]);
+        // Footer with paint palette swatches
+        let footer_y = my + modal_h - 40.0;
+        self.add_rect(mx, footer_y, modal_w, 40.0, [0.08, 0.10, 0.15, 0.98]);
         self.add_rect(mx, footer_y, modal_w, 1.0, [0.25, 0.35, 0.50, 0.6]);
+
+        let color_name =
+            GARAGE_PAINT_PALETTE[selected_color_idx.min(GARAGE_PAINT_PALETTE.len() - 1)].0;
         self.add_text(
-            mx + 20.0,
-            footer_y + 11.0,
-            1.05,
-            "[↑/↓] or Scroll Navigate  |  Click Item to Inspect",
-            [1.0, 0.65, 0.2, 1.0],
+            mx + 16.0,
+            footer_y + 12.0,
+            1.0,
+            &format!("PAINT: {}", color_name),
+            [1.0, 0.75, 0.25, 1.0],
         );
+
+        for (c_idx, rect) in layout.color_rects.iter().enumerate() {
+            let col = GARAGE_PAINT_PALETTE[c_idx].1;
+            self.add_rect(rect.x + 80.0, rect.y, rect.w, rect.h, col);
+            if c_idx == selected_color_idx {
+                self.add_rect_outline(
+                    rect.x + 78.0,
+                    rect.y - 2.0,
+                    rect.w + 4.0,
+                    rect.h + 4.0,
+                    2.0,
+                    [1.0, 1.0, 1.0, 1.0],
+                );
+            } else {
+                self.add_rect_outline(
+                    rect.x + 80.0,
+                    rect.y,
+                    rect.w,
+                    rect.h,
+                    1.0,
+                    [0.3, 0.4, 0.5, 0.7],
+                );
+            }
+        }
 
         // Clickable Select & Spawn Button
         let sb = layout.select_btn;
@@ -2649,8 +2758,43 @@ impl HudMesh {
         metric_units: bool,
         vehicle_model: &str,
     ) {
-        let cluster_w = 340.0;
-        let cluster_h = 130.0;
+        self.add_speedometer_cluster_assisted(
+            x,
+            y,
+            speed_kph,
+            gear_str,
+            rpm,
+            max_rpm,
+            steer_deg,
+            metric_units,
+            vehicle_model,
+            true,
+            true,
+            true,
+            false,
+        );
+    }
+
+    /// Adds an instrument cluster with real-time driving assist indicators (ABS, TCS, ESC, handbrake) and dynamic color ramp.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_speedometer_cluster_assisted(
+        &mut self,
+        x: f32,
+        y: f32,
+        speed_kph: f32,
+        gear_str: &str,
+        rpm: f32,
+        max_rpm: f32,
+        steer_deg: f32,
+        metric_units: bool,
+        vehicle_model: &str,
+        abs_on: bool,
+        tcs_on: bool,
+        esc_on: bool,
+        handbrake_on: bool,
+    ) {
+        let cluster_w = 345.0;
+        let cluster_h = 138.0;
 
         self.add_panel(x, y, cluster_w, cluster_h, [1.0, 0.45, 0.10, 1.0]);
 
@@ -2661,14 +2805,39 @@ impl HudMesh {
             (speed_kph.abs() * 0.621371, "MPH")
         };
 
-        // Large Speed Readout
+        // Dynamic Speed Digits Color Ramp
+        let speed_color = if speed_val > 105.0 {
+            [1.0, 0.25, 0.25, 1.0] // Crimson warning
+        } else if speed_val > 75.0 {
+            [1.0, 0.85, 0.20, 1.0] // Amber
+        } else {
+            [1.0, 1.0, 1.0, 1.0] // Crisp white
+        };
+
+        // Large Speed Readout with proportional typography
         let speed_str = format!("{:>3.0}", speed_val);
-        self.add_text(x + 16.0, y + 16.0, 3.8, &speed_str, [1.0, 1.0, 1.0, 1.0]);
-        self.add_text(x + 120.0, y + 36.0, 1.4, unit_str, [0.95, 0.55, 0.20, 1.0]);
+        self.add_text_proportional(
+            x + 16.0,
+            y + 14.0,
+            &speed_str,
+            FontSize::Hero.pixels(),
+            speed_color,
+            FontWeight::Bold,
+            true,
+        );
+        self.add_text_proportional(
+            x + 122.0,
+            y + 36.0,
+            unit_str,
+            FontSize::Body.pixels(),
+            [0.95, 0.55, 0.20, 1.0],
+            FontWeight::Bold,
+            true,
+        );
 
         // Transmission Gear Badge (High-contrast pill)
         let gear_x = x + cluster_w - 75.0;
-        let gear_y = y + 16.0;
+        let gear_y = y + 14.0;
         let is_reverse = gear_str == "R";
         let gear_bg = if is_reverse {
             [0.85, 0.15, 0.15, 0.95]
@@ -2679,12 +2848,14 @@ impl HudMesh {
         };
         self.add_rect(gear_x, gear_y, 55.0, 36.0, gear_bg);
         self.add_rect_outline(gear_x, gear_y, 55.0, 36.0, 1.5, [1.0, 1.0, 1.0, 0.6]);
-        self.add_text(
-            gear_x + 12.0,
+        self.add_text_proportional(
+            gear_x + 14.0,
             gear_y + 8.0,
-            2.2,
             gear_str,
+            FontSize::Title.pixels(),
             [1.0, 1.0, 1.0, 1.0],
+            FontWeight::Bold,
+            true,
         );
 
         // Tachometer RPM Gauge Bar
@@ -2696,32 +2867,182 @@ impl HudMesh {
         } else {
             [0.15, 0.85, 0.45, 1.0] // Cruising
         };
-        self.add_text(
+        self.add_text_proportional(
             x + 16.0,
-            y + 62.0,
-            1.0,
+            y + 60.0,
             &format!("{:.0} RPM", rpm),
+            FontSize::Caption.pixels(),
             [0.8, 0.85, 0.9, 0.9],
+            FontWeight::Regular,
+            false,
         );
         self.add_bar(
             x + 16.0,
             y + 74.0,
             cluster_w - 32.0,
-            10.0,
+            8.0,
             rpm_frac,
             rpm_color,
             [0.12, 0.15, 0.20, 1.0],
         );
 
+        // Driving Assist Status Badges: [ABS] [TCS] [ESC] [P-BRAKE]
+        let chip_y = y + 88.0;
+        let mut chip_x = x + 16.0;
+        let assist_chips = [
+            ("ABS", abs_on, [0.2, 0.85, 0.4, 0.9]),
+            ("TCS", tcs_on, [0.2, 0.85, 0.4, 0.9]),
+            ("ESC", esc_on, [0.2, 0.85, 0.4, 0.9]),
+            ("P-BRAKE", handbrake_on, [0.95, 0.25, 0.25, 0.95]),
+        ];
+        for (label, active, active_col) in assist_chips {
+            let (bg, border, text_col) = if active {
+                (
+                    [
+                        active_col[0] * 0.3,
+                        active_col[1] * 0.3,
+                        active_col[2] * 0.3,
+                        0.8,
+                    ],
+                    active_col,
+                    [1.0, 1.0, 1.0, 1.0],
+                )
+            } else {
+                (
+                    [0.08, 0.10, 0.14, 0.6],
+                    [0.25, 0.30, 0.40, 0.4],
+                    [0.45, 0.50, 0.55, 0.6],
+                )
+            };
+            let chip_w = label.len() as f32 * 6.0 + 10.0;
+            self.add_rect(chip_x, chip_y, chip_w, 16.0, bg);
+            self.add_rect_outline(chip_x, chip_y, chip_w, 16.0, 0.8, border);
+            self.add_text_proportional(
+                chip_x + 5.0,
+                chip_y + 3.0,
+                label,
+                9.0,
+                text_col,
+                FontWeight::Bold,
+                false,
+            );
+            chip_x += chip_w + 6.0;
+        }
+
         // Steer angle & Vehicle model subtitle
         let steer_str = format!("STEER: {:>+3.0} deg", steer_deg);
-        self.add_text(x + 16.0, y + 96.0, 1.0, &steer_str, [0.5, 0.8, 1.0, 0.9]);
-        self.add_text(
-            x + 150.0,
-            y + 96.0,
-            1.0,
+        self.add_text_proportional(
+            x + 16.0,
+            y + 114.0,
+            &steer_str,
+            FontSize::Caption.pixels(),
+            [0.5, 0.8, 1.0, 0.9],
+            FontWeight::Regular,
+            false,
+        );
+        self.add_text_proportional(
+            x + 140.0,
+            y + 114.0,
             vehicle_model,
+            FontSize::Caption.pixels(),
             [0.75, 0.75, 0.75, 0.8],
+            FontWeight::Regular,
+            false,
+        );
+    }
+
+    /// Adds a modern location pill banner displaying city district, street, and cardinal heading.
+    pub fn add_location_pill(
+        &mut self,
+        x: f32,
+        y: f32,
+        district: &str,
+        street: &str,
+        heading_cardinal: &str,
+    ) {
+        let pill_w = 280.0;
+        let pill_h = 42.0;
+        self.add_panel(x, y, pill_w, pill_h, [0.2, 0.7, 1.0, 0.9]);
+        // Compass badge
+        self.add_rect(x + 8.0, y + 8.0, 34.0, 26.0, [0.10, 0.35, 0.65, 0.9]);
+        self.add_rect_outline(x + 8.0, y + 8.0, 34.0, 26.0, 1.0, [0.4, 0.8, 1.0, 0.7]);
+        self.add_text_proportional(
+            x + 14.0,
+            y + 12.0,
+            heading_cardinal,
+            FontSize::Body.pixels(),
+            [1.0, 1.0, 1.0, 1.0],
+            FontWeight::Bold,
+            true,
+        );
+        // District & Street text
+        self.add_text_proportional(
+            x + 50.0,
+            y + 8.0,
+            district,
+            FontSize::Body.pixels(),
+            [0.4, 0.9, 1.0, 1.0],
+            FontWeight::Bold,
+            true,
+        );
+        self.add_text_proportional(
+            x + 50.0,
+            y + 23.0,
+            street,
+            FontSize::Caption.pixels(),
+            [0.85, 0.90, 0.95, 0.85],
+            FontWeight::Regular,
+            false,
+        );
+    }
+
+    /// Adds a stylish contextual action prompt chip (e.g. above speedometer or bottom-center).
+    pub fn add_contextual_action_prompt(
+        &mut self,
+        cx: f32,
+        y: f32,
+        key_badge: &str,
+        action_text: &str,
+    ) {
+        let badge_w = (key_badge.len() as f32 * 9.0 + 16.0).max(36.0);
+        let text_w = action_text.len() as f32 * 7.5;
+        let total_w = badge_w + text_w + 24.0;
+        let x = cx - total_w * 0.5;
+        let h = 32.0;
+
+        self.add_panel(x, y, total_w, h, [0.15, 0.85, 0.55, 0.95]);
+        self.add_rect(
+            x + 5.0,
+            y + 5.0,
+            badge_w,
+            h - 10.0,
+            [0.12, 0.55, 0.35, 0.95],
+        );
+        self.add_rect_outline(
+            x + 5.0,
+            y + 5.0,
+            badge_w,
+            h - 10.0,
+            1.0,
+            [0.4, 1.0, 0.7, 0.8],
+        );
+        self.add_text_proportional(
+            x + 10.0,
+            y + 8.0,
+            key_badge,
+            FontSize::Body.pixels(),
+            [1.0, 1.0, 1.0, 1.0],
+            FontWeight::Bold,
+            true,
+        );
+        self.add_text_proportional(
+            x + badge_w + 14.0,
+            y + 9.0,
+            action_text,
+            FontSize::Body.pixels(),
+            [0.95, 1.0, 0.95, 1.0],
+            FontWeight::Regular,
+            true,
         );
     }
 
@@ -2830,7 +3151,7 @@ impl HudMesh {
             [0.35, 0.95, 0.65, 1.0],
         );
         let pay_str = format!("REWARD: Rs.{:.0}", payout_credits);
-        let pay_w = pay_str.len() as f32 * 6.0 * 1.1;
+        let (pay_w, _) = self.measure_text_proportional(&pay_str, 1.1 * 13.5);
         self.add_text(
             x + w - pay_w - 14.0,
             y + 12.0,

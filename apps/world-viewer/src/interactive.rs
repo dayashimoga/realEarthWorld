@@ -356,6 +356,9 @@ pub struct InteractiveViewerApp {
     pub pause_menu_selected_idx: usize,
     pub job_browser_selected_idx: usize,
     pub garage_selected_idx: usize,
+    pub garage_selected_color_idx: usize,
+    pub vehicle_custom_color: Option<[f32; 4]>,
+    pub audio_engine: realearth_gameplay::audio::VehicleAudioEngine,
     pub settings_selected_idx: usize,
     pub show_debug_overlay: bool,
     pub use_metric_units: bool,
@@ -580,6 +583,11 @@ impl InteractiveViewerApp {
             pause_menu_selected_idx: 0,
             job_browser_selected_idx: 0,
             garage_selected_idx: 0,
+            garage_selected_color_idx: 0,
+            vehicle_custom_color: None,
+            audio_engine: realearth_gameplay::audio::VehicleAudioEngine::new(
+                realearth_gameplay::audio::VehicleAudioPreset::SportsCoupe,
+            ),
             settings_selected_idx: 0,
             show_debug_overlay: false,
             use_metric_units: true,
@@ -724,7 +732,14 @@ impl InteractiveViewerApp {
             active_job: self.active_job.clone(),
             active_region_id: self.config.region_id.clone(),
             vehicle_position: veh_coord,
-            settings: GameSettings::default(),
+            settings: GameSettings {
+                metric_units: self.use_metric_units,
+                abs_enabled: self.vehicle.config.abs_enabled,
+                tcs_enabled: self.vehicle.config.tcs_enabled,
+                esc_enabled: self.vehicle.config.esc_enabled,
+                custom_vehicle_color: self.vehicle_custom_color,
+                ..GameSettings::default()
+            },
         };
 
         match SaveManager::save_to_file(&save_path, &save_data) {
@@ -757,6 +772,13 @@ impl InteractiveViewerApp {
                 Ok(loaded) => {
                     self.player_profile = loaded.profile;
                     self.active_job = loaded.active_job;
+                    self.use_metric_units = loaded.settings.metric_units;
+                    self.vehicle.config.abs_enabled = loaded.settings.abs_enabled;
+                    self.vehicle.config.tcs_enabled = loaded.settings.tcs_enabled;
+                    self.vehicle.config.esc_enabled = loaded.settings.esc_enabled;
+                    if let Some(col) = loaded.settings.custom_vehicle_color {
+                        self.vehicle_custom_color = Some(col);
+                    }
                     if loaded.active_region_id != self.config.region_id {
                         let _ = self.load_region(&loaded.active_region_id);
                     }
@@ -1430,6 +1452,12 @@ impl InteractiveViewerApp {
         self.previous_vehicle_orient = self.vehicle.orientation;
         self.smoothed_steer_input = 0.0;
         self.vehicle_cam.reset();
+        self.vehicle_custom_color = Some(
+            realearth_rendering::GARAGE_PAINT_PALETTE[self
+                .garage_selected_color_idx
+                .min(realearth_rendering::GARAGE_PAINT_PALETTE.len() - 1)]
+            .1,
+        );
     }
 
     /// Executes validated multimodal vehicle spawning on appropriate infrastructure with camera synchronization.
@@ -1585,57 +1613,93 @@ impl InteractiveViewerApp {
         self.smoothed_steer_input = 0.0;
         self.vehicle_cam.reset();
 
+        self.vehicle_custom_color = Some(
+            realearth_rendering::GARAGE_PAINT_PALETTE[self
+                .garage_selected_color_idx
+                .min(realearth_rendering::GARAGE_PAINT_PALETTE.len() - 1)]
+            .1,
+        );
+
+        let audio_preset = match idx {
+            0 => realearth_gameplay::audio::VehicleAudioPreset::SportsCoupe,
+            1 => realearth_gameplay::audio::VehicleAudioPreset::LuxurySedan,
+            2 => realearth_gameplay::audio::VehicleAudioPreset::OverlandSuv,
+            3 => realearth_gameplay::audio::VehicleAudioPreset::CityTaxi,
+            4 => realearth_gameplay::audio::VehicleAudioPreset::TransitBus,
+            5 => realearth_gameplay::audio::VehicleAudioPreset::HeavyTruck,
+            6 => realearth_gameplay::audio::VehicleAudioPreset::Superbike,
+            7 => realearth_gameplay::audio::VehicleAudioPreset::Electric,
+            _ => realearth_gameplay::audio::VehicleAudioPreset::SportsCoupe,
+        };
+        self.audio_engine = realearth_gameplay::audio::VehicleAudioEngine::new(audio_preset);
+        self.audio_engine
+            .play_ui_cue(realearth_gameplay::audio::UiSoundCue::MenuSelect);
+
         // Camera perspective & positioning update
         self.vehicle_cam.perspective = VehicleCameraPerspective::Chase;
         let (cam_pos, cam_yaw, cam_pitch) = match self.active_transport_mode {
-            ActiveTransportMode::Car => self.vehicle_cam.update_pose(
+            ActiveTransportMode::Car => self.vehicle_cam.update_pose_with_ground(
                 self.vehicle.position,
                 self.vehicle.orientation,
                 5.5,
                 2.2,
+                self.vehicle.speed_kph,
                 0.016,
+                Some(elev),
             ),
-            ActiveTransportMode::Motorcycle => self.vehicle_cam.update_pose(
+            ActiveTransportMode::Motorcycle => self.vehicle_cam.update_pose_with_ground(
                 self.motorcycle.position,
                 self.motorcycle.orientation,
                 4.2,
                 1.6,
+                self.motorcycle.speed_kph,
                 0.016,
+                Some(elev),
             ),
-            ActiveTransportMode::TransitBus => self.vehicle_cam.update_pose(
+            ActiveTransportMode::TransitBus => self.vehicle_cam.update_pose_with_ground(
                 self.transit_bus.position,
                 self.transit_bus.orientation,
                 16.0,
                 4.5,
+                self.transit_bus.speed_kph,
                 0.016,
+                Some(elev),
             ),
-            ActiveTransportMode::HeavyTruck => self.vehicle_cam.update_pose(
+            ActiveTransportMode::HeavyTruck => self.vehicle_cam.update_pose_with_ground(
                 self.heavy_truck.tractor_position,
                 self.heavy_truck.tractor_orientation,
                 18.5,
                 4.8,
+                self.heavy_truck.speed_kph,
                 0.016,
+                Some(elev),
             ),
-            ActiveTransportMode::Train => self.vehicle_cam.update_pose(
+            ActiveTransportMode::Train => self.vehicle_cam.update_pose_with_ground(
                 self.train_position,
                 glam::Quat::from_rotation_y(self.train_yaw),
                 28.0,
                 6.2,
+                self.train_consist.speed_kph,
                 0.016,
+                Some(elev),
             ),
-            ActiveTransportMode::Marine => self.vehicle_cam.update_pose(
+            ActiveTransportMode::Marine => self.vehicle_cam.update_pose_with_ground(
                 self.marine_vessel.position,
                 self.marine_vessel.orientation,
                 90.0,
                 24.0,
+                self.marine_vessel.speed_knots * 1.852,
                 0.016,
+                Some(0.0),
             ),
-            ActiveTransportMode::Aviation => self.vehicle_cam.update_pose(
+            ActiveTransportMode::Aviation => self.vehicle_cam.update_pose_with_ground(
                 self.aircraft.position,
                 self.aircraft.orientation,
                 48.0,
                 12.5,
+                self.aircraft.true_airspeed_mps * 3.6,
                 0.016,
+                Some(elev),
             ),
         };
 
@@ -1646,6 +1710,7 @@ impl InteractiveViewerApp {
         self.camera_ctrl.coord = Wgs84Coord::new(cam_lat, cam_lon, cam_pos.y as f64);
         self.camera_ctrl.yaw = cam_yaw;
         self.camera_ctrl.pitch = cam_pitch;
+        self.camera.fov_y = self.vehicle_cam.current_fov_deg.to_radians();
         self.camera_ctrl.update_camera(&mut self.camera);
 
         // Clear incompatible career mission contract
@@ -2681,6 +2746,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                                                 Some(GarageHit::VehicleItem(idx)) => {
                                                     self.garage_selected_idx = idx;
                                                 }
+                                                Some(GarageHit::ColorOption(c_idx)) => {
+                                                    self.garage_selected_color_idx = c_idx;
+                                                    self.vehicle_custom_color = Some(
+                                                        realearth_rendering::GARAGE_PAINT_PALETTE
+                                                            [c_idx]
+                                                            .1,
+                                                    );
+                                                    self.audio_engine.play_ui_cue(
+                                                        realearth_gameplay::audio::UiSoundCue::MenuNavigate,
+                                                    );
+                                                }
                                                 Some(GarageHit::SelectAndSpawn) => {
                                                     self.dispatch_ui_action(
                                                         UiDomainAction::SelectAndSpawnVehicle(
@@ -2989,6 +3065,37 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 KeyCode::ArrowDown | KeyCode::KeyS => {
                                     self.garage_selected_idx =
                                         (self.garage_selected_idx + 1).min(total_vehicles - 1);
+                                    return;
+                                }
+                                KeyCode::ArrowLeft | KeyCode::KeyA => {
+                                    self.garage_selected_color_idx =
+                                        if self.garage_selected_color_idx == 0 {
+                                            realearth_rendering::GARAGE_PAINT_PALETTE.len() - 1
+                                        } else {
+                                            self.garage_selected_color_idx - 1
+                                        };
+                                    self.vehicle_custom_color = Some(
+                                        realearth_rendering::GARAGE_PAINT_PALETTE
+                                            [self.garage_selected_color_idx]
+                                            .1,
+                                    );
+                                    self.audio_engine.play_ui_cue(
+                                        realearth_gameplay::audio::UiSoundCue::MenuNavigate,
+                                    );
+                                    return;
+                                }
+                                KeyCode::ArrowRight | KeyCode::KeyD => {
+                                    self.garage_selected_color_idx =
+                                        (self.garage_selected_color_idx + 1)
+                                            % realearth_rendering::GARAGE_PAINT_PALETTE.len();
+                                    self.vehicle_custom_color = Some(
+                                        realearth_rendering::GARAGE_PAINT_PALETTE
+                                            [self.garage_selected_color_idx]
+                                            .1,
+                                    );
+                                    self.audio_engine.play_ui_cue(
+                                        realearth_gameplay::audio::UiSoundCue::MenuNavigate,
+                                    );
                                     return;
                                 }
                                 KeyCode::Enter => {
@@ -3958,16 +4065,59 @@ impl ApplicationHandler for InteractiveViewerApp {
                     self.player_profile
                         .record_distance((speed_mps * dt) / 1000.0);
 
-                    // Update camera based on active transport mode
+                    // Step audio synthesis telemetry
+                    let (slip_ratio, slip_angle) = if self.active_transport_mode
+                        == ActiveTransportMode::Car
+                    {
+                        let w0 = &self.vehicle.wheels[0];
+                        let forward_speed = (self.vehicle.speed_kph / 3.6).abs();
+                        let wheel_speed =
+                            (w0.angular_velocity * self.vehicle.config.wheel_radius).abs();
+                        let ratio = if forward_speed > 0.5 {
+                            ((wheel_speed - forward_speed).abs() / forward_speed).clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        };
+                        (ratio, w0.slip_angle.to_degrees().abs())
+                    } else {
+                        (0.0, 0.0)
+                    };
+                    let telemetry = realearth_gameplay::audio::AudioTelemetry {
+                        engine_rpm: match self.active_transport_mode {
+                            ActiveTransportMode::Car => self.vehicle.engine_rpm,
+                            ActiveTransportMode::Motorcycle => {
+                                (self.motorcycle.speed_kph * 95.0 + 1200.0).min(11500.0)
+                            }
+                            _ => 2200.0,
+                        },
+                        throttle: if is_braking { 0.0 } else { 0.8 },
+                        speed_kph: active_speed_kph,
+                        brake_input: if is_braking || self.park_engaged {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        tire_slip_ratio: slip_ratio,
+                        tire_slip_angle_deg: slip_angle,
+                        collision_impulse: 0.0,
+                        horn_pressed: self.pressed_keys.contains(&KeyCode::KeyH),
+                    };
+                    let _ = self.audio_engine.update_telemetry(telemetry, dt as f32);
+
+                    // Update camera based on active transport mode with ground elevation clamping and speed FOV
                     match self.active_transport_mode {
                         ActiveTransportMode::Car => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                render_pos,
-                                render_orient,
-                                5.5,
-                                2.2,
-                                dt as f32,
-                            );
+                            let g_elev = gq.elevation(render_pos.x, render_pos.z);
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    render_pos,
+                                    render_orient,
+                                    5.5,
+                                    2.2,
+                                    self.vehicle.speed_kph,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -3976,13 +4126,18 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::Motorcycle => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.motorcycle.position,
-                                self.motorcycle.orientation,
-                                4.2,
-                                1.6,
-                                dt as f32,
-                            );
+                            let g_elev = gq
+                                .elevation(self.motorcycle.position.x, self.motorcycle.position.z);
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.motorcycle.position,
+                                    self.motorcycle.orientation,
+                                    4.2,
+                                    1.6,
+                                    self.motorcycle.speed_kph,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -3991,13 +4146,20 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::TransitBus => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.transit_bus.position,
-                                self.transit_bus.orientation,
-                                16.0,
-                                4.5,
-                                dt as f32,
+                            let g_elev = gq.elevation(
+                                self.transit_bus.position.x,
+                                self.transit_bus.position.z,
                             );
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.transit_bus.position,
+                                    self.transit_bus.orientation,
+                                    16.0,
+                                    4.5,
+                                    self.transit_bus.speed_kph,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -4006,13 +4168,20 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::HeavyTruck => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.heavy_truck.tractor_position,
-                                self.heavy_truck.tractor_orientation,
-                                18.5,
-                                4.8,
-                                dt as f32,
+                            let g_elev = gq.elevation(
+                                self.heavy_truck.tractor_position.x,
+                                self.heavy_truck.tractor_position.z,
                             );
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.heavy_truck.tractor_position,
+                                    self.heavy_truck.tractor_orientation,
+                                    18.5,
+                                    4.8,
+                                    self.heavy_truck.speed_kph,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -4021,13 +4190,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::Train => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.train_position,
-                                glam::Quat::from_rotation_y(self.train_yaw),
-                                28.0,
-                                6.2,
-                                dt as f32,
-                            );
+                            let g_elev = gq.elevation(self.train_position.x, self.train_position.z);
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.train_position,
+                                    glam::Quat::from_rotation_y(self.train_yaw),
+                                    28.0,
+                                    6.2,
+                                    self.train_consist.speed_kph,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -4036,13 +4209,16 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::Marine => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.marine_vessel.position,
-                                self.marine_vessel.orientation,
-                                90.0,
-                                24.0,
-                                dt as f32,
-                            );
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.marine_vessel.position,
+                                    self.marine_vessel.orientation,
+                                    90.0,
+                                    24.0,
+                                    self.marine_vessel.speed_knots * 1.852,
+                                    dt as f32,
+                                    Some(0.0),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -4051,13 +4227,18 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::Aviation => {
-                            let (cam_pos, cam_yaw, cam_pitch) = self.vehicle_cam.update_pose(
-                                self.aircraft.position,
-                                self.aircraft.orientation,
-                                48.0,
-                                12.5,
-                                dt as f32,
-                            );
+                            let g_elev =
+                                gq.elevation(self.aircraft.position.x, self.aircraft.position.z);
+                            let (cam_pos, cam_yaw, cam_pitch) =
+                                self.vehicle_cam.update_pose_with_ground(
+                                    self.aircraft.position,
+                                    self.aircraft.orientation,
+                                    48.0,
+                                    12.5,
+                                    self.aircraft.true_airspeed_mps * 3.6,
+                                    dt as f32,
+                                    Some(g_elev),
+                                );
                             let cam_lat = anchor.lat + (cam_pos.z as f64 / meters_per_deg_lat);
                             let cam_lon = anchor.lon + (cam_pos.x as f64 / meters_per_deg_lon);
                             self.camera_ctrl.coord =
@@ -4066,6 +4247,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                     }
+                    self.camera.fov_y = self.vehicle_cam.current_fov_deg.to_radians();
                     self.camera_ctrl.update_camera(&mut self.camera);
 
                     forward_vec * (active_speed_kph * (1000.0 / 3600.0))
@@ -4182,15 +4364,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                             let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                                 position: render_pos,
                                 orientation: render_orient,
-                                color: match self.vehicle_visual_type {
-                                    VehicleVisualType::SportsCoupe => [0.92, 0.12, 0.12, 1.0], // Cherry Red
-                                    VehicleVisualType::Sedan => [0.15, 0.35, 0.85, 1.0], // Electric Blue
-                                    VehicleVisualType::Suv => [0.20, 0.22, 0.25, 1.0], // Graphite Gray
-                                    VehicleVisualType::Taxi => [0.95, 0.80, 0.10, 1.0], // Yellow Taxi
-                                    VehicleVisualType::TransitBus => [0.10, 0.65, 0.40, 1.0], // City Green Transit
-                                    VehicleVisualType::HeavyTruck => [0.85, 0.45, 0.10, 1.0], // Orange Hauler
-                                    _ => [0.92, 0.12, 0.12, 1.0],
-                                },
+                                color: self.vehicle_custom_color.unwrap_or(
+                                    match self.vehicle_visual_type {
+                                        VehicleVisualType::SportsCoupe => [0.92, 0.12, 0.12, 1.0], // Cherry Red
+                                        VehicleVisualType::Sedan => [0.15, 0.35, 0.85, 1.0], // Electric Blue
+                                        VehicleVisualType::Suv => [0.20, 0.22, 0.25, 1.0], // Graphite Gray
+                                        VehicleVisualType::Taxi => [0.95, 0.80, 0.10, 1.0], // Yellow Taxi
+                                        VehicleVisualType::TransitBus => [0.10, 0.65, 0.40, 1.0], // City Green Transit
+                                        VehicleVisualType::HeavyTruck => [0.85, 0.45, 0.10, 1.0], // Orange Hauler
+                                        _ => [0.92, 0.12, 0.12, 1.0],
+                                    },
+                                ),
                                 vehicle_type: self.vehicle_visual_type,
                                 wheel_steer_angle: self.vehicle.wheels[0].steer_angle,
                                 trailer_angle: 0.0,
@@ -4761,10 +4945,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 None
                             };
 
-                            hud.add_garage_modal_interactive(
+                            hud.add_garage_modal_interactive_with_color(
                                 width_f,
                                 height_f,
                                 self.garage_selected_idx,
+                                self.garage_selected_color_idx,
                                 hovered_idx,
                                 pressed_idx,
                                 hovered_btn,
@@ -4993,6 +5178,47 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     }
                                 };
 
+                                // Location & Compass Pill (Top Left, unless debug overlay active)
+                                if !self.show_debug_overlay {
+                                    let rot_mat = glam::Mat3::from_quat(self.vehicle.orientation);
+                                    let forward_vec = rot_mat.col(2);
+                                    let heading_deg = (forward_vec.x.atan2(forward_vec.z) as f64)
+                                        .to_degrees()
+                                        .rem_euclid(360.0);
+                                    let heading_cardinal = if (337.5..=360.0).contains(&heading_deg)
+                                        || (0.0..22.5).contains(&heading_deg)
+                                    {
+                                        "N"
+                                    } else if (22.5..67.5).contains(&heading_deg) {
+                                        "NE"
+                                    } else if (67.5..112.5).contains(&heading_deg) {
+                                        "E"
+                                    } else if (112.5..157.5).contains(&heading_deg) {
+                                        "SE"
+                                    } else if (157.5..202.5).contains(&heading_deg) {
+                                        "S"
+                                    } else if (202.5..247.5).contains(&heading_deg) {
+                                        "SW"
+                                    } else if (247.5..292.5).contains(&heading_deg) {
+                                        "W"
+                                    } else {
+                                        "NW"
+                                    };
+                                    let current_street = self
+                                        .active_nav_update
+                                        .as_ref()
+                                        .and_then(|u| u.current_instruction.as_ref())
+                                        .and_then(|i| i.street_name.as_deref())
+                                        .unwrap_or(res.landmark.name);
+                                    hud.add_location_pill(
+                                        16.0,
+                                        16.0,
+                                        res.region_name,
+                                        current_street,
+                                        heading_cardinal,
+                                    );
+                                }
+
                                 // 1. Turn-by-Turn Navigation Guidance Overlay Banner
                                 if let Some(ref update) = self.active_nav_update {
                                     let (icon, instruction, street_name) =
@@ -5053,7 +5279,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                             };
                                             let steer_deg =
                                                 self.vehicle.wheels[0].steer_angle.to_degrees();
-                                            hud.add_speedometer_cluster(
+                                            hud.add_speedometer_cluster_assisted(
                                                 16.0,
                                                 height_f - 145.0,
                                                 self.vehicle.speed_kph,
@@ -5063,6 +5289,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                                                 steer_deg,
                                                 self.use_metric_units,
                                                 self.vehicle_visual_type.display_name(),
+                                                self.vehicle.config.abs_enabled,
+                                                self.vehicle.config.tcs_enabled,
+                                                self.vehicle.config.esc_enabled,
+                                                self.park_engaged,
                                             );
                                         }
                                         ActiveTransportMode::Motorcycle => {
@@ -5432,6 +5662,43 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     remote_count,
                                 );
 
+                                // Contextual Action Prompt
+                                if let Some(ref job) = self.active_job {
+                                    match job.state {
+                                        realearth_gameplay::JobState::AtPickup { .. } => {
+                                            hud.add_contextual_action_prompt(
+                                                width_f * 0.5,
+                                                height_f - 60.0,
+                                                "SPACE",
+                                                "HOLD TO BOARD PASSENGERS",
+                                            );
+                                        }
+                                        realearth_gameplay::JobState::AtDropoff { .. } => {
+                                            hud.add_contextual_action_prompt(
+                                                width_f * 0.5,
+                                                height_f - 60.0,
+                                                "SPACE",
+                                                "HOLD TO COMPLETE CONTRACT",
+                                            );
+                                        }
+                                        _ => {
+                                            hud.add_contextual_action_prompt(
+                                                width_f * 0.5,
+                                                height_f - 60.0,
+                                                "TAB / J",
+                                                "DISPATCH CONTRACTS",
+                                            );
+                                        }
+                                    }
+                                } else {
+                                    hud.add_contextual_action_prompt(
+                                        width_f * 0.5,
+                                        height_f - 60.0,
+                                        "J",
+                                        "BROWSE DISPATCH CONTRACTS",
+                                    );
+                                }
+
                                 // 8. Clean Keyboard Hint Footer
                                 let hint_str = "[W/S/A/D] Drive  |  [P] Park  |  [Esc] Pause  |  [N] Multiplayer  |  [J] Jobs  |  [G] Garage  |  [U] World Cities  |  [F3] Debug";
                                 let hint_w = hint_str.len() as f32 * 6.0 * 1.0;
@@ -5454,24 +5721,25 @@ impl ApplicationHandler for InteractiveViewerApp {
                         }
                     }
 
-                    // Temporary Status / Notification Banner
+                    // Temporary Status / Notification Banner (Relocated to top-center to eliminate footer collision)
                     if let Some((ref text, stamp)) = self.status_notification {
                         if stamp.elapsed().as_secs_f32() < 4.0 {
                             let banner_w = 560.0;
                             let banner_x = (width_f - banner_w) * 0.5;
-                            hud.add_panel(
-                                banner_x,
-                                height_f - 60.0,
-                                banner_w,
-                                36.0,
-                                [0.1, 0.9, 0.6, 1.0],
-                            );
-                            hud.add_text(
+                            let banner_y = if self.active_nav_update.is_some() {
+                                78.0
+                            } else {
+                                18.0
+                            };
+                            hud.add_panel(banner_x, banner_y, banner_w, 36.0, [0.1, 0.9, 0.6, 1.0]);
+                            hud.add_text_proportional(
                                 banner_x + 14.0,
-                                height_f - 49.0,
-                                1.15,
+                                banner_y + 10.0,
                                 text,
+                                realearth_rendering::FontSize::Body.pixels(),
                                 [1.0, 1.0, 1.0, 1.0],
+                                realearth_rendering::FontWeight::Bold,
+                                true,
                             );
                         }
                     }

@@ -88,6 +88,26 @@ pub struct VehicleConfig {
     pub aero_drag_coeff: f32,
     /// Rolling resistance coefficient (default: 0.015).
     pub rolling_resistance_coeff: f32,
+    /// Anti-lock Braking System (modulates wheel brake force to prevent lockup).
+    #[serde(default = "default_true")]
+    pub abs_enabled: bool,
+    /// Traction Control System (reduces drive wheel spin on slippery surfaces).
+    #[serde(default = "default_true")]
+    pub tcs_enabled: bool,
+    /// Electronic Stability Control (corrects oversteer/understeer yaw moments).
+    #[serde(default = "default_true")]
+    pub esc_enabled: bool,
+    /// Speed-sensitive steering attenuation factor (1.0 = standard, 0.0 = fixed steering lock).
+    #[serde(default = "default_one")]
+    pub steering_sensitivity: f32,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_one() -> f32 {
+    1.0
 }
 
 impl Default for VehicleConfig {
@@ -110,6 +130,10 @@ impl Default for VehicleConfig {
             cornering_stiffness: 32000.0,
             aero_drag_coeff: 0.42,
             rolling_resistance_coeff: 0.015,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 }
@@ -135,6 +159,10 @@ impl VehicleConfig {
             cornering_stiffness: 38000.0,
             aero_drag_coeff: 0.34,
             rolling_resistance_coeff: 0.014,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 
@@ -163,6 +191,10 @@ impl VehicleConfig {
             cornering_stiffness: 30000.0,
             aero_drag_coeff: 0.48,
             rolling_resistance_coeff: 0.018,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 
@@ -186,6 +218,10 @@ impl VehicleConfig {
             cornering_stiffness: 33000.0,
             aero_drag_coeff: 0.40,
             rolling_resistance_coeff: 0.015,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 
@@ -209,6 +245,10 @@ impl VehicleConfig {
             cornering_stiffness: 85000.0,
             aero_drag_coeff: 0.65,
             rolling_resistance_coeff: 0.018,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 
@@ -232,6 +272,10 @@ impl VehicleConfig {
             cornering_stiffness: 110000.0,
             aero_drag_coeff: 0.72,
             rolling_resistance_coeff: 0.020,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            steering_sensitivity: 1.0,
         }
     }
 
@@ -385,8 +429,15 @@ impl DynamicVehicle {
         // Check if vehicle is overturned (chassis up vector points downwards)
         self.is_overturned = up.y < 0.2;
 
-        // Update wheel steer angles (Ackermann front wheel steering)
-        let steer_rad = inputs.steer * self.config.max_steer_angle;
+        // Update wheel steer angles (Ackermann front wheel steering) with speed-sensitive attenuation
+        let speed_ms = self.linear_velocity.length();
+        let steer_scale = if self.config.steering_sensitivity > 0.0 && speed_ms > 12.0 {
+            let high_speed_ratio = ((speed_ms - 12.0) / 38.0).clamp(0.0, 1.0);
+            1.0 - 0.5 * high_speed_ratio * self.config.steering_sensitivity
+        } else {
+            1.0
+        };
+        let steer_rad = inputs.steer * (self.config.max_steer_angle * steer_scale);
         self.wheels[0].steer_angle = steer_rad;
         self.wheels[1].steer_angle = steer_rad;
         self.wheels[2].steer_angle = 0.0;
@@ -443,13 +494,25 @@ impl DynamicVehicle {
                     (v_lateral / 0.5).clamp(-1.0, 1.0) * (std::f32::consts::FRAC_PI_4)
                 };
 
-                // Longitudinal Force (Traction & Braking)
+                // Longitudinal Force (Traction & Braking with ABS and TCS)
                 let mut f_long = 0.0;
-                let compute_brake = |brake_ratio: f32, max_f: f32, vel: f32| -> f32 {
+                let compute_brake = |brake_ratio: f32,
+                                     max_f: f32,
+                                     vel: f32,
+                                     abs_on: bool,
+                                     norm_f: f32,
+                                     mu: f32|
+                 -> f32 {
                     if brake_ratio <= 0.0 {
                         0.0
                     } else {
-                        let force = brake_ratio * max_f;
+                        let mut force = brake_ratio * max_f;
+                        if abs_on && brake_ratio > 0.05 && vel.abs() > 2.5 {
+                            let max_grip = mu * norm_f;
+                            if force > max_grip * 0.98 {
+                                force = max_grip * 0.96;
+                            }
+                        }
                         let v_thresh = 0.4;
                         if vel.abs() < v_thresh {
                             force * (vel / v_thresh)
@@ -458,6 +521,17 @@ impl DynamicVehicle {
                         }
                     }
                 };
+
+                let compute_drive =
+                    |throttle: f32, raw_force: f32, tcs_on: bool, norm_f: f32, mu: f32| -> f32 {
+                        let base_drive = throttle * raw_force;
+                        if tcs_on && throttle > 0.05 {
+                            let grip_limit = mu * norm_f * 0.95;
+                            base_drive.min(grip_limit)
+                        } else {
+                            base_drive
+                        }
+                    };
 
                 match inputs.gear_mode {
                     TransmissionMode::Drive => {
@@ -468,9 +542,22 @@ impl DynamicVehicle {
                         } else {
                             0.4
                         };
-                        f_long += inputs.throttle * self.config.peak_engine_force * drive_mult;
-                        f_long -=
-                            compute_brake(inputs.brake, self.config.max_brake_force, v_forward);
+                        let drive_f = compute_drive(
+                            inputs.throttle,
+                            self.config.peak_engine_force * drive_mult,
+                            self.config.tcs_enabled,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
+                        f_long += drive_f;
+                        f_long -= compute_brake(
+                            inputs.brake,
+                            self.config.max_brake_force,
+                            v_forward,
+                            self.config.abs_enabled,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
                     }
                     TransmissionMode::Reverse => {
                         let rev_speed_cap = 12.5; // ~45 km/h
@@ -479,19 +566,42 @@ impl DynamicVehicle {
                         } else {
                             (1.0 - (-v_forward / rev_speed_cap).max(0.0)).clamp(0.0, 1.0)
                         };
-                        f_long -= inputs.throttle
-                            * self.config.peak_engine_force
-                            * 0.5
-                            * rev_throttle_factor;
-                        f_long -=
-                            compute_brake(inputs.brake, self.config.max_brake_force, v_forward);
+                        let rev_drive_f = compute_drive(
+                            inputs.throttle,
+                            self.config.peak_engine_force * 0.5 * rev_throttle_factor,
+                            self.config.tcs_enabled,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
+                        f_long -= rev_drive_f;
+                        f_long -= compute_brake(
+                            inputs.brake,
+                            self.config.max_brake_force,
+                            v_forward,
+                            self.config.abs_enabled,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
                     }
                     TransmissionMode::Neutral => {
-                        f_long -=
-                            compute_brake(inputs.brake, self.config.max_brake_force, v_forward);
+                        f_long -= compute_brake(
+                            inputs.brake,
+                            self.config.max_brake_force,
+                            v_forward,
+                            self.config.abs_enabled,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
                     }
                     TransmissionMode::Park => {
-                        f_long -= compute_brake(1.0, 15000.0, v_forward);
+                        f_long -= compute_brake(
+                            1.0,
+                            15000.0,
+                            v_forward,
+                            false,
+                            normal_force,
+                            self.config.tire_friction_coeff,
+                        );
                     }
                 }
 
@@ -499,7 +609,14 @@ impl DynamicVehicle {
                 if inputs.handbrake
                     && (wheel.index == WheelIndex::RearLeft || wheel.index == WheelIndex::RearRight)
                 {
-                    f_long -= compute_brake(1.0, self.config.handbrake_force, v_forward);
+                    f_long -= compute_brake(
+                        1.0,
+                        self.config.handbrake_force,
+                        v_forward,
+                        false,
+                        normal_force,
+                        self.config.tire_friction_coeff,
+                    );
                 }
 
                 // Rolling resistance with smooth near-zero ramp
@@ -576,6 +693,21 @@ impl DynamicVehicle {
             let rear_roll_diff = self.wheels[2].compression - self.wheels[3].compression;
             let arb_force = rear_roll_diff * 5500.0;
             total_torque -= forward * (arb_force * self.config.track_width * 0.5);
+        }
+
+        // Electronic Stability Control (ESC): counteracts yaw divergence (oversteer / spinout)
+        let forward_speed_ms = self.linear_velocity.dot(forward);
+        if self.config.esc_enabled && self.is_grounded && forward_speed_ms.abs() > 2.0 {
+            let actual_yaw_rate = self.angular_velocity.dot(up);
+            let steer_angle = self.wheels[0].steer_angle;
+            let desired_yaw_rate =
+                (forward_speed_ms / self.config.wheelbase.max(1.0)) * steer_angle.tan();
+            let yaw_divergence = actual_yaw_rate - desired_yaw_rate;
+            if yaw_divergence.abs() > 0.20 {
+                // Corrective restoring yaw torque
+                let esc_torque = -up * (yaw_divergence * self.config.mass_kg * 4.0);
+                total_torque += esc_torque;
+            }
         }
 
         // Aerodynamic drag opposing velocity
@@ -978,5 +1110,46 @@ mod tests {
         assert_eq!(car.speed_kph, 0.0);
         assert_eq!(car.current_gear, 1);
         assert!(!car.is_overturned);
+    }
+
+    #[test]
+    fn test_driving_assists_abs_tcs_esc() {
+        let mut config = VehicleConfig::sports_coupe();
+        assert!(config.abs_enabled);
+        assert!(config.tcs_enabled);
+        assert!(config.esc_enabled);
+        assert_eq!(config.steering_sensitivity, 1.0);
+
+        let ground = FlatGround::new(0.0);
+        let mut car = DynamicVehicle::new(config.clone(), Vec3::new(0.0, 0.8, 0.0), 0.0);
+
+        // Accelerate with TCS enabled
+        let full_throttle = VehicleInputs {
+            throttle: 1.0,
+            ..Default::default()
+        };
+        for _ in 0..60 {
+            car.step(&full_throttle, &ground, 1.0 / 60.0);
+        }
+        assert!(car.speed_kph > 10.0);
+
+        // Emergency braking with ABS
+        let full_brake = VehicleInputs {
+            brake: 1.0,
+            ..Default::default()
+        };
+        for _ in 0..60 {
+            car.step(&full_brake, &ground, 1.0 / 60.0);
+        }
+        assert!(car.speed_kph < 15.0);
+
+        // Verify config toggling
+        config.abs_enabled = false;
+        config.tcs_enabled = false;
+        config.esc_enabled = false;
+        config.steering_sensitivity = 0.5;
+        assert!(!config.abs_enabled);
+        assert!(!config.tcs_enabled);
+        assert!(!config.esc_enabled);
     }
 }

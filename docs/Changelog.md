@@ -1594,6 +1594,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Authentic Geometry: 49,799 triangles across 30 active chunks.
     - Verified Screenshot: Written to `target/screenshots/san_francisco_view.ppm`.
 
+## [1.1.0] - 2026-10-25 — STAGE 1.1: Complete Driving Game Experience and UX Overhaul (Completed & Certified)
+### Added
+- **Proportional Vector Typography (`engine/rendering/src/typography.rs`)**:
+  - Pure Rust vector typography engine modeling ASCII 32..=126 with proportional character widths and advance spacing.
+  - Zero heap allocations during glyph generation using fixed stack arrays `[GlyphSegment; 12]`.
+  - Antialiased outer alpha feathering fringes and subtle contrast drop shadows.
+  - 4 standardized font scale presets: `Hero` (32px), `Title` (20px), `Body` (14px), `Caption` (11px) with `Regular` and `Bold` weights.
+- **Adaptive Driving HUD & UX Overhaul (`engine/rendering/src/hud.rs`, `apps/world-viewer/src/interactive.rs`)**:
+  - `add_speedometer_cluster_assisted`: Tachometer bar, proportional speed digits, dynamic color ramp (white $\to$ amber $\to$ crimson), transmission gear badge, steer angle readout, and driving assist status chips (`[ABS]`, `[TCS]`, `[ESC]`, `[P-BRAKE]`).
+  - `add_location_pill`: District name, street name, and cardinal compass heading pill.
+  - `add_contextual_action_prompt`: Dynamic action prompt chip positioned above the cluster or bottom-center.
+  - Relocated notification banner from bottom footer to top-center ($y = 78.0$ or $18.0$), eliminating visual collisions with contextual prompts and keyboard control hints.
+- **Dynamic Vehicle Camera & Terrain Clamping (`engine/vehicles/src/camera.rs`)**:
+  - Speed-aware dynamic FOV widening ($60.0^\circ \to 72.0^\circ$ smoothly between 0 and 160 km/h).
+  - Dynamic steering lookahead angular offset for enhanced cornering visibility.
+  - Terrain elevation clamping across all multimodal cameras, eliminating ground clipping on steep San Francisco grades.
+- **Vehicle Garage Customization & Assist Dynamics (`engine/rendering/src/hud.rs`, `engine/vehicles/src/dynamics.rs`)**:
+  - 7 automotive gloss paint finishes (`GARAGE_PAINT_PALETTE`): Midnight Obsidian, Pure Alpine White, Guards Red, Deep Metallic Sapphire, British Racing Green, Liquid Silver, Sunburst Yellow.
+  - Interactive garage color selector with mouse hit-testing (`GarageHit::ColorOption`) and Left/Right arrow navigation.
+  - Configurable driving assists in `VehicleConfig`: ABS slip modulation, TCS drive torque slip limiting, speed-sensitive steering attenuation, and ESC corrective yaw torque counteracting spin divergence.
+- **Pure Rust Mathematical Vehicle Acoustic Synthesis (`engine/gameplay/src/audio.rs`)**:
+  - `VehicleAudioEngine`: Real-time additive synthesis of engine RPM harmonics, turbocharger whine, tire scrub/squeal, brake squeal, aerodynamic wind roar with turbulence, collision impulse boom, dual-tone horn, and UI sound chimes (`UiSoundCue`).
+  - Interleaved 44.1 kHz 16-bit stereo PCM buffer generation (`generate_pcm_samples`) with zero external C or OS sound server dependencies in headless mode.
+- **Save/Load Schema Persistence (`engine/gameplay/src/save.rs`)**:
+  - Added `abs_enabled`, `tcs_enabled`, `esc_enabled`, and `custom_vehicle_color: Option<[f32; 4]>` to `GameSettings` with backward-compatible serde defaults and atomic persistence.
+- **Dedicated Independent Certification Suite (`tests/tests/stage1_1_driving_gameplay_and_ux_certification.rs`)**:
+  - Authored 6 independent certification tests (6/6 PASSED ✅):
+    1. `test_proportional_vector_typography_and_metrics`: Proportional widths, advance metrics, font sizing, and drop shadows.
+    2. `test_camera_speed_fov_and_terrain_clamping`: Speed FOV widening ($60^\circ \to 72^\circ$), lookahead offset, and terrain elevation clamping.
+    3. `test_garage_color_customization_and_fleet`: 7-color paint palette, interactive hit-testing, and fleet specifications summary.
+    4. `test_vehicle_audio_synthesis_engine`: Acoustic synthesizer harmonics, skid/brake acoustics, horn, wind roar, and PCM output.
+    5. `test_driving_assists_physics_validation`: ABS slip threshold modulation, TCS launch limiting, and ESC stability counter-torque.
+    6. `test_end_to_end_playable_journey_and_persistence`: Complete dispatch mission journey, passenger dwell countdown, and atomic quicksave/quickload persistence.
+  - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), clean formatting (`cargo fmt --check`).
+
+
 
 
 

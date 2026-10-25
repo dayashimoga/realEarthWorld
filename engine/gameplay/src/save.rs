@@ -32,6 +32,22 @@ pub struct GameSettings {
     pub metric_units: bool,
     pub currency_symbol: String,
     pub subtitle_notifications: bool,
+    #[serde(default = "default_true")]
+    pub abs_enabled: bool,
+    #[serde(default = "default_true")]
+    pub tcs_enabled: bool,
+    #[serde(default = "default_true")]
+    pub esc_enabled: bool,
+    #[serde(default = "default_none_color")]
+    pub custom_vehicle_color: Option<[f32; 4]>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_none_color() -> Option<[f32; 4]> {
+    None
 }
 
 impl Default for GameSettings {
@@ -41,6 +57,10 @@ impl Default for GameSettings {
             metric_units: true,
             currency_symbol: "₹".to_string(),
             subtitle_notifications: true,
+            abs_enabled: true,
+            tcs_enabled: true,
+            esc_enabled: true,
+            custom_vehicle_color: None,
         }
     }
 }

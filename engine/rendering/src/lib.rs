@@ -8,6 +8,7 @@ pub mod hud;
 pub mod preset;
 pub mod renderer;
 pub mod shaders;
+pub mod typography;
 pub mod uniforms;
 pub mod vehicle_mesh;
 pub mod vehicle_models;
@@ -26,11 +27,14 @@ pub use gltf_asset::{
 pub use hud::{
     CatalogHit, CatalogLayout, GarageHit, GarageLayout, HudMesh, HudVertex, JobBrowserHit,
     JobBrowserLayout, PauseMenuHit, PauseMenuLayout, SettingsHit, SettingsLayout, StartScreenHit,
-    StartScreenLayout, UiButtonVisualState, UiRect,
+    StartScreenLayout, UiButtonVisualState, UiRect, GARAGE_PAINT_PALETTE,
 };
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};
 pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
 pub use shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};
+pub use typography::{
+    measure_proportional_text, render_proportional_text, FontSize, FontWeight, VectorGlyph,
+};
 pub use uniforms::SceneUniforms;
 pub use vehicle_mesh::{
     generate_fallback_development_mesh, generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType,
