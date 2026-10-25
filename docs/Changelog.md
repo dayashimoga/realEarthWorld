@@ -1706,11 +1706,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     4. `test_part4_standstill_anti_drift_and_coasting_physics`
     5. `test_part5_input_router_focus_loss_and_mode_switching_isolation`
     6. `test_part6_multi_framerate_physics_accumulator_invariance`
+## [0.1.4] - 2026-10-25
+### Added & Certified — STAGE 1.4-R: Real Railway Simulation and Multimodal Spawn Integrity
+- **Track-Constrained 3D Kinematics & Curvature Tracking**:
+  - Eliminated open-field straight line train movement (`train_position += forward * v * dt`). Trains now strictly follow surveyed 3D track centerline geometry from `RailNetworkGraph` with cross-track error $< 0.05\text{m}$.
+  - Implemented `RailTrackSegment::sample_pose_enu` computing 3D position, orientation quaternion, elevation grade pitch angle, heading yaw tangent, and instantaneous curvature ($\kappa = \frac{d\theta}{ds}$).
+  - Implemented `RailNetworkGraph::sample_route_pose` supporting multi-segment routes, turnouts, and terminus buffer stops.
+  - Surveyed authentic San Francisco Caltrain corridor: 6 nodes (`SF_4TH_KING`, `SF_MISSION_BAY_TURNOUT`, `SF_22ND_STREET`, `SF_MISSION_BAY_YARD`, `SF_BAYSHORE`, `SF_MILLBRAE_SFO`), 5 track segments, mainline routes, and yard siding routes.
+- **Multi-Carriage Consist Articulation & Coupler Spacing**:
+  - Upgraded consist to MPI MP36PH-3C diesel-electric locomotive + 4 Bombardier BiLevel commuter passenger coaches (351.5 tonnes total consist mass).
+  - Implemented individual carriage 3D track pose sampling along route arclength ($s - \sum \Delta s_i$) with authentic $25.9\text{m}$ coupler spacing.
+  - Carriages articulate and yaw independently along curves rather than trailing rigidly behind the locomotive.
+- **Switch Routing, Signal Aspects & Automatic Train Protection (ATP)**:
+  - Connected switch turnouts (Mission Bay maintenance yard turnout `SW_KING_YARD_01`).
+  - Implemented Automatic Train Protection (ATP): passing Red Stop signal at speed trips emergency braking ($P_{cyl} \ge 3.5\text{ bar}$, tractive throttle cut to 0.0, vehicle clamped to complete stop).
+  - Implemented route terminus buffer stop velocity clamp ($v = 0.0\text{ m/s}$) to prevent track overrunning and derailment.
+- **Authentic Multimodal Infrastructure Spawning Validation**:
+  - Implemented `find_road_spawn_candidate` verifying $\ge 1$ lane for sports car/motorcycle, $\ge 2$ lanes for bus/truck, legal heading, and building clearance.
+  - Implemented `find_marine_spawn_candidate` verifying surveyed port facilities or sea-level water depth ($\le 1.0\text{m}$ MSL). In dry inland locations (SF hills, Mysore), cleanly rejects with `NAVIGABLE WATER REQUIRED / NO VALID SPAWN`.
+  - Implemented `find_aviation_spawn_candidate` verifying surveyed runway alignment or establishing safe $+350\text{m}$ AGL open-sky flight corridor.
+  - Implemented `find_rail_spawn_candidate` verifying surveyed track platforms.
+  - **Honest Rejection**: In regions without surveyed rail infrastructure, returns authoritative error: `RAIL DATA REQUIRED / NO VALID SPAWN: Region contains no surveyed railway infrastructure. Fictitious rail paths are prohibited.` without fabricating fake tracks.
+- **Interactive Railway Route Selector Modal & Controls**:
+  - Implemented `HudRenderer::add_rail_route_modal` displaying route list, departure/destination, platform tracks, length in km, and track segment breakdown.
+  - Added in-cab `[T]` key in Train mode to toggle the route selector modal.
+  - Updated Garage selection item 7 to "Caltrain Commuter Consist" with authentic MPI MP36PH-3C diesel specifications.
+  - Updated vehicle cycling `[M]` and direct number keys `[5]`, `[6]`, `[7]` to dispatch through infrastructure-verified candidate locators.
+- **Master Certification Test Suite (`tests/tests/stage1_4_real_railway_simulation_and_multimodal_spawn_certification.rs`)**:
+  - Authored comprehensive 6-part test suite (6/6 passed):
+    1. `test_part1_track_constrained_kinematics_and_curvature`
+    2. `test_part2_multi_carriage_consist_articulation`
+    3. `test_part3_switch_routing_and_atp_emergency_braking`
+    4. `test_part4_station_arrival_and_buffer_stop_safety`
+    5. `test_part5_multimodal_spawn_integrity_and_honest_rejection`
+    6. `test_part6_multi_framerate_invariance`
 - **Architecture & Certification Reports**:
-  - Authored ADR-0046 (`docs/adr/0046-stage-1-3-r-permanent-vehicle-control-motion-and-braking-repair.md`).
-  - Authored Certification Report (`docs/reports/stage1_3_certification_report.md`).
-  - Updated `dist/certification_matrix.json` (30 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
+  - Authored ADR-0047 (`docs/adr/0047-stage-1-4-r-real-railway-simulation-and-multimodal-spawn-integrity.md`).
+  - Authored Certification Report (`docs/reports/stage1_4_certification_report.md`).
+  - Updated `dist/certification_matrix.json` (36 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
   - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
+
 
 
 

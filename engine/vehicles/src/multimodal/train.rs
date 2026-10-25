@@ -2,7 +2,8 @@
 //! steel wheel-on-rail adhesion limits, and Westinghouse pneumatic air brake simulation.
 
 use crate::multimodal::MultimodalAudioEvent;
-use realearth_navigation::rail_graph::SignalAspect;
+use realearth_navigation::{RailNetworkGraph, RailTrackPose, SignalAspect};
+use realearth_shared::coordinates::Wgs84Coord;
 use serde::{Deserialize, Serialize};
 
 /// Type of railway locomotive propulsion.
@@ -136,6 +137,20 @@ pub struct TrainConsist {
     pub current_signal: SignalAspect,
     /// Pending audio events emitted during simulation.
     pub audio_events: Vec<MultimodalAudioEvent>,
+    /// Active route sequence of segment IDs.
+    pub active_route: Vec<String>,
+    /// Index of segment within active route.
+    pub current_segment_idx: usize,
+    /// Distance along current segment in meters.
+    pub distance_along_segment: f64,
+    /// Total cumulative distance traversed along active route in meters.
+    pub total_route_distance: f64,
+    /// True when train has reached the end of the line / buffer stop.
+    pub is_at_buffer_stop: bool,
+    /// Current 3D track pose of the locomotive.
+    pub track_pose: Option<RailTrackPose>,
+    /// Current 3D track poses of each trailing carriage.
+    pub carriage_poses: Vec<RailTrackPose>,
 }
 
 impl TrainConsist {
@@ -172,7 +187,35 @@ impl TrainConsist {
             current_track_id: None,
             current_signal: SignalAspect::Clear,
             audio_events: Vec::new(),
+            active_route: Vec::new(),
+            current_segment_idx: 0,
+            distance_along_segment: 0.0,
+            total_route_distance: 0.0,
+            is_at_buffer_stop: false,
+            track_pose: None,
+            carriage_poses: Vec::new(),
         }
+    }
+
+    /// Creates an authentic Caltrain commuter consist (MPI MP36PH-3C diesel-electric locomotive + 4 Bombardier BiLevel cars).
+    pub fn new_caltrain_diesel() -> Self {
+        let mut train = Self::new_locomotive(
+            "Caltrain MP36PH-3C #925",
+            LocomotiveType::DieselElectric,
+            2_684_000.0,
+            290_000.0,
+            131_500.0,
+            17.15,
+        );
+        for i in 1..=4 {
+            train.add_wagon(TrainCar::new_wagon(
+                &format!("Caltrain-BiLevel-{}", 4000 + i),
+                50_000.0,
+                5_000.0,
+                25.9,
+            ));
+        }
+        train
     }
 
     /// Adds a trailing wagon or passenger coach to the consist.
@@ -373,6 +416,130 @@ impl TrainConsist {
             self.trigger_emergency_brake();
         }
     }
+
+    /// Binds the train consist to an active rail route and initializes all carriage poses along the track.
+    pub fn bind_route(
+        &mut self,
+        graph: &RailNetworkGraph,
+        route_segments: Vec<String>,
+        anchor: Wgs84Coord,
+    ) {
+        self.active_route = route_segments;
+        self.current_segment_idx = 0;
+        self.distance_along_segment = 0.0;
+        self.total_route_distance = 0.0;
+        self.is_at_buffer_stop = false;
+        self.update_track_poses(graph, anchor);
+    }
+
+    /// Explicitly sets the distance along the active route and updates all consist poses.
+    pub fn set_route_distance(
+        &mut self,
+        graph: &RailNetworkGraph,
+        distance_m: f64,
+        anchor: Wgs84Coord,
+    ) {
+        let total_len = graph.total_route_length(&self.active_route);
+        self.total_route_distance = distance_m.clamp(0.0, total_len);
+        self.update_track_poses(graph, anchor);
+    }
+
+    /// Updates 3D poses (locomotive and all carriages) along the active route.
+    pub fn update_track_poses(&mut self, graph: &RailNetworkGraph, anchor: Wgs84Coord) {
+        if self.active_route.is_empty() {
+            return;
+        }
+
+        let loco_sample =
+            graph.sample_route_pose(&self.active_route, self.total_route_distance, anchor);
+
+        if let Some((pose, seg_idx, dist_on_seg, at_buffer)) = loco_sample {
+            self.track_pose = Some(pose);
+            self.current_segment_idx = seg_idx;
+            self.distance_along_segment = dist_on_seg;
+            self.is_at_buffer_stop = at_buffer;
+            if seg_idx < self.active_route.len() {
+                self.current_track_id = Some(self.active_route[seg_idx].clone());
+                if let Some(seg) = graph.segments.get(&self.active_route[seg_idx]) {
+                    self.current_signal = seg.signal_aspect;
+                }
+            }
+        }
+
+        // Articulate carriages along track behind the locomotive
+        let mut carriage_poses = Vec::with_capacity(self.cars.len().saturating_sub(1));
+        if !self.cars.is_empty() {
+            let loco_len = self.cars[0].length_meters as f64;
+            let mut cumulative_dist_offset = loco_len * 0.5;
+
+            for i in 1..self.cars.len() {
+                let car_len = self.cars[i].length_meters as f64;
+                cumulative_dist_offset += car_len * 0.5;
+                let car_s = (self.total_route_distance - cumulative_dist_offset).max(0.0);
+                if let Some((car_pose, _, _, _)) =
+                    graph.sample_route_pose(&self.active_route, car_s, anchor)
+                {
+                    carriage_poses.push(car_pose);
+                }
+                cumulative_dist_offset += car_len * 0.5;
+            }
+        }
+        self.carriage_poses = carriage_poses;
+    }
+
+    /// Advances the train physical simulation by `dt` seconds and computes new track poses.
+    pub fn step_along_route(&mut self, graph: &RailNetworkGraph, anchor: Wgs84Coord, dt: f32) {
+        if self.active_route.is_empty() {
+            self.step(dt);
+            return;
+        }
+
+        // Buffer stop check
+        let total_route_len = graph.total_route_length(&self.active_route);
+        if self.is_at_buffer_stop && self.velocity_mps > 0.0 && self.reverser > 0 {
+            self.velocity_mps = 0.0;
+            self.acceleration_mps2 = 0.0;
+            self.throttle = 0.0;
+            return;
+        }
+
+        // Step longitudinal physics (Westinghouse brakes, Davis resistance, tractive effort)
+        self.step(dt);
+
+        // Update distance along route
+        let new_dist = self.total_route_distance + (self.velocity_mps as f64) * (dt as f64);
+        if new_dist >= total_route_len {
+            self.total_route_distance = total_route_len;
+            self.velocity_mps = 0.0;
+            self.acceleration_mps2 = 0.0;
+            self.is_at_buffer_stop = true;
+        } else if new_dist <= 0.0 {
+            self.total_route_distance = 0.0;
+            if self.velocity_mps < 0.0 {
+                self.velocity_mps = 0.0;
+                self.acceleration_mps2 = 0.0;
+            }
+            self.is_at_buffer_stop = false;
+        } else {
+            self.total_route_distance = new_dist;
+            self.is_at_buffer_stop = false;
+        }
+
+        self.update_track_poses(graph, anchor);
+    }
+
+    /// Curvature of the track under the locomotive in rad/m.
+    pub fn current_curvature(&self) -> f32 {
+        self.track_pose
+            .as_ref()
+            .map(|p| p.curvature_rad_per_m)
+            .unwrap_or(0.0)
+    }
+
+    /// Number of trailing carriages in the consist.
+    pub fn carriage_count(&self) -> usize {
+        self.cars.len().saturating_sub(1)
+    }
 }
 
 #[cfg(test)]
@@ -496,5 +663,60 @@ mod tests {
 
         assert!(train.emergency_brake);
         assert_eq!(train.brake_state, TrainBrakeState::Emergency);
+    }
+
+    #[test]
+    fn test_caltrain_diesel_consist_route_binding_and_track_following() {
+        let rail = RailNetworkGraph::create_san_francisco_caltrain_corridor();
+        let route = RailNetworkGraph::build_caltrain_mainline_route();
+        let anchor = Wgs84Coord::new(37.7764, -122.3942, 5.0);
+
+        let mut consist = TrainConsist::new_caltrain_diesel();
+        assert_eq!(consist.cars.len(), 5); // 1 loco + 4 bilevel coaches
+        assert_eq!(consist.carriage_count(), 4);
+
+        consist.bind_route(&rail, route.segment_ids.clone(), anchor);
+        assert!(consist.track_pose.is_some());
+        assert_eq!(consist.carriage_poses.len(), 4);
+
+        let initial_loco_pos = consist.track_pose.unwrap().position;
+        // Locomotive should be at 0,0,0 relative to anchor
+        assert!(initial_loco_pos.length() < 0.1);
+
+        // Apply throttle and step along track for 10 seconds (600 ticks)
+        consist.throttle = 1.0;
+        consist.reverser = 1;
+        for _ in 0..600 {
+            consist.step_along_route(&rail, anchor, 1.0 / 60.0);
+        }
+
+        assert!(
+            consist.total_route_distance > 10.0,
+            "Caltrain consist should have traveled >10m in 10s, actual: {}",
+            consist.total_route_distance
+        );
+        let advanced_loco_pos = consist.track_pose.unwrap().position;
+        assert!(advanced_loco_pos.length() > 10.0);
+
+        // Verify zero cross-track deviation
+        let xtrack_err =
+            rail.route_cross_track_distance(&route.segment_ids, advanced_loco_pos, anchor);
+        assert!(
+            xtrack_err < 0.05,
+            "Locomotive cross-track error ({}) must be under 5cm",
+            xtrack_err
+        );
+
+        // Verify each carriage also has zero cross-track error
+        for (idx, c_pose) in consist.carriage_poses.iter().enumerate() {
+            let c_xtrack =
+                rail.route_cross_track_distance(&route.segment_ids, c_pose.position, anchor);
+            assert!(
+                c_xtrack < 0.05,
+                "Carriage {} cross-track error ({}) must be under 5cm",
+                idx + 1,
+                c_xtrack
+            );
+        }
     }
 }

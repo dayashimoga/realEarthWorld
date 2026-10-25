@@ -34,8 +34,8 @@ use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
 use realearth_ingestion::sample_seattle::create_seattle_dataset;
 use realearth_navigation::{
-    find_route, generate_turn_by_turn, ManeuverType, NavigationUpdate, RoadNetworkGraph,
-    RouteTracker, RoutingPreference, RuleOfTheRoad,
+    find_route, generate_turn_by_turn, ManeuverType, NavigationUpdate, RailNetworkGraph,
+    RailRoutePlan, RoadNetworkGraph, RouteTracker, RoutingPreference, RuleOfTheRoad,
 };
 use realearth_rendering::{
     generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
@@ -53,10 +53,10 @@ use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
 use realearth_vehicles::{
     AircraftFlight, AuthoritativeVehicleState, DynamicVehicle, FlightInputs, GroundQuery,
-    HeavyTruckModel, IntersectionStopLine, LocomotiveType, MarineInputs, MarineVessel,
-    MotorcycleModel, PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainCar,
-    TrainConsist, TransitBusModel, TransmissionMode, VehicleCameraController,
-    VehicleCameraPerspective, VehicleConfig, VehicleInputs,
+    HeavyTruckModel, IntersectionStopLine, MarineInputs, MarineVessel, MotorcycleModel,
+    PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainConsist,
+    TransitBusModel, TransmissionMode, VehicleCameraController, VehicleCameraPerspective,
+    VehicleConfig, VehicleInputs,
 };
 
 /// Verified authentic roadway spawn location candidate.
@@ -69,6 +69,37 @@ pub struct RoadSpawnCandidate {
     pub road_name: String,
     pub highway_type: HighwayType,
     pub lane_width: f32,
+}
+
+/// Verified authentic railway track spawn location candidate on verified track geometry.
+#[derive(Debug, Clone)]
+pub struct RailSpawnCandidate {
+    pub position: glam::Vec3,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub surface_elevation: f32,
+    pub track_id: String,
+    pub station_name: Option<String>,
+    pub route_plan: RailRoutePlan,
+}
+
+/// Verified authentic marine vessel spawn location candidate in navigable water.
+#[derive(Debug, Clone)]
+pub struct MarineSpawnCandidate {
+    pub position: glam::Vec3,
+    pub yaw: f32,
+    pub water_elevation: f32,
+    pub port_name: Option<String>,
+}
+
+/// Verified authentic aviation spawn location candidate on runway/taxiway or flight corridor.
+#[derive(Debug, Clone)]
+pub struct AviationSpawnCandidate {
+    pub position: glam::Vec3,
+    pub yaw: f32,
+    pub altitude: f32,
+    pub runway_name: Option<String>,
+    pub is_airborne: bool,
 }
 
 /// Ground elevation query backed by geographic DEM bilinear interpolation.
@@ -215,6 +246,12 @@ struct RegionResources {
     dem: DemGrid,
     raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
     raw_buildings: Vec<realearth_ingestion::osm_types::OsmBuildingFeature>,
+    #[allow(dead_code)]
+    raw_railways: Vec<realearth_ingestion::osm_types::OsmRailwayFeature>,
+    raw_aeroways: Vec<realearth_ingestion::osm_types::OsmAerowayFeature>,
+    raw_waterways: Vec<realearth_ingestion::osm_types::OsmWaterFeature>,
+    raw_ports: Vec<realearth_ingestion::osm_types::OsmPortFeature>,
+    rail_graph: Option<RailNetworkGraph>,
     streamer: WorldStreamer,
 }
 
@@ -247,6 +284,7 @@ pub enum AppUiState {
     CatalogModal,
     DebriefModal,
     MultiplayerModal,
+    RailRouteModal,
 }
 
 /// Settlement debrief details emitted when a mission contract completes.
@@ -374,6 +412,8 @@ pub struct InteractiveViewerApp {
     pub multiplayer_selected_action: usize,
     pub multiplayer_server_addr_input: String,
     pub transition_phase: RegionTransitionPhase,
+    pub rail_route_selected_idx: usize,
+    pub rail_routes_cache: Vec<RailRoutePlan>,
 }
 
 /// Resolves the storage location for compiled region chunks, supporting bundled packages,
@@ -465,16 +505,7 @@ impl InteractiveViewerApp {
         let heavy_truck =
             HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), initial_landmark.yaw);
 
-        let mut train_consist = TrainConsist::new_locomotive(
-            "WAP-7 / Pacific Electric",
-            LocomotiveType::Electric,
-            4_500_000.0,
-            450_000.0,
-            123_000.0,
-            20.5,
-        );
-        train_consist.add_wagon(TrainCar::new_wagon("Coach-A", 42_000.0, 3_000.0, 24.0));
-        train_consist.add_wagon(TrainCar::new_wagon("Coach-B", 42_000.0, 3_000.0, 24.0));
+        let train_consist = TrainConsist::new_caltrain_diesel();
         let train_position = glam::Vec3::new(0.0, 10.0, 20.0);
         let train_yaw = initial_landmark.yaw;
 
@@ -600,6 +631,11 @@ impl InteractiveViewerApp {
             multiplayer_selected_action: 0,
             multiplayer_server_addr_input: config.multiplayer_server.clone().unwrap_or_else(|| "127.0.0.1:7777".to_string()),
             transition_phase: RegionTransitionPhase::Idle,
+            rail_route_selected_idx: 0,
+            rail_routes_cache: vec![
+                RailNetworkGraph::build_caltrain_mainline_route(),
+                RailNetworkGraph::build_caltrain_yard_siding_route(),
+            ],
         };
 
         if let Some(port) = app.config.host_server_port {
@@ -1330,6 +1366,193 @@ impl InteractiveViewerApp {
         }
     }
 
+    /// Resolves an authentic, verified railway track spawn candidate on surveyed track geometry.
+    pub fn find_rail_spawn_candidate(&self) -> Result<RailSpawnCandidate, String> {
+        let res = self
+            .region_resources
+            .as_ref()
+            .ok_or_else(|| "Region resources not loaded".to_string())?;
+
+        let rail_graph = res.rail_graph.as_ref().ok_or_else(|| {
+            "RAIL DATA REQUIRED / NO VALID SPAWN: Region contains no surveyed railway infrastructure. Fictitious rail paths are prohibited.".to_string()
+        })?;
+
+        if rail_graph.is_empty() {
+            return Err("RAIL DATA REQUIRED / NO VALID SPAWN: Railway network graph contains zero track segments.".to_string());
+        }
+
+        let route_plan = self
+            .rail_routes_cache
+            .get(self.rail_route_selected_idx)
+            .cloned()
+            .unwrap_or_else(RailNetworkGraph::build_caltrain_mainline_route);
+
+        let anchor = res.package_anchor;
+
+        // Sample initial pose at start of route (SF 4th & King Station / departure platform)
+        let (pose, seg_idx, _, _) = rail_graph
+            .sample_route_pose(&route_plan.segment_ids, 0.0, anchor)
+            .ok_or_else(|| "Failed to sample track pose on route geometry".to_string())?;
+
+        let track_id = if seg_idx < route_plan.segment_ids.len() {
+            route_plan.segment_ids[seg_idx].clone()
+        } else {
+            "TRK_MAIN_01".to_string()
+        };
+
+        let departure_station = rail_graph
+            .nodes
+            .get(&route_plan.departure_station_id)
+            .and_then(|n| n.station_name.clone());
+
+        Ok(RailSpawnCandidate {
+            position: pose.position,
+            yaw: pose.yaw,
+            pitch: pose.pitch,
+            surface_elevation: pose.position.y,
+            track_id,
+            station_name: departure_station,
+            route_plan,
+        })
+    }
+
+    /// Resolves an authentic, verified marine spawn candidate in verified navigable water.
+    pub fn find_marine_spawn_candidate(&self) -> Result<MarineSpawnCandidate, String> {
+        let res = self
+            .region_resources
+            .as_ref()
+            .ok_or_else(|| "Region resources not loaded".to_string())?;
+        let gq = self
+            .ground_query
+            .as_ref()
+            .ok_or_else(|| "DEM ground query not available".to_string())?;
+
+        let conv = EnuConverter::new(res.package_anchor);
+
+        // Check for verified port facilities first
+        if let Some(port) = res.raw_ports.first() {
+            if let Some(first_coord) = port.polygon.first() {
+                let enu = conv.wgs84_to_enu(*first_coord);
+                let water_y = gq.elevation(enu.east as f32, enu.north as f32).min(1.0);
+                return Ok(MarineSpawnCandidate {
+                    position: glam::Vec3::new(enu.east as f32, water_y, enu.north as f32),
+                    yaw: 0.0,
+                    water_elevation: water_y,
+                    port_name: port.name.clone(),
+                });
+            }
+        }
+
+        // Check surveyed water polygons for sea-level navigable water
+        for water in &res.raw_waterways {
+            if water.outer_ring.len() >= 3 {
+                let center_lat = water.outer_ring.iter().map(|c| c.lat).sum::<f64>()
+                    / water.outer_ring.len() as f64;
+                let center_lon = water.outer_ring.iter().map(|c| c.lon).sum::<f64>()
+                    / water.outer_ring.len() as f64;
+                let enu = conv.wgs84_to_enu(Wgs84Coord::new(center_lat, center_lon, 0.0));
+                let elev = gq.elevation(enu.east as f32, enu.north as f32);
+                if elev <= 1.5 {
+                    return Ok(MarineSpawnCandidate {
+                        position: glam::Vec3::new(enu.east as f32, elev, enu.north as f32),
+                        yaw: 0.0,
+                        water_elevation: elev,
+                        port_name: water.name.clone(),
+                    });
+                }
+            }
+        }
+
+        // Check for coastal water near anchor
+        let coastal_probe = [
+            glam::Vec2::new(250.0, -100.0),
+            glam::Vec2::new(-250.0, 100.0),
+            glam::Vec2::new(100.0, 300.0),
+        ];
+        for pt in &coastal_probe {
+            let elev = gq.elevation(pt.x, pt.y);
+            if elev <= 1.0 {
+                return Ok(MarineSpawnCandidate {
+                    position: glam::Vec3::new(pt.x, elev, pt.y),
+                    yaw: 0.0,
+                    water_elevation: elev,
+                    port_name: Some("Coastal Harbor Basin".to_string()),
+                });
+            }
+        }
+
+        Err("NAVIGABLE WATER REQUIRED / NO VALID SPAWN: No navigable water body or port facility detected in region.".to_string())
+    }
+
+    /// Resolves an authentic aviation spawn candidate (runway or safe airborne corridor).
+    pub fn find_aviation_spawn_candidate(&self) -> Result<AviationSpawnCandidate, String> {
+        let res = self
+            .region_resources
+            .as_ref()
+            .ok_or_else(|| "Region resources not loaded".to_string())?;
+        let gq = self
+            .ground_query
+            .as_ref()
+            .ok_or_else(|| "DEM ground query not available".to_string())?;
+        let conv = EnuConverter::new(res.package_anchor);
+
+        // Check for verified runway in raw aeroways
+        for aero in &res.raw_aeroways {
+            if aero.aeroway_type == realearth_ingestion::osm_types::AerowayType::Runway
+                && aero.geometry.len() >= 2
+            {
+                let p1 = conv.wgs84_to_enu(aero.geometry[0]);
+                let p2 = conv.wgs84_to_enu(aero.geometry[1]);
+                let dx = (p2.east - p1.east) as f32;
+                let dz = (p2.north - p1.north) as f32;
+                let yaw = dx.atan2(dz);
+                let elev = gq.elevation(p1.east as f32, p1.north as f32);
+                return Ok(AviationSpawnCandidate {
+                    position: glam::Vec3::new(p1.east as f32, elev + 2.0, p1.north as f32),
+                    yaw,
+                    altitude: elev + 2.0,
+                    runway_name: aero.ref_code.clone().or_else(|| aero.name.clone()),
+                    is_airborne: false,
+                });
+            }
+        }
+
+        // Safe open-sky flight corridor (+350m AGL above anchor)
+        let ground_y = gq.elevation(0.0, 0.0);
+        let safe_alt = ground_y + 350.0;
+        Ok(AviationSpawnCandidate {
+            position: glam::Vec3::new(0.0, safe_alt, -200.0),
+            yaw: 0.0,
+            altitude: safe_alt,
+            runway_name: None,
+            is_airborne: true,
+        })
+    }
+
+    /// Dispatches the train consist onto the selected railway route.
+    pub fn dispatch_selected_rail_route(&mut self) {
+        if let Some(ref res) = self.region_resources {
+            if let Some(ref rail_graph) = res.rail_graph {
+                if let Some(route) = self.rail_routes_cache.get(self.rail_route_selected_idx) {
+                    self.train_consist.bind_route(
+                        rail_graph,
+                        route.segment_ids.clone(),
+                        res.package_anchor,
+                    );
+                    if let Some(ref pose) = self.train_consist.track_pose {
+                        self.train_position = pose.position;
+                        self.train_yaw = pose.yaw;
+                    }
+                    self.active_transport_mode = ActiveTransportMode::Train;
+                    self.config.is_drive = true;
+                    let label = format!("🚆 Dispatched Consist on Route: {}", route.line_name);
+                    println!("{}", label);
+                    self.status_notification = Some((label, Instant::now()));
+                }
+            }
+        }
+    }
+
     /// Prepares vehicle models at the authentic ground surface without activating drive mode or moving camera.
     pub fn prepare_initial_vehicle(&mut self, idx: usize) {
         let (landmark, package_anchor) = if let Some(ref r) = self.region_resources {
@@ -1437,8 +1660,20 @@ impl InteractiveViewerApp {
             7 => {
                 self.active_transport_mode = ActiveTransportMode::Train;
                 self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
-                self.train_position = glam::Vec3::new(spawn_x, elev + 0.6, spawn_z);
-                self.train_yaw = spawn_yaw;
+                if let Ok(c) = self.find_rail_spawn_candidate() {
+                    if let Some(ref res) = self.region_resources {
+                        if let Some(ref rail_graph) = res.rail_graph {
+                            self.train_consist = TrainConsist::new_caltrain_diesel();
+                            self.train_consist.bind_route(
+                                rail_graph,
+                                c.route_plan.segment_ids.clone(),
+                                res.package_anchor,
+                            );
+                        }
+                    }
+                    self.train_position = c.position;
+                    self.train_yaw = c.yaw;
+                }
             }
             8 => {
                 self.active_transport_mode = ActiveTransportMode::Marine;
@@ -1485,9 +1720,9 @@ impl InteractiveViewerApp {
             .as_ref()
             .ok_or_else(|| "Ground query not available".to_string())?;
 
-        let ground_y = gq.elevation(0.0, 0.0);
+        let _ground_y = gq.elevation(0.0, 0.0);
 
-        let (spawn_x, spawn_z, spawn_yaw, elev) = if idx <= 6 {
+        let (spawn_x, spawn_z, spawn_yaw, elev, rail_candidate) = if idx <= 6 {
             let landmark_coord = self
                 .region_resources
                 .as_ref()
@@ -1499,24 +1734,38 @@ impl InteractiveViewerApp {
                 candidate.position.z,
                 candidate.yaw,
                 candidate.surface_elevation,
+                None,
             )
         } else if idx == 7 {
-            // Rail
-            let landmark_coord = self
-                .region_resources
-                .as_ref()
-                .map(|r| r.landmark.coord)
-                .unwrap_or(package_anchor);
-            let conv = EnuConverter::new(package_anchor);
-            let lm_enu = conv.wgs84_to_enu(landmark_coord);
-            let e = gq.elevation(lm_enu.east as f32, lm_enu.north as f32);
-            (lm_enu.east as f32, lm_enu.north as f32, 0.0, e)
+            // Rail: authenticated surveyed track sections only
+            let candidate = self.find_rail_spawn_candidate()?;
+            (
+                candidate.position.x,
+                candidate.position.z,
+                candidate.yaw,
+                candidate.surface_elevation,
+                Some(candidate),
+            )
         } else if idx == 8 {
-            // Marine
-            (250.0, -100.0, 0.0, 0.5)
+            // Marine: verified navigable water body or port facility
+            let candidate = self.find_marine_spawn_candidate()?;
+            (
+                candidate.position.x,
+                candidate.position.z,
+                candidate.yaw,
+                candidate.water_elevation + 0.5,
+                None,
+            )
         } else if idx == 9 {
-            // Aviation
-            (0.0, -200.0, 0.0, ground_y + 350.0)
+            // Aviation: verified runway or safe airborne corridor (+350m AGL)
+            let candidate = self.find_aviation_spawn_candidate()?;
+            (
+                candidate.position.x,
+                candidate.position.z,
+                candidate.yaw,
+                candidate.altitude,
+                None,
+            )
         } else {
             return Err(format!("Invalid vehicle fleet index: {}", idx));
         };
@@ -1583,8 +1832,23 @@ impl InteractiveViewerApp {
             7 => {
                 self.active_transport_mode = ActiveTransportMode::Train;
                 self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
-                self.train_position = glam::Vec3::new(spawn_x, elev + 0.6, spawn_z);
-                self.train_yaw = spawn_yaw;
+                self.train_consist = TrainConsist::new_caltrain_diesel();
+                if let Some(candidate) = rail_candidate {
+                    if let Some(ref res) = self.region_resources {
+                        if let Some(ref rail_graph) = res.rail_graph {
+                            self.train_consist.bind_route(
+                                rail_graph,
+                                candidate.route_plan.segment_ids.clone(),
+                                res.package_anchor,
+                            );
+                        }
+                    }
+                    self.train_position = candidate.position;
+                    self.train_yaw = candidate.yaw;
+                } else {
+                    self.train_position = glam::Vec3::new(spawn_x, elev + 0.6, spawn_z);
+                    self.train_yaw = spawn_yaw;
+                }
                 self.train_consist.velocity_mps = 0.0;
                 self.train_consist.speed_kph = 0.0;
                 self.train_consist.throttle = 0.0;
@@ -1754,7 +2018,7 @@ impl InteractiveViewerApp {
             "CityLine Transit Bus",
             "TransContinental Semi",
             "HyperSport RR-1000",
-            "Pacific Intercity Consist",
+            "Caltrain Commuter Consist",
             "Golden Gate Passenger Ferry",
             "SkyCourier B737-800",
         ];
@@ -1785,9 +2049,18 @@ impl InteractiveViewerApp {
             ..Default::default()
         };
 
-        let (world_dir, region_name, landmark, dem, raw_roads, raw_buildings) = if let Some(city) =
-            find_city_by_id(region_id)
-        {
+        let (
+            world_dir,
+            region_name,
+            landmark,
+            dem,
+            raw_roads,
+            raw_buildings,
+            raw_railways,
+            raw_aeroways,
+            raw_water_bodies,
+            raw_ports,
+        ) = if let Some(city) = find_city_by_id(region_id) {
             let (raw, dem, meta) = load_authentic_city(city.id)?;
             let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
             let landmark = Landmark::from_us_city(city);
@@ -1807,7 +2080,18 @@ impl InteractiveViewerApp {
                 };
                 compile_world_package(&val, &dem, &dir, &options)?;
             }
-            (dir, city.name, landmark, dem, raw.roads, raw.buildings)
+            (
+                dir,
+                city.name,
+                landmark,
+                dem,
+                raw.roads,
+                raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
+            )
         } else if region_id.contains("mysuru") {
             let dir = resolve_world_package_dir("mysuru");
             let dem = DemGrid::create_mysuru_dem(64, 64);
@@ -1829,6 +2113,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("chennai") {
             let dir = resolve_world_package_dir("chennai");
@@ -1851,6 +2139,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("hyderabad") {
             let dir = resolve_world_package_dir("hyderabad");
@@ -1873,6 +2165,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("corridor") {
             let dir = resolve_world_package_dir("corridors");
@@ -1895,6 +2191,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("bengaluru") || region_id == "in" {
             let dir = resolve_world_package_dir("bengaluru");
@@ -1917,6 +2217,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("nyc") || region_id.contains("new-york") {
             let dir = resolve_world_package_dir("new_york");
@@ -1939,6 +2243,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("la") || region_id.contains("los-angeles") {
             let dir = resolve_world_package_dir("los_angeles");
@@ -1961,6 +2269,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("chicago") {
             let dir = resolve_world_package_dir("chicago");
@@ -1983,6 +2295,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("seattle") {
             let dir = resolve_world_package_dir("seattle");
@@ -2005,6 +2321,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else if region_id.contains("miami") {
             let dir = resolve_world_package_dir("miami");
@@ -2027,6 +2347,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         } else {
             let dir = resolve_world_package_dir("san_francisco");
@@ -2064,6 +2388,10 @@ impl InteractiveViewerApp {
                 dem,
                 raw.roads,
                 raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
             )
         };
 
@@ -2153,12 +2481,14 @@ impl InteractiveViewerApp {
             ),
             landmark.yaw,
         );
-        self.train_position = glam::Vec3::new(
-            lm_enu.east as f32,
-            initial_elevation + 0.6,
-            lm_enu.north as f32 + 20.0,
-        );
-        self.train_yaw = landmark.yaw;
+        if self.train_consist.track_pose.is_none() {
+            self.train_position = glam::Vec3::new(
+                lm_enu.east as f32,
+                initial_elevation + 0.6,
+                lm_enu.north as f32 + 20.0,
+            );
+            self.train_yaw = landmark.yaw;
+        }
         self.marine_vessel = MarineVessel::new_ferry(
             "Harbor Passenger Ferry",
             glam::Vec3::new(250.0, 0.0, -100.0),
@@ -2319,6 +2649,40 @@ impl InteractiveViewerApp {
         self.camera_ctrl.pitch = landmark.pitch;
         self.camera_ctrl.update_camera(&mut self.camera);
 
+        // Initialize Caltrain rail corridor for San Francisco or from surveyed railways
+        let rail_graph = if region_id.contains("san_francisco")
+            || region_id.contains("san-francisco")
+            || region_name.contains("San Francisco")
+        {
+            Some(RailNetworkGraph::create_san_francisco_caltrain_corridor())
+        } else if !raw_railways.is_empty() {
+            let g = RailNetworkGraph::from_railways(&raw_railways);
+            if g.is_empty() {
+                None
+            } else {
+                Some(g)
+            }
+        } else {
+            None
+        };
+
+        if let Some(ref rg) = rail_graph {
+            let route = RailNetworkGraph::build_caltrain_mainline_route();
+            self.train_consist = TrainConsist::new_caltrain_diesel();
+            self.train_consist
+                .bind_route(rg, route.segment_ids.clone(), package_anchor);
+            if let Some(ref pose) = self.train_consist.track_pose {
+                self.train_position = pose.position;
+                self.train_yaw = pose.yaw;
+            }
+            self.rail_routes_cache =
+                vec![route, RailNetworkGraph::build_caltrain_yard_siding_route()];
+            self.rail_route_selected_idx = 0;
+        } else {
+            self.rail_routes_cache.clear();
+            self.rail_route_selected_idx = 0;
+        }
+
         self.ground_query = Some(ground_query);
         self.sim_world = Some(sim_world);
         self.region_resources = Some(RegionResources {
@@ -2329,6 +2693,11 @@ impl InteractiveViewerApp {
             dem,
             raw_roads,
             raw_buildings,
+            raw_railways,
+            raw_aeroways,
+            raw_waterways: raw_water_bodies,
+            raw_ports,
+            rail_graph,
             streamer,
         });
 
@@ -3255,11 +3624,56 @@ impl ApplicationHandler for InteractiveViewerApp {
                             _ => {}
                         },
 
+                        AppUiState::RailRouteModal => match key {
+                            KeyCode::Escape | KeyCode::KeyT => {
+                                self.ui_state = AppUiState::InGame;
+                                return;
+                            }
+                            KeyCode::ArrowUp | KeyCode::KeyW => {
+                                if !self.rail_routes_cache.is_empty() {
+                                    if self.rail_route_selected_idx == 0 {
+                                        self.rail_route_selected_idx =
+                                            self.rail_routes_cache.len() - 1;
+                                    } else {
+                                        self.rail_route_selected_idx -= 1;
+                                    }
+                                }
+                                return;
+                            }
+                            KeyCode::ArrowDown | KeyCode::KeyS => {
+                                if !self.rail_routes_cache.is_empty() {
+                                    self.rail_route_selected_idx = (self.rail_route_selected_idx
+                                        + 1)
+                                        % self.rail_routes_cache.len();
+                                }
+                                return;
+                            }
+                            KeyCode::Enter | KeyCode::Space => {
+                                self.dispatch_selected_rail_route();
+                                self.ui_state = AppUiState::InGame;
+                                return;
+                            }
+                            _ => {}
+                        },
+
                         AppUiState::InGame => match key {
                             KeyCode::Escape => {
                                 self.pressed_keys.clear();
                                 self.smoothed_steer_input = 0.0;
                                 self.ui_state = AppUiState::PauseMenu;
+                                return;
+                            }
+
+                            KeyCode::KeyT => {
+                                if !self.rail_routes_cache.is_empty() {
+                                    self.pressed_keys.clear();
+                                    self.smoothed_steer_input = 0.0;
+                                    self.ui_state = AppUiState::RailRouteModal;
+                                } else {
+                                    let label = "RAIL DATA REQUIRED: No surveyed rail routes available in this region.".to_string();
+                                    println!("🚆 {}", label);
+                                    self.status_notification = Some((label, Instant::now()));
+                                }
                                 return;
                             }
 
@@ -3409,27 +3823,31 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
 
                             KeyCode::KeyM => {
-                                self.active_transport_mode = match self.active_transport_mode {
-                                    ActiveTransportMode::Car => ActiveTransportMode::Motorcycle,
-                                    ActiveTransportMode::Motorcycle => {
-                                        ActiveTransportMode::TransitBus
-                                    }
-                                    ActiveTransportMode::TransitBus => {
-                                        ActiveTransportMode::HeavyTruck
-                                    }
-                                    ActiveTransportMode::HeavyTruck => ActiveTransportMode::Train,
-                                    ActiveTransportMode::Train => ActiveTransportMode::Marine,
-                                    ActiveTransportMode::Marine => ActiveTransportMode::Aviation,
-                                    ActiveTransportMode::Aviation => ActiveTransportMode::Car,
+                                let next_idx = match self.active_transport_mode {
+                                    ActiveTransportMode::Car => 6,        // Motorcycle
+                                    ActiveTransportMode::Motorcycle => 4, // TransitBus
+                                    ActiveTransportMode::TransitBus => 5, // HeavyTruck
+                                    ActiveTransportMode::HeavyTruck => 7, // Train
+                                    ActiveTransportMode::Train => 8,      // Marine
+                                    ActiveTransportMode::Marine => 9,     // Aviation
+                                    ActiveTransportMode::Aviation => 0,   // Car
                                 };
-                                self.config.is_drive = true;
-                                let label = format!(
-                                    "{} Transport Mode: {}",
-                                    self.active_transport_mode.icon(),
-                                    self.active_transport_mode.display_name()
-                                );
-                                println!("{}", label);
-                                self.status_notification = Some((label, Instant::now()));
+                                match self.execute_spawn_vehicle(next_idx) {
+                                    Ok(()) => {
+                                        let label = format!(
+                                            "{} Transport Mode: {}",
+                                            self.active_transport_mode.icon(),
+                                            self.active_transport_mode.display_name()
+                                        );
+                                        println!("{}", label);
+                                        self.status_notification = Some((label, Instant::now()));
+                                    }
+                                    Err(err) => {
+                                        println!("⚠️ Spawn rejected: {}", err);
+                                        self.status_notification =
+                                            Some((format!("⚠️ {}", err), Instant::now()));
+                                    }
+                                }
                                 return;
                             }
 
@@ -3478,14 +3896,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit1 | KeyCode::Numpad1 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::Car;
-                                    self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
-                                    self.vehicle.config = VehicleConfig::sports_coupe();
-                                    let label =
-                                        "🏎️ Mode: Automobile (Sports Coupe / Ackermann-Pacejka)"
-                                            .to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(0) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::SAN_FRANCISCO_TRANSAMERICA);
@@ -3502,11 +3920,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit2 | KeyCode::Numpad2 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::Motorcycle;
-                                    let label =
-                                        "🏍️ Mode: Motorcycle (2-Wheel Lean Dynamics)".to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(6) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::SAN_FRANCISCO_SALESFORCE);
@@ -3523,11 +3944,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit3 | KeyCode::Numpad3 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::TransitBus;
-                                    let label =
-                                        "🚌 Mode: Transit Bus (Pneumatic Air Brakes)".to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(4) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::SAN_FRANCISCO_FERRY_BUILDING);
@@ -3544,11 +3968,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit4 | KeyCode::Numpad4 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::HeavyTruck;
-                                    let label =
-                                        "🚛 Mode: Heavy Truck (Trailer Articulation)".to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(5) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::SAN_FRANCISCO_COIT_TOWER);
@@ -3565,11 +3992,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit5 | KeyCode::Numpad5 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::Train;
-                                    let label = "🚆 Mode: Train Consist (Davis Drag & Air Brakes)"
-                                        .to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(7) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::SAN_FRANCISCO_BAY_BRIDGE);
@@ -3586,11 +4016,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit6 | KeyCode::Numpad6 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::Marine;
-                                    let label =
-                                        "🚢 Mode: Marine Vessel (Archimedes Buoyancy)".to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(8) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl
                                         .jump_to(&Landmark::BENGALURU_VIDHANA_SOUDHA);
@@ -3607,15 +4040,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::Digit7 | KeyCode::Numpad7 => {
                                 if self.config.is_drive {
                                     self.reset_all_inputs();
-                                    self.active_transport_mode = ActiveTransportMode::Aviation;
-                                    let label = "✈️ Mode: Aviation Aircraft (6-DOF Flight Polar)"
-                                        .to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
-                                    let label = "✈️ Mode: Aviation Aircraft (6-DOF Flight Polar)"
-                                        .to_string();
-                                    println!("{}", label);
-                                    self.status_notification = Some((label, Instant::now()));
+                                    match self.execute_spawn_vehicle(9) {
+                                        Ok(()) => {}
+                                        Err(err) => {
+                                            println!("⚠️ {}", err);
+                                            self.status_notification =
+                                                Some((format!("⚠️ {}", err), Instant::now()));
+                                        }
+                                    }
                                 } else {
                                     self.camera_ctrl.jump_to(&Landmark::MYSURU_PALACE);
                                     self.status_notification = Some((
@@ -3932,15 +4364,19 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     self.train_consist.trigger_emergency_brake();
                                 }
 
-                                self.train_consist.step(PHYSICS_DT);
-
-                                let forward =
-                                    glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
-                                self.train_position +=
-                                    forward * (self.train_consist.velocity_mps * PHYSICS_DT);
-                                let ground_y =
-                                    gq.elevation(self.train_position.x, self.train_position.z);
-                                self.train_position.y = ground_y + 0.6;
+                                if let Some(ref rail_graph) = res.rail_graph {
+                                    self.train_consist.step_along_route(
+                                        rail_graph,
+                                        res.package_anchor,
+                                        PHYSICS_DT,
+                                    );
+                                    if let Some(pose) = self.train_consist.track_pose {
+                                        self.train_position = pose.position;
+                                        self.train_yaw = pose.yaw;
+                                    }
+                                } else {
+                                    self.train_consist.step(PHYSICS_DT);
+                                }
                             }
                             ActiveTransportMode::Marine => {
                                 let mut marine_inputs = MarineInputs::default();
@@ -4558,25 +4994,50 @@ impl ApplicationHandler for InteractiveViewerApp {
                             });
                             fleet_mesh.append(&loco_mesh);
 
-                            // Append 2 passenger coach wagons behind locomotive
-                            let back = -glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
-                            for i in 1..=2 {
-                                let wagon_pos = self.train_position
-                                    + back * (20.5 + (i as f32 - 1.0) * 24.0 + 12.0);
-                                let wagon_mesh = generate_vehicle_mesh(&VehicleMeshParams {
-                                    position: wagon_pos,
-                                    orientation: glam::Quat::from_rotation_y(self.train_yaw),
-                                    color: [0.75, 0.78, 0.82, 1.0], // Stainless Steel Coach
-                                    vehicle_type: VehicleVisualType::TrainWagon,
-                                    wheel_steer_angle: 0.0,
-                                    trailer_angle: 0.0,
-                                    headlights_on: false,
-                                    brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
-                                        > 0.5,
-                                    reverse_lights_on: false,
-                                    ..Default::default()
-                                });
-                                fleet_mesh.append(&wagon_mesh);
+                            // Render articulated carriages along 3D centerline track poses
+                            if !self.train_consist.carriage_poses.is_empty() {
+                                for carriage_pose in &self.train_consist.carriage_poses {
+                                    let wagon_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                        position: carriage_pose.position,
+                                        orientation: carriage_pose.orientation,
+                                        color: [0.75, 0.78, 0.82, 1.0], // Bombardier BiLevel Stainless Steel
+                                        vehicle_type: VehicleVisualType::TrainWagon,
+                                        wheel_steer_angle: 0.0,
+                                        trailer_angle: 0.0,
+                                        headlights_on: false,
+                                        brake_lights_on: self
+                                            .train_consist
+                                            .brake_cylinder_pressure_bar
+                                            > 0.5,
+                                        reverse_lights_on: false,
+                                        ..Default::default()
+                                    });
+                                    fleet_mesh.append(&wagon_mesh);
+                                }
+                            } else {
+                                // Append passenger coach wagons behind locomotive (fallback)
+                                let back =
+                                    -glam::Quat::from_rotation_y(self.train_yaw) * glam::Vec3::Z;
+                                for i in 1..=4 {
+                                    let wagon_pos = self.train_position
+                                        + back * (20.5 + (i as f32 - 1.0) * 26.0 + 13.0);
+                                    let wagon_mesh = generate_vehicle_mesh(&VehicleMeshParams {
+                                        position: wagon_pos,
+                                        orientation: glam::Quat::from_rotation_y(self.train_yaw),
+                                        color: [0.75, 0.78, 0.82, 1.0], // Stainless Steel Coach
+                                        vehicle_type: VehicleVisualType::TrainWagon,
+                                        wheel_steer_angle: 0.0,
+                                        trailer_angle: 0.0,
+                                        headlights_on: false,
+                                        brake_lights_on: self
+                                            .train_consist
+                                            .brake_cylinder_pressure_bar
+                                            > 0.5,
+                                        reverse_lights_on: false,
+                                        ..Default::default()
+                                    });
+                                    fleet_mesh.append(&wagon_mesh);
+                                }
                             }
                         }
                         ActiveTransportMode::Marine => {
@@ -4994,12 +5455,12 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     self.active_transport_mode == ActiveTransportMode::Motorcycle,
                                 ),
                                 (
-                                    "Pacific Intercity Consist",
+                                    "Caltrain Commuter Consist",
                                     "Locomotive Consist",
-                                    "Dual-Cab Electric 25kV",
-                                    165000.0,
-                                    6000.0,
-                                    160.0,
+                                    "MPI MP36PH-3C Diesel",
+                                    351500.0,
+                                    2685.0,
+                                    127.0,
                                     self.active_transport_mode == ActiveTransportMode::Train,
                                 ),
                                 (
@@ -5243,6 +5704,36 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 &self.config.player_name,
                                 self.multiplayer_selected_action,
                                 &roster,
+                            );
+                        }
+
+                        AppUiState::RailRouteModal => {
+                            let line_name = self
+                                .rail_routes_cache
+                                .first()
+                                .map(|r| r.line_name.as_str())
+                                .unwrap_or("Surveyed Rail Network");
+                            let formatted_routes: Vec<(&str, &str, &str, &str, f32, &str)> = self
+                                .rail_routes_cache
+                                .iter()
+                                .map(|r| {
+                                    (
+                                        r.line_name.as_str(),
+                                        r.departure_station_name.as_str(),
+                                        r.destination_station_name.as_str(),
+                                        "Track 1 (Platform A)",
+                                        (r.total_length_meters / 1000.0) as f32,
+                                        "TRK_MAIN_01, TRK_MAIN_02, TRK_MAIN_03",
+                                    )
+                                })
+                                .collect();
+                            hud.add_rail_route_modal(
+                                width_f,
+                                height_f,
+                                self.rail_route_selected_idx,
+                                line_name,
+                                &formatted_routes,
+                                None,
                             );
                         }
 

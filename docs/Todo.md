@@ -1073,5 +1073,45 @@
   - [x] Zero deviations on `cargo fmt --check`.
   - [x] 100% tests passed on `cargo test --workspace`.
 
+## STAGE 1.4-R: Real Railway Simulation and Multimodal Spawn Integrity (Completed)
+- [x] Phase 1.4-R.1: Track-Constrained 3D Kinematics & Curvature Calculation
+  - [x] Replaced fake open-field straight line train movement (`train_position += forward * v * dt`) with 3D centerline tracking.
+  - [x] Implemented `RailTrackSegment::sample_pose_enu` with 3D position, orientation, pitch along grades, yaw tangent, and curvature $\kappa = \frac{d\theta}{ds}$.
+  - [x] Implemented `RailNetworkGraph::sample_route_pose` and `route_cross_track_distance` (< 0.05m deviation).
+  - [x] Configured authentic San Francisco Caltrain corridor: 6 nodes, 5 track segments, mainline express and yard siding routes.
+- [x] Phase 1.4-R.2: Multi-Carriage Consist 3D Articulation & Turnout Routing
+  - [x] Implemented MPI MP36PH-3C locomotive + 4 Bombardier BiLevel passenger commuter coaches (351.5 tonnes).
+  - [x] Implemented individual carriage 3D track sampling along route arclength with 25.9m coupler spacing.
+  - [x] Connected switch and turnout routing (Mission Bay Yard turnout `SW_KING_YARD_01`).
+  - [x] Implemented Automatic Train Protection (ATP) emergency brake tripping on Red signal violation ($P_{cyl} \ge 3.5\text{ bar}$, $v \to 0$).
+  - [x] Implemented route terminus buffer stop velocity clamp ($v = 0.0\text{ m/s}$) to prevent track overrunning.
+- [x] Phase 1.4-R.3: Authentic Multimodal Infrastructure Spawning & Honest Rejection
+  - [x] Implemented `find_road_spawn_candidate` verifying $\ge 1$ lane for sports car/motorcycle, $\ge 2$ lanes for bus/truck, and building setback clearance.
+  - [x] Implemented `find_marine_spawn_candidate` verifying surveyed port facilities or sea-level water depth ($\le 1.0\text{m}$ MSL). Dry inland locations cleanly rejected with `NAVIGABLE WATER REQUIRED / NO VALID SPAWN`.
+  - [x] Implemented `find_aviation_spawn_candidate` verifying surveyed runway alignment or establishing safe $+350\text{m}$ AGL open-sky flight corridor.
+  - [x] Implemented `find_rail_spawn_candidate` verifying surveyed track platforms.
+  - [x] Honest rejection: In regions without surveyed rail infrastructure, returns `RAIL DATA REQUIRED / NO VALID SPAWN: Region contains no surveyed railway infrastructure. Fictitious rail paths are prohibited.` without fabricating fake tracks.
+- [x] Phase 1.4-R.4: Interactive Railway Route Selector Modal & Fleet Polish
+  - [x] Implemented `HudRenderer::add_rail_route_modal` displaying line name, departure station, destination station, platform tracks, and segment breakdowns.
+  - [x] Added `[T]` in-cab key in Train mode to toggle route selector modal.
+  - [x] Updated garage item 7 to "Caltrain Commuter Consist" with authentic MPI MP36PH-3C diesel specs.
+  - [x] Updated vehicle cycling `[M]` and number keys `[5]`, `[6]`, `[7]` to dispatch through infrastructure-verified candidate locators.
+- [x] Phase 1.4-R.5: Master Certification Test Suite
+  - [x] Authored `tests/tests/stage1_4_real_railway_simulation_and_multimodal_spawn_certification.rs` (6/6 passed).
+  - [x] Part 1: Track-constrained 3D kinematics, zero cross-track deviation (< 0.05m), curvature, and Davis resistance.
+  - [x] Part 2: Multi-carriage consist articulation (5 cars, independent curve yaw, 25.9m coupler spacing).
+  - [x] Part 3: Switch routing, signal aspects, and ATP emergency braking.
+  - [x] Part 4: Station arrival, departure workflow, and buffer stop safety.
+  - [x] Part 5: Multimodal spawn integrity & honest rejection of unverified rail/water.
+  - [x] Part 6: Multi-framerate (30 / 60 / 120 FPS) fixed-timestep replay invariance (< 1.5% variance).
+- [x] Phase 1.4-R.6: Documentation & Workspace Verification
+  - [x] Authored ADR-0047 (`docs/adr/0047-stage-1-4-r-real-railway-simulation-and-multimodal-spawn-integrity.md`).
+  - [x] Authored Certification Report (`docs/reports/stage1_4_certification_report.md`).
+  - [x] Updated `dist/certification_matrix.json` (40 requirements, 36 verified, 0 broken, 4 toolchain blocked).
+  - [x] Zero warnings on `cargo clippy --workspace --all-targets -- -D warnings`.
+  - [x] Zero diffs on `cargo fmt --check`.
+  - [x] 100% tests passed on `cargo test --workspace`.
+
+
 
 

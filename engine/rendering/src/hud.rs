@@ -3587,8 +3587,108 @@ impl HudMesh {
             x + 16.0,
             y + 106.0,
             0.85,
-            "Controls: [W/S] Throttle Notch / Air Brakes | [Space] Emergency Vent",
+            "Controls: [W/S] Throttle Notch / Air Brakes | [Space] Emergency Vent | [T] Routes",
             [0.65, 0.75, 0.85, 0.8],
+        );
+    }
+
+    /// Adds an authentic railway station and route dispatch selector modal.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_rail_route_modal(
+        &mut self,
+        screen_w: f32,
+        screen_h: f32,
+        selected_route_idx: usize,
+        line_name: &str,
+        routes: &[(&str, &str, &str, &str, f32, &str)],
+        hovered_idx: Option<usize>,
+    ) {
+        let modal_w = (screen_w * 0.72).clamp(650.0, 920.0);
+        let modal_h = (screen_h * 0.70).clamp(480.0, 680.0);
+        let x = (screen_w - modal_w) * 0.5;
+        let y = (screen_h - modal_h) * 0.5;
+
+        // Semi-transparent backdrop and modal panel
+        self.add_rect(0.0, 0.0, screen_w, screen_h, [0.02, 0.04, 0.08, 0.78]);
+        self.add_panel(x, y, modal_w, modal_h, [0.2, 0.85, 1.0, 1.0]);
+
+        // Header
+        self.add_text(
+            x + 24.0,
+            y + 20.0,
+            1.8,
+            "TRAIN ROUTE & DISPATCH SELECTOR",
+            [0.2, 0.85, 1.0, 1.0],
+        );
+        self.add_text(
+            x + 24.0,
+            y + 52.0,
+            1.1,
+            &format!("CORRIDOR: {} | AUTHENTIC TRACK CENTERLINES", line_name),
+            [0.7, 0.8, 0.9, 1.0],
+        );
+
+        // List routes
+        let list_y = y + 85.0;
+        let row_h = 75.0;
+        for (i, (r_name, dep, dest, plat, len_km, tracks)) in routes.iter().enumerate() {
+            let ry = list_y + (i as f32) * (row_h + 12.0);
+            let is_selected = i == selected_route_idx;
+            let is_hovered = hovered_idx == Some(i);
+
+            let bg_color = if is_selected {
+                [0.15, 0.35, 0.65, 0.9]
+            } else if is_hovered {
+                [0.12, 0.22, 0.38, 0.8]
+            } else {
+                [0.06, 0.09, 0.16, 0.8]
+            };
+
+            self.add_rect(x + 24.0, ry, modal_w - 48.0, row_h, bg_color);
+            self.add_rect_outline(
+                x + 24.0,
+                ry,
+                modal_w - 48.0,
+                row_h,
+                1.0,
+                if is_selected {
+                    [0.4, 0.75, 1.0, 0.8]
+                } else {
+                    [0.2, 0.3, 0.45, 0.4]
+                },
+            );
+
+            let title_color = if is_selected {
+                [1.0, 0.9, 0.3, 1.0]
+            } else {
+                [0.9, 0.95, 1.0, 1.0]
+            };
+            self.add_text(x + 36.0, ry + 10.0, 1.3, r_name, title_color);
+
+            let info_str = format!(
+                "From: {}  ->  To: {}  |  Platform: {}  |  Length: {:.1} km",
+                dep, dest, plat, len_km
+            );
+            self.add_text(x + 36.0, ry + 32.0, 1.0, &info_str, [0.75, 0.85, 0.95, 1.0]);
+
+            let track_str = format!("Track Segments: {}", tracks);
+            self.add_text(
+                x + 36.0,
+                ry + 50.0,
+                0.9,
+                &track_str,
+                [0.55, 0.70, 0.85, 1.0],
+            );
+        }
+
+        // Footer instructions
+        let foot_y = y + modal_h - 45.0;
+        self.add_text(
+            x + 24.0,
+            foot_y,
+            1.05,
+            "[UP/DOWN / CLICK] Select Route  |  [ENTER / SPACE] Dispatch Consist  |  [ESC/T] Close",
+            [0.6, 0.75, 0.9, 1.0],
         );
     }
 

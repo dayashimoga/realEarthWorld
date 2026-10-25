@@ -77,12 +77,47 @@ pub struct RailTrackSegment {
     pub geometry: Vec<Wgs84Coord>,
 }
 
+/// 3D Position and orientation sampled along a railway track centerline.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct RailTrackPose {
+    pub position: glam::Vec3,
+    pub orientation: glam::Quat,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub curvature_rad_per_m: f32,
+}
+
+/// A planned passenger or freight railway corridor between stations.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RailRoutePlan {
+    pub line_name: String,
+    pub departure_station_id: String,
+    pub departure_station_name: String,
+    pub destination_station_id: String,
+    pub destination_station_name: String,
+    pub segment_ids: Vec<String>,
+    pub total_length_meters: f64,
+}
+
 impl RailTrackSegment {
     /// Samples local ENU 3D position (X=East, Y=Up, Z=North) and heading (radians from north)
     /// at arclength `s_meters` along this track segment relative to an anchor.
     pub fn sample_position_enu(&self, s_meters: f64, anchor: Wgs84Coord) -> (glam::Vec3, f32) {
+        let pose = self.sample_pose_enu(s_meters, anchor);
+        (pose.position, pose.yaw)
+    }
+
+    /// Samples local ENU 3D pose (position, orientation, yaw, pitch, curvature)
+    /// at arclength `s_meters` along this track segment relative to an anchor.
+    pub fn sample_pose_enu(&self, s_meters: f64, anchor: Wgs84Coord) -> RailTrackPose {
         if self.geometry.is_empty() {
-            return (glam::Vec3::ZERO, 0.0);
+            return RailTrackPose {
+                position: glam::Vec3::ZERO,
+                orientation: glam::Quat::IDENTITY,
+                yaw: 0.0,
+                pitch: 0.0,
+                curvature_rad_per_m: 0.0,
+            };
         }
         let transforms = EnuConverter::new(anchor);
         let pts: Vec<glam::Vec3> = self
@@ -92,7 +127,13 @@ impl RailTrackSegment {
             .collect();
 
         if pts.len() == 1 {
-            return (pts[0], 0.0);
+            return RailTrackPose {
+                position: pts[0],
+                orientation: glam::Quat::IDENTITY,
+                yaw: 0.0,
+                pitch: 0.0,
+                curvature_rad_per_m: 0.0,
+            };
         }
 
         let mut cum_dist = Vec::with_capacity(pts.len());
@@ -105,7 +146,13 @@ impl RailTrackSegment {
         }
 
         if total <= 1e-6 {
-            return (pts[0], 0.0);
+            return RailTrackPose {
+                position: pts[0],
+                orientation: glam::Quat::IDENTITY,
+                yaw: 0.0,
+                pitch: 0.0,
+                curvature_rad_per_m: 0.0,
+            };
         }
 
         let s = s_meters.clamp(0.0, total);
@@ -117,12 +164,78 @@ impl RailTrackSegment {
                 let t = ((s - d0) / seg_d).clamp(0.0, 1.0) as f32;
                 let pos = pts[i].lerp(pts[i + 1], t);
                 let diff = pts[i + 1] - pts[i];
-                let heading = diff.x.atan2(diff.z);
-                return (pos, heading);
+                let horiz_len = (diff.x * diff.x + diff.z * diff.z).sqrt().max(1e-4);
+                let pitch = (-diff.y).atan2(horiz_len);
+                let yaw = diff.x.atan2(diff.z);
+                let orientation =
+                    glam::Quat::from_rotation_y(yaw) * glam::Quat::from_rotation_x(pitch);
+
+                let curvature = if i + 2 < pts.len() {
+                    let diff2 = pts[i + 2] - pts[i + 1];
+                    let yaw2 = diff2.x.atan2(diff2.z);
+                    let mut dyaw = yaw2 - yaw;
+                    while dyaw > std::f32::consts::PI {
+                        dyaw -= 2.0 * std::f32::consts::PI;
+                    }
+                    while dyaw < -std::f32::consts::PI {
+                        dyaw += 2.0 * std::f32::consts::PI;
+                    }
+                    (dyaw / seg_d as f32).abs()
+                } else {
+                    0.0
+                };
+
+                return RailTrackPose {
+                    position: pos,
+                    orientation,
+                    yaw,
+                    pitch,
+                    curvature_rad_per_m: curvature,
+                };
             }
         }
 
-        (pts[pts.len() - 1], 0.0)
+        let last_pt = pts[pts.len() - 1];
+        let diff = last_pt - pts[pts.len() - 2];
+        let yaw = diff.x.atan2(diff.z);
+        RailTrackPose {
+            position: last_pt,
+            orientation: glam::Quat::from_rotation_y(yaw),
+            yaw,
+            pitch: 0.0,
+            curvature_rad_per_m: 0.0,
+        }
+    }
+
+    /// Computes minimum orthogonal distance from a point in ENU coordinates to this track segment.
+    pub fn cross_track_distance(&self, point_enu: glam::Vec3, anchor: Wgs84Coord) -> f32 {
+        if self.geometry.len() < 2 {
+            return f32::MAX;
+        }
+        let transforms = EnuConverter::new(anchor);
+        let pts: Vec<glam::Vec3> = self
+            .geometry
+            .iter()
+            .map(|c| transforms.wgs84_to_enu(*c).to_vec3())
+            .collect();
+
+        let mut min_dist = f32::MAX;
+        for i in 0..pts.len() - 1 {
+            let a = pts[i];
+            let b = pts[i + 1];
+            let ab = b - a;
+            let ap = point_enu - a;
+            let ab_len_sq = ab.length_squared();
+            if ab_len_sq < 1e-6 {
+                min_dist = min_dist.min(ap.length());
+                continue;
+            }
+            let t = (ap.dot(ab) / ab_len_sq).clamp(0.0, 1.0);
+            let proj = a + ab * t;
+            let d = (point_enu - proj).length();
+            min_dist = min_dist.min(d);
+        }
+        min_dist
     }
 }
 
@@ -409,6 +522,134 @@ impl RailNetworkGraph {
         });
 
         rail
+    }
+
+    /// Checks whether any track exists in this graph.
+    pub fn is_empty(&self) -> bool {
+        self.segments.is_empty()
+    }
+
+    /// Number of verified track segments in this graph.
+    pub fn segment_count(&self) -> usize {
+        self.segments.len()
+    }
+
+    /// Number of station nodes in this graph.
+    pub fn station_count(&self) -> usize {
+        self.nodes.values().filter(|n| n.is_station).count()
+    }
+
+    /// Samples 3D pose along a multi-segment route at distance `distance_meters`.
+    /// Returns: (Pose, Active Segment Index, Distance on Segment, Is at buffer stop).
+    pub fn sample_route_pose(
+        &self,
+        route_segments: &[String],
+        distance_meters: f64,
+        anchor: Wgs84Coord,
+    ) -> Option<(RailTrackPose, usize, f64, bool)> {
+        if route_segments.is_empty() {
+            return None;
+        }
+
+        let mut d = distance_meters;
+
+        if d < 0.0 {
+            if let Some(first_seg) = self.segments.get(&route_segments[0]) {
+                let pose = first_seg.sample_pose_enu(0.0, anchor);
+                return Some((pose, 0, 0.0, true));
+            }
+        }
+
+        for (idx, seg_id) in route_segments.iter().enumerate() {
+            if let Some(seg) = self.segments.get(seg_id) {
+                let seg_len = seg.length_meters;
+                if d <= seg_len || idx == route_segments.len() - 1 {
+                    let clamped_s = d.clamp(0.0, seg_len);
+                    let pose = seg.sample_pose_enu(clamped_s, anchor);
+                    let at_buffer = idx == route_segments.len() - 1 && d >= seg_len;
+                    return Some((pose, idx, clamped_s, at_buffer));
+                }
+                d -= seg_len;
+            }
+        }
+
+        None
+    }
+
+    /// Total track length along a sequence of segment IDs.
+    pub fn total_route_length(&self, route_segments: &[String]) -> f64 {
+        route_segments
+            .iter()
+            .filter_map(|id| self.segments.get(id))
+            .map(|s| s.length_meters)
+            .sum()
+    }
+
+    /// Minimum cross-track distance from a point in ENU space to any track in this route.
+    pub fn route_cross_track_distance(
+        &self,
+        route_segments: &[String],
+        point_enu: glam::Vec3,
+        anchor: Wgs84Coord,
+    ) -> f32 {
+        let mut min_d = f32::MAX;
+        for seg_id in route_segments {
+            if let Some(seg) = self.segments.get(seg_id) {
+                let d = seg.cross_track_distance(point_enu, anchor);
+                min_d = min_d.min(d);
+            }
+        }
+        min_d
+    }
+
+    /// Finds a station node by name (case-insensitive substring match).
+    pub fn find_station_by_name(&self, name_substr: &str) -> Option<&RailNode> {
+        let needle = name_substr.to_lowercase();
+        self.nodes.values().find(|n| {
+            n.is_station
+                && n.station_name
+                    .as_ref()
+                    .map(|s| s.to_lowercase().contains(&needle))
+                    .unwrap_or(false)
+        })
+    }
+
+    /// Lists all station nodes sorted alphabetically by station name.
+    pub fn list_stations(&self) -> Vec<&RailNode> {
+        let mut list: Vec<&RailNode> = self.nodes.values().filter(|n| n.is_station).collect();
+        list.sort_by_key(|n| n.station_name.clone().unwrap_or_default());
+        list
+    }
+
+    /// Builds the standard passenger route between two station nodes.
+    pub fn build_caltrain_mainline_route() -> RailRoutePlan {
+        RailRoutePlan {
+            line_name: "Caltrain Peninsula Commuter Line".to_string(),
+            departure_station_id: "SF_4TH_KING".to_string(),
+            departure_station_name: "San Francisco 4th & King (Platform 1)".to_string(),
+            destination_station_id: "SF_MILLBRAE_SFO".to_string(),
+            destination_station_name: "Millbrae SFO Intermodal (Terminal)".to_string(),
+            segment_ids: vec![
+                "TRK_SF_01".to_string(),
+                "TRK_SF_02_MAIN".to_string(),
+                "TRK_SF_03".to_string(),
+                "TRK_SF_04".to_string(),
+            ],
+            total_length_meters: 1050.0 + 1250.0 + 5600.0 + 12200.0,
+        }
+    }
+
+    /// Builds a siding route into the maintenance yard.
+    pub fn build_caltrain_yard_siding_route() -> RailRoutePlan {
+        RailRoutePlan {
+            line_name: "Mission Bay Depot & Maintenance Siding".to_string(),
+            departure_station_id: "SF_4TH_KING".to_string(),
+            departure_station_name: "San Francisco 4th & King (Yard Track)".to_string(),
+            destination_station_id: "SF_MISSION_BAY_YARD".to_string(),
+            destination_station_name: "Mission Bay Maintenance Facility".to_string(),
+            segment_ids: vec!["TRK_SF_01".to_string(), "TRK_SF_02_YARD".to_string()],
+            total_length_meters: 1050.0 + 420.0,
+        }
     }
 }
 

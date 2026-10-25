@@ -10,8 +10,8 @@ pub use air_navigation::{
     AirCorridorSegment, AirNavigationDatabase, Airport, AirportRunway, IlsGuidance,
 };
 pub use rail_graph::{
-    CrossingState, RailGauge, RailLevelCrossing, RailNetworkGraph, RailNode, RailTrackSegment,
-    SignalAspect, SwitchState,
+    CrossingState, RailGauge, RailLevelCrossing, RailNetworkGraph, RailNode, RailRoutePlan,
+    RailTrackPose, RailTrackSegment, SignalAspect, SwitchState,
 };
 pub use realearth_ingestion::osm_types::HighwayType;
 pub use road_graph::{
