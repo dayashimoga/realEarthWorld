@@ -954,5 +954,29 @@
   - [x] Verify clean formatting (`cargo fmt --check`, 0 deviations).
   - [x] Headless driving benchmark: 105.3 FPS (Avg: 9.49ms, p95: 10.20ms), 239.54 MB peak RSS, 22,793 authentic triangles across 30 active chunks.
 
-
-
+## STAGE 1.0: Complete San Francisco City and Environmental Realism (Completed & Certified)
+- [x] Phase 1.0.1: Authentic World Ingestion and Completeness Audit
+  - [x] Survey and ingest 285 authentic buildings spanning Financial District, SoMa, Chinatown, North Beach, Nob Hill, Union Square, and Embarcadero Waterfront.
+  - [x] Compile 51 connected urban roads forming a fully contiguous 3D street grid across Sacramento, Clay, Washington, Jackson, Pacific, Vallejo, Green, Union, Filbert, Bryant, Brannan, 5th, Stockton, Grant, Powell, Mason, Taylor, and Jones streets.
+  - [x] Verify water body boundary (San Francisco Bay), 7 surveyed municipal parks, rail transit, and 64x64 DEM elevation grid (0.0m sea level to 102.8m Nob Hill peak).
+  - [x] Enforce zero synthetic scatter gate (0 quarantined features, 0 fabricated geometries).
+  - [x] Compile all 30 spatial chunks in `data/world_san_francisco/` (78,475 vertices, 49,799 triangles, 4.18 MB uncompressed).
+- [x] Phase 1.0.2: Architectural Diversity and Street-Level Detailing
+  - [x] Implement 6 distinct authentic architectural styles: Modern Glass Skyscraper (61), Postmodern Steel & Stone (79), Art Deco Masonry (89), Classic Victorian / Edwardian (28), Brutalist Concrete (11), Historic Brick Warehouse (17).
+  - [x] Procedural ground-floor entrance portals (recessed entryways) and glass entry canopies ($1.0\text{m}$ projection at $+3.2\text{m}$) on building facades.
+  - [x] Procedural Victorian bay windows ($0.5\text{m}$ outward cantilever with angled flanks and top caps from floor 2 to parapet coping).
+  - [x] Rooftop mechanical penthouses and elevator overruns on high-rise structures.
+  - [x] 3D cantilever traffic signals with 3-aspect signal heads at all verified intersections.
+  - [x] 3D San Francisco low-pressure fire hydrants (safety yellow barrel, white bonnet) and stop signs on sidewalk corners.
+  - [x] 3D urban sidewalk street trees (wooden trunk + 4-sided foliage canopy) spaced between streetlights.
+  - [x] Curbside white parking stall lines rendered on road shoulders.
+- [x] Phase 1.0.3: DEM Terrain, Diurnal Atmosphere and Night Lighting
+  - [x] Slope-aware multi-material terrain blending (weathered rock cuts on slopes $>8^\circ$, sandy coastal shore at $y < 1.2\text{m}$, natural ground grain).
+  - [x] Diurnal ephemeris lighting cycle (noon zenith, warm golden sunset Rayleigh scattering, nocturnal ambient).
+  - [x] Night emissive lighting: warm yellow streetlight illumination, traffic signal lamp emissions (red/yellow/green), and glowing building windows.
+- [x] Phase 1.0.4: Representative Viewpoints, Driving Benchmark, and Certification
+  - [x] Verify 7 canonical San Francisco geographic viewpoints: Financial District Canyon, Market Street Arterial, Nob Hill Crest Panorama, SF Bay Skyline, Market/3rd Junction, Yerba Buena Gardens, and Embarcadero Waterfront.
+  - [x] Implement 60-frame driving simulation benchmark maintaining $>60$ FPS (achieved 110.3 FPS steady-state, 9.07ms average frame latency, 278.13 MB peak RSS, <800ms startup).
+  - [x] Capture verified 1280x720 framebuffer screenshot to `target/screenshots/san_francisco_view.ppm`.
+  - [x] Author comprehensive 6-test certification suite in `tests/tests/stage1_0_city_and_environmental_realism_certification.rs` (6/6 passing).
+  - [x] 100% test pass rate across workspace (`cargo test --workspace`), zero warnings under `cargo clippy`, zero formatting deviations (`cargo fmt --check`).

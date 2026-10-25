@@ -19,6 +19,7 @@ use realearth_vehicles::{DynamicVehicle, FlatGround, VehicleConfig, VehicleInput
 use std::f32::consts::PI;
 use std::path::Path;
 
+#[allow(dead_code)]
 fn get_assets_dir() -> std::path::PathBuf {
     if Path::new("assets/vehicles").exists() {
         std::path::PathBuf::from("assets/vehicles")
@@ -35,8 +36,8 @@ fn get_assets_dir() -> std::path::PathBuf {
 
 #[test]
 fn test_stage0_8_1_gltf_export_and_binary_roundtrip_parsing() {
-    let assets_dir = get_assets_dir();
-    std::fs::create_dir_all(&assets_dir).expect("Failed to create assets/vehicles directory");
+    let temp_dir = tempfile::tempdir().expect("Failed to create isolated tempdir");
+    let assets_dir = temp_dir.path().to_path_buf();
 
     // Export all certified models to disk
     export_all_certified_models_to_glb_directory(&assets_dir)
@@ -463,7 +464,8 @@ fn test_stage0_8_5_lod_scaling_and_asset_registry_caching() {
     );
 
     // 2. Asset registry caching and lookup
-    let assets_dir = get_assets_dir();
+    let temp_dir = tempfile::tempdir().expect("Failed to create isolated tempdir");
+    let assets_dir = temp_dir.path().to_path_buf();
     let _ = export_all_certified_models_to_glb_directory(&assets_dir);
     let mut registry = VehicleAssetRegistry::new(&assets_dir);
     let model_a = registry

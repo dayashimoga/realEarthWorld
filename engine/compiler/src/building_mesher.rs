@@ -154,6 +154,304 @@ fn mesh_standard_building(
         indices.push(base_idx + 2);
         indices.push(base_idx + 1);
 
+        // 1B. Ground-Floor Entrance Portal & Canopy (on primary facade edge i == 0)
+        if i == 0 && edge_len >= 8.0 && building_height >= 6.0 {
+            let tangent = edge / edge_len;
+            let mid_p = (p0 + p1) * 0.5;
+            let portal_half_w = 1.8f32;
+            let door_h = 2.8f32;
+            let canopy_y = wall_bottom0 + 3.2f32;
+            let canopy_proj = 1.0f32;
+
+            let d0 = mid_p - tangent * portal_half_w;
+            let d1 = mid_p + tangent * portal_half_w;
+
+            // Recessed double glass doors with entrance trim
+            let door_base = vertices.len() as u32;
+            let door_color = [0.22, 0.26, 0.32, 0.80]; // Glass entrance door (alpha 0.80)
+            let door_norm = norm_arr;
+            vertices.push(Vertex::new(
+                [d0.x, wall_bottom0, d0.z],
+                door_norm,
+                [0.0, 0.0],
+                door_color,
+            ));
+            vertices.push(Vertex::new(
+                [d1.x, wall_bottom1, d1.z],
+                door_norm,
+                [3.6, 0.0],
+                door_color,
+            ));
+            vertices.push(Vertex::new(
+                [d1.x, wall_bottom1 + door_h, d1.z],
+                door_norm,
+                [3.6, door_h],
+                door_color,
+            ));
+            vertices.push(Vertex::new(
+                [d0.x, wall_bottom0 + door_h, d0.z],
+                door_norm,
+                [0.0, door_h],
+                door_color,
+            ));
+            indices.extend_from_slice(&[
+                door_base,
+                door_base + 3,
+                door_base + 2,
+                door_base,
+                door_base + 2,
+                door_base + 1,
+            ]);
+
+            // Projecting Entrance Canopy Awning (overhang along normal)
+            let c_p0 = d0 + normal * canopy_proj;
+            let c_p1 = d1 + normal * canopy_proj;
+            let canopy_color = [0.30, 0.32, 0.36, 0.70]; // Architectural steel/bronze canopy (alpha 0.70)
+            let up_n = [0.0, 1.0, 0.0];
+
+            let can_base = vertices.len() as u32;
+            // Top face (+Y)
+            vertices.push(Vertex::new(
+                [d0.x, canopy_y, d0.z],
+                up_n,
+                [0.0, 0.0],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [d1.x, canopy_y, d1.z],
+                up_n,
+                [3.6, 0.0],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [c_p1.x, canopy_y, c_p1.z],
+                up_n,
+                [3.6, canopy_proj],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [c_p0.x, canopy_y, c_p0.z],
+                up_n,
+                [0.0, canopy_proj],
+                canopy_color,
+            ));
+            indices.extend_from_slice(&[
+                can_base,
+                can_base + 3,
+                can_base + 2,
+                can_base,
+                can_base + 2,
+                can_base + 1,
+            ]);
+
+            // Underside (-Y)
+            let down_n = [0.0, -1.0, 0.0];
+            let und_base = vertices.len() as u32;
+            vertices.push(Vertex::new(
+                [d0.x, canopy_y - 0.15, d0.z],
+                down_n,
+                [0.0, 0.0],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [c_p0.x, canopy_y - 0.15, c_p0.z],
+                down_n,
+                [0.0, canopy_proj],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [c_p1.x, canopy_y - 0.15, c_p1.z],
+                down_n,
+                [3.6, canopy_proj],
+                canopy_color,
+            ));
+            vertices.push(Vertex::new(
+                [d1.x, canopy_y - 0.15, d1.z],
+                down_n,
+                [3.6, 0.0],
+                canopy_color,
+            ));
+            indices.extend_from_slice(&[
+                und_base,
+                und_base + 3,
+                und_base + 2,
+                und_base,
+                und_base + 2,
+                und_base + 1,
+            ]);
+        }
+
+        // 1C. San Francisco Architectural Bay Windows (Multi-story projecting bays for Residential / Victorian)
+        let is_residential_or_victorian =
+            matches!(building.building_type, BuildingType::Residential)
+                || (wall_color[3] >= 0.83 && wall_color[3] <= 0.89);
+        if i == 0 && is_residential_or_victorian && edge_len >= 12.0 && building_height >= 9.0 {
+            let tangent = edge / edge_len;
+            let bay_bot = wall_bottom0 + 3.5f32; // Begins above ground floor
+            let bay_top = roof_elev - 1.2f32; // Terminates below roof cornice
+            let bay_proj = 0.50f32; // 0.50m outward cantilever
+            let bay_half_w = 1.2f32;
+
+            let offsets = [edge_len * 0.28, edge_len * 0.72];
+            for off in offsets {
+                let center_bay = p0 + tangent * off;
+                let b0 = center_bay - tangent * bay_half_w;
+                let b1 = center_bay + tangent * bay_half_w;
+                let b0_out = b0 + normal * bay_proj;
+                let b1_out = b1 + normal * bay_proj;
+
+                let bay_color = [
+                    wall_color[0] * 1.05,
+                    wall_color[1] * 1.05,
+                    wall_color[2] * 1.05,
+                    wall_color[3],
+                ];
+
+                // Front face
+                let bf_base = vertices.len() as u32;
+                vertices.push(Vertex::new(
+                    [b0_out.x, bay_bot, b0_out.z],
+                    norm_arr,
+                    [0.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1_out.x, bay_bot, b1_out.z],
+                    norm_arr,
+                    [bay_half_w * 2.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1_out.x, bay_top, b1_out.z],
+                    norm_arr,
+                    [bay_half_w * 2.0, bay_top - bay_bot],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b0_out.x, bay_top, b0_out.z],
+                    norm_arr,
+                    [0.0, bay_top - bay_bot],
+                    bay_color,
+                ));
+                indices.extend_from_slice(&[
+                    bf_base,
+                    bf_base + 3,
+                    bf_base + 2,
+                    bf_base,
+                    bf_base + 2,
+                    bf_base + 1,
+                ]);
+
+                // Left angled flank
+                let left_norm = [-tangent.x, 0.0, -tangent.z];
+                let bl_base = vertices.len() as u32;
+                vertices.push(Vertex::new(
+                    [b0.x, bay_bot, b0.z],
+                    left_norm,
+                    [0.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b0_out.x, bay_bot, b0_out.z],
+                    left_norm,
+                    [bay_proj, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b0_out.x, bay_top, b0_out.z],
+                    left_norm,
+                    [bay_proj, bay_top - bay_bot],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b0.x, bay_top, b0.z],
+                    left_norm,
+                    [0.0, bay_top - bay_bot],
+                    bay_color,
+                ));
+                indices.extend_from_slice(&[
+                    bl_base,
+                    bl_base + 3,
+                    bl_base + 2,
+                    bl_base,
+                    bl_base + 2,
+                    bl_base + 1,
+                ]);
+
+                // Right angled flank
+                let right_norm = [tangent.x, 0.0, tangent.z];
+                let br_base = vertices.len() as u32;
+                vertices.push(Vertex::new(
+                    [b1_out.x, bay_bot, b1_out.z],
+                    right_norm,
+                    [0.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1.x, bay_bot, b1.z],
+                    right_norm,
+                    [bay_proj, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1.x, bay_top, b1.z],
+                    right_norm,
+                    [bay_proj, bay_top - bay_bot],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1_out.x, bay_top, b1_out.z],
+                    right_norm,
+                    [0.0, bay_top - bay_bot],
+                    bay_color,
+                ));
+                indices.extend_from_slice(&[
+                    br_base,
+                    br_base + 3,
+                    br_base + 2,
+                    br_base,
+                    br_base + 2,
+                    br_base + 1,
+                ]);
+
+                // Bay roof / top cap (+Y)
+                let cap_base = vertices.len() as u32;
+                let up_n = [0.0, 1.0, 0.0];
+                vertices.push(Vertex::new(
+                    [b0.x, bay_top, b0.z],
+                    up_n,
+                    [0.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1.x, bay_top, b1.z],
+                    up_n,
+                    [bay_half_w * 2.0, 0.0],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b1_out.x, bay_top, b1_out.z],
+                    up_n,
+                    [bay_half_w * 2.0, bay_proj],
+                    bay_color,
+                ));
+                vertices.push(Vertex::new(
+                    [b0_out.x, bay_top, b0_out.z],
+                    up_n,
+                    [0.0, bay_proj],
+                    bay_color,
+                ));
+                indices.extend_from_slice(&[
+                    cap_base,
+                    cap_base + 3,
+                    cap_base + 2,
+                    cap_base,
+                    cap_base + 2,
+                    cap_base + 1,
+                ]);
+            }
+        }
+
         // 2. Architectural Cornice Moulding (0.30m outward projecting cornice below roof parapet)
         if building_height >= 8.0 {
             let cornice_overhang = 0.30f32;

@@ -130,6 +130,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 base_color = white_color;
             }
         }
+
+        // E. Curbside White Parking Space Stall Markings
+        let dist_curb = min(u, 1.0 - u);
+        if (dist_curb > 0.035 && dist_curb < 0.22) {
+            let stall_line = fract(v / 6.0);
+            if (stall_line < 0.02) {
+                base_color = white_color;
+            }
+        }
     }
 
     // Concrete sidewalk pavement slabs (expansion joints every 2 meters)
@@ -286,6 +295,42 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         base_color = mix(deep_water, shallow_water, shore_prox);
     }
 
+    // Natural & Urban Terrain Multi-Material Blending
+    let is_terrain = abs(alpha_tag - 1.0) < 0.015;
+    if (is_terrain) {
+        let slope = 1.0 - normal.y;
+        let p_world = in.world_pos.xz * 0.12;
+        let ground_noise = (hash2(p_world) - 0.5) * 0.08;
+
+        // Rock / steep cut on grades > 18 degrees
+        if (slope > 0.18) {
+            let rock_color = vec3<f32>(0.46, 0.43, 0.38) + ground_noise;
+            base_color = mix(base_color, rock_color, clamp((slope - 0.18) / 0.15, 0.0, 1.0));
+        } else if (in.world_pos.y < 1.2) {
+            // Coastal sandy/rip-rap boundary near water
+            let sand_color = vec3<f32>(0.50, 0.48, 0.42) + ground_noise;
+            base_color = mix(sand_color, base_color, clamp((in.world_pos.y - 0.2) / 1.0, 0.0, 1.0));
+        } else {
+            // Natural ground grain
+            base_color = clamp(base_color + ground_noise, vec3<f32>(0.12), vec3<f32>(0.75));
+        }
+    }
+
+    // Street Furniture & Signal Luminaire Head night emission (alpha 0.70)
+    var furniture_emissive = vec3<f32>(0.0);
+    if (abs(alpha_tag - 0.70) < 0.015) {
+        // Luminaire warm light head or yellow traffic signal
+        if (in.color.r > 0.90 && in.color.g > 0.70 && in.color.b < 0.30) {
+            furniture_emissive = in.color.rgb * (1.0 - day_factor * 0.4) * 1.6;
+        } else if (in.color.r > 0.85 && in.color.g < 0.30) {
+            // Red traffic signal / stop sign
+            furniture_emissive = in.color.rgb * 1.8;
+        } else if (in.color.g > 0.80 && in.color.r < 0.30) {
+            // Green traffic signal
+            furniture_emissive = in.color.rgb * 1.8;
+        }
+    }
+
     // Specular highlight with Fresnel reflectance (water, glass, moist surfaces)
     let half_dir = normalize(sun_dir + view_dir);
     let is_glass = abs(alpha_tag - 0.80) < 0.015;
@@ -300,7 +345,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let spec_mult = select(uniforms.material_params.x, uniforms.material_params.x * 2.5, is_water || is_glass);
     let specular = uniforms.sun_color_intensity.rgb * spec_base * fresnel * spec_mult * day_factor;
 
-    let lit_color = base_color * (ambient + diffuse) + specular;
+    let lit_color = base_color * (ambient + diffuse) + specular + furniture_emissive;
 
     // =========================================================================
     // 4. ATMOSPHERE, SKYLIGHT, DISTANCE FOG & VOLUMETRIC CLOUDS

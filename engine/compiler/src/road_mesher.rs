@@ -817,6 +817,456 @@ pub fn mesh_road_infrastructure_with_options(
                     indices.push(arm_base_idx + 2);
                     indices.push(arm_base_idx + 1);
                 }
+
+                // Urban Street Trees: Placed between streetlights along sidewalks
+                if (18.0..=22.0).contains(&dist_since_light) && (start_node..=end_node).contains(&i)
+                {
+                    let tree_base_pt = right_edge_pts[i] + (miter_perps[i].0 * -1.8f32);
+                    let trunk_h = 2.6f32;
+                    let trunk_r = 0.15f32;
+                    let canopy_bot = tree_base_pt.y + trunk_h;
+                    let canopy_top = canopy_bot + 3.2f32;
+                    let canopy_r = 1.4f32;
+
+                    let trunk_color = [0.38, 0.26, 0.18, 0.40]; // Wood bark (alpha 0.40)
+                    let foliage_color = [0.20, 0.52, 0.24, 0.50]; // Leaf canopy (alpha 0.50)
+
+                    // 4-sided Tree Trunk
+                    let t_corners = [
+                        tree_base_pt + Vec3::new(-trunk_r, 0.0, -trunk_r),
+                        tree_base_pt + Vec3::new(trunk_r, 0.0, -trunk_r),
+                        tree_base_pt + Vec3::new(trunk_r, 0.0, trunk_r),
+                        tree_base_pt + Vec3::new(-trunk_r, 0.0, trunk_r),
+                    ];
+                    let t_norms = [
+                        [0.0, 0.0, -1.0],
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                        [-1.0, 0.0, 0.0],
+                    ];
+                    for f in 0..4 {
+                        let next = (f + 1) % 4;
+                        let c0 = t_corners[f];
+                        let c1 = t_corners[next];
+                        let n = t_norms[f];
+
+                        let b_idx = vertices.len() as u32;
+                        vertices.push(Vertex::new([c0.x, c0.y, c0.z], n, [0.0, 0.0], trunk_color));
+                        vertices.push(Vertex::new([c1.x, c1.y, c1.z], n, [1.0, 0.0], trunk_color));
+                        vertices.push(Vertex::new(
+                            [c1.x, canopy_bot, c1.z],
+                            n,
+                            [1.0, 1.0],
+                            trunk_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [c0.x, canopy_bot, c0.z],
+                            n,
+                            [0.0, 1.0],
+                            trunk_color,
+                        ));
+
+                        indices.push(b_idx);
+                        indices.push(b_idx + 3);
+                        indices.push(b_idx + 2);
+                        indices.push(b_idx);
+                        indices.push(b_idx + 2);
+                        indices.push(b_idx + 1);
+                    }
+
+                    // 4-sided Foliage Canopy Pyramid
+                    let f_corners = [
+                        tree_base_pt + Vec3::new(-canopy_r, 0.0, -canopy_r),
+                        tree_base_pt + Vec3::new(canopy_r, 0.0, -canopy_r),
+                        tree_base_pt + Vec3::new(canopy_r, 0.0, canopy_r),
+                        tree_base_pt + Vec3::new(-canopy_r, 0.0, canopy_r),
+                    ];
+                    let apex = Vec3::new(tree_base_pt.x, canopy_top, tree_base_pt.z);
+                    for f in 0..4 {
+                        let next = (f + 1) % 4;
+                        let c0 = f_corners[f];
+                        let c1 = f_corners[next];
+                        let n = t_norms[f];
+
+                        let b_idx = vertices.len() as u32;
+                        vertices.push(Vertex::new(
+                            [c0.x, canopy_bot, c0.z],
+                            n,
+                            [0.0, 0.0],
+                            foliage_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [c1.x, canopy_bot, c1.z],
+                            n,
+                            [1.0, 0.0],
+                            foliage_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [apex.x, apex.y, apex.z],
+                            n,
+                            [0.5, 1.0],
+                            foliage_color,
+                        ));
+
+                        indices.push(b_idx);
+                        indices.push(b_idx + 2);
+                        indices.push(b_idx + 1);
+                    }
+                }
+            }
+        }
+
+        // 4. Urban Traffic Signals & Street Signage at Authenticated Intersections
+        if let Some(j_coords) = options.junction_coords {
+            for i in start_node..=end_node {
+                let key = (
+                    (road.geometry[i].lat * 1e7).round() as i64,
+                    (road.geometry[i].lon * 1e7).round() as i64,
+                    road.layer,
+                );
+                if j_coords.contains(&key) && is_arterial {
+                    // Place 3D Traffic Signal Cantilever Mast on right sidewalk corner
+                    let sig_base = right_edge_pts[i] + (miter_perps[i].0 * -1.8f32);
+                    let mast_h = 5.8f32;
+                    let mast_top = sig_base + Vec3::new(0.0, mast_h, 0.0);
+                    let arm_len = 4.2f32;
+                    let arm_end = mast_top + (miter_perps[i].0 * arm_len); // Reach over carriageway
+
+                    let sig_base_idx = vertices.len() as u32;
+                    let norm = [miter_perps[i].0.x, 0.0, miter_perps[i].0.z];
+                    let w = 0.14f32;
+
+                    // Vertical Signal Mast
+                    vertices.push(Vertex::new(
+                        [sig_base.x - w, sig_base.y, sig_base.z],
+                        norm,
+                        [0.0, 0.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sig_base.x + w, sig_base.y, sig_base.z],
+                        norm,
+                        [1.0, 0.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [mast_top.x + w, mast_top.y, mast_top.z],
+                        norm,
+                        [1.0, 1.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [mast_top.x - w, mast_top.y, mast_top.z],
+                        norm,
+                        [0.0, 1.0],
+                        steel_pole_color,
+                    ));
+                    indices.extend_from_slice(&[
+                        sig_base_idx,
+                        sig_base_idx + 3,
+                        sig_base_idx + 2,
+                        sig_base_idx,
+                        sig_base_idx + 2,
+                        sig_base_idx + 1,
+                    ]);
+
+                    // Horizontal Cantilever Arm
+                    let arm_base_idx = vertices.len() as u32;
+                    let down_n = [0.0, -1.0, 0.0];
+                    vertices.push(Vertex::new(
+                        [mast_top.x, mast_top.y, mast_top.z],
+                        down_n,
+                        [0.0, 0.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [arm_end.x, arm_end.y, arm_end.z],
+                        down_n,
+                        [1.0, 0.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [arm_end.x, arm_end.y - 0.18, arm_end.z],
+                        down_n,
+                        [1.0, 1.0],
+                        steel_pole_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [mast_top.x, mast_top.y - 0.18, mast_top.z],
+                        down_n,
+                        [0.0, 1.0],
+                        steel_pole_color,
+                    ));
+                    indices.extend_from_slice(&[
+                        arm_base_idx,
+                        arm_base_idx + 3,
+                        arm_base_idx + 2,
+                        arm_base_idx,
+                        arm_base_idx + 2,
+                        arm_base_idx + 1,
+                    ]);
+
+                    // 3-Aspect Traffic Signal Head (Red, Yellow, Green lamps)
+                    let head_pos = arm_end - (miter_perps[i].0 * 0.8);
+                    let head_w = 0.35f32;
+                    let red_light = [0.92, 0.15, 0.15, 0.70];
+                    let yellow_light = [0.92, 0.78, 0.15, 0.70];
+                    let green_light = [0.15, 0.85, 0.25, 0.70];
+
+                    let lamp_base = vertices.len() as u32;
+                    // Red Aspect
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y, head_pos.z],
+                        norm,
+                        [0.0, 0.0],
+                        red_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y, head_pos.z],
+                        norm,
+                        [1.0, 0.0],
+                        red_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y - 0.28, head_pos.z],
+                        norm,
+                        [1.0, 1.0],
+                        red_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y - 0.28, head_pos.z],
+                        norm,
+                        [0.0, 1.0],
+                        red_light,
+                    ));
+                    // Yellow Aspect
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y - 0.32, head_pos.z],
+                        norm,
+                        [0.0, 0.0],
+                        yellow_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y - 0.32, head_pos.z],
+                        norm,
+                        [1.0, 0.0],
+                        yellow_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y - 0.60, head_pos.z],
+                        norm,
+                        [1.0, 1.0],
+                        yellow_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y - 0.60, head_pos.z],
+                        norm,
+                        [0.0, 1.0],
+                        yellow_light,
+                    ));
+                    // Green Aspect
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y - 0.64, head_pos.z],
+                        norm,
+                        [0.0, 0.0],
+                        green_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y - 0.64, head_pos.z],
+                        norm,
+                        [1.0, 0.0],
+                        green_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x + head_w, head_pos.y - 0.92, head_pos.z],
+                        norm,
+                        [1.0, 1.0],
+                        green_light,
+                    ));
+                    vertices.push(Vertex::new(
+                        [head_pos.x - head_w, head_pos.y - 0.92, head_pos.z],
+                        norm,
+                        [0.0, 1.0],
+                        green_light,
+                    ));
+
+                    indices.extend_from_slice(&[
+                        lamp_base,
+                        lamp_base + 3,
+                        lamp_base + 2,
+                        lamp_base,
+                        lamp_base + 2,
+                        lamp_base + 1,
+                        lamp_base + 4,
+                        lamp_base + 7,
+                        lamp_base + 6,
+                        lamp_base + 4,
+                        lamp_base + 6,
+                        lamp_base + 5,
+                        lamp_base + 8,
+                        lamp_base + 11,
+                        lamp_base + 10,
+                        lamp_base + 8,
+                        lamp_base + 10,
+                        lamp_base + 9,
+                    ]);
+
+                    // 5. Authentic San Francisco Low-Pressure Fire Hydrant near curb
+                    let hyd_pos = right_edge_pts[i] + (miter_perps[i].0 * -0.65f32);
+                    let hyd_h = 0.75f32;
+                    let hyd_r = 0.16f32;
+                    let hyd_color = [0.95, 0.78, 0.12, 0.70]; // Safety yellow barrel
+                    let cap_color = [0.92, 0.92, 0.94, 0.70]; // White top bonnet
+
+                    let _hyd_base_idx = vertices.len() as u32;
+                    let h_corners = [
+                        hyd_pos + Vec3::new(-hyd_r, 0.0, -hyd_r),
+                        hyd_pos + Vec3::new(hyd_r, 0.0, -hyd_r),
+                        hyd_pos + Vec3::new(hyd_r, 0.0, hyd_r),
+                        hyd_pos + Vec3::new(-hyd_r, 0.0, hyd_r),
+                    ];
+                    for f in 0..4 {
+                        let next = (f + 1) % 4;
+                        let c0 = h_corners[f];
+                        let c1 = h_corners[next];
+                        let b_idx = vertices.len() as u32;
+                        vertices.push(Vertex::new([c0.x, c0.y, c0.z], norm, [0.0, 0.0], hyd_color));
+                        vertices.push(Vertex::new([c1.x, c1.y, c1.z], norm, [1.0, 0.0], hyd_color));
+                        vertices.push(Vertex::new(
+                            [c1.x, c1.y + hyd_h, c1.z],
+                            norm,
+                            [1.0, 1.0],
+                            hyd_color,
+                        ));
+                        vertices.push(Vertex::new(
+                            [c0.x, c0.y + hyd_h, c0.z],
+                            norm,
+                            [0.0, 1.0],
+                            hyd_color,
+                        ));
+                        indices.extend_from_slice(&[
+                            b_idx,
+                            b_idx + 3,
+                            b_idx + 2,
+                            b_idx,
+                            b_idx + 2,
+                            b_idx + 1,
+                        ]);
+                    }
+                    // Cap (+Y)
+                    let cap_idx = vertices.len() as u32;
+                    vertices.push(Vertex::new(
+                        [h_corners[0].x, hyd_pos.y + hyd_h, h_corners[0].z],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0],
+                        cap_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [h_corners[1].x, hyd_pos.y + hyd_h, h_corners[1].z],
+                        [0.0, 1.0, 0.0],
+                        [1.0, 0.0],
+                        cap_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [h_corners[2].x, hyd_pos.y + hyd_h, h_corners[2].z],
+                        [0.0, 1.0, 0.0],
+                        [1.0, 1.0],
+                        cap_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [h_corners[3].x, hyd_pos.y + hyd_h, h_corners[3].z],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 1.0],
+                        cap_color,
+                    ));
+                    indices.extend_from_slice(&[
+                        cap_idx,
+                        cap_idx + 3,
+                        cap_idx + 2,
+                        cap_idx,
+                        cap_idx + 2,
+                        cap_idx + 1,
+                    ]);
+
+                    // 6. 3D Street Sign / Stop Sign on opposite sidewalk corner
+                    let sign_pos = left_edge_pts[i] + (miter_perps[i].0 * 1.6f32);
+                    let sign_post_h = 2.8f32;
+                    let sign_base_idx = vertices.len() as u32;
+                    let sign_color = [0.85, 0.15, 0.15, 0.70]; // Octagonal red stop sign
+                    let post_color = [0.65, 0.65, 0.68, 0.70];
+
+                    // Sign post
+                    let sw = 0.06f32;
+                    vertices.push(Vertex::new(
+                        [sign_pos.x - sw, sign_pos.y, sign_pos.z],
+                        norm,
+                        [0.0, 0.0],
+                        post_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x + sw, sign_pos.y, sign_pos.z],
+                        norm,
+                        [1.0, 0.0],
+                        post_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x + sw, sign_pos.y + sign_post_h, sign_pos.z],
+                        norm,
+                        [1.0, 1.0],
+                        post_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x - sw, sign_pos.y + sign_post_h, sign_pos.z],
+                        norm,
+                        [0.0, 1.0],
+                        post_color,
+                    ));
+                    indices.extend_from_slice(&[
+                        sign_base_idx,
+                        sign_base_idx + 3,
+                        sign_base_idx + 2,
+                        sign_base_idx,
+                        sign_base_idx + 2,
+                        sign_base_idx + 1,
+                    ]);
+
+                    // Sign face
+                    let sf_idx = vertices.len() as u32;
+                    let sf_w = 0.38f32;
+                    let sf_y = sign_pos.y + sign_post_h - 0.2;
+                    vertices.push(Vertex::new(
+                        [sign_pos.x - sf_w, sf_y - sf_w, sign_pos.z],
+                        norm,
+                        [0.0, 0.0],
+                        sign_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x + sf_w, sf_y - sf_w, sign_pos.z],
+                        norm,
+                        [1.0, 0.0],
+                        sign_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x + sf_w, sf_y + sf_w, sign_pos.z],
+                        norm,
+                        [1.0, 1.0],
+                        sign_color,
+                    ));
+                    vertices.push(Vertex::new(
+                        [sign_pos.x - sf_w, sf_y + sf_w, sign_pos.z],
+                        norm,
+                        [0.0, 1.0],
+                        sign_color,
+                    ));
+                    indices.extend_from_slice(&[
+                        sf_idx,
+                        sf_idx + 3,
+                        sf_idx + 2,
+                        sf_idx,
+                        sf_idx + 2,
+                        sf_idx + 1,
+                    ]);
+                }
             }
         }
     }

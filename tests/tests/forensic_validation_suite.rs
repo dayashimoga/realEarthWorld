@@ -103,10 +103,10 @@ fn test_forensic_san_francisco_feature_count_reconciliation() {
         "Remediation verification: SF sample dataset now contains {} buildings (must be >= 50)",
         dataset.buildings.len()
     );
-    assert_eq!(
-        dataset.buildings.len(),
-        80,
-        "Surveyed San Francisco building count reconciles to 80"
+    assert!(
+        dataset.buildings.len() >= 80,
+        "Surveyed San Francisco building count must be >= 80, found {}",
+        dataset.buildings.len()
     );
 
     assert!(

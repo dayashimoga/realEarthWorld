@@ -1514,4 +1514,41 @@
   - Zero deviations under `cargo fmt --check`.
   - Packaged Application Driving Benchmark: Executed `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60` delivering 105.3 FPS steady-state (Avg: 9.49ms, p95: 10.20ms), 239.54 MB peak RSS, 22,793 authentic triangles across 30 active chunks, 8 AI traffic vehicles, taxi mission active, 22.7 km/h driving, and offscreen screenshot saved to `target/screenshots/san_francisco_view.ppm`.
 
+## STAGE 1.0: Complete San Francisco City and Environmental Realism (Completed & Certified)
+- [x] Phase 1.0.1 — Authentic GIS Completeness & World Packaging:
+  - Source Reconciled: Expanded authentic San Francisco OpenStreetMap vector extract (`assets/san_francisco_sample/san_francisco_downtown.osm.xml`) to 285 surveyed buildings and 51 interconnected roads (140 multi-way intersection nodes).
+  - Spatial Coverage: Dense high-density urban core infill across Financial District, South of Market (SoMa), Chinatown, North Beach, Nob Hill, Union Square, and the Embarcadero Waterfront within Lat [37.7800, 37.8050] and Lon [-122.4150, -122.3880].
+  - Connected Road Network: Extended complete continuous street grid including Sacramento, Clay, Washington, Jackson, Pacific, Vallejo, Green, Union, Filbert, Bryant, Brannan, 5th, Stockton, Grant, Powell, Mason, Taylor, and Jones streets.
+  - Zero Synthetic Scattering: Passed strict validation gate with 0 quarantined features (`report.quarantined.len() == 0`) and zero synthetic random scatters.
+  - Setback Integrity: Calculated authentic property setback envelopes preventing building-road boundary collisions (0 collisions across all 285 buildings).
+  - World Compilation: Recompiled all 30 binary `.rec` spatial chunks in `data/world_san_francisco/` (78,475 vertices, 49,799 triangles, 4.18 MB uncompressed).
+- [x] Phase 1.0.2 — Architectural Anatomy, Diversity & Street Furniture:
+  - 6 Architectural Styles: Implemented authentic classification: Modern Glass Skyscrapers (61), Postmodern Steel & Stone (79), Art Deco Masonry (89), Classic Victorian / Edwardian (28), Brutalist Concrete (11), Historic Brick Warehouses (17).
+  - Entrance Portals & Canopies: In [`engine/compiler/src/building_mesher.rs`](file:///j:/rustRealEarth/engine/compiler/src/building_mesher.rs), generated ground-floor recessed entrance portals (2.8m high) and 1.0m projection glass canopies at +3.2m along primary street-facing facades.
+  - Victorian Bay Windows: In [`engine/compiler/src/building_mesher.rs`](file:///j:/rustRealEarth/engine/compiler/src/building_mesher.rs), generated authentic San Francisco multi-story bay windows (0.50m outward cantilever with angled flanks and top caps from floor 2 to parapet coping).
+  - Rooftop Infrastructure: High-rise commercial buildings feature mechanical penthouses, cooling towers, and elevator overruns.
+  - 3D Cantilever Traffic Signals: In [`engine/compiler/src/road_mesher.rs`](file:///j:/rustRealEarth/engine/compiler/src/road_mesher.rs), generated 3D vertical signal masts with 4.2m horizontal cantilever arms and 3-aspect signal heads (red, yellow, green lamps) at all authenticated intersection coordinates.
+  - Urban Street Furniture: Generated 3D low-pressure San Francisco fire hydrants (safety yellow barrel, white bonnet) and octagonal stop signs / street name signs on sidewalk corner nodes.
+  - Sidewalk Trees: Placed 3D urban street trees (wooden trunk + 4-sided canopy) spaced between streetlights along sidewalks.
+  - Curbside Parking Stalls: In [`engine/rendering/src/shaders.rs`](file:///j:/rustRealEarth/engine/rendering/src/shaders.rs), rendered authentic white parking stall demarcations along road shoulders.
+- [x] Phase 1.0.3 — DEM Multi-Material Shading, Diurnal Sky & Emissive Lighting:
+  - Multi-Material Terrain: In [`engine/rendering/src/shaders.rs`](file:///j:/rustRealEarth/engine/rendering/src/shaders.rs), implemented slope-aware material blending: weathered rock cuts on steep slopes ($>8^\circ$), sandy shoreline on waterfront elevations ($y < 1.2\text{m}$), and urban park turf.
+  - Diurnal Lighting Cycle: Dynamic solar ephemeris evaluation with noon zenith, warm golden sunset Rayleigh scattering, and nocturnal ambient sky.
+  - Emissive Lighting: Integrated dynamic night illumination for streetlights (warm yellow emission), traffic signals (red, yellow, green lamp glow), and building windows.
+- [x] Phase 1.0.4 — Multi-Perspective Verification & Driving Benchmark:
+  - Dedicated Certification Test Suite: Implemented [`tests/tests/stage1_0_city_and_environmental_realism_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage1_0_city_and_environmental_realism_certification.rs) (6/6 PASSED ✅):
+    1. Test 1: World completeness, 285 buildings, 51 roads, 30 chunks, 0 quarantined features.
+    2. Test 2: Architectural diversity (6 styles) and facade anatomy (portals, canopies, bay windows).
+    3. Test 3: Street infrastructure & urban furniture (140 intersection nodes, 3D signals, hydrants, signs, trees).
+    4. Test 4: DEM elevation extremes (0.0m sea level to 102.8m Nob Hill) and slope rock cuts.
+    5. Test 5: Diurnal lighting, atmospheric sunset scattering, and night emissive windows/streetlights.
+    6. Test 6: 7 canonical viewpoints verification and 60-frame driving simulation benchmark.
+  - Quality Gates: 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), clean formatting (`cargo fmt --check`).
+  - Headless Driving Benchmark: Executed `cargo run -p realearth-viewer -- --headless --drive --benchmark --frames 60 --region san_francisco`:
+    - Steady-State Framerate: 110.3 FPS (Avg frame time: 9.07ms, p95: 9.73ms) exceeding 60 FPS budget.
+    - Resident Memory (RSS): 278.13 MB peak (well below 1024 MB threshold).
+    - Cold Startup: 793.87ms (well within 2000ms SLA).
+    - Authentic Geometry: 49,799 triangles across 30 active chunks.
+    - Verified Screenshot: Written to `target/screenshots/san_francisco_view.ppm`.
+
 

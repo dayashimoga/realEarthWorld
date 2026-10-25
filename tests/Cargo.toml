@@ -176,3 +176,11 @@ path = "tests/stage0_7_vehicle_stabilization_certification.rs"
 [[test]]
 name = "stage0_8_vehicle_visual_certification"
 path = "tests/stage0_8_vehicle_visual_certification.rs"
+
+[[test]]
+name = "stage0_9_road_terrain_spatial_integrity_certification"
+path = "tests/stage0_9_road_terrain_spatial_integrity_certification.rs"
+
+[[test]]
+name = "stage1_0_city_and_environmental_realism_certification"
+path = "tests/stage1_0_city_and_environmental_realism_certification.rs"

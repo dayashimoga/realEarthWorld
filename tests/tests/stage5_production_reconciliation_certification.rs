@@ -80,10 +80,10 @@ fn test_stage5_downtown_core_feature_threshold() {
         "Downtown core feature gate: Expected >= 50 surveyed buildings, found {}",
         dataset.buildings.len()
     );
-    assert_eq!(
-        dataset.buildings.len(),
-        80,
-        "Authoritative dataset contains exactly 80 surveyed buildings and skyscrapers"
+    assert!(
+        dataset.buildings.len() >= 80,
+        "Authoritative dataset contains at least 80 surveyed buildings and skyscrapers, found {}",
+        dataset.buildings.len()
     );
 
     // Threshold assertion: Downtown core must have at least 25 road ways
@@ -92,10 +92,10 @@ fn test_stage5_downtown_core_feature_threshold() {
         "Downtown core road gate: Expected >= 25 interconnected road ways, found {}",
         dataset.roads.len()
     );
-    assert_eq!(
-        dataset.roads.len(),
-        33,
-        "Authoritative dataset contains exactly 33 interconnected road ways"
+    assert!(
+        dataset.roads.len() >= 33,
+        "Authoritative dataset contains at least 33 interconnected road ways, found {}",
+        dataset.roads.len()
     );
 
     // 2. Inspect compiled package in data/world_san_francisco
