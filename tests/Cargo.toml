@@ -188,3 +188,23 @@ path = "tests/stage1_0_city_and_environmental_realism_certification.rs"
 [[test]]
 name = "stage1_5_mouse_and_ui_interaction_certification"
 path = "tests/stage1_5_mouse_and_ui_interaction_certification.rs"
+
+[[test]]
+name = "stage_a_p0_defect_reproduction"
+path = "tests/stage_a_p0_defect_reproduction.rs"
+
+[[test]]
+name = "stage_a_deterministic_replay"
+path = "tests/stage_a_deterministic_replay.rs"
+
+[[test]]
+name = "stage_a_graphics_regression"
+path = "tests/stage_a_graphics_regression.rs"
+
+[[test]]
+name = "stage_a_injected_defects"
+path = "tests/stage_a_injected_defects.rs"
+
+[[test]]
+name = "stage_a_artifact_smoke"
+path = "tests/stage_a_artifact_smoke.rs"

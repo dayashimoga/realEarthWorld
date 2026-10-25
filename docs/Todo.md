@@ -1181,6 +1181,33 @@
   - [x] Zero diffs on `cargo fmt --check`.
   - [x] 100% tests passing across workspace.
 
+## STAGE A: Forensic Root-Cause Recovery and No-Regression Foundation (Completed)
+- [x] Phase A1: Non-Destructive Preservation & Defect Reproduction
+  - [x] Preserved HEAD commit `d85d8677e5d87171d3d63bca2d897f1f41489ecf` on recovery branch `recovery/stage_a_forensic_foundation`.
+  - [x] Recorded compiler versions (`rustc 1.99.1`, `cargo 1.99.1`) and platform artifact hashes (`dist/windows/realearth-windows-x64.zip` SHA256: `948180155CE871B76FCA222939D19E47D6C4FB156E2185F45D8535EABA90D744`).
+  - [x] Authored `tests/tests/stage_a_p0_defect_reproduction.rs` independently reproducing all 8 P0 defects:
+    - P0-1: Steering sign convention inversion and 90° road spawn tangent yaw frame shift.
+    - P0-2: Self-steering divergence under zero input during reverse slope motion.
+    - P0-3: Backward movement on slope with zero input in Drive D1 (rolls backward $-0.473$m in 1s, speed reaches $-2.8$ km/h, tripping reverse brake threshold).
+    - P0-4: Building collision inward normal penetration trapping (pushes vehicle from $x=0.2$ to $x=2.42$ deeper into building).
+    - P0-5: Fallback primitive boxes and heavy truck trailer occlusion (camera chase distance 18.0m vs 15.0m trailer, clearance only $1.95$m).
+    - P0-6: Train free roam without track (accelerates to $5.9$ km/h and steps freely over terrain without rail graph).
+    - P0-7: Aircraft leaving geographic world bounds ($2933$m displacement in 15s, escaping $2500$m regional box).
+    - P0-8: US city transitions failing for 32 of 38 catalog cities due to unbundled GIS packages on disk.
+- [x] Phase A2: Systemic Root-Cause Identification & Tracing
+  - [x] Traced every bug across the full stack: `event input` -> `authoritative state` -> `simulation` -> `geographic collision` -> `rendering` -> `HUD`.
+  - [x] Authored machine-readable defect matrix in `docs/RootCauseMatrix.json` and mirrored in `docs/RootCauseMatrix.md`.
+- [x] Phase A3: Permanent Regression Test Infrastructure
+  - [x] Authored `tests/tests/stage_a_deterministic_replay.rs` (300 frames at 60Hz, snapshot capture/restore, bitwise invariance $\Delta pos = 0.00\text{e}0\text{m}$, $\Delta vel = 0.00\text{e}0\text{m/s}$).
+  - [x] Authored `tests/tests/stage_a_graphics_regression.rs` (fixed landmark cameras, finite view-projection matrices, NDC depth clamping $z \in [0, 1]$, semantic geometry IDs across all 10 vehicle types, and camera depth clearance analysis).
+  - [x] Authored `tests/tests/stage_a_injected_defects.rs` (verified automated failure detection for reversed steering, runaway acceleration in Park, unbundled city packages, absent GPU meshes, and stale geographic cache).
+  - [x] Authored `tests/tests/stage_a_artifact_smoke.rs` (extracted `dist/windows/realearth-windows-x64.zip` into isolated temporary directory, executed `realearth-viewer.exe --headless --drive --frames 10` with exit code 0 without repository-relative paths, and cleaned up temporary directory).
+- [x] Phase A4: Governance & Documentation
+  - [x] Authored `docs/RecoveryContract.md`, `docs/RegressionScenarios.md`, `docs/ArtifactEvidence.md`, and `docs/StageAcceptance.md`.
+  - [x] Authored ADR-0050 (`docs/adr/0050-stage-a-forensic-root-cause-recovery-and-no-regression-foundation.md`).
+  - [x] 100% test pass rate across all 5 Stage A test suites (20/20 tests passing).
+  - [x] Formally certified Stage A completion and authorized Stage B remediation.
+
 
 
 

@@ -1,0 +1,144 @@
+{
+  "stage": "STAGE A",
+  "version": "0.1.0",
+  "timestamp": "2026-10-25T19:50:00Z",
+  "baseline_commit": "d85d8677e5d87171d3d63bca2d897f1f41489ecf",
+  "defects": [
+    {
+      "id": "P0-1",
+      "name": "Car Steering Sign Inversion & Camera Yaw Offset",
+      "severity": "P0",
+      "symptom": "Pressing KeyA turns the car rightwards or pans the camera opposite to vehicle deflection; initial road spawn orientation misaligned by 90 degrees.",
+      "flow_tracing": {
+        "event_input": "apps/world-viewer/src/interactive.rs:4593 (steer_left via KeyA)",
+        "authoritative_state": "apps/world-viewer/src/interactive.rs:4618 (target_steer = -0.65 * speed_factor)",
+        "simulation": "engine/vehicles/src/dynamics.rs:440 (steer_rad = inputs.steer * max_steer_angle = -0.4225 rad)",
+        "geographic_collision": "apps/world-viewer/src/interactive.rs:1290 (spawn yaw atan2(dx, dz) produces 90-degree frame shift relative to camera atan2(dz, dx))",
+        "rendering": "engine/rendering/src/gltf_asset.rs:372 & vehicle_mesh.rs:250 (sign discrepancy between wheel mesh rotation and steering wheel Quat::from_rotation_z(-steer * 3.5))",
+        "hud": "engine/rendering/src/hud.rs:3421 (STEER: -24 deg vs inverted visual steering)"
+      },
+      "verified_root_cause": "1. In interactive.rs:1290, road tangent heading uses atan2(dx, dz) instead of atan2(dz, dx), creating a pi/2 (90-degree) angular misalignment between road geometry and camera frame. 2. In camera.rs:111, steer_lookahead = car_right * (steer_angle * 1.5) pulls camera lookahead left, shifting car to the right of the viewport.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_1_car_steering_sign_inversion",
+      "remediation_strategy": "Align road heading calculation to atan2(dz, dx) matching camera controller, correct steering wheel rotation signs, and tune steer lookahead vector."
+    },
+    {
+      "id": "P0-2",
+      "name": "Self-Steering Lateral Divergence Under Zero Input",
+      "severity": "P0",
+      "symptom": "Vehicle drifts laterally and self-steers when moving in reverse down slopes with hands off steering (zero steer input).",
+      "flow_tracing": {
+        "event_input": "VehicleInputs { steer: 0.0, throttle: 0.0 }",
+        "authoritative_state": "smoothed_steer_input = 0.0",
+        "simulation": "engine/vehicles/src/dynamics.rs:491-495 (Tire slip angle formula uses abs(v_forward); lacking pneumatic trail and caster angle, front wheels at +Z act as trailing casters without restoring moment)",
+        "geographic_collision": "engine/vehicles/src/ground.rs:60 (Sloped ground surface normal pushes vehicle backward)",
+        "rendering": "Vehicle yaw rotates continuously away from tangent",
+        "hud": "Yaw rate diverges from 0.0 rad/s"
+      },
+      "verified_root_cause": "Tire slip angle calculation in dynamics.rs:491 uses (v_lateral / v_forward.abs()).atan(). When moving in reverse (v_forward < 0), front wheels lack caster self-aligning mechanical trail, creating positive feedback yaw divergence that induces self-steering.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_2_self_steering_divergence",
+      "remediation_strategy": "Incorporate pneumatic trail and signed caster angle restoring torque in dynamics.rs to stabilize reverse wheel slip."
+    },
+    {
+      "id": "P0-3",
+      "name": "Backward Drift on Slope With Zero Input in Drive (D1)",
+      "severity": "P0",
+      "symptom": "Vehicle rolls backwards down realistic hill slopes (e.g. San Francisco 8% grade) while transmission is in Drive with zero throttle/brake input; pressing W then triggers reverse service braking instead of forward motion.",
+      "flow_tracing": {
+        "event_input": "VehicleInputs { throttle: 0.0, brake: 0.0, gear_mode: Drive }",
+        "authoritative_state": "TransmissionMode::Drive, gear D1",
+        "simulation": "engine/vehicles/src/dynamics.rs:739 (is_flat_idle requires slope_grade < 0.025; fails on 8% grade, allowing gravity to accelerate car backwards)",
+        "geographic_collision": "Normal force component along slope pushes vehicle along -Z",
+        "rendering": "Vehicle moves backwards down hill while gear indicator shows D1",
+        "hud": "apps/world-viewer/src/interactive.rs:4674 (active_forward_speed < -0.3 causes pressing W to apply brake = 0.95 and force gear_mode = Reverse)"
+      },
+      "verified_root_cause": "Absence of automatic transmission hill-hold / torque converter creep in Drive mode. dynamics.rs:739 disables static friction hold when slope_grade >= 0.025, permitting gravitational rollback. interactive.rs:4674 then mistakenly treats forward throttle (W) as reverse braking when rolling backwards.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_3_backward_movement_on_slope_zero_input",
+      "remediation_strategy": "Add idle creep and automatic hill-hold logic in Drive mode, and decouple forward key input (W) from reverse brake switching."
+    },
+    {
+      "id": "P0-4",
+      "name": "Building Collision Inward Penetration Trapping",
+      "severity": "P0",
+      "symptom": "When a vehicle penetrates slightly into a building footprint polygon, collision resolution pushes it deeper inside rather than ejecting it to the street.",
+      "flow_tracing": {
+        "event_input": "Vehicle moves toward building footprint",
+        "authoritative_state": "Position intersects building footprint polygon",
+        "simulation": "engine/vehicles/src/building_collision.rs:24-29 & 136-139",
+        "geographic_collision": "diff = p - closest edge. When p is inside polygon, diff points inward from edge to center. best_normal is set to diff / d (pointing inward), and pos += normal * depth pushes vehicle deeper inside",
+        "rendering": "Vehicle trapped inside opaque building geometry",
+        "hud": "Collision sound loops, speed drops to 0"
+      },
+      "verified_root_cause": "In building_collision.rs:24-29, the collision normal is calculated as (p - closest). When the vehicle point p penetrates the building, (p - closest) points from the exterior edge toward the building interior, causing pos += normal * depth to drive the vehicle deeper into the building geometry.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_4_building_collision_inward_penetration_trapping",
+      "remediation_strategy": "Invert normal when inside polygon using point-in-polygon test, ensuring collision normal always points outward toward street exterior."
+    },
+    {
+      "id": "P0-5",
+      "name": "Placeholder Fallback Meshes & Heavy Truck Viewport Occlusion",
+      "severity": "P0",
+      "symptom": "Heavy truck articulated trailer completely blocks the third-person camera viewport; runtime models use procedural fallback boxes instead of glTF models.",
+      "flow_tracing": {
+        "event_input": "Digit6 (Heavy Truck) selected in viewer",
+        "authoritative_state": "ActiveTransportMode::HeavyTruck",
+        "simulation": "HeavyTruckModel has trailer length = 15.0m",
+        "geographic_collision": "Truck chassis + trailer bounding box (17.5m total length)",
+        "rendering": "engine/rendering/src/vehicle_models.rs:3426 generates procedural boxes; camera chase distance is set to 18.0m, leaving only 1.95m clearance to rear trailer wall",
+        "hud": "Heavy haul telemetry visible, but screen center is 90% occluded by grey trailer wall"
+      },
+      "verified_root_cause": "1. Vehicle 3D GLB assets in assets/vehicles/ are not loaded or bound at runtime; rendering falls back to procedural primitive boxes in vehicle_models.rs. 2. Heavy truck camera anchors define chase_distance = 18.0m while trailer extends 15.0m rearward, placing the camera within 1.95m of the tall trailer back wall.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_5_placeholder_primitive_fallback_meshes",
+      "remediation_strategy": "Bind certified glTF vehicle models and adjust Heavy Truck camera chase distance to >= 24.0m with elevated chase height."
+    },
+    {
+      "id": "P0-6",
+      "name": "Train Simulation Free Roam Without Track Geometry",
+      "severity": "P0",
+      "symptom": "Locomotive and railcars accelerate and drive over roads, hills, and dirt terrain when no rail graph is loaded, acting like an off-road vehicle.",
+      "flow_tracing": {
+        "event_input": "Digit5 (Train) selected; W pressed",
+        "authoritative_state": "ActiveTransportMode::Train",
+        "simulation": "apps/world-viewer/src/interactive.rs:4827-4829 (when res.rail_graph is None, fallback executes train_consist.step(PHYSICS_DT))",
+        "geographic_collision": "Train steps unconstrained 3D motion without rail snapping",
+        "rendering": "Locomotive floating across road traffic lanes",
+        "hud": "Train speedometer registers speed > 10 km/h with no track"
+      },
+      "verified_root_cause": "interactive.rs:4827 lacks guard condition requiring authentic railway infrastructure. When res.rail_graph is None, fallback executes train_consist.step(PHYSICS_DT) which simulates unconstrained 3D motion rather than disabling traction or enforcing track constraint.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_6_train_without_track_free_roam",
+      "remediation_strategy": "Clamp train motion to validated rail segments; if rail graph is missing or unlinked, hold train in emergency brake standstill with UI guidance."
+    },
+    {
+      "id": "P0-7",
+      "name": "Aircraft Flight Escaping Geographic World Bounds",
+      "severity": "P0",
+      "symptom": "Aircraft easily flies beyond the active 2,500m geographic package boundary within 15 seconds, traversing into empty black/void terrain.",
+      "flow_tracing": {
+        "event_input": "Digit7 (Aviation) selected; throttle applied",
+        "authoritative_state": "ActiveTransportMode::Aviation",
+        "simulation": "engine/vehicles/src/multimodal/aviation.rs:337 (Airliner accelerates to ~200 m/s with zero boundary enforcement or world re-anchoring)",
+        "geographic_collision": "No bounding box clamping or boundary warning",
+        "rendering": "World chunks unload outside 2.5km; plane renders in void space",
+        "hud": "Airspeed = 171 kts, alt = 174m, terrain disappears"
+      },
+      "verified_root_cause": "Aviation flight model computes kinematic velocity without geographic boundary awareness, streaming lookahead extension, or soft boundary turnback logic. High speed (70-200 m/s) outpaces regional chunk bounds (< 2.5km radius) in < 15 seconds.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_7_aircraft_leaving_geographic_world",
+      "remediation_strategy": "Implement regional airspace boundaries with automated flight computer vectoring / warning, or dynamically stream regional packages along flight heading."
+    },
+    {
+      "id": "P0-8",
+      "name": "US City Transitions Failing for Catalog-Only Definitions",
+      "severity": "P0",
+      "symptom": "Selecting any of 32 US metropolitan cities from the in-game city menu aborts immediately with an error, preventing exploration of the catalog.",
+      "flow_tracing": {
+        "event_input": "In-game City Transition Menu -> Select City (e.g. Dallas, Austin, Boston)",
+        "authoritative_state": "verify_city_playable(city_id)",
+        "simulation": "N/A",
+        "geographic_collision": "engine/ingestion/src/authentic.rs:270-305 checks bundled GIS files; 32 of 38 cities lack installed chunk packages on disk",
+        "rendering": "Transition modal reports error dialog",
+        "hud": "Error banner: 'Region requires GIS data package (Surveyed GIS not bundled on disk)'"
+      },
+      "verified_root_cause": "authentic.rs:271 only whitelists 6 sample cities, while all 38 cities are listed in the user-facing menu. The remaining 32 cities are catalog definitions only without pre-compiled chunk packages in dist/packages/.",
+      "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_8_unsuccessful_us_city_transitions",
+      "remediation_strategy": "Bundle procedural/synthetic fallback GIS packages for unbundled cities or clearly mark catalog-only status in UI menu with disabled transition button."
+    }
+  ]
+}

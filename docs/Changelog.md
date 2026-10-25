@@ -1822,6 +1822,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `dist/certification_matrix.json` (52 Requirements: 48 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
   - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
 
+## [0.1.7] - 2026-10-25
+### Added & Certified — STAGE A: Forensic Root-Cause Recovery and No-Regression Foundation
+- **Preserved Non-Destructive Recovery Baseline**:
+  - Established recovery branch `recovery/stage_a_forensic_foundation` at baseline HEAD commit `d85d8677e5d87171d3d63bca2d897f1f41489ecf`.
+  - Cataloged toolchain versions (`rustc 1.99.1`, `cargo 1.99.1`), package digests (`dist/windows/realearth-windows-x64.zip` SHA256: `948180155CE871B76FCA222939D19E47D6C4FB156E2185F45D8535EABA90D744`), and baseline screenshots.
+- **Automated P0 Defect Reproduction (`tests/tests/stage_a_p0_defect_reproduction.rs`)**:
+  - Authored independent reproduction test suite reproducing all 8 P0 defects:
+    1. Car steering right when A is pressed / 90° road spawn tangent yaw frame shift.
+    2. Self-steering divergence under zero input during reverse slope motion.
+    3. Backward movement on slope with zero input in Drive D1 (rolls backward $-0.473$m in 1s, speed reaches $-2.8$ km/h, tripping reverse brake threshold).
+    4. Building collision inward normal penetration trapping (pushes vehicle from $x=0.2$ to $x=2.42$ deeper into building).
+    5. Fallback primitive boxes and heavy truck trailer occlusion (camera chase distance 18.0m vs 15.0m trailer, clearance only $1.95$m).
+    6. Train free roam without track (accelerates to $5.9$ km/h and steps freely over terrain without rail graph).
+    7. Aircraft leaving geographic world bounds ($2933$m displacement in 15s, escaping $2500$m regional box).
+    8. US city transitions failing for 32 of 38 catalog cities due to unbundled GIS packages on disk.
+- **Machine-Readable Defect Matrix**:
+  - Published [`docs/RootCauseMatrix.json`](file:///j:/rustRealEarth/docs/RootCauseMatrix.json) and [`docs/RootCauseMatrix.md`](file:///j:/rustRealEarth/docs/RootCauseMatrix.md) establishing exact source lines, symptoms, mathematical causes, and remediation strategies for all 8 defects.
+- **Permanent Regression Test Infrastructure**:
+  - Deterministic input replay harness (`tests/tests/stage_a_deterministic_replay.rs`): 300 frames at fixed 60Hz, snapshot capture/restore, bitwise invariance ($\Delta pos = 0.00\text{e}0\text{m}$, $\Delta vel = 0.00\text{e}0\text{m/s}$).
+  - Graphics regression harness (`tests/tests/stage_a_graphics_regression.rs`): fixed geographic landmark cameras, finite view-projection matrices, NDC depth clamping ($z \in [0, 1]$), semantic geometry IDs across all 10 vehicle types, and camera depth clearance analysis.
+  - Injected defects harness (`tests/tests/stage_a_injected_defects.rs`): verified automated failure detection for reversed steering, runaway acceleration in Park, unbundled city packages, absent GPU meshes, and stale geographic cache.
+  - Packaged artifact smoke test (`tests/tests/stage_a_artifact_smoke.rs`): extracted `dist/windows/realearth-windows-x64.zip` into isolated temporary directory, executed `realearth-viewer.exe --headless --drive --frames 10` with exit code 0 without repository-relative paths, and cleaned up temporary directory.
+- **Quality Governance & Acceptance**:
+  - Authored [`docs/RecoveryContract.md`](file:///j:/rustRealEarth/docs/RecoveryContract.md), [`docs/RegressionScenarios.md`](file:///j:/rustRealEarth/docs/RegressionScenarios.md), [`docs/ArtifactEvidence.md`](file:///j:/rustRealEarth/docs/ArtifactEvidence.md), and [`docs/StageAcceptance.md`](file:///j:/rustRealEarth/docs/StageAcceptance.md).
+  - Authored ADR-0050 (`docs/adr/0050-stage-a-forensic-root-cause-recovery-and-no-regression-foundation.md`).
+  - Passed all 20 test gates across the 5 Stage A test targets.
+  - Formally certified Stage A completion and authorized Stage B remediation.
+
+
 
 
 
