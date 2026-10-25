@@ -1692,6 +1692,40 @@
   - Zero diffs on `cargo fmt --check`.
   - 100% tests passed on `cargo test --workspace`.
 
+## STAGE 1.5-R: Windows Mouse and Complete UI Interaction Repair (Completed & Certified)
+- [x] Phase 1.5-R.1 — Forensic Event & Hit-Test Coordinate Audit:
+  - Traced physical pixel coordinates from `winit::event::WindowEvent::CursorMoved` to surface configuration and uniform buffer in `RealEarthRenderer::render_hud`.
+  - Confirmed physical coordinate mapping matches drawn rectangles 1:1.
+  - Eliminated in-game left-click camera rotation conflict: Left clicks are reserved for interactive UI, HUD Dock chips, and contextual action prompts. Camera orbit is strictly relegated to Right-Click Drag.
+  - Rectified missing modal mouse handling: Added mouse input, double-click, and wheel scroll routing for `MultiplayerModal` and `RailRouteModal`.
+- [x] Phase 1.5-R.2 — Central Pointer Event Router & Complete Camera Isolation:
+  - Implemented 3-tier deterministic pointer priority order: Modal UI > Non-Modal Interactive HUD Dock > Camera/World Picking.
+  - Free-look camera orbit is initiated strictly by `MouseButton::Right` drag in `InGame` mode, eliminating inadvertent viewport spins while clicking buttons.
+  - Implemented comprehensive input state clearing on window focus loss (`WindowEvent::Focused(false)`), window occlusion (`WindowEvent::Occluded(true)`), minimization, and cursor departure (`WindowEvent::CursorLeft`).
+  - Integrated touch event parity: Touch phases map identically to pointer click and drag events.
+- [x] Phase 1.5-R.3 — Complete UI Functionality & Live Preview:
+  - Garage live 3D preview: Single-clicking any vehicle card in `GarageSelect` immediately calls `apply_garage_selection(idx)`, updating the 3D model, chassis dimensions, and paint texture in the background viewport.
+  - Double-click instant execution: Implemented double-click detection (interval $\le 350\text{ms}$, radius $\le 10\text{px}$) to instantly spawn vehicles in Garage, warp to selected cities in City Catalog, and accept jobs in Career Contracts.
+  - Dedicated HUD Layouts: Added `MultiplayerLayout`, `RailRouteLayout`, and `InGameHudLayout` to `engine/rendering/src/hud.rs` with responsive button geometries.
+  - Configurable Mouse Sensitivity: Added `MOUSE LOOK SENSITIVITY` setting to simulation preferences (`1.0x Normal`, `1.5x Fast`, `2.0x Ultra`, `0.5x Precise`).
+- [x] Phase 1.5-R.4 — Automated Master Certification Test Suite:
+  - Authored `tests/tests/stage1_5_mouse_and_ui_interaction_certification.rs` (7/7 tests passed):
+    - Part 1: All 9 layouts and in-game HUD hit-tested at center, corners, and boundaries across 720p, 900p, 1080p, 1440p, and 4K UHD.
+    - Part 2: DPI scale factor coordinate invariance (100% to 200%).
+    - Part 3: Camera isolation: left drag does not rotate camera; right drag smoothly rotates camera; modal windows suppress dragging.
+    - Part 4: Garage selection -> live 3D preview -> spawn lifecycle and double-click instant spawn.
+    - Part 5: Geographic city catalog selection, warp button hit-testing, and contract acceptance.
+    - Part 6: Focus loss, window occlusion, and cursor departure safety input purging.
+    - Part 7: In-game HUD dock chips and pause button click transitions.
+- [x] Phase 1.5-R.5 — Documentation & Workspace Verification:
+  - Authored ADR-0048 (`docs/adr/0048-stage-1-5-r-windows-mouse-and-complete-ui-interaction-repair.md`).
+  - Authored Certification Report (`docs/reports/stage1_5_certification_report.md`).
+  - Updated `dist/certification_matrix.json` (46 requirements, 42 verified, 0 broken, 4 toolchain blocked).
+  - Zero warnings under `cargo clippy --workspace --all-targets -- -D warnings`.
+  - Zero deviations under `cargo fmt --check`.
+  - 100% test pass rate across entire workspace.
+
+
 
 
 

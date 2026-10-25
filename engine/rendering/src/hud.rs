@@ -480,6 +480,275 @@ impl CatalogLayout {
     }
 }
 
+/// Responsive layout definitions and bounding boxes for Contract Debrief modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DebriefLayout {
+    pub modal_rect: UiRect,
+    pub claim_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DebriefHit {
+    Claim,
+}
+
+impl DebriefLayout {
+    pub fn compute(screen_w: f32, screen_h: f32) -> Self {
+        let modal_w = 480.0;
+        let modal_h = 320.0;
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let btn_y = my + modal_h - 44.0;
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            claim_btn: UiRect::new(mx + 20.0, btn_y, modal_w - 40.0, 32.0),
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<DebriefHit> {
+        if self.claim_btn.contains(px, py) || self.modal_rect.contains(px, py) {
+            Some(DebriefHit::Claim)
+        } else {
+            None
+        }
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Multiplayer Session modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MultiplayerLayout {
+    pub modal_rect: UiRect,
+    pub action_rects: Vec<UiRect>,
+    pub close_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MultiplayerHit {
+    Action(usize),
+    Close,
+}
+
+impl MultiplayerLayout {
+    pub fn compute(screen_w: f32, screen_h: f32) -> Self {
+        let modal_w = (screen_w - 40.0).min(760.0);
+        let modal_h = (screen_h - 40.0).min(500.0);
+        let mx = (screen_w - modal_w) * 0.5;
+        let my = (screen_h - modal_h) * 0.5;
+        let info_y = my + 52.0;
+        let actions_y = info_y + 80.0;
+
+        let mut action_rects = Vec::with_capacity(4);
+        for i in 0..4 {
+            let by = actions_y + i as f32 * 46.0;
+            action_rects.push(UiRect::new(mx + 16.0, by, modal_w - 32.0, 42.0));
+        }
+
+        let close_btn = UiRect::new(mx + modal_w - 34.0, my + 9.0, 24.0, 24.0);
+
+        Self {
+            modal_rect: UiRect::new(mx, my, modal_w, modal_h),
+            action_rects,
+            close_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<MultiplayerHit> {
+        if self.close_btn.contains(px, py) {
+            return Some(MultiplayerHit::Close);
+        }
+        for (i, rect) in self.action_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(MultiplayerHit::Action(i));
+            }
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Surveyed Rail Route modal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RailRouteLayout {
+    pub modal_rect: UiRect,
+    pub route_rects: Vec<UiRect>,
+    pub dispatch_btn: UiRect,
+    pub close_btn: UiRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RailRouteHit {
+    RouteItem(usize),
+    DispatchRoute,
+    Close,
+}
+
+impl RailRouteLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, route_count: usize) -> Self {
+        let modal_w = (screen_w * 0.72).clamp(650.0, 920.0);
+        let modal_h = (screen_h * 0.70).clamp(480.0, 680.0);
+        let x = (screen_w - modal_w) * 0.5;
+        let y = (screen_h - modal_h) * 0.5;
+        let list_y = y + 85.0;
+        let row_h = 75.0;
+
+        let mut route_rects = Vec::with_capacity(route_count);
+        for i in 0..route_count {
+            let ry = list_y + (i as f32) * (row_h + 12.0);
+            route_rects.push(UiRect::new(x + 24.0, ry, modal_w - 48.0, row_h));
+        }
+
+        let dispatch_btn = UiRect::new(x + modal_w - 290.0, y + modal_h - 44.0, 160.0, 32.0);
+        let close_btn = UiRect::new(x + modal_w - 110.0, y + modal_h - 44.0, 90.0, 32.0);
+
+        Self {
+            modal_rect: UiRect::new(x, y, modal_w, modal_h),
+            route_rects,
+            dispatch_btn,
+            close_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<RailRouteHit> {
+        if self.close_btn.contains(px, py) {
+            return Some(RailRouteHit::Close);
+        }
+        if self.dispatch_btn.contains(px, py) {
+            return Some(RailRouteHit::DispatchRoute);
+        }
+        for (i, rect) in self.route_rects.iter().enumerate() {
+            if rect.contains(px, py) {
+                return Some(RailRouteHit::RouteItem(i));
+            }
+        }
+        None
+    }
+}
+
+/// Responsive layout definitions and bounding boxes for the Non-Modal In-Game HUD & Dock.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InGameHudLayout {
+    pub pause_btn: UiRect,
+    pub camera_btn: UiRect,
+    pub park_chip: UiRect,
+    pub garage_chip: UiRect,
+    pub jobs_chip: UiRect,
+    pub cities_chip: UiRect,
+    pub multiplayer_chip: UiRect,
+    pub routes_chip: UiRect,
+    pub debug_chip: UiRect,
+    pub context_prompt_btn: Option<UiRect>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InGameHudHit {
+    Pause,
+    CameraCycle,
+    ParkToggle,
+    OpenGarage,
+    OpenJobs,
+    OpenCities,
+    OpenMultiplayer,
+    OpenRoutes,
+    ToggleDebug,
+    ContextAction,
+}
+
+impl InGameHudLayout {
+    pub fn compute(screen_w: f32, screen_h: f32, has_context_action: bool) -> Self {
+        let pause_btn = UiRect::new(screen_w - 74.0, 16.0, 58.0, 30.0);
+        let camera_btn = UiRect::new(screen_w - 180.0, 16.0, 98.0, 30.0);
+
+        let chip_w = 78.0;
+        let chip_h = 24.0;
+        let spacing = 6.0;
+        let total_w = 7.0 * chip_w + 6.0 * spacing + 14.0;
+        let min_x = 368.0;
+        let max_x = (screen_w - 150.0).max(min_x + total_w) - total_w;
+        let centered_x = (screen_w - total_w) * 0.5;
+        let dock_x = centered_x.clamp(min_x, max_x);
+        let dock_y = screen_h - 32.0;
+
+        let park_chip = UiRect::new(dock_x, dock_y, chip_w, chip_h);
+        let garage_chip = UiRect::new(dock_x + (chip_w + spacing), dock_y, chip_w, chip_h);
+        let jobs_chip = UiRect::new(dock_x + (chip_w + spacing) * 2.0, dock_y, chip_w, chip_h);
+        let cities_chip = UiRect::new(dock_x + (chip_w + spacing) * 3.0, dock_y, chip_w, chip_h);
+        let multiplayer_chip = UiRect::new(
+            dock_x + (chip_w + spacing) * 4.0,
+            dock_y,
+            chip_w + 14.0,
+            chip_h,
+        );
+        let routes_chip = UiRect::new(
+            dock_x + (chip_w + spacing) * 5.0 + 14.0,
+            dock_y,
+            chip_w,
+            chip_h,
+        );
+        let debug_chip = UiRect::new(
+            dock_x + (chip_w + spacing) * 6.0 + 14.0,
+            dock_y,
+            chip_w,
+            chip_h,
+        );
+
+        let context_prompt_btn = if has_context_action {
+            let pw = 340.0;
+            let ph = 32.0;
+            Some(UiRect::new((screen_w - pw) * 0.5, screen_h - 72.0, pw, ph))
+        } else {
+            None
+        };
+
+        Self {
+            pause_btn,
+            camera_btn,
+            park_chip,
+            garage_chip,
+            jobs_chip,
+            cities_chip,
+            multiplayer_chip,
+            routes_chip,
+            debug_chip,
+            context_prompt_btn,
+        }
+    }
+
+    pub fn hit_test(&self, px: f32, py: f32) -> Option<InGameHudHit> {
+        if self.pause_btn.contains(px, py) {
+            return Some(InGameHudHit::Pause);
+        }
+        if self.camera_btn.contains(px, py) {
+            return Some(InGameHudHit::CameraCycle);
+        }
+        if self.park_chip.contains(px, py) {
+            return Some(InGameHudHit::ParkToggle);
+        }
+        if self.garage_chip.contains(px, py) {
+            return Some(InGameHudHit::OpenGarage);
+        }
+        if self.jobs_chip.contains(px, py) {
+            return Some(InGameHudHit::OpenJobs);
+        }
+        if self.cities_chip.contains(px, py) {
+            return Some(InGameHudHit::OpenCities);
+        }
+        if self.multiplayer_chip.contains(px, py) {
+            return Some(InGameHudHit::OpenMultiplayer);
+        }
+        if self.routes_chip.contains(px, py) {
+            return Some(InGameHudHit::OpenRoutes);
+        }
+        if self.debug_chip.contains(px, py) {
+            return Some(InGameHudHit::ToggleDebug);
+        }
+        if let Some(ref prompt) = self.context_prompt_btn {
+            if prompt.contains(px, py) {
+                return Some(InGameHudHit::ContextAction);
+            }
+        }
+        None
+    }
+}
+
 /// Dynamic 2D mesh container for HUD panels, gauges, text, and telemetry indicators.
 #[derive(Debug, Clone, Default)]
 pub struct HudMesh {
@@ -1123,10 +1392,11 @@ impl HudMesh {
         self.add_text(bb.x + 10.0, bb.y + 7.0, 1.1, "◀ BACK", [1.0, 0.6, 0.6, 1.0]);
     }
 
-    /// Adds a compact glassmorphic multiplayer status chip in the top right.
-    pub fn add_multiplayer_chip(
+    /// Adds a compact glassmorphic multiplayer status chip in the top right at specified y coordinate.
+    pub fn add_multiplayer_chip_at(
         &mut self,
         screen_w: f32,
+        y: f32,
         is_connected: bool,
         is_reconnecting: bool,
         ping_ms: f32,
@@ -1135,7 +1405,6 @@ impl HudMesh {
         let chip_w = 280.0;
         let chip_h = 32.0;
         let x = screen_w - chip_w - 20.0;
-        let y = 16.0;
 
         let (bg_color, border_color, status_text) = if is_connected {
             (
@@ -1178,6 +1447,201 @@ impl HudMesh {
         );
     }
 
+    /// Adds a compact glassmorphic multiplayer status chip in the top right.
+    pub fn add_multiplayer_chip(
+        &mut self,
+        screen_w: f32,
+        is_connected: bool,
+        is_reconnecting: bool,
+        ping_ms: f32,
+        remote_player_count: usize,
+    ) {
+        self.add_multiplayer_chip_at(
+            screen_w,
+            16.0,
+            is_connected,
+            is_reconnecting,
+            ping_ms,
+            remote_player_count,
+        );
+    }
+
+    /// Renders the responsive glassmorphic bottom control dock and top action buttons for InGame HUD.
+    pub fn add_ingame_control_dock(
+        &mut self,
+        layout: &InGameHudLayout,
+        park_engaged: bool,
+        debug_overlay_active: bool,
+        hovered_hit: Option<InGameHudHit>,
+        pressed_hit: Option<InGameHudHit>,
+    ) {
+        // 1. Top Pause Button
+        let is_pause_hov = hovered_hit == Some(InGameHudHit::Pause);
+        let is_pause_pre = pressed_hit == Some(InGameHudHit::Pause);
+        let pause_bg = if is_pause_pre {
+            [0.25, 0.15, 0.15, 0.95]
+        } else if is_pause_hov {
+            [0.18, 0.10, 0.10, 0.90]
+        } else {
+            [0.08, 0.08, 0.12, 0.80]
+        };
+        let pause_border = if is_pause_hov || is_pause_pre {
+            [1.0, 0.4, 0.4, 1.0]
+        } else {
+            [0.4, 0.45, 0.55, 0.6]
+        };
+        self.add_rect(
+            layout.pause_btn.x,
+            layout.pause_btn.y,
+            layout.pause_btn.w,
+            layout.pause_btn.h,
+            pause_bg,
+        );
+        self.add_rect_outline(
+            layout.pause_btn.x,
+            layout.pause_btn.y,
+            layout.pause_btn.w,
+            layout.pause_btn.h,
+            1.2,
+            pause_border,
+        );
+        self.add_text(
+            layout.pause_btn.x + 8.0,
+            layout.pause_btn.y + 7.0,
+            1.05,
+            "PAUSE",
+            [1.0, 0.9, 0.9, 1.0],
+        );
+
+        // 2. Top Camera Button
+        let is_cam_hov = hovered_hit == Some(InGameHudHit::CameraCycle);
+        let is_cam_pre = pressed_hit == Some(InGameHudHit::CameraCycle);
+        let cam_bg = if is_cam_pre {
+            [0.15, 0.25, 0.35, 0.95]
+        } else if is_cam_hov {
+            [0.10, 0.18, 0.28, 0.90]
+        } else {
+            [0.08, 0.08, 0.12, 0.80]
+        };
+        let cam_border = if is_cam_hov || is_cam_pre {
+            [0.3, 0.85, 1.0, 1.0]
+        } else {
+            [0.4, 0.45, 0.55, 0.6]
+        };
+        self.add_rect(
+            layout.camera_btn.x,
+            layout.camera_btn.y,
+            layout.camera_btn.w,
+            layout.camera_btn.h,
+            cam_bg,
+        );
+        self.add_rect_outline(
+            layout.camera_btn.x,
+            layout.camera_btn.y,
+            layout.camera_btn.w,
+            layout.camera_btn.h,
+            1.2,
+            cam_border,
+        );
+        self.add_text(
+            layout.camera_btn.x + 10.0,
+            layout.camera_btn.y + 7.0,
+            1.05,
+            "CAM [C]",
+            [0.85, 0.95, 1.0, 1.0],
+        );
+
+        // 3. Bottom Control Strip Chips
+        let chips = [
+            (
+                layout.park_chip,
+                InGameHudHit::ParkToggle,
+                if park_engaged { "P: PARK" } else { "P: DRIVE" },
+                park_engaged,
+                [0.2, 0.95, 0.45, 1.0],
+            ),
+            (
+                layout.garage_chip,
+                InGameHudHit::OpenGarage,
+                "G: FLEET",
+                false,
+                [0.3, 0.85, 1.0, 1.0],
+            ),
+            (
+                layout.jobs_chip,
+                InGameHudHit::OpenJobs,
+                "J: JOBS",
+                false,
+                [1.0, 0.85, 0.2, 1.0],
+            ),
+            (
+                layout.cities_chip,
+                InGameHudHit::OpenCities,
+                "U: CITIES",
+                false,
+                [0.4, 0.9, 1.0, 1.0],
+            ),
+            (
+                layout.multiplayer_chip,
+                InGameHudHit::OpenMultiplayer,
+                "N: MULTI",
+                false,
+                [0.6, 0.8, 1.0, 1.0],
+            ),
+            (
+                layout.routes_chip,
+                InGameHudHit::OpenRoutes,
+                "T: ROUTES",
+                false,
+                [1.0, 0.7, 0.3, 1.0],
+            ),
+            (
+                layout.debug_chip,
+                InGameHudHit::ToggleDebug,
+                "F3: STATS",
+                debug_overlay_active,
+                [0.9, 0.4, 0.9, 1.0],
+            ),
+        ];
+
+        for (rect, hit_kind, label, is_active, accent) in chips {
+            let is_hov = hovered_hit == Some(hit_kind);
+            let is_pre = pressed_hit == Some(hit_kind);
+
+            let bg = if is_pre {
+                [accent[0] * 0.4, accent[1] * 0.4, accent[2] * 0.4, 0.95]
+            } else if is_active {
+                [accent[0] * 0.25, accent[1] * 0.25, accent[2] * 0.25, 0.90]
+            } else if is_hov {
+                [0.12, 0.16, 0.22, 0.90]
+            } else {
+                [0.05, 0.07, 0.10, 0.80]
+            };
+
+            let border = if is_hov || is_pre {
+                accent
+            } else if is_active {
+                [accent[0], accent[1], accent[2], 0.8]
+            } else {
+                [0.25, 0.35, 0.45, 0.5]
+            };
+
+            self.add_rect(rect.x, rect.y, rect.w, rect.h, bg);
+            self.add_rect_outline(rect.x, rect.y, rect.w, rect.h, 1.0, border);
+            self.add_text(
+                rect.x + 8.0,
+                rect.y + 5.0,
+                0.95,
+                label,
+                if is_active || is_hov {
+                    [1.0, 1.0, 1.0, 1.0]
+                } else {
+                    [0.75, 0.82, 0.90, 0.85]
+                },
+            );
+        }
+    }
+
     /// Adds an interactive authoritative multiplayer lobby and session management modal.
     #[allow(clippy::too_many_arguments)]
     pub fn add_multiplayer_modal(
@@ -1201,6 +1665,30 @@ impl HudMesh {
             modal_h,
             "AUTHORITATIVE MULTIPLAYER NETWORK — SESSION & LOBBY",
             [0.2, 0.75, 1.0, 1.0],
+        );
+
+        // Close button in header
+        self.add_rect(
+            mx + modal_w - 90.0,
+            my + 14.0,
+            74.0,
+            24.0,
+            [0.35, 0.15, 0.15, 0.85],
+        );
+        self.add_rect_outline(
+            mx + modal_w - 90.0,
+            my + 14.0,
+            74.0,
+            24.0,
+            1.0,
+            [0.85, 0.35, 0.35, 0.9],
+        );
+        self.add_text(
+            mx + modal_w - 76.0,
+            my + 20.0,
+            1.0,
+            "✕ CLOSE",
+            [1.0, 0.85, 0.85, 1.0],
         );
 
         // Section 1: Session & Server Info Banner
@@ -3681,8 +4169,55 @@ impl HudMesh {
             );
         }
 
-        // Footer instructions
+        // Footer instructions and action buttons
         let foot_y = y + modal_h - 45.0;
+
+        self.add_rect(
+            x + 24.0,
+            foot_y - 38.0,
+            200.0,
+            32.0,
+            [0.15, 0.45, 0.25, 0.9],
+        );
+        self.add_rect_outline(
+            x + 24.0,
+            foot_y - 38.0,
+            200.0,
+            32.0,
+            1.0,
+            [0.35, 0.85, 0.45, 1.0],
+        );
+        self.add_text(
+            x + 40.0,
+            foot_y - 28.0,
+            1.15,
+            "▶ DISPATCH ROUTE",
+            [0.9, 1.0, 0.9, 1.0],
+        );
+
+        self.add_rect(
+            x + 234.0,
+            foot_y - 38.0,
+            120.0,
+            32.0,
+            [0.25, 0.15, 0.15, 0.85],
+        );
+        self.add_rect_outline(
+            x + 234.0,
+            foot_y - 38.0,
+            120.0,
+            32.0,
+            1.0,
+            [0.85, 0.35, 0.35, 0.9],
+        );
+        self.add_text(
+            x + 264.0,
+            foot_y - 28.0,
+            1.15,
+            "✕ CLOSE",
+            [1.0, 0.85, 0.85, 1.0],
+        );
+
         self.add_text(
             x + 24.0,
             foot_y,

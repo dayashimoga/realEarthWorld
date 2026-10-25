@@ -184,3 +184,7 @@ path = "tests/stage0_9_road_terrain_spatial_integrity_certification.rs"
 [[test]]
 name = "stage1_0_city_and_environmental_realism_certification"
 path = "tests/stage1_0_city_and_environmental_realism_certification.rs"
+
+[[test]]
+name = "stage1_5_mouse_and_ui_interaction_certification"
+path = "tests/stage1_5_mouse_and_ui_interaction_certification.rs"

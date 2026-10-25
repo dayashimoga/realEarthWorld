@@ -25,9 +25,11 @@ pub use gltf_asset::{
     VehicleSubmesh, VehicleSubmeshType,
 };
 pub use hud::{
-    CatalogHit, CatalogLayout, GarageHit, GarageLayout, HudMesh, HudVertex, JobBrowserHit,
-    JobBrowserLayout, PauseMenuHit, PauseMenuLayout, SettingsHit, SettingsLayout, StartScreenHit,
-    StartScreenLayout, UiButtonVisualState, UiRect, GARAGE_PAINT_PALETTE,
+    CatalogHit, CatalogLayout, DebriefHit, DebriefLayout, GarageHit, GarageLayout, HudMesh,
+    HudVertex, InGameHudHit, InGameHudLayout, JobBrowserHit, JobBrowserLayout, MultiplayerHit,
+    MultiplayerLayout, PauseMenuHit, PauseMenuLayout, RailRouteHit, RailRouteLayout, SettingsHit,
+    SettingsLayout, StartScreenHit, StartScreenLayout, UiButtonVisualState, UiRect,
+    GARAGE_PAINT_PALETTE,
 };
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};
 pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};

@@ -1,7 +1,7 @@
 {
-  "SchemaVersion": "1.4.0",
-  "GeneratedAt": "2026-10-25T12:30:00Z",
-  "Stage": "STAGE 1.4-R — REAL RAILWAY SIMULATION AND MULTIMODAL SPAWN INTEGRITY",
+  "SchemaVersion": "1.5.0",
+  "GeneratedAt": "2026-10-25T13:30:00Z",
+  "Stage": "STAGE 1.5-R — WINDOWS MOUSE AND COMPLETE UI INTERACTION REPAIR",
   "HostEnvironment": {
     "OperatingSystem": "Windows 11 x86_64",
     "RustToolchain": "stable-x86_64-pc-windows-msvc",
@@ -9,8 +9,8 @@
     "GitBranch": "feature/stage0_9_road_terrain_spatial_integrity"
   },
   "StatusSummary": {
-    "TotalRequirements": 40,
-    "VerifiedCount": 36,
+    "TotalRequirements": 46,
+    "VerifiedCount": 42,
     "BlockedCount": 4,
     "BrokenCount": 0,
     "MissingCount": 0,
@@ -295,6 +295,48 @@
       "Category": "Real Railway Simulation and Multimodal Spawn Integrity",
       "Requirement": "Honest rejection of unsurveyed spawns without fabricated tracks",
       "Evidence": "Regions lacking surveyed rail infrastructure return authoritative error 'RAIL DATA REQUIRED / NO VALID SPAWN' without inventing fake geometry",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-01",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "Central pointer event router and 100% camera orbit isolation",
+      "Evidence": "Left-click interacts with HUD Dock, prompts, and modal UI without camera rotation; Right-drag orbits camera with configurable sensitivity",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-02",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "All 9 Layouts & InGame HUD hit-test determinism across 720p to 4K UHD resolutions",
+      "Evidence": "StartScreen, PauseMenu, Garage, Jobs, Settings, Catalog, Debrief, Multiplayer, RailRoute, and InGame HUD verified at center, corners, and boundaries",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-03",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "DPI scale factor coordinate invariance across 100% to 200%",
+      "Evidence": "Winit physical coordinates match renderer surface configuration 1:1 with zero coordinate drift or hit misalignment",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-04",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "Garage selection live 3D preview, paint customization, and double-click spawn",
+      "Evidence": "Clicking vehicle card immediately updates 3D preview in background; double-click spawns and deploys vehicle instantly",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-05",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "Geographic city catalog selection, instant warp, and career contract acceptance",
+      "Evidence": "Single-click selects city/job; double-click immediately activates warp/acceptance with seamless region transition",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "UI-06",
+      "Category": "Windows Mouse and UI Interaction Repair",
+      "Requirement": "Safety input purging on focus loss, window occlusion, and cursor departure",
+      "Evidence": "Focused(false), Occluded(true), minimization, and CursorLeft immediately purge pressed keys, mouse drag active flags, and cursor coordinates",
       "Status": "VERIFIED"
     }
   ]

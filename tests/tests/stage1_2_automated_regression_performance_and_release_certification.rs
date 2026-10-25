@@ -736,7 +736,10 @@ fn test_stage1_2_five_platform_release_packaging_and_ci_gates() {
         serde_json::from_str(matrix_str.trim_start_matches('\u{feff}'))
             .expect("Certification matrix must be valid JSON");
 
-    assert_eq!(matrix_json["SchemaVersion"], "1.2.0");
+    assert!(
+        matrix_json["SchemaVersion"].as_str().unwrap() >= "1.2.0",
+        "SchemaVersion must be at least 1.2.0"
+    );
     assert_eq!(
         matrix_json["StatusSummary"]["BrokenCount"], 0,
         "Broken requirement count must be 0"

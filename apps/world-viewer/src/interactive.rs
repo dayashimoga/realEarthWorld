@@ -6,7 +6,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta, WindowEvent};
+use winit::event::{
+    ElementState, KeyEvent, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent,
+};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowAttributes, WindowId};
@@ -39,11 +41,13 @@ use realearth_navigation::{
 };
 use realearth_rendering::{
     generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
-    generate_vehicle_mesh, CatalogHit, CatalogLayout, FloatingOriginCamera, GarageHit,
-    GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh, JobBrowserHit, JobBrowserLayout,
-    PauseMenuHit, PauseMenuLayout, RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout,
-    StartScreenHit, StartScreenLayout, TrafficSignalVisualState, VehicleLodLevel,
-    VehicleMeshParams, VehicleVisualType,
+    generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout,
+    FloatingOriginCamera, GarageHit, GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh,
+    InGameHudHit, InGameHudLayout, JobBrowserHit, JobBrowserLayout, MultiplayerHit,
+    MultiplayerLayout, PauseMenuHit, PauseMenuLayout, RailRouteHit, RailRouteLayout,
+    RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout, StartScreenHit,
+    StartScreenLayout, TrafficSignalVisualState, VehicleLodLevel, VehicleMeshParams,
+    VehicleVisualType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::metrics::get_current_process_memory;
@@ -320,6 +324,13 @@ pub enum UiDomainAction {
     SelectAndSpawnVehicle(usize),
     ToggleSelectedSetting(usize),
     WarpToSelectedCity(usize),
+    PauseSimulation,
+    CycleCamera,
+    TogglePark,
+    ToggleDebug,
+    OpenMultiplayer,
+    OpenRoutes,
+    ClaimDebrief,
 }
 
 /// Persistent winit + wgpu interactive surface viewer application.
@@ -391,6 +402,11 @@ pub struct InteractiveViewerApp {
     pub previous_ui_state: AppUiState,
     pub cursor_pos: Option<(f32, f32)>,
     pub mouse_left_down: bool,
+    pub mouse_right_down: bool,
+    pub mouse_pressed_pos: Option<(f32, f32)>,
+    pub last_click_time: Option<Instant>,
+    pub last_click_pos: Option<(f32, f32)>,
+    pub mouse_sensitivity_idx: usize,
     pub start_menu_selected_idx: usize,
     pub pause_menu_selected_idx: usize,
     pub job_browser_selected_idx: usize,
@@ -612,6 +628,11 @@ impl InteractiveViewerApp {
             previous_ui_state: AppUiState::StartScreen,
             cursor_pos: None,
             mouse_left_down: false,
+            mouse_right_down: false,
+            mouse_pressed_pos: None,
+            last_click_time: None,
+            last_click_pos: None,
+            mouse_sensitivity_idx: 0,
             start_menu_selected_idx: 0,
             pause_menu_selected_idx: 0,
             job_browser_selected_idx: 0,
@@ -1017,6 +1038,17 @@ impl InteractiveViewerApp {
                             format!("HUD Display: {}", if self.show_hud { "ON" } else { "OFF" });
                         self.status_notification = Some((msg, Instant::now()));
                     }
+                    5 => {
+                        self.mouse_sensitivity_idx = (self.mouse_sensitivity_idx + 1) % 4;
+                        let mult = match self.mouse_sensitivity_idx {
+                            0 => 1.0,
+                            1 => 1.5,
+                            2 => 2.0,
+                            _ => 0.5,
+                        };
+                        let msg = format!("Mouse Sensitivity: {:.1}x", mult);
+                        self.status_notification = Some((msg, Instant::now()));
+                    }
                     _ => {}
                 }
             }
@@ -1068,10 +1100,51 @@ impl InteractiveViewerApp {
                     }
                 }
             }
+            UiDomainAction::PauseSimulation => {
+                self.previous_ui_state = AppUiState::InGame;
+                self.ui_state = AppUiState::PauseMenu;
+            }
+            UiDomainAction::CycleCamera => {
+                self.vehicle_cam.cycle_perspective();
+                let msg = format!("Camera: {:?}", self.vehicle_cam.perspective);
+                self.status_notification = Some((msg, Instant::now()));
+            }
+            UiDomainAction::TogglePark => {
+                self.park_engaged = !self.park_engaged;
+                let msg = format!(
+                    "Park Brake: {}",
+                    if self.park_engaged {
+                        "ENGAGED [P]"
+                    } else {
+                        "RELEASED"
+                    }
+                );
+                self.status_notification = Some((msg, Instant::now()));
+            }
+            UiDomainAction::ToggleDebug => {
+                self.show_debug_overlay = !self.show_debug_overlay;
+                let msg = format!(
+                    "Developer Overlay: {}",
+                    if self.show_debug_overlay { "ON" } else { "OFF" }
+                );
+                self.status_notification = Some((msg, Instant::now()));
+            }
+            UiDomainAction::OpenMultiplayer => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::MultiplayerModal;
+            }
+            UiDomainAction::OpenRoutes => {
+                self.previous_ui_state = self.ui_state;
+                self.ui_state = AppUiState::RailRouteModal;
+            }
+            UiDomainAction::ClaimDebrief => {
+                self.active_debrief = None;
+                self.ui_state = AppUiState::InGame;
+            }
         }
 
         if let Some(ref window) = self.window {
-            window.set_cursor_visible(self.ui_state != AppUiState::InGame);
+            window.set_cursor_visible(true);
         }
     }
 
@@ -1079,8 +1152,12 @@ impl InteractiveViewerApp {
     pub fn reset_all_inputs(&mut self) {
         self.pressed_keys.clear();
         self.mouse_drag_active = false;
+        self.mouse_left_down = false;
+        self.mouse_right_down = false;
+        self.last_cursor_pos = None;
         self.smoothed_steer_input = 0.0;
         self.aircraft_throttle = 0.0;
+        self.train_consist.throttle = 0.0;
     }
 
     /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
@@ -2010,6 +2087,7 @@ impl InteractiveViewerApp {
     /// Selects and inspects a vehicle from the fleet garage.
     pub fn apply_garage_selection(&mut self, idx: usize) {
         self.garage_selected_idx = idx;
+        self.prepare_initial_vehicle(idx);
         let names = [
             "Apex GT Sports Coupe",
             "Executive Sedan",
@@ -2023,7 +2101,7 @@ impl InteractiveViewerApp {
             "SkyCourier B737-800",
         ];
         let name = names.get(idx).copied().unwrap_or("Vehicle");
-        let label = format!("🔍 Inspected: {} (Click 'SPAWN VEHICLE' to deploy)", name);
+        let label = format!("🔍 Previewing: {} (Click 'SPAWN VEHICLE' to deploy)", name);
         self.status_notification = Some((label, Instant::now()));
     }
 
@@ -2931,6 +3009,13 @@ impl ApplicationHandler for InteractiveViewerApp {
                 }
             }
 
+            WindowEvent::CursorLeft { .. } => {
+                self.mouse_left_down = false;
+                self.mouse_right_down = false;
+                self.mouse_drag_active = false;
+                self.last_cursor_pos = None;
+            }
+
             WindowEvent::Resized(physical_size) => {
                 if physical_size.width == 0 || physical_size.height == 0 {
                     self.is_minimized = true;
@@ -3011,29 +3096,56 @@ impl ApplicationHandler for InteractiveViewerApp {
             }
 
             WindowEvent::MouseInput { state, button, .. } => {
-                if self.ui_state == AppUiState::InGame {
-                    if button == MouseButton::Right || button == MouseButton::Left {
-                        self.mouse_drag_active = state == ElementState::Pressed;
-                        if !self.mouse_drag_active {
-                            self.last_cursor_pos = None;
-                        }
-                    }
-                } else if button == MouseButton::Left {
-                    match state {
+                match button {
+                    MouseButton::Right => match state {
                         ElementState::Pressed => {
-                            self.mouse_left_down = true;
+                            self.mouse_right_down = true;
+                            if self.ui_state == AppUiState::InGame {
+                                self.mouse_drag_active = true;
+                                self.last_cursor_pos =
+                                    self.cursor_pos.map(|(x, y)| (x as f64, y as f64));
+                            }
                         }
                         ElementState::Released => {
-                            if self.mouse_left_down {
-                                self.mouse_left_down = false;
+                            self.mouse_right_down = false;
+                            self.mouse_drag_active = false;
+                            self.last_cursor_pos = None;
+                        }
+                    },
+                    MouseButton::Left => match state {
+                        ElementState::Pressed => {
+                            self.mouse_left_down = true;
+                            self.mouse_pressed_pos = self.cursor_pos;
+                        }
+                        ElementState::Released => {
+                            let was_down = self.mouse_left_down;
+                            self.mouse_left_down = false;
+                            if was_down {
                                 let (screen_w, screen_h) =
                                     if let Some(ref config) = self.surface_config {
                                         (config.width as f32, config.height as f32)
                                     } else {
                                         (1920.0, 1080.0)
                                     };
+
+                                let now = Instant::now();
+                                let is_double_click =
+                                    if let (Some(last_time), Some(last_pos), Some(curr_pos)) =
+                                        (self.last_click_time, self.last_click_pos, self.cursor_pos)
+                                    {
+                                        let dt = now.duration_since(last_time).as_millis();
+                                        let dist_sq = (curr_pos.0 - last_pos.0).powi(2)
+                                            + (curr_pos.1 - last_pos.1).powi(2);
+                                        dt <= 350 && dist_sq <= 100.0
+                                    } else {
+                                        false
+                                    };
+                                self.last_click_time = Some(now);
+                                self.last_click_pos = self.cursor_pos;
+
                                 if let Some((px, py)) = self.cursor_pos {
                                     match self.ui_state {
+                                        // Priority 1: Modal UI Overlays
                                         AppUiState::StartScreen => {
                                             let layout =
                                                 StartScreenLayout::compute(screen_w, screen_h, 7);
@@ -3117,6 +3229,12 @@ impl ApplicationHandler for InteractiveViewerApp {
                                             match layout.hit_test(px, py) {
                                                 Some(JobBrowserHit::JobItem(idx)) => {
                                                     self.job_browser_selected_idx = idx;
+                                                    if is_double_click {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::AcceptSelectedContract,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
                                                 }
                                                 Some(JobBrowserHit::AcceptContract) => {
                                                     self.dispatch_ui_action(
@@ -3138,7 +3256,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                                 GarageLayout::compute(screen_w, screen_h, 10);
                                             match layout.hit_test(px, py) {
                                                 Some(GarageHit::VehicleItem(idx)) => {
-                                                    self.garage_selected_idx = idx;
+                                                    self.apply_garage_selection(idx);
+                                                    if is_double_click {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::SelectAndSpawnVehicle(
+                                                                idx,
+                                                            ),
+                                                            Some(event_loop),
+                                                        );
+                                                    }
                                                 }
                                                 Some(GarageHit::ColorOption(c_idx)) => {
                                                     self.garage_selected_color_idx = c_idx;
@@ -3170,7 +3296,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         }
                                         AppUiState::SettingsMenu => {
                                             let layout =
-                                                SettingsLayout::compute(screen_w, screen_h, 5);
+                                                SettingsLayout::compute(screen_w, screen_h, 6);
                                             match layout.hit_test(px, py) {
                                                 Some(SettingsHit::SettingItem(idx)) => {
                                                     self.settings_selected_idx = idx;
@@ -3199,6 +3325,12 @@ impl ApplicationHandler for InteractiveViewerApp {
                                             match layout.hit_test(px, py) {
                                                 Some(CatalogHit::CityItem(idx)) => {
                                                     self.catalog_selected_idx = idx;
+                                                    if is_double_click {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::WarpToSelectedCity(idx),
+                                                            Some(event_loop),
+                                                        );
+                                                    }
                                                 }
                                                 Some(CatalogHit::WarpCity) => {
                                                     self.dispatch_ui_action(
@@ -3217,11 +3349,277 @@ impl ApplicationHandler for InteractiveViewerApp {
                                                 None => {}
                                             }
                                         }
-                                        _ => {}
+                                        AppUiState::DebriefModal => {
+                                            let layout = DebriefLayout::compute(screen_w, screen_h);
+                                            if let Some(DebriefHit::Claim) = layout.hit_test(px, py)
+                                            {
+                                                self.dispatch_ui_action(
+                                                    UiDomainAction::ClaimDebrief,
+                                                    Some(event_loop),
+                                                );
+                                            }
+                                        }
+                                        AppUiState::MultiplayerModal => {
+                                            let layout =
+                                                MultiplayerLayout::compute(screen_w, screen_h);
+                                            match layout.hit_test(px, py) {
+                                                Some(MultiplayerHit::Action(idx)) => {
+                                                    self.multiplayer_selected_action = idx;
+                                                    match idx {
+                                                        0 => self.host_and_join_local_server(7777),
+                                                        1 => {
+                                                            let addr = self
+                                                                .multiplayer_server_addr_input
+                                                                .clone();
+                                                            self.join_multiplayer_server(&addr);
+                                                        }
+                                                        2 => self.disconnect_multiplayer(),
+                                                        3 => self.ui_state = AppUiState::InGame,
+                                                        _ => {}
+                                                    }
+                                                }
+                                                Some(MultiplayerHit::Close) => {
+                                                    self.ui_state = AppUiState::InGame;
+                                                }
+                                                None => {}
+                                            }
+                                        }
+                                        AppUiState::RailRouteModal => {
+                                            let total = self.rail_routes_cache.len();
+                                            let layout =
+                                                RailRouteLayout::compute(screen_w, screen_h, total);
+                                            match layout.hit_test(px, py) {
+                                                Some(RailRouteHit::RouteItem(idx)) => {
+                                                    self.rail_route_selected_idx = idx;
+                                                    if is_double_click {
+                                                        self.dispatch_selected_rail_route();
+                                                        self.ui_state = AppUiState::InGame;
+                                                    }
+                                                }
+                                                Some(RailRouteHit::DispatchRoute) => {
+                                                    self.dispatch_selected_rail_route();
+                                                    self.ui_state = AppUiState::InGame;
+                                                }
+                                                Some(RailRouteHit::Close) => {
+                                                    self.ui_state = AppUiState::InGame;
+                                                }
+                                                None => {}
+                                            }
+                                        }
+
+                                        // Priority 2: Non-Modal Interactive In-Game HUD & Dock
+                                        AppUiState::InGame => {
+                                            let hud_layout =
+                                                InGameHudLayout::compute(screen_w, screen_h, true);
+                                            if let Some(hud_hit) = hud_layout.hit_test(px, py) {
+                                                match hud_hit {
+                                                    InGameHudHit::Pause => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::PauseSimulation,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::CameraCycle => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::CycleCamera,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::ParkToggle => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::TogglePark,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::OpenGarage => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenGarage,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::OpenJobs => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenContracts,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::OpenCities => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenGeography,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::OpenMultiplayer => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenMultiplayer,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::OpenRoutes => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenRoutes,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::ToggleDebug => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::ToggleDebug,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                    InGameHudHit::ContextAction => {
+                                                        self.dispatch_ui_action(
+                                                            UiDomainAction::OpenContracts,
+                                                            Some(event_loop),
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                    },
+                    _ => {}
+                }
+            }
+
+            WindowEvent::Touch(touch) => {
+                let px = touch.location.x as f32;
+                let py = touch.location.y as f32;
+                self.cursor_pos = Some((px, py));
+                match touch.phase {
+                    TouchPhase::Started => {
+                        self.mouse_left_down = true;
+                        self.mouse_pressed_pos = Some((px, py));
+                    }
+                    TouchPhase::Moved => {}
+                    TouchPhase::Ended => {
+                        if self.mouse_left_down {
+                            self.mouse_left_down = false;
+                            let (screen_w, screen_h) = if let Some(ref config) = self.surface_config
+                            {
+                                (config.width as f32, config.height as f32)
+                            } else {
+                                (1920.0, 1080.0)
+                            };
+                            match self.ui_state {
+                                AppUiState::StartScreen => {
+                                    let layout = StartScreenLayout::compute(screen_w, screen_h, 7);
+                                    if let Some(hit) = layout.hit_test(px, py) {
+                                        match hit {
+                                            StartScreenHit::Option(idx) => {
+                                                let action = match idx {
+                                                    0 => UiDomainAction::ContinueCareer,
+                                                    1 => UiDomainAction::FreeRoam,
+                                                    2 => UiDomainAction::OpenContracts,
+                                                    3 => UiDomainAction::OpenGeography,
+                                                    4 => UiDomainAction::OpenGarage,
+                                                    5 => UiDomainAction::OpenSettings,
+                                                    6 => UiDomainAction::ExitApplication,
+                                                    _ => UiDomainAction::FreeRoam,
+                                                };
+                                                self.dispatch_ui_action(action, Some(event_loop));
+                                            }
+                                            StartScreenHit::QuickRoam => {
+                                                self.dispatch_ui_action(
+                                                    UiDomainAction::FreeRoam,
+                                                    Some(event_loop),
+                                                );
+                                            }
+                                            StartScreenHit::Close => {
+                                                self.dispatch_ui_action(
+                                                    UiDomainAction::ExitApplication,
+                                                    Some(event_loop),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                                AppUiState::PauseMenu => {
+                                    let layout = PauseMenuLayout::compute(screen_w, screen_h, 10);
+                                    if let Some(hit) = layout.hit_test(px, py) {
+                                        match hit {
+                                            PauseMenuHit::Option(idx) => {
+                                                let action = match idx {
+                                                    0 => UiDomainAction::ResumeSimulation,
+                                                    1 => UiDomainAction::OpenContracts,
+                                                    2 => UiDomainAction::OpenGarage,
+                                                    3 => UiDomainAction::OpenGeography,
+                                                    4 => UiDomainAction::RoadsideRecovery,
+                                                    5 => UiDomainAction::QuicksaveProgress,
+                                                    6 => UiDomainAction::QuickloadProgress,
+                                                    7 => UiDomainAction::OpenSettings,
+                                                    8 => UiDomainAction::ReturnToStartScreen,
+                                                    9 => UiDomainAction::ExitApplication,
+                                                    _ => UiDomainAction::ResumeSimulation,
+                                                };
+                                                self.dispatch_ui_action(action, Some(event_loop));
+                                            }
+                                            PauseMenuHit::Resume | PauseMenuHit::Close => {
+                                                self.dispatch_ui_action(
+                                                    UiDomainAction::ResumeSimulation,
+                                                    Some(event_loop),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                                AppUiState::InGame => {
+                                    let layout = InGameHudLayout::compute(screen_w, screen_h, true);
+                                    if let Some(hit) = layout.hit_test(px, py) {
+                                        match hit {
+                                            InGameHudHit::Pause => self.dispatch_ui_action(
+                                                UiDomainAction::PauseSimulation,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::CameraCycle => self.dispatch_ui_action(
+                                                UiDomainAction::CycleCamera,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::ParkToggle => self.dispatch_ui_action(
+                                                UiDomainAction::TogglePark,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::OpenGarage => self.dispatch_ui_action(
+                                                UiDomainAction::OpenGarage,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::OpenJobs => self.dispatch_ui_action(
+                                                UiDomainAction::OpenContracts,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::OpenCities => self.dispatch_ui_action(
+                                                UiDomainAction::OpenGeography,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::OpenMultiplayer => self
+                                                .dispatch_ui_action(
+                                                    UiDomainAction::OpenMultiplayer,
+                                                    Some(event_loop),
+                                                ),
+                                            InGameHudHit::OpenRoutes => self.dispatch_ui_action(
+                                                UiDomainAction::OpenRoutes,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::ToggleDebug => self.dispatch_ui_action(
+                                                UiDomainAction::ToggleDebug,
+                                                Some(event_loop),
+                                            ),
+                                            InGameHudHit::ContextAction => self.dispatch_ui_action(
+                                                UiDomainAction::OpenContracts,
+                                                Some(event_loop),
+                                            ),
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    TouchPhase::Cancelled => {
+                        self.mouse_left_down = false;
                     }
                 }
             }
@@ -3231,12 +3629,18 @@ impl ApplicationHandler for InteractiveViewerApp {
                 let py = position.y as f32;
                 self.cursor_pos = Some((px, py));
 
-                // 100% Camera Isolation: do NOT rotate camera when interacting with menus!
+                // 100% Camera Isolation: ONLY right-drag rotates camera when InGame
                 if self.ui_state == AppUiState::InGame && self.mouse_drag_active {
                     if let Some((prev_x, prev_y)) = self.last_cursor_pos {
                         let dx = (position.x - prev_x) as f32;
                         let dy = (position.y - prev_y) as f32;
-                        let sensitivity = 0.0035;
+                        let mult = match self.mouse_sensitivity_idx {
+                            0 => 1.0,
+                            1 => 1.5,
+                            2 => 2.0,
+                            _ => 0.5,
+                        };
+                        let sensitivity = 0.0035 * mult;
                         self.camera_ctrl
                             .rotate(-dx * sensitivity, -dy * sensitivity);
                     }
@@ -3280,15 +3684,25 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 (self.job_browser_selected_idx + 1).min(total - 1);
                         }
                         AppUiState::GarageSelect => {
-                            self.garage_selected_idx = (self.garage_selected_idx + 1).min(9);
+                            let next = (self.garage_selected_idx + 1).min(9);
+                            self.apply_garage_selection(next);
                         }
                         AppUiState::SettingsMenu => {
-                            self.settings_selected_idx = (self.settings_selected_idx + 1).min(4);
+                            self.settings_selected_idx = (self.settings_selected_idx + 1).min(5);
                         }
                         AppUiState::CatalogModal => {
                             let total = all_us_cities().len();
                             self.catalog_selected_idx =
                                 (self.catalog_selected_idx + 1).min(total.saturating_sub(1));
+                        }
+                        AppUiState::MultiplayerModal => {
+                            self.multiplayer_selected_action =
+                                (self.multiplayer_selected_action + 1).min(3);
+                        }
+                        AppUiState::RailRouteModal => {
+                            let total = self.rail_routes_cache.len().max(1);
+                            self.rail_route_selected_idx =
+                                (self.rail_route_selected_idx + 1).min(total - 1);
                         }
                         _ => {}
                     }
@@ -3308,7 +3722,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 self.job_browser_selected_idx.saturating_sub(1);
                         }
                         AppUiState::GarageSelect => {
-                            self.garage_selected_idx = self.garage_selected_idx.saturating_sub(1);
+                            let next = self.garage_selected_idx.saturating_sub(1);
+                            self.apply_garage_selection(next);
                         }
                         AppUiState::SettingsMenu => {
                             self.settings_selected_idx =
@@ -3316,6 +3731,14 @@ impl ApplicationHandler for InteractiveViewerApp {
                         }
                         AppUiState::CatalogModal => {
                             self.catalog_selected_idx = self.catalog_selected_idx.saturating_sub(1);
+                        }
+                        AppUiState::MultiplayerModal => {
+                            self.multiplayer_selected_action =
+                                self.multiplayer_selected_action.saturating_sub(1);
+                        }
+                        AppUiState::RailRouteModal => {
+                            self.rail_route_selected_idx =
+                                self.rail_route_selected_idx.saturating_sub(1);
                         }
                         _ => {}
                     }
@@ -5568,6 +5991,16 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         "DISABLED (OFF)"
                                     },
                                     "Master heads-up display overlay",
+                                ),
+                                (
+                                    "MOUSE LOOK SENSITIVITY",
+                                    match self.mouse_sensitivity_idx {
+                                        0 => "1.0x (NORMAL)",
+                                        1 => "1.5x (FAST)",
+                                        2 => "2.0x (ULTRA)",
+                                        _ => "0.5x (PRECISE)",
+                                    },
+                                    "Right-click camera look rotation multiplier",
                                 ),
                             ];
                             let layout = SettingsLayout::compute(width_f, height_f, settings.len());

@@ -1746,6 +1746,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `dist/certification_matrix.json` (36 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
   - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
 
+## [0.1.5] - 2026-10-25
+### Added & Certified — STAGE 1.5-R: Windows Mouse and Complete UI Interaction Repair
+- **Central Pointer Event Router & 100% Camera Isolation**:
+  - Eliminated in-game left-click camera rotation conflict: Left clicks exclusively interact with UI buttons, HUD Dock chips, and contextual action prompts.
+  - Camera orbit and free-look is strictly isolated to **Right-Click Drag** (`MouseButton::Right`), scaled by configurable mouse sensitivity.
+  - Implemented deterministic 3-tier input priority router: Modal UI > Non-Modal Interactive HUD Dock > Camera/World Picking.
+- **Dedicated Interactive Layouts & Bounding Boxes in HUD Subsystem**:
+  - Added `MultiplayerLayout` and `MultiplayerHit`: Computes responsive geometry for 4 lobby action buttons and Close button.
+  - Added `RailRouteLayout` and `RailRouteHit`: Computes responsive geometry for route cards, `Dispatch Route`, and Close button.
+  - Added `InGameHudLayout` and `InGameHudHit`: Computes responsive top bar controls, bottom dock chips (Garage, Jobs, Cities, Multiplayer, Routes, Park, Debug), and contextual prompts.
+  - Exported all layouts and hit enums in `engine/rendering/src/lib.rs`.
+- **Garage Live 3D Preview & Double-Click Instant Spawning**:
+  - Single-clicking any vehicle card in `GarageSelect` immediately calls `apply_garage_selection(idx)`, updating the 3D model, chassis dimensions, and paint texture in the background viewport.
+  - Implemented double-click detection (interval $\le 350\text{ms}$, radius $\le 10\text{px}$) to instantly spawn vehicles in Garage, warp to selected cities in City Catalog, and accept jobs in Career Contracts.
+- **Authoritative Input Purging on Focus Loss & Occlusion**:
+  - Added authoritative input clearing in `WindowEvent::Focused(false)`, `WindowEvent::Occluded(true)`, window minimization, and `WindowEvent::CursorLeft`.
+  - Zeroes all pressed keys, releases mouse dragging flags, clears smoothed steer inputs, and resets cursor tracking to prevent stuck controls.
+- **Configurable Mouse Look Sensitivity**:
+  - Added a 6th setting to simulation preferences: `MOUSE LOOK SENSITIVITY` cycling through `1.0x (NORMAL)`, `1.5x (FAST)`, `2.0x (ULTRA)`, and `0.5x (PRECISE)`.
+- **Master Certification Test Suite (`tests/tests/stage1_5_mouse_and_ui_interaction_certification.rs`)**:
+  - Authored comprehensive 7-part test suite (7/7 passed):
+    1. `test_all_layouts_hit_test_determinism_across_resolutions`
+    2. `test_dpi_scale_factor_invariance`
+    3. `test_camera_isolation_and_left_click_protection`
+    4. `test_garage_selection_preview_and_spawn_lifecycle`
+    5. `test_city_catalog_and_contract_acceptance`
+    6. `test_focus_loss_and_input_purging`
+    7. `test_in_game_hud_interaction_and_context_prompts`
+- **Architecture & Certification Reports**:
+  - Authored ADR-0048 (`docs/adr/0048-stage-1-5-r-windows-mouse-and-complete-ui-interaction-repair.md`).
+  - Authored Certification Report (`docs/reports/stage1_5_certification_report.md`).
+  - Updated `dist/certification_matrix.json` (46 Requirements: 42 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
+  - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
+
+
 
 
 
