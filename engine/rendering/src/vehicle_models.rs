@@ -1702,9 +1702,9 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         .with_physics(4.20, 2.05, 0.52, 7500.0)
         .with_lod(lod)
         .with_camera_anchors(VehicleCameraAnchors {
-            chase_target: Vec3::new(0.0, 1.50, 0.0),
-            chase_distance: 18.0,
-            chase_height: 4.50,
+            chase_target: Vec3::new(0.0, 2.00, -3.0),
+            chase_distance: 26.0,
+            chase_height: 5.20,
             cockpit_eye: Vec3::new(-0.75, 2.30, 0.80),
             cockpit_look: Vec3::new(-0.75, 2.30, 4.5),
             hood_eye: Vec3::new(0.0, 2.05, 2.60),

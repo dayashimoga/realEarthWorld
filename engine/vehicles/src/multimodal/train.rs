@@ -151,6 +151,8 @@ pub struct TrainConsist {
     pub track_pose: Option<RailTrackPose>,
     /// Current 3D track poses of each trailing carriage.
     pub carriage_poses: Vec<RailTrackPose>,
+    /// When true, railway vehicle motion is strictly constrained to surveyed track geometry.
+    pub requires_track_pose: bool,
 }
 
 impl TrainConsist {
@@ -194,6 +196,7 @@ impl TrainConsist {
             is_at_buffer_stop: false,
             track_pose: None,
             carriage_poses: Vec::new(),
+            requires_track_pose: false,
         }
     }
 
@@ -215,6 +218,7 @@ impl TrainConsist {
                 25.9,
             ));
         }
+        train.requires_track_pose = true;
         train
     }
 
@@ -285,6 +289,16 @@ impl TrainConsist {
 
         let total_mass = self.total_mass_kg();
         if total_mass <= 1.0 {
+            return;
+        }
+
+        // Failsafe: When track constraints are required, free-roam simulation without
+        // an active route or track pose is strictly prohibited.
+        if self.requires_track_pose && self.track_pose.is_none() && self.active_route.is_empty() {
+            self.trigger_emergency_brake();
+            self.velocity_mps = 0.0;
+            self.speed_kph = 0.0;
+            self.acceleration_mps2 = 0.0;
             return;
         }
 

@@ -187,10 +187,10 @@ fn test_camera_depth_clearance_and_occlusion_audit() {
         "  • Heavy Truck: Trailer Length={:.1}m, ChaseDist={:.1}m, Clearance to Rear={:.2}m",
         trailer_length, truck_chase_dist, trailer_clearance
     );
-    // When trailer_clearance is <= 3.0m on a 15m trailer, the camera viewport is completely occluded by the trailer back wall:
+    // In Stage B remediation: Truck chase camera maintains >= 8.0m rear clearance to prevent trailer occlusion
     assert!(
-        trailer_clearance <= 3.0,
-        "DEFECT CONFIRMED: Truck chase camera distance ({:.1}m) is too close to the 15m trailer, leaving only {:.2}m clearance",
+        trailer_clearance >= 8.0,
+        "Truck chase camera distance ({:.1}m) must provide unobstructed view with >= 8.0m clearance (got {:.2}m)",
         truck_chase_dist, trailer_clearance
     );
 }

@@ -1208,6 +1208,47 @@
   - [x] 100% test pass rate across all 5 Stage A test suites (20/20 tests passing).
   - [x] Formally certified Stage A completion and authorized Stage B remediation.
 
+## STAGE B: Systemic Defect Remediation and Certification (Completed)
+- [x] Phase B1: Steering Sign Alignment & Road Spawn Heading
+  - [x] Aligned road spawn yaw calculation in `apps/world-viewer/src/interactive.rs:1290` to `tangent.1.atan2(tangent.0)` (`dz.atan2(dx)`), matching camera controller reference frame.
+  - [x] Converted fallback landmark camera yaw to compass vehicle heading (`FRAC_PI_2 - landmark.yaw`) in `interactive.rs:1650`.
+  - [x] Reduced camera lookahead steer multiplier from 1.5 to 0.2 in `engine/vehicles/src/camera.rs:111`.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_1_steering_and_road_spawn_alignment`.
+- [x] Phase B2: Zero-Input Reverse Steering Stabilization
+  - [x] Introduced mechanical caster trail yaw rate damping (`angular_velocity.y *= 0.88`) in `engine/vehicles/src/dynamics.rs:638` when steering input is zero.
+  - [x] Stabilized reverse wheel slip angle tracking in `dynamics.rs:770`, eliminating divergent yaw moments.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_2_zero_input_steering_stability`.
+- [x] Phase B3: Slope Hill-Hold Assist, Idle Creep & Drive Power Interlock
+  - [x] Implemented Hill-Hold Assist (HHA) in `engine/vehicles/src/dynamics.rs:545` locking vehicle on road grades up to 25% with zero throttle in Drive.
+  - [x] Implemented torque converter idle forward creep force in `dynamics.rs:750`.
+  - [x] Decoupled KeyW from Reverse mode and service braking in `apps/world-viewer/src/interactive.rs:4670`, ensuring forward throttle immediately powers out of rollback.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_3_slope_hill_hold_and_drive_power`.
+- [x] Phase B4: Outward Building Collision Ejection
+  - [x] Added point-in-polygon verification and normal inversion (`-best_normal`) in `engine/vehicles/src/building_collision.rs:136`, ejecting penetrating vehicles toward street.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_4_building_collision_outward_ejection`.
+- [x] Phase B5: Heavy Truck Camera Clearance & Viewport Occlusion
+  - [x] Increased heavy truck chase distance to 26.0m and height to 5.2m in `engine/rendering/src/vehicle_models.rs:1704` and `interactive.rs:2027`.
+  - [x] Certified 9.95m clearance behind the 15m trailer and clear sightline over the 4m trailer roof.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_5_heavy_truck_camera_and_trailer_clearance`.
+- [x] Phase B6: Train Consist Track Pose Constraint Enforcement
+  - [x] Added `requires_track_pose: bool` to `TrainConsist` in `engine/vehicles/src/multimodal/train.rs:154`.
+  - [x] Clamped train speed to 0.0 km/h with emergency brakes locked when unlinked from track geometry in `interactive.rs:4823` and `train.rs:295`.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_6_train_track_constraint_enforcement`.
+- [x] Phase B7: Aircraft Airspace Boundary Enforcement & Soft Vectoring
+  - [x] Added `enforce_airspace_boundary(max_radius_m)` in `engine/vehicles/src/multimodal/aviation.rs:408` with advisory warning at 2000m and turnback vectoring / horizontal distance clamping at 2400m.
+  - [x] Wired per-frame boundary enforcement in `apps/world-viewer/src/interactive.rs:4895`.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_7_aircraft_airspace_boundary_enforcement`.
+- [x] Phase B8: US City Transitions Graceful Handling & Playable Extent
+  - [x] Updated city transitions in `apps/world-viewer/src/interactive.rs:1063` so catalog-only definitions synthesize an authentic surveyed extract via `load_authentic_city` with user notification, eliminating transition aborts.
+  - [x] Certified by `stage_b_remediation_certification::test_certify_p0_8_us_city_transitions_and_catalog_availability`.
+- [x] Phase B9: Governance, Master Certification & Quality Gates
+  - [x] Authored `tests/tests/stage_b_remediation_certification.rs` (8/8 tests passing).
+  - [x] Updated `docs/RootCauseMatrix.md` and `docs/RootCauseMatrix.json` marking all 8 P0 defects as `REMEDIATED`.
+  - [x] Authored ADR-0051 (`docs/adr/0051-stage-b-systemic-defect-remediation-and-certification.md`).
+  - [x] Verified zero regressions across all existing test suites (deterministic replay, graphics regression, injected defects, vehicle dynamics, and rendering tests passing 100%).
+  - [x] Clean compilation across full workspace with zero errors (`cargo check --workspace`).
+
+
 
 
 

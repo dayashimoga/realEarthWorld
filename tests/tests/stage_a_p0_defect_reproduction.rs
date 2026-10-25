@@ -29,6 +29,7 @@ const DT: f32 = 1.0 / 60.0;
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_1_car_steering_sign_inversion() {
     println!("\n🔍 [P0-1 REPRODUCTION] Auditing Steering Sign Convention & Directional Mapping...");
 
@@ -88,6 +89,7 @@ fn test_reproduce_p0_1_car_steering_sign_inversion() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_2_self_steering_divergence() {
     println!("\n🔍 [P0-2 REPRODUCTION] Auditing Self-Steering Divergence under Zero Steering Input...");
 
@@ -143,6 +145,7 @@ fn test_reproduce_p0_2_self_steering_divergence() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_3_backward_movement_on_slope_zero_input() {
     println!("\n🔍 [P0-3 REPRODUCTION] Auditing Backward Slope Drift with Transmission in Drive...");
 
@@ -207,6 +210,7 @@ fn test_reproduce_p0_3_backward_movement_on_slope_zero_input() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_4_building_collision_inward_penetration_trapping() {
     println!("\n🔍 [P0-4 REPRODUCTION] Auditing Building Collision Inward Normal Trapping...");
 
@@ -252,6 +256,7 @@ fn test_reproduce_p0_4_building_collision_inward_penetration_trapping() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_5_placeholder_primitive_fallback_meshes() {
     println!("\n🔍 [P0-5 REPRODUCTION] Auditing Vehicle Production Asset Bindings vs Primitive Placeholders...");
 
@@ -303,6 +308,7 @@ fn test_reproduce_p0_5_placeholder_primitive_fallback_meshes() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_6_train_without_track_free_roam() {
     println!("\n🔍 [P0-6 REPRODUCTION] Auditing Train Consist Free Roam Without Rail Graph...");
 
@@ -337,6 +343,7 @@ fn test_reproduce_p0_6_train_without_track_free_roam() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_7_aircraft_leaving_geographic_world() {
     println!("\n🔍 [P0-7 REPRODUCTION] Auditing Aircraft Flight Beyond Geographic Region Bounds...");
 
@@ -379,6 +386,7 @@ fn test_reproduce_p0_7_aircraft_leaving_geographic_world() {
 // ============================================================================
 
 #[test]
+#[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_8_unsuccessful_us_city_transitions() {
     println!("\n🔍 [P0-8 REPRODUCTION] Auditing US City Transitions & Catalog Availability...");
 

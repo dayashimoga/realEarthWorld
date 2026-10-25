@@ -542,13 +542,19 @@ impl DynamicVehicle {
                         } else {
                             0.4
                         };
-                        let drive_f = compute_drive(
+                        let mut drive_f = compute_drive(
                             inputs.throttle,
                             self.config.peak_engine_force * drive_mult,
                             self.config.tcs_enabled,
                             normal_force,
                             self.config.tire_friction_coeff,
                         );
+                        // Automatic torque converter forward creep when idling in Drive:
+                        // Real torque converter creep produces ~5-8 km/h forward momentum or holds against mild rollback
+                        if inputs.throttle < 0.01 && v_forward < 2.5 && inputs.brake < 0.05 {
+                            let creep_scale = (1.0 - (v_forward / 2.5).max(0.0)).clamp(0.0, 1.0);
+                            drive_f += self.config.peak_engine_force * 0.08 * drive_mult * creep_scale;
+                        }
                         f_long += drive_f;
                         f_long -= compute_brake(
                             inputs.brake,
@@ -630,7 +636,13 @@ impl DynamicVehicle {
                 // At low speed (<= 0.5 m/s), use stable critically-damped tire contact resistance
                 // that avoids numerical Euler oscillation explosion (|Delta v| < |v|).
                 let f_lat = if v_forward.abs() > 0.5 {
-                    -self.config.cornering_stiffness * wheel.slip_angle
+                    let base_lat = -self.config.cornering_stiffness * wheel.slip_angle;
+                    if v_forward < 0.0 && inputs.steer.abs() < 0.02 {
+                        // Stabilize reverse tracking: prevent positive-feedback yaw divergence
+                        base_lat * 0.5 - (self.config.cornering_stiffness * 0.4) * (v_lateral / v_forward.abs()).clamp(-0.5, 0.5)
+                    } else {
+                        base_lat
+                    }
                 } else {
                     let quarter_mass = self.config.mass_kg * 0.25;
                     let max_stable_damping = (quarter_mass / dt) * 0.75;
@@ -738,7 +750,16 @@ impl DynamicVehicle {
                 && grounded_wheels >= 2
                 && slope_grade < 0.025;
 
-            if is_park || is_handbrake || is_service_brake || is_flat_idle {
+            // Automatic Hill-Hold Assist (HHA) & Automatic Drive Standstill Hold:
+            // When in Drive with zero throttle and grounded wheels, hold against backward rollback on grades up to 25% (0.25)
+            let forward_speed = self.linear_velocity.dot(forward);
+            let is_hill_hold_drive = inputs.gear_mode == TransmissionMode::Drive
+                && inputs.throttle == 0.0
+                && grounded_wheels >= 2
+                && forward_speed <= 0.05
+                && slope_grade <= 0.25;
+
+            if is_park || is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
                 self.linear_velocity.x = 0.0;
                 self.linear_velocity.z = 0.0;
                 self.angular_velocity = Vec3::ZERO;
@@ -755,7 +776,15 @@ impl DynamicVehicle {
         // Angular acceleration with damping
         let angular_accel = rot_mat * (inv_inertia * (rot_mat.transpose() * total_torque));
         self.angular_velocity += angular_accel * dt;
-        self.angular_velocity *= 0.98; // Natural rotational damping
+        if inputs.steer.abs() < 0.01 {
+            // Mechanical caster trail and pneumatic self-centering active damping:
+            // Prevents lateral yaw divergence / positive-feedback drift when steering wheel is released
+            self.angular_velocity.y *= 0.88;
+            self.angular_velocity.x *= 0.95;
+            self.angular_velocity.z *= 0.95;
+        } else {
+            self.angular_velocity *= 0.98; // Natural rotational damping
+        }
 
         // Update Position & Orientation
         self.position += self.linear_velocity * dt;

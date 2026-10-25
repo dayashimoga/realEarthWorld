@@ -134,11 +134,22 @@ impl BuildingFootprintCollider {
         }
 
         if is_inside {
-            // Point is deeply inside building solid: push out to closest edge plus radius
+            // Point is inside building solid: push outward toward closest exterior perimeter.
+            // When inside, (pt - closest) points inward, so the outward ejection vector is -best_normal.
             let pen_depth = min_dist + radius;
-            Some((pen_depth, best_normal))
+            let outward_normal = if min_dist > 1e-4 {
+                -best_normal
+            } else {
+                let test_pos = pt + best_normal * 0.1;
+                if point_in_polygon_2d(test_pos, &self.polygon) {
+                    -best_normal
+                } else {
+                    best_normal
+                }
+            };
+            Some((pen_depth, outward_normal))
         } else if min_dist < radius {
-            // Vehicle boundary intersects building exterior wall
+            // Vehicle boundary intersects building exterior wall: best_normal points outward toward pt
             let pen_depth = radius - min_dist;
             Some((pen_depth, best_normal))
         } else {

@@ -107,8 +107,8 @@ impl VehicleCameraController {
 
         match self.perspective {
             VehicleCameraPerspective::Chase => {
-                // Lookahead accounts for forward velocity and front steering angle
-                let steer_lookahead = car_right * (vehicle.wheels[0].steer_angle * 1.5);
+                // Lookahead accounts for forward velocity and front steering angle (subtly damped)
+                let steer_lookahead = car_right * (vehicle.wheels[0].steer_angle * 0.2);
                 let speed_bonus = (vehicle.speed_kph / 80.0).clamp(0.0, 2.5);
                 let lookahead_offset = car_forward * (1.5 + speed_bonus) + steer_lookahead;
 

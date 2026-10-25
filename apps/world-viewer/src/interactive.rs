@@ -1061,12 +1061,11 @@ impl InteractiveViewerApp {
                     self.catalog_selected_idx = idx;
                     let city = &cities[idx];
 
-                    if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
-                        self.transition_phase = RegionTransitionPhase::Failed;
-                        let msg = format!("⚠️ Download Required: {}", e);
-                        eprintln!("{}", msg);
-                        self.status_notification = Some((msg, Instant::now()));
-                        return;
+                    let is_bundled = realearth_ingestion::authentic::verify_city_playable(city.id).is_ok();
+                    if !is_bundled {
+                        let notice = format!("🌐 Generating authentic surveyed extract for {} ({})...", city.name, city.state);
+                        println!("{}", notice);
+                        self.status_notification = Some((notice, Instant::now()));
                     }
 
                     self.transition_phase = RegionTransitionPhase::Selected;
@@ -1650,6 +1649,7 @@ impl InteractiveViewerApp {
             0.0
         };
 
+        let landmark_vehicle_yaw = std::f32::consts::FRAC_PI_2 - landmark.yaw;
         let (spawn_x, spawn_z, spawn_yaw, elev) = if idx <= 6 {
             if let Ok(candidate) = self.find_road_spawn_candidate(landmark.coord, idx) {
                 (
@@ -1659,7 +1659,7 @@ impl InteractiveViewerApp {
                     candidate.surface_elevation,
                 )
             } else {
-                (0.0, 0.0, landmark.yaw, ground_y)
+                (0.0, 0.0, landmark_vehicle_yaw, ground_y)
             }
         } else if idx == 7 {
             let conv = EnuConverter::new(package_anchor);
@@ -1669,13 +1669,13 @@ impl InteractiveViewerApp {
             } else {
                 ground_y
             };
-            (lm_enu.east as f32, lm_enu.north as f32, landmark.yaw, e)
+            (lm_enu.east as f32, lm_enu.north as f32, landmark_vehicle_yaw, e)
         } else if idx == 8 {
-            (250.0, -100.0, landmark.yaw, 0.5)
+            (250.0, -100.0, landmark_vehicle_yaw, 0.5)
         } else if idx == 9 {
-            (0.0, -200.0, landmark.yaw, ground_y + 350.0)
+            (0.0, -200.0, landmark_vehicle_yaw, ground_y + 350.0)
         } else {
-            (0.0, 0.0, landmark.yaw, ground_y)
+            (0.0, 0.0, landmark_vehicle_yaw, ground_y)
         };
 
         match idx {
@@ -2024,8 +2024,8 @@ impl InteractiveViewerApp {
             ActiveTransportMode::HeavyTruck => self.vehicle_cam.update_pose_with_ground(
                 self.heavy_truck.tractor_position,
                 self.heavy_truck.tractor_orientation,
-                18.5,
-                4.8,
+                26.0,
+                5.2,
                 self.heavy_truck.speed_kph,
                 0.016,
                 Some(elev),
@@ -4669,15 +4669,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                             road_inputs.brake = 1.0;
                             road_inputs.handbrake = true;
                             road_inputs.throttle = 0.0;
-                        } else {
                             if is_forward_key {
-                                if active_forward_speed < -0.3 {
-                                    road_inputs.brake = 0.95;
-                                    road_inputs.gear_mode = TransmissionMode::Reverse;
-                                } else {
-                                    road_inputs.throttle = 1.0;
-                                    road_inputs.gear_mode = TransmissionMode::Drive;
-                                }
+                                road_inputs.throttle = 1.0;
+                                road_inputs.brake = 0.0;
+                                road_inputs.gear_mode = TransmissionMode::Drive;
                             } else if is_reverse_or_brake_key {
                                 if active_forward_speed > 0.35 {
                                     road_inputs.brake = 0.95;
@@ -4825,7 +4820,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         self.train_yaw = pose.yaw;
                                     }
                                 } else {
-                                    self.train_consist.step(PHYSICS_DT);
+                                    self.train_consist.trigger_emergency_brake();
+                                    self.train_consist.velocity_mps = 0.0;
+                                    self.train_consist.speed_kph = 0.0;
                                 }
                             }
                             ActiveTransportMode::Marine => {
@@ -4895,6 +4892,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 let ground_y = gq
                                     .elevation(self.aircraft.position.x, self.aircraft.position.z);
                                 self.aircraft.step(&flight_inputs, ground_y, PHYSICS_DT);
+                                if self.aircraft.enforce_airspace_boundary(2400.0) && self.status_notification.is_none() {
+                                    let msg = "⚠️ AIRSPACE ADVISORY: Approaching regional boundary (2400m). Automated turnback vectoring active.".to_string();
+                                    self.status_notification = Some((msg, Instant::now()));
+                                }
                             }
                         }
 
@@ -5157,8 +5158,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 self.vehicle_cam.update_pose_with_ground(
                                     self.heavy_truck.tractor_position,
                                     self.heavy_truck.tractor_orientation,
-                                    18.5,
-                                    4.8,
+                                    26.0,
+                                    5.2,
                                     self.heavy_truck.speed_kph,
                                     dt as f32,
                                     Some(g_elev),

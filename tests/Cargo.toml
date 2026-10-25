@@ -208,3 +208,8 @@ path = "tests/stage_a_injected_defects.rs"
 [[test]]
 name = "stage_a_artifact_smoke"
 path = "tests/stage_a_artifact_smoke.rs"
+
+[[test]]
+name = "stage_b_remediation_certification"
+path = "tests/stage_b_remediation_certification.rs"
+
