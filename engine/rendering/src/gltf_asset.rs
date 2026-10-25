@@ -359,7 +359,16 @@ impl LoadedVehicleModel {
         let mut combined_mesh = ChunkMesh::default();
         let world_rot_mat = Mat3::from_quat(world_orient);
 
-        for submesh in &self.submeshes {
+        // Alpha / depth sorting: Emit opaque submeshes first, mask second, and blend/transparent
+        // submeshes (e.g. greenhouse glass, contact shadows) last so the depth buffer properly resolves.
+        let mut sorted_submeshes: Vec<&VehicleSubmesh> = self.submeshes.iter().collect();
+        sorted_submeshes.sort_by_key(|s| match s.material.alpha_mode {
+            VehicleAlphaMode::Opaque => 0,
+            VehicleAlphaMode::Mask => 1,
+            VehicleAlphaMode::Blend => 2,
+        });
+
+        for submesh in sorted_submeshes {
             if submesh.mesh.is_empty() {
                 continue;
             }
@@ -470,6 +479,9 @@ impl LoadedVehicleModel {
                 }
                 VehicleSubmeshType::ChassisBody => {
                     (Vec3::ZERO, Quat::IDENTITY, override_paint_color)
+                }
+                VehicleSubmeshType::TurnSignals => {
+                    (Vec3::ZERO, Quat::IDENTITY, None)
                 }
                 _ => (Vec3::ZERO, Quat::IDENTITY, None),
             };

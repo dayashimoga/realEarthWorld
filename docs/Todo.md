@@ -1273,6 +1273,43 @@
   - [x] 100% pass rate across all Stage A regression suites (deterministic replay, graphics regression, injected defects, artifact smoke).
   - [x] 100% pass rate across 44 unit tests in `realearth-vehicles` with clean workspace compilation (`cargo check --workspace`).
 
+## STAGE C — PREMIUM REALISTIC TRANSPORT MODELS AND ANIMATION (Certified)
+- [x] Phase C1 — Asset Pipeline and Acceptance Specifications:
+  - [x] Audited `engine/rendering/src/vehicle_mesh.rs`, asset registries, PBR metallic-roughness materials, and GPU upload pipelines.
+  - [x] Completed glTF/GLB 2.0 binary ingestion with Khronos-compliant headers and buffer layouts.
+  - [x] Verified open-source licensed asset attribution manifest in `assets/vehicles/LICENSE_ATTRIBUTION.md`.
+  - [x] Implemented submesh alpha depth sorting in `engine/rendering/src/gltf_asset.rs` rendering opaque geometry before transparent blend geometry.
+  - [x] Labeled procedural primitive boxes as development fallback only; certified vehicles render authored 3D production models.
+- [x] Phase C2 — Apex GT Sports Coupe Reference Car Overhaul:
+  - [x] Eliminated wheel/chassis clipping with authentic radiused wheel arch cutouts cresting at $y = 0.72\text{m}$ (front) and $y = 0.74\text{m}$ (rear), clearing $0.66\text{m}$ tire tops.
+  - [x] Integrated matte dark inner wheel well cavity liners (`[0.05, 0.05, 0.06, 1.0]`) enclosing inner wheel tubs.
+  - [x] Eliminated floating/disconnected rear components by building a solid, enclosed rear fascia with upper decklid shelf, mid bumper face, recessed dark license plate cove, embossed registration plate, and lower apron connecting to the carbon diffuser.
+  - [x] Replaced 2D quad spoiler with 3D solid carbon uprights, 3D enclosed carbon airfoil camber, trailing Gurney flap lip, and aerodynamic endplates.
+  - [x] Added dynamic amber turn signal indicator clusters (`VehicleSubmeshType::TurnSignals`) to front headlight brows and rear taillight outer segments.
+  - [x] Realigned quad polished stainless steel exhaust tips longitudinally along the Z-axis (`add_cylinder_z`).
+  - [x] Maintained detailed cockpit interior (racing bucket seats, digital display telemetry screens, center console, articulated steering wheel) and verified camera viewpoints.
+- [x] Phase C3 — Complete Multimodal Transport Classes:
+  - [x] Verified all 12 distinct multimodal transport models: Sports Coupe, Luxury Sedan, All-Terrain SUV, Medallion Taxi, Class 8 Semi with 53ft Trailer, Transit Bus, Supersport Motorcycle, Diesel-Electric Locomotive, BiLevel Passenger Coach, Catamaran Ferry, Airliner B737, and General Aviation C172.
+  - [x] Confirmed each model has authentic authored proportions, dimensions, mass, and class-specific submeshes (no scaled box geometry).
+- [x] Phase C4 — Physics-Driven Dynamic Animation & Optimization:
+  - [x] Verified wheel spin rotation ($v = \omega \cdot r$) and steering rack deflection.
+  - [x] Verified motorcycle dynamic cornering lean banking around roll axis.
+  - [x] Verified heavy truck semitrailer articulation around fifth-wheel kingpin plate.
+  - [x] Verified transit bus passenger bi-fold door opening kinematics.
+  - [x] Verified railway locomotive and coach bogie yaw articulation following track curvature.
+  - [x] Verified aircraft propeller and turbofan rotor spinning animation.
+  - [x] Verified marine vessel rotating radar scanner mast.
+  - [x] Verified multi-LOD scaling monotonicity ($LOD0 > LOD1 > LOD2$).
+- [x] Phase C5 — Visual Certification & Non-Regression:
+  - [x] Exported all 16 GLB binary containers to `assets/vehicles/` on disk (totaling ~2.2 MB).
+  - [x] Verified Khronos glTF 2.0 binary headers and buffer sizes on disk.
+  - [x] Authored and certified Stage C Master Test Suite `tests/tests/stage_c_premium_models_and_animation.rs` (6/6 tests passing).
+  - [x] Verified 100% pass rate on Stage B authoritative physics and coordinate tests (9/9).
+  - [x] Verified 100% pass rate on Stage B remediation tests (8/8).
+  - [x] Verified 100% pass rate on Stage 1.6 multimodal animation tests (10/10).
+  - [x] Verified 100% pass rate on Stage 0.8 vehicle visual tests (6/6).
+  - [x] Authored ADR-0052 (`docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md`).
+
 
 
 

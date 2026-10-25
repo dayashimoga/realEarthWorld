@@ -1931,6 +1931,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 44 unit tests passing in `realearth-vehicles` (44/44).
   - Clean workspace build (`cargo check --workspace`).
 
+## [Stage C] - 2026-10-25
+### Certified — Premium Realistic Transport Models and Animation
+- **Submesh Alpha Depth Sorting Pipeline (`engine/rendering/src/gltf_asset.rs`)**:
+  - Implemented automatic material depth sorting in `compose_multimodal_world_mesh`: emits `VehicleAlphaMode::Opaque` geometry first, `VehicleAlphaMode::Mask` second, and `VehicleAlphaMode::Blend` (glass, shadows) last.
+  - Eliminated transparent glass depth-buffer occlusion defects that previously occluded interior dashboards, seats, and steering wheels.
+  - Added semantic dispatch and vertex animation routing for `VehicleSubmeshType::TurnSignals`.
+- **Apex GT Sports Coupe Reference Car Fidelity (`engine/rendering/src/vehicle_models.rs`)**:
+  - **Non-Clipping Wheel Arches:** Replaced flat continuous fender quads with 3-section fender panels containing radiused wheel arch cutouts rising to $y = 0.72\text{m}$ (front) and $y = 0.74\text{m}$ (rear), clearing $0.66\text{m}$ tire tops.
+  - **Dark Inner Wheel Liners:** Inset matte dark composite cavity liners (`[0.05, 0.05, 0.06, 1.0]`) enclosing inner wheel tubs, eliminating hollow see-through voids.
+  - **Solid Grounded Rear Fascia:** Built a four-tier vertical rear enclosure connecting the decklid edge ($y=0.82\text{m}, z=-2.12\text{m}$) down to the carbon diffuser ($y=0.32\text{m}, z=-2.22\text{m}$), embedding the full-width OLED taillight bar, reverse lights, recessed dark license plate cove, and stamped registration plate. Eliminates floating/disconnected components.
+  - **3D Solid Aerodynamic GT Wing:** Replaced 1-sided 2D quad stanchions and airfoil with 3D solid carbon uprights (`add_box_at`), a 3D enclosed airfoil camber box, trailing Gurney flap lip, and aerodynamic endplates.
+  - **Dynamic Amber Turn Signals:** Added `VehicleSubmeshType::TurnSignals` with front headlight brow indicators and rear taillight outer modules (`AutomotivePalette::TURN_SIGNAL_AMBER`, emissive `[1.0, 0.65, 0.05]`).
+  - **Longitudinal Exhaust Tips:** Replaced transverse X-axis cylinders with longitudinal Z-axis cylinders (`add_cylinder_z`) protruding rearwards through the lower bumper fascia.
+  - **Detailed Cockpit & Camera Anchors:** Maintained bucket seats, telemetry display screens, center console, articulated steering wheel, and verified camera viewpoints (cockpit, hood, chase, orbit).
+- **Multimodal Transport Classes Certification (`engine/rendering/src/vehicle_models.rs`)**:
+  - Certified all 12 distinct multimodal transport models: Sports Coupe, Luxury Sedan, All-Terrain SUV, Medallion Taxi, Class 8 Semi with 53ft Trailer, Transit Bus, Supersport Motorcycle, Diesel-Electric Locomotive, BiLevel Passenger Coach, Catamaran Ferry, Airliner B737, and General Aviation C172.
+  - Verified each model is uniquely authored with realistic dimensions, wheelbase, wheel radius, mass, and class-specific submeshes (no scaled box geometry).
+- **Physics-Driven Dynamic Animations & Multi-LOD Optimization (`engine/rendering/src/gltf_asset.rs`, `vehicle_mesh.rs`)**:
+  - Wheel spin rotation ($v = \omega \cdot r$) and front steering rack deflection.
+  - Motorcycle dynamic cornering lean banking around roll axis.
+  - Semi-truck fifth-wheel trailer yaw articulation.
+  - Transit bus passenger bi-fold door opening kinematics.
+  - Locomotive and coach railway bogie yaw articulation following track curvature.
+  - Aircraft propeller and turbofan rotor spinning rotation.
+  - Marine vessel rotating radar scanner mast.
+  - Monotonic multi-LOD decimation ($LOD0 > LOD1 > LOD2$).
+- **Complete GLB Binary Asset Generation (`assets/vehicles/`)**:
+  - Exported and certified all 16 GLB binary containers on disk (totaling ~2.2 MB).
+  - Validated Khronos glTF 2.0 binary headers (magic `0x46546C67`, version `2`) and buffer sizes.
+- **Stage C Master Test Suite & Regression Verification**:
+  - Authored [`tests/tests/stage_c_premium_models_and_animation.rs`](file:///j:/rustRealEarth/tests/tests/stage_c_premium_models_and_animation.rs) (6/6 tests passing).
+  - All Stage B physics tests passing (9/9).
+  - All Stage B remediation tests passing (8/8).
+  - All Stage 1.6 multimodal animation tests passing (10/10).
+  - All Stage 0.8 vehicle visual tests passing (6/6).
+  - Authored [`docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md`](file:///j:/rustRealEarth/docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md).
+
 
 
 

@@ -217,3 +217,7 @@ path = "tests/stage_b_remediation_certification.rs"
 name = "stage_b_authoritative_physics_and_inputs"
 path = "tests/stage_b_authoritative_physics_and_inputs.rs"
 
+[[test]]
+name = "stage_c_premium_models_and_animation"
+path = "tests/stage_c_premium_models_and_animation.rs"
+

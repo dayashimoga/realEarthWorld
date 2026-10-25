@@ -746,27 +746,69 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
         );
     }
 
-    // 1e. Flared Front and Rear Fenders
-    // Front-Left Fender
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(-half_w, 0.32, 1.75),
-        Vec3::new(-0.80, 0.58, 1.75),
-        Vec3::new(-0.85, 0.65, 0.65),
-        Vec3::new(-half_w, 0.35, 0.65),
-        -Vec3::X,
-        AutomotivePalette::APEX_CHERRY_RED,
-    );
-    // Front-Right Fender
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(0.80, 0.58, 1.75),
-        Vec3::new(half_w, 0.32, 1.75),
-        Vec3::new(half_w, 0.35, 0.65),
-        Vec3::new(0.85, 0.65, 0.65),
-        Vec3::X,
-        AutomotivePalette::APEX_CHERRY_RED,
-    );
+    // 1e. Flared Front Fenders with Authentic Non-Clipping Wheel Arches & Dark Wheel Liners
+    // Front wheel axle is at z = 1.25, wheel_r = 0.33, tire top at y = 0.66. Wheel extends z in [0.92, 1.58].
+    for sign in [-1.0f32, 1.0f32] {
+        let fx = sign * half_w;
+        let fnorm = Vec3::new(sign, 0.0, 0.0);
+        let inner_x = sign * (half_w - 0.12);
+        let wheel_liner_color = [0.05, 0.05, 0.06, 1.0];
+
+        // 1e-i. Forward Fender Section (Ahead of wheel arch: z = 1.58 to 1.75)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.32, 1.75),
+            Vec3::new(sign * 0.80, 0.58, 1.75),
+            Vec3::new(sign * 0.82, 0.62, 1.58),
+            Vec3::new(fx, 0.32, 1.58),
+            fnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1e-ii. Sculpted Wheel Arch Cutout (Over wheel: z = 0.92 to 1.58, arch apex y = 0.72)
+        // Forward arch quadrant (z = 1.25 to 1.58)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.32, 1.58),
+            Vec3::new(sign * 0.82, 0.62, 1.58),
+            Vec3::new(sign * 0.85, 0.68, 1.25),
+            Vec3::new(fx, 0.72, 1.25), // Crest clears tire (0.72m > 0.66m)
+            fnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+        // Aft arch quadrant (z = 0.92 to 1.25)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.72, 1.25),
+            Vec3::new(sign * 0.85, 0.68, 1.25),
+            Vec3::new(sign * 0.85, 0.65, 0.92),
+            Vec3::new(fx, 0.32, 0.92),
+            fnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1e-iii. Aft Fender Section (Behind wheel arch: z = 0.65 to 0.92)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.32, 0.92),
+            Vec3::new(sign * 0.85, 0.65, 0.92),
+            Vec3::new(sign * 0.85, 0.65, 0.65),
+            Vec3::new(fx, 0.35, 0.65),
+            fnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1e-iv. Matte Dark Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.70, 0.92),
+            Vec3::new(fx, 0.72, 0.92),
+            Vec3::new(fx, 0.72, 1.58),
+            Vec3::new(inner_x, 0.70, 1.58),
+            -Vec3::Y,
+            wheel_liner_color,
+        );
+    }
 
     // 1f. Sculpted Door Sills and Coke-Bottle Waistline
     add_quad(
@@ -788,25 +830,69 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
         AutomotivePalette::APEX_CHERRY_RED,
     );
 
-    // 1g. Flared Rear Muscular Haunches
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(-half_w * 0.92, 0.30, -0.65),
-        Vec3::new(-half_w * 0.88, 0.68, -0.65),
-        Vec3::new(-half_w, 0.72, -1.85),
-        Vec3::new(-half_w, 0.30, -1.85),
-        -Vec3::X,
-        AutomotivePalette::APEX_CHERRY_RED,
-    );
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(half_w * 0.88, 0.68, -0.65),
-        Vec3::new(half_w * 0.92, 0.30, -0.65),
-        Vec3::new(half_w, 0.30, -1.85),
-        Vec3::new(half_w, 0.72, -1.85),
-        Vec3::X,
-        AutomotivePalette::APEX_CHERRY_RED,
-    );
+    // 1g. Flared Rear Muscular Haunches with Non-Clipping Wheel Arches & Dark Wheel Liners
+    // Rear wheel axle is at z = -1.25, wheel_r = 0.33, tire top at y = 0.66. Wheel extends z in [-1.58, -0.92].
+    for sign in [-1.0f32, 1.0f32] {
+        let rx = sign * half_w;
+        let rnorm = Vec3::new(sign, 0.0, 0.0);
+        let inner_x = sign * (half_w - 0.12);
+        let wheel_liner_color = [0.05, 0.05, 0.06, 1.0];
+
+        // 1g-i. Forward Haunch Section (Ahead of rear wheel arch: z = -0.65 to -0.92)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(sign * half_w * 0.92, 0.30, -0.65),
+            Vec3::new(sign * half_w * 0.88, 0.68, -0.65),
+            Vec3::new(sign * 0.92, 0.70, -0.92),
+            Vec3::new(rx, 0.30, -0.92),
+            rnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1g-ii. Sculpted Rear Wheel Arch Cutout (Over rear wheel: z = -0.92 to -1.58, arch apex y = 0.74)
+        // Forward arch quadrant (z = -0.92 to -1.25)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(rx, 0.30, -0.92),
+            Vec3::new(sign * 0.92, 0.70, -0.92),
+            Vec3::new(sign * 0.95, 0.75, -1.25),
+            Vec3::new(rx, 0.74, -1.25), // Crest clears tire (0.74m > 0.66m)
+            rnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+        // Aft arch quadrant (z = -1.25 to -1.58)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(rx, 0.74, -1.25),
+            Vec3::new(sign * 0.95, 0.75, -1.25),
+            Vec3::new(sign * 0.94, 0.72, -1.58),
+            Vec3::new(rx, 0.30, -1.58),
+            rnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1g-iii. Aft Haunch Section (Behind rear wheel arch: z = -1.58 to -1.85)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(rx, 0.30, -1.58),
+            Vec3::new(sign * 0.94, 0.72, -1.58),
+            Vec3::new(sign * 0.90, 0.72, -1.85),
+            Vec3::new(rx, 0.30, -1.85),
+            rnorm,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+
+        // 1g-iv. Matte Dark Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.72, -1.58),
+            Vec3::new(rx, 0.74, -1.58),
+            Vec3::new(rx, 0.74, -0.92),
+            Vec3::new(inner_x, 0.72, -0.92),
+            -Vec3::Y,
+            wheel_liner_color,
+        );
+    }
 
     // 1h. Aerodynamic Rear Diffuser with Airflow Strakes
     add_quad(
@@ -842,7 +928,64 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
         AutomotivePalette::APEX_CHERRY_RED,
     );
 
-    // 1j. Aerodynamic Side Mirrors (Mounted on Doors)
+    // 1j. Solid Rear Fascia & Embedded Bumper (Permanently eliminates floating rear components)
+    // Upper fascia connecting decklid trailing edge to taillight shelf
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.75, 0.82, -half_l + 0.10),
+        Vec3::new(0.75, 0.82, -half_l + 0.10),
+        Vec3::new(0.76, 0.79, -half_l + 0.015),
+        Vec3::new(-0.76, 0.79, -half_l + 0.015),
+        -Vec3::Z,
+        AutomotivePalette::APEX_CHERRY_RED,
+    );
+    // Mid rear bumper face (Left and Right wings beneath taillights)
+    for sign in [-1.0f32, 1.0f32] {
+        let x0 = sign * 0.22;
+        let x1 = sign * 0.80;
+        let (left_x, right_x) = if sign < 0.0 { (x1, x0) } else { (x0, x1) };
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(left_x, 0.44, -half_l + 0.015),
+            Vec3::new(right_x, 0.44, -half_l + 0.015),
+            Vec3::new(right_x, 0.74, -half_l + 0.015),
+            Vec3::new(left_x, 0.74, -half_l + 0.015),
+            -Vec3::Z,
+            AutomotivePalette::APEX_CHERRY_RED,
+        );
+    }
+    // Recessed center license plate cove
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.22, 0.44, -half_l + 0.035),
+        Vec3::new(0.22, 0.44, -half_l + 0.035),
+        Vec3::new(0.22, 0.72, -half_l + 0.035),
+        Vec3::new(-0.22, 0.72, -half_l + 0.035),
+        -Vec3::Z,
+        [0.08, 0.08, 0.10, 1.0], // Dark composite recess
+    );
+    // Embossed registration license plate
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.18, 0.48, -half_l + 0.032),
+        Vec3::new(0.18, 0.48, -half_l + 0.032),
+        Vec3::new(0.18, 0.66, -half_l + 0.032),
+        Vec3::new(-0.18, 0.66, -half_l + 0.032),
+        -Vec3::Z,
+        [0.92, 0.92, 0.95, 1.0], // White stamped plate
+    );
+    // Lower rear bumper apron connecting down to carbon diffuser
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-half_w * 0.85, 0.32, -half_l),
+        Vec3::new(half_w * 0.85, 0.32, -half_l),
+        Vec3::new(0.80, 0.44, -half_l + 0.015),
+        Vec3::new(-0.80, 0.44, -half_l + 0.015),
+        -Vec3::Z,
+        AutomotivePalette::APEX_CHERRY_RED,
+    );
+
+    // 1k. Aerodynamic Side Mirrors (Mounted on Doors)
     for sign in [-1.0f32, 1.0f32] {
         let mir_x = sign * 0.88;
         let mir_stalk_x = sign * 0.82;
@@ -1204,37 +1347,38 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
     });
 
     // -------------------------------------------------------------------------
-    // 6. Elevated Aerodynamic GT Rear Wing / Spoiler
+    // 6. Elevated Aerodynamic GT Rear Wing / Spoiler (3D Solid Carbon Geometry)
     // -------------------------------------------------------------------------
     let mut spoiler_mesh = ChunkMesh::default();
     let wing_z = -1.95;
     let wing_y = 1.05;
     let wing_span = 0.85;
 
-    // Dual carbon fiber mounting stanchions
+    // Dual 3D solid carbon fiber mounting stanchions (with authentic thickness)
     for sign in [-1.0f32, 1.0f32] {
         let sx = sign * 0.42;
-        add_quad(
+        add_box_at(
             &mut spoiler_mesh,
-            Vec3::new(sx, 0.82, wing_z + 0.05),
-            Vec3::new(sx, 0.82, wing_z - 0.05),
-            Vec3::new(sx, wing_y, wing_z - 0.05),
-            Vec3::new(sx, wing_y, wing_z + 0.05),
-            Vec3::X,
+            Vec3::new(sx, (0.82 + wing_y) * 0.5, wing_z),
+            Vec3::new(0.02, (wing_y - 0.82) * 0.5, 0.07),
             AutomotivePalette::CARBON_FIBER,
         );
     }
-    // Main airfoil wing element
-    add_quad(
+    // Main 3D enclosed carbon fiber airfoil wing element
+    add_box_at(
         &mut spoiler_mesh,
-        Vec3::new(-wing_span, wing_y, wing_z + 0.12),
-        Vec3::new(wing_span, wing_y, wing_z + 0.12),
-        Vec3::new(wing_span, wing_y + 0.03, wing_z - 0.12),
-        Vec3::new(-wing_span, wing_y + 0.03, wing_z - 0.12),
-        Vec3::Y,
+        Vec3::new(0.0, wing_y + 0.015, wing_z),
+        Vec3::new(wing_span, 0.018, 0.13),
         AutomotivePalette::CARBON_FIBER,
     );
-    // Endplates
+    // Trailing edge Gurney flap lip for high aerodynamic downforce
+    add_box_at(
+        &mut spoiler_mesh,
+        Vec3::new(0.0, wing_y + 0.035, wing_z - 0.125),
+        Vec3::new(wing_span, 0.015, 0.01),
+        AutomotivePalette::CARBON_FIBER,
+    );
+    // Dual 3D aerodynamic endplates
     for sign in [-1.0f32, 1.0f32] {
         let ex = sign * wing_span;
         add_box_at(
@@ -1261,15 +1405,15 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
     });
 
     // -------------------------------------------------------------------------
-    // 7. Quad Polished Stainless Steel Exhaust System
+    // 7. Quad Polished Stainless Steel Exhaust System (Longitudinal Z-Axis)
     // -------------------------------------------------------------------------
     let mut exhaust_mesh = ChunkMesh::default();
     for ex_x in [-0.72, -0.60, 0.60, 0.72] {
-        add_cylinder_x(
+        add_cylinder_z(
             &mut exhaust_mesh,
-            Vec3::new(ex_x, 0.26, -half_l - 0.04),
+            Vec3::new(ex_x, 0.28, -half_l + 0.01),
             0.045,
-            0.02,
+            0.05,
             12,
             AutomotivePalette::POLISHED_CHROME,
         );
@@ -1285,6 +1429,53 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
             metallic: 0.98,
             roughness: 0.08,
             emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 8. Dynamic Amber Turn Signal Indicator Modules (Front & Rear Clusters)
+    // -------------------------------------------------------------------------
+    let mut turn_signal_mesh = ChunkMesh::default();
+    // Front amber indicator modules integrated into outer headlight brows
+    for sign in [-1.0f32, 1.0f32] {
+        let tx = sign * 0.78;
+        let ty = 0.52;
+        let tz = half_l - 0.13;
+        add_quad(
+            &mut turn_signal_mesh,
+            Vec3::new(tx - sign * 0.03, ty - 0.035, tz),
+            Vec3::new(tx + sign * 0.03, ty - 0.035, tz - 0.04),
+            Vec3::new(tx + sign * 0.03, ty + 0.035, tz - 0.04),
+            Vec3::new(tx - sign * 0.03, ty + 0.035, tz),
+            Vec3::Z,
+            AutomotivePalette::TURN_SIGNAL_AMBER,
+        );
+    }
+    // Rear amber indicator modules integrated into outer taillight bar
+    for sign in [-1.0f32, 1.0f32] {
+        let rx = sign * 0.72;
+        add_quad(
+            &mut turn_signal_mesh,
+            Vec3::new(rx - 0.04, 0.74, -half_l + 0.018),
+            Vec3::new(rx + 0.04, 0.74, -half_l + 0.018),
+            Vec3::new(rx + 0.04, 0.79, -half_l + 0.018),
+            Vec3::new(rx - 0.04, 0.79, -half_l + 0.018),
+            -Vec3::Z,
+            AutomotivePalette::TURN_SIGNAL_AMBER,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "TurnSignals".into(),
+        submesh_type: VehicleSubmeshType::TurnSignals,
+        mesh: turn_signal_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TURN_SIGNAL_AMBER,
+            metallic: 0.10,
+            roughness: 0.10,
+            emissive: [1.0, 0.65, 0.05],
             alpha_mode: VehicleAlphaMode::Opaque,
         },
     });
