@@ -56,6 +56,16 @@ pub struct VehicleMeshParams {
     pub wheel_spin_angle: f32,
     pub wheel_compressions: [f32; 4],
     pub lod: VehicleLodLevel,
+    /// Passenger door opening animation ratio [0.0 = closed, 1.0 = fully open].
+    pub door_open_ratio: f32,
+    /// Front and rear railway truck / bogie yaw articulation angles [rad].
+    pub bogie_angles: [f32; 2],
+    /// Propeller or turbofan fan blade rotation angle [rad].
+    pub propeller_angle: f32,
+    /// Aircraft flight control surfaces: [elevator pitch, aileron roll, rudder yaw] [rad].
+    pub control_surfaces: [f32; 3],
+    /// Motorcycle dynamic cornering bank / roll lean angle [rad].
+    pub motorcycle_lean_angle: f32,
 }
 
 impl Default for VehicleMeshParams {
@@ -73,97 +83,36 @@ impl Default for VehicleMeshParams {
             wheel_spin_angle: 0.0,
             wheel_compressions: [0.0; 4],
             lod: VehicleLodLevel::Lod0High,
+            door_open_ratio: 0.0,
+            bogie_angles: [0.0, 0.0],
+            propeller_angle: 0.0,
+            control_surfaces: [0.0, 0.0, 0.0],
+            motorcycle_lean_angle: 0.0,
         }
     }
 }
 
 /// Generates a complete 3D ChunkMesh for a vehicle using certified production models
-/// or multimodal specialized procedural models.
+/// and multimodal physical animations.
 pub fn generate_vehicle_mesh(params: &VehicleMeshParams) -> ChunkMesh {
-    match params.vehicle_type {
-        VehicleVisualType::SportsCoupe
-        | VehicleVisualType::Sedan
-        | VehicleVisualType::Suv
-        | VehicleVisualType::Taxi
-        | VehicleVisualType::TransitBus
-        | VehicleVisualType::Motorcycle => {
-            let model = get_certified_vehicle_model(params.vehicle_type, params.lod);
-            model.compose_world_mesh(
-                params.position,
-                params.orientation,
-                Some(params.color),
-                params.wheel_steer_angle,
-                params.wheel_spin_angle,
-                params.wheel_compressions,
-                params.headlights_on,
-                params.brake_lights_on,
-                params.reverse_lights_on,
-            )
-        }
-        VehicleVisualType::HeavyTruck => {
-            let model = get_certified_vehicle_model(VehicleVisualType::HeavyTruck, params.lod);
-            let mut mesh = model.compose_world_mesh(
-                params.position,
-                params.orientation,
-                Some(params.color),
-                params.wheel_steer_angle,
-                params.wheel_spin_angle,
-                params.wheel_compressions,
-                params.headlights_on,
-                params.brake_lights_on,
-                params.reverse_lights_on,
-            );
-
-            // Articulated semi freight trailer
-            let trailer_l = 8.5;
-            let trailer_w = 2.45;
-            let trailer_h = 2.4;
-            let hitch_z = 0.6;
-            let trailer_rot = Quat::from_rotation_y(params.trailer_angle);
-            let trailer_center = Vec3::new(0.0, 0.50 + trailer_h * 0.5, hitch_z)
-                + trailer_rot.mul_vec3(Vec3::new(0.0, 0.0, -trailer_l * 0.5));
-            add_oriented_box(
-                &mut mesh,
-                params,
-                trailer_center,
-                trailer_rot,
-                Vec3::new(trailer_w * 0.5, trailer_h * 0.5, trailer_l * 0.5),
-                [0.85, 0.88, 0.92, 1.0], // Clean white freight container
-            );
-
-            // Trailer rear wheels (dual bogie axles at tail of trailer)
-            let trailer_axle_z1 = trailer_center
-                + trailer_rot.mul_vec3(Vec3::new(0.0, -trailer_h * 0.5 + 0.35, -trailer_l * 0.35));
-            let trailer_axle_z2 = trailer_center
-                + trailer_rot.mul_vec3(Vec3::new(0.0, -trailer_h * 0.5 + 0.35, -trailer_l * 0.45));
-            let wheel_rubber = [0.12, 0.12, 0.12, 1.0];
-            for axle_pos in [trailer_axle_z1, trailer_axle_z2] {
-                add_oriented_box(
-                    &mut mesh,
-                    params,
-                    axle_pos + trailer_rot.mul_vec3(Vec3::new(-trailer_w * 0.5, 0.0, 0.0)),
-                    trailer_rot,
-                    Vec3::new(0.12, 0.35, 0.35),
-                    wheel_rubber,
-                );
-                add_oriented_box(
-                    &mut mesh,
-                    params,
-                    axle_pos + trailer_rot.mul_vec3(Vec3::new(trailer_w * 0.5, 0.0, 0.0)),
-                    trailer_rot,
-                    Vec3::new(0.12, 0.35, 0.35),
-                    wheel_rubber,
-                );
-            }
-
-            mesh
-        }
-        VehicleVisualType::TrainLocomotive => generate_train_locomotive_mesh(params),
-        VehicleVisualType::TrainWagon => generate_train_wagon_mesh(params),
-        VehicleVisualType::MarineVessel => generate_marine_vessel_mesh(params),
-        VehicleVisualType::CommercialAirliner => generate_commercial_airliner_mesh(params),
-        VehicleVisualType::GeneralAviation => generate_general_aviation_mesh(params),
-    }
+    let model = get_certified_vehicle_model(params.vehicle_type, params.lod);
+    model.compose_multimodal_world_mesh(
+        params.position,
+        params.orientation,
+        Some(params.color),
+        params.wheel_steer_angle,
+        params.wheel_spin_angle,
+        params.wheel_compressions,
+        params.headlights_on,
+        params.brake_lights_on,
+        params.reverse_lights_on,
+        params.door_open_ratio,
+        params.bogie_angles,
+        params.propeller_angle,
+        params.control_surfaces,
+        params.motorcycle_lean_angle,
+        params.trailer_angle,
+    )
 }
 
 /// Development fallback generator creating coarse primitive boxes.

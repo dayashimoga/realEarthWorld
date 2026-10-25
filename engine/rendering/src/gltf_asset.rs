@@ -96,12 +96,73 @@ pub enum VehicleSubmeshType {
     AerodynamicSpoiler,
     /// Soft ambient occlusion contact shadow plane beneath tires.
     ContactShadow,
+    /// Front railway truck / bogie assembly articulating with track curves.
+    TrainBogieFront,
+    /// Rear railway truck / bogie assembly articulating with track curves.
+    TrainBogieRear,
+    /// Flanged steel railway wheelsets rotating with track linear speed.
+    TrainWheelset,
+    /// Railway AAR Type E knuckle couplers and end draft gear.
+    TrainCoupler,
+    /// Transit bus front boarding doors animating open/closed.
+    BusDoorFront,
+    /// Transit bus center exit doors animating open/closed.
+    BusDoorCenter,
+    /// Interior passenger seating rows in transit buses and rail coaches.
+    InteriorPassengerSeats,
+    /// Articulated highway freight trailer.
+    TruckArticulatedTrailer,
+    /// Aircraft propulsion propeller.
+    AircraftPropeller,
+    /// Aircraft high-bypass turbofan intake fan blades.
+    AircraftTurbofanFan,
+    /// Aircraft aerodynamic control surfaces (elevators, ailerons, rudder).
+    AircraftControlSurface,
+    /// Marine vessel high-velocity waterjet propulsion nozzles.
+    MarineWaterjets,
+    /// Marine radar scanner mast rotating in azimuth.
+    MarineRadarMast,
+    /// Motorcycle frame, engine, and rider banking dynamically into turns.
+    MotorcycleLeanBody,
 }
 
 impl VehicleSubmeshType {
     pub fn from_node_name(name: &str) -> Self {
         let n = name.to_lowercase();
-        if n.contains("wheel_fl") || n.contains("front_left_wheel") || n.contains("wheel.fl") {
+        if n.contains("bogie_f") || n.contains("front_bogie") || n.contains("truck_front") {
+            Self::TrainBogieFront
+        } else if n.contains("bogie_r") || n.contains("rear_bogie") || n.contains("truck_rear") {
+            Self::TrainBogieRear
+        } else if n.contains("wheelset") || n.contains("train_wheel") || n.contains("rail_wheel") {
+            Self::TrainWheelset
+        } else if n.contains("coupler") || n.contains("knuckle") {
+            Self::TrainCoupler
+        } else if n.contains("door_front") || n.contains("bus_door_f") {
+            Self::BusDoorFront
+        } else if n.contains("door_center") || n.contains("bus_door_c") || n.contains("exit_door") {
+            Self::BusDoorCenter
+        } else if n.contains("passenger_seat") || n.contains("saloon_seat") {
+            Self::InteriorPassengerSeats
+        } else if n.contains("propeller") || n.contains("airscrew") {
+            Self::AircraftPropeller
+        } else if n.contains("turbofan") || n.contains("jet_fan") || n.contains("engine_fan") {
+            Self::AircraftTurbofanFan
+        } else if n.contains("aileron")
+            || n.contains("elevator")
+            || n.contains("rudder")
+            || n.contains("control_surface")
+        {
+            Self::AircraftControlSurface
+        } else if n.contains("waterjet") || n.contains("propulsion") {
+            Self::MarineWaterjets
+        } else if n.contains("radar") || n.contains("mast") {
+            Self::MarineRadarMast
+        } else if n.contains("trailer") || n.contains("semitrailer") {
+            Self::TruckArticulatedTrailer
+        } else if n.contains("bike_body") || n.contains("motorcycle_frame") {
+            Self::MotorcycleLeanBody
+        } else if n.contains("wheel_fl") || n.contains("front_left_wheel") || n.contains("wheel.fl")
+        {
             Self::WheelFrontLeft
         } else if n.contains("wheel_fr")
             || n.contains("front_right_wheel")
@@ -255,6 +316,46 @@ impl LoadedVehicleModel {
         brake_lights_on: bool,
         reverse_lights_on: bool,
     ) -> ChunkMesh {
+        self.compose_multimodal_world_mesh(
+            world_pos,
+            world_orient,
+            override_paint_color,
+            wheel_steer_angle,
+            wheel_spin_angle,
+            wheel_compressions,
+            headlights_on,
+            brake_lights_on,
+            reverse_lights_on,
+            0.0,
+            [0.0, 0.0],
+            0.0,
+            [0.0, 0.0, 0.0],
+            0.0,
+            0.0,
+        )
+    }
+
+    /// Composes a rich multimodal articulated `ChunkMesh` with physics-driven animations:
+    /// wheels, bogies, doors, propellers, control surfaces, trailers, and motorcycle banking.
+    #[allow(clippy::too_many_arguments)]
+    pub fn compose_multimodal_world_mesh(
+        &self,
+        world_pos: Vec3,
+        world_orient: Quat,
+        override_paint_color: Option<[f32; 4]>,
+        wheel_steer_angle: f32,
+        wheel_spin_angle: f32,
+        wheel_compressions: [f32; 4],
+        headlights_on: bool,
+        brake_lights_on: bool,
+        reverse_lights_on: bool,
+        door_open_ratio: f32,
+        bogie_angles: [f32; 2],
+        propeller_spin_angle: f32,
+        control_surfaces: [f32; 3], // [elevator, aileron, rudder]
+        motorcycle_lean_angle: f32,
+        trailer_angle: f32,
+    ) -> ChunkMesh {
         let mut combined_mesh = ChunkMesh::default();
         let world_rot_mat = Mat3::from_quat(world_orient);
 
@@ -290,6 +391,54 @@ impl LoadedVehicleModel {
                     let offset = Vec3::new(0.0, comp, 0.0);
                     let roll_rot = Quat::from_rotation_x(wheel_spin_angle);
                     (offset, roll_rot, None)
+                }
+                VehicleSubmeshType::TrainBogieFront => {
+                    let yaw_rot = Quat::from_rotation_y(bogie_angles[0]);
+                    (Vec3::ZERO, yaw_rot, None)
+                }
+                VehicleSubmeshType::TrainBogieRear => {
+                    let yaw_rot = Quat::from_rotation_y(bogie_angles[1]);
+                    (Vec3::ZERO, yaw_rot, None)
+                }
+                VehicleSubmeshType::TrainWheelset => {
+                    let roll_rot = Quat::from_rotation_x(wheel_spin_angle);
+                    (Vec3::ZERO, roll_rot, None)
+                }
+                VehicleSubmeshType::BusDoorFront => {
+                    let open_offset =
+                        Vec3::new(-0.25 * door_open_ratio, 0.0, 0.12 * door_open_ratio);
+                    let open_rot = Quat::from_rotation_y(door_open_ratio * 0.35);
+                    (open_offset, open_rot, None)
+                }
+                VehicleSubmeshType::BusDoorCenter => {
+                    let open_offset =
+                        Vec3::new(-0.25 * door_open_ratio, 0.0, -0.12 * door_open_ratio);
+                    let open_rot = Quat::from_rotation_y(-door_open_ratio * 0.35);
+                    (open_offset, open_rot, None)
+                }
+                VehicleSubmeshType::TruckArticulatedTrailer => {
+                    let trailer_rot = Quat::from_rotation_y(trailer_angle);
+                    (Vec3::ZERO, trailer_rot, None)
+                }
+                VehicleSubmeshType::AircraftPropeller => {
+                    let spin_rot = Quat::from_rotation_z(propeller_spin_angle);
+                    (Vec3::ZERO, spin_rot, None)
+                }
+                VehicleSubmeshType::AircraftTurbofanFan => {
+                    let spin_rot = Quat::from_rotation_z(propeller_spin_angle * 1.5);
+                    (Vec3::ZERO, spin_rot, None)
+                }
+                VehicleSubmeshType::AircraftControlSurface => {
+                    let pitch_rot = Quat::from_rotation_x(control_surfaces[0]);
+                    (Vec3::ZERO, pitch_rot, None)
+                }
+                VehicleSubmeshType::MarineRadarMast => {
+                    let scan_rot = Quat::from_rotation_y(propeller_spin_angle * 0.20);
+                    (Vec3::ZERO, scan_rot, None)
+                }
+                VehicleSubmeshType::MotorcycleLeanBody => {
+                    let lean_rot = Quat::from_rotation_z(motorcycle_lean_angle);
+                    (Vec3::ZERO, lean_rot, None)
                 }
                 VehicleSubmeshType::InteriorSteeringWheel => {
                     let steer_rot = Quat::from_rotation_z(-wheel_steer_angle * 1.5);

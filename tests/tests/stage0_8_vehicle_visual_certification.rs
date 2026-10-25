@@ -534,6 +534,7 @@ fn test_stage0_8_6_authoritative_simulation_invariance_under_rendering() {
                 car.wheels[3].compression,
             ],
             lod: VehicleLodLevel::Lod0High,
+            ..Default::default()
         });
 
         // Verify visual output is valid

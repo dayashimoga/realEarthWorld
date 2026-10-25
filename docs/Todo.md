@@ -1145,6 +1145,42 @@
   - [x] Zero diffs on `cargo fmt --check`.
   - [x] 100% tests passing across workspace.
 
+## STAGE 1.6-R: Premium Multimodal Vehicle Visual & Animation Overhaul (Completed)
+- [x] Phase 1.6-R.1: Multimodal Vehicle Fleet 3D Modeling (Zero Placeholder Shapes)
+  - [x] Redesigned CityLine 40ft low-floor transit bus: curved aerodynamic windshield, cabin aisle, passenger seating rows, grab poles, amber LED destination matrix, rooftop HVAC pods, bi-fold doors.
+  - [x] Redesigned Pacific Locomotive: authentic North American diesel-electric wide-nose safety cab, twin 2-axle articulated bogies with flanged steel wheelsets conforming to standard 1,435mm gauge, AAR knuckle couplers, undercarriage diesel fuel tank, and cyclops headlight.
+  - [x] Redesigned Bombardier BiLevel commuter rail coach: octagonal carbody, dual-level tinted passenger windows, gangway diaphragms, and articulated railway bogies.
+  - [x] Redesigned TransContinental Class 8 Semi with articulated 53ft dry van freight trailer pivoting on fifth-wheel kingpin plate.
+  - [x] Modeled Golden Gate passenger ferry: twin catamaran sponsons, wave-piercing knife bows, observation bridge, stern waterjets, and rotating radar scanner mast.
+  - [x] Modeled SkyCourier B737 narrow-body airliner: swept wings, winglets, and twin underwing high-bypass turbofans with spinning titanium fan blades.
+  - [x] Modeled Skyhawk C172 general aviation aircraft: high wings, lift struts, tricycle gear, and spinning nose propeller.
+  - [x] Modeled HyperSport RR-1000 motorcycle: trellis frame, monoshock, twin floating front discs, and dynamic cornering roll lean body.
+- [x] Phase 1.6-R.2: Semantic Submesh Architecture & glTF 2.0 / GLB Pipeline
+  - [x] Extended `VehicleSubmeshType` with `TrainBogieFront`, `TrainBogieRear`, `TrainWheelset`, `TrainCoupler`, `BusDoorFront`, `BusDoorCenter`, `InteriorPassengerSeats`, `TruckArticulatedTrailer`, `AircraftPropeller`, `AircraftTurbofanFan`, `AircraftControlSurface`, `MarineWaterjets`, `MarineRadarMast`, and `MotorcycleLeanBody`.
+  - [x] Updated semantic node parser `from_node_name` for standard glTF node hierarchy matching.
+  - [x] Implemented `LoadedVehicleModel::compose_multimodal_world_mesh` with independent articulation around submesh model-space pivots.
+  - [x] Implemented batch exporter `export_all_certified_models_to_glb_directory` generating 16 valid binary `.glb` files with PBR materials.
+- [x] Phase 1.6-R.3: Physical Kinematic & Dynamic Animation Integration
+  - [x] Connected wheel spin ($\omega = v / r$) and Ackermann steering rack articulation.
+  - [x] Connected motorcycle cornering roll lean based on lateral acceleration.
+  - [x] Connected transit bus bi-fold doors opening when stopped at stations ($< 1\text{ km/h}$).
+  - [x] Connected railway bogie independent yaw articulation for negotiating track curves.
+  - [x] Connected semitrailer yaw articulation on fifth-wheel hitch.
+  - [x] Connected continuous angular spin for aircraft propellers, turbofan blades, and marine radar masts.
+  - [x] Verified 100% authoritative physics invariance: rendering pipeline never alters vehicle simulation state.
+- [x] Phase 1.6-R.4: Multi-LOD Geometric Scaling & Polygon Budgets
+  - [x] Monotonic triangle reduction verified across LOD0 High, LOD1 Medium, and LOD2 Low.
+  - [x] All 10 models strictly adhere to real-time triangle budget caps (<= 5,000 LOD0, <= 2,000 LOD1, <= 1,000 LOD2).
+- [x] Phase 1.6-R.5: Master Certification Test Suite & Quality Gates
+  - [x] Authored `tests/tests/stage1_6_vehicle_visual_and_animation_certification.rs` (6/6 tests passing).
+  - [x] Authored ADR-0049 (`docs/adr/0049-stage-1-6-r-premium-multimodal-vehicle-visual-and-animation-overhaul.md`).
+  - [x] Authored Certification Report (`docs/reports/stage1_6_certification_report.md`).
+  - [x] Updated `assets/vehicles/LICENSE_ATTRIBUTION.md` with full fleet specs and Apache-2.0 / MIT licenses.
+  - [x] Updated `dist/certification_matrix.json` (52 requirements, 48 verified, 0 broken, 4 toolchain blocked).
+  - [x] Zero warnings on `cargo clippy --workspace --all-targets -- -D warnings`.
+  - [x] Zero diffs on `cargo fmt --check`.
+  - [x] 100% tests passing across workspace.
+
 
 
 

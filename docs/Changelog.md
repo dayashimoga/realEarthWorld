@@ -1780,6 +1780,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `dist/certification_matrix.json` (46 Requirements: 42 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
   - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
 
+## [0.1.6] - 2026-10-25
+### Added & Certified — STAGE 1.6-R: Premium Multimodal Vehicle Visual and Animation Overhaul
+- **Complete Multimodal Vehicle Fleet 3D Modeling (Zero Placeholder Shapes)**:
+  - Eliminated box-shaped placeholder models across transit buses, trains, trucks, motorcycles, aircraft, and ferries in favor of authentic, convincing modern designs.
+  - **CityLine 40ft Low-Floor Transit Bus**: Curved aerodynamic front windshield, amber destination display, cabin aisle with passenger seating rows, grab poles, dual bi-fold entrance/exit doors.
+  - **Pacific Diesel-Electric Locomotive**: Wide-nose safety cab, twin 2-axle articulated bogies with flanged steel wheelsets conforming to standard 1,435mm gauge, AAR knuckle couplers, undercarriage diesel fuel tank, and cyclops headlight.
+  - **Bombardier BiLevel Commuter Rail Coach**: Octagonal stainless steel carbody, dual-level tinted passenger windows, gangway diaphragms, and articulated railway bogies.
+  - **TransContinental Semi & 53ft Trailer**: Class 8 tractor with dual tandem drive axles, vertical chrome stacks, and articulated 53ft dry van semitrailer pivoting on fifth-wheel plate.
+  - **Golden Gate Passenger Ferry**: High-speed catamaran with twin sponsons, razor wave-piercing knife bows, observation bridge, stern waterjets, and rotating radar scanner mast.
+  - **SkyCourier B737 Airliner**: Narrow-body airliner with swept wings, winglets, and twin underwing turbofans with spinning titanium fan blades.
+  - **Skyhawk C172 Aircraft**: High-wing strut-braced monoplane with spinning nose propeller and tricycle landing gear.
+  - **HyperSport RR-1000 Superbike**: 1000cc superbike with trellis frame, monoshock, twin floating front discs, and cornering roll lean body.
+- **glTF 2.0 / GLB Binary Pipeline & Semantic Submeshes**:
+  - Extended `VehicleSubmeshType` in `engine/rendering/src/gltf_asset.rs` with semantic submesh types (`TrainBogieFront`, `TrainBogieRear`, `TrainWheelset`, `TrainCoupler`, `BusDoorFront`, `BusDoorCenter`, `InteriorPassengerSeats`, `TruckArticulatedTrailer`, `AircraftPropeller`, `AircraftTurbofanFan`, `AircraftControlSurface`, `MarineWaterjets`, `MarineRadarMast`, `MotorcycleLeanBody`).
+  - Implemented `LoadedVehicleModel::compose_multimodal_world_mesh` supporting per-submesh articulation around model-space pivots.
+  - Implemented batch exporter `export_all_certified_models_to_glb_directory` generating 16 binary `.glb` assets with PBR metallic/roughness materials, verified by `GltfParser::parse_glb`.
+- **Physical Kinematic & Dynamic Animation Systems**:
+  - Wheel spin ($\omega = v / r$) and Ackermann steering rack articulation with suspension compression.
+  - Dynamic motorcycle roll lean banking into turns up to 0.50 rad.
+  - Transit bus passenger bi-fold doors opening when stopped at stations ($< 1\text{ km/h}$).
+  - Railway bogies yawing independently to negotiate track curvature.
+  - Articulated semitrailer yawing around fifth-wheel hitch plate.
+  - Spinning aircraft propellers, turbofan blades, and rotating marine radar masts.
+  - Proved authoritative simulation invariance: zero drift or perturbation to underlying simulation physics.
+- **Multi-LOD Geometric Scaling & Triangle Budgets**:
+  - Verified monotonic triangle reduction across LOD0 High, LOD1 Medium, and LOD2 Low.
+  - All models adhere to strict budget caps ($\le 5,000$ LOD0, $\le 2,000$ LOD1, $\le 1,000$ LOD2).
+- **Master Certification Test Suite (`tests/tests/stage1_6_vehicle_visual_and_animation_certification.rs`)**:
+  - Authored comprehensive 6-part test suite (6/6 passed):
+    1. `test_stage1_6_1_certified_multimodal_vehicle_fleet_inventory`
+    2. `test_stage1_6_2_transit_bus_and_locomotive_visual_anatomy`
+    3. `test_stage1_6_3_physical_kinematic_and_dynamic_animation`
+    4. `test_stage1_6_4_multimodal_lod_scaling_and_budgets`
+    5. `test_stage1_6_5_gltf_glb_export_and_binary_roundtrip`
+    6. `test_stage1_6_6_authoritative_physics_simulation_invariance`
+- **Architecture & Certification Reports**:
+  - Authored ADR-0049 (`docs/adr/0049-stage-1-6-r-premium-multimodal-vehicle-visual-and-animation-overhaul.md`).
+  - Authored Certification Report (`docs/reports/stage1_6_certification_report.md`).
+  - Updated `assets/vehicles/LICENSE_ATTRIBUTION.md` with full fleet specifications and Apache-2.0 / MIT licenses.
+  - Updated `dist/certification_matrix.json` (52 Requirements: 48 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
+  - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
+
+
 
 
 

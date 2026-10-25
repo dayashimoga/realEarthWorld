@@ -1,16 +1,16 @@
 {
-  "SchemaVersion": "1.5.0",
-  "GeneratedAt": "2026-10-25T13:30:00Z",
-  "Stage": "STAGE 1.5-R — WINDOWS MOUSE AND COMPLETE UI INTERACTION REPAIR",
+  "SchemaVersion": "1.6.0",
+  "GeneratedAt": "2026-10-25T14:00:00Z",
+  "Stage": "STAGE 1.6-R — PREMIUM MULTIMODAL VEHICLE VISUAL AND ANIMATION OVERHAUL",
   "HostEnvironment": {
     "OperatingSystem": "Windows 11 x86_64",
     "RustToolchain": "stable-x86_64-pc-windows-msvc",
     "GraphicsAdapter": "DirectX 12 / Vulkan / wgpu",
-    "GitBranch": "feature/stage0_9_road_terrain_spatial_integrity"
+    "GitBranch": "main"
   },
   "StatusSummary": {
-    "TotalRequirements": 46,
-    "VerifiedCount": 42,
+    "TotalRequirements": 52,
+    "VerifiedCount": 48,
     "BlockedCount": 4,
     "BrokenCount": 0,
     "MissingCount": 0,
@@ -337,6 +337,48 @@
       "Category": "Windows Mouse and UI Interaction Repair",
       "Requirement": "Safety input purging on focus loss, window occlusion, and cursor departure",
       "Evidence": "Focused(false), Occluded(true), minimization, and CursorLeft immediately purge pressed keys, mouse drag active flags, and cursor coordinates",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-01",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "Certified multimodal vehicle fleet inventory across all 12 visual classes",
+      "Evidence": "10 distinct high-fidelity models (Apex GT, Sedan, SUV, Taxi, Semi, Transit Bus, Motorcycle, Pacific Loco, BiLevel Coach, Ferry, B737, C172) with authentic dimensions and zero box placeholders",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-02",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "Authentic transit bus visual anatomy (curved windscreen, interior, passenger seats, bi-fold doors, destination display, HVAC pods)",
+      "Evidence": "CityLine 40ft low-floor transit bus features aerodynamic front fascia, tinted panoramic glass, cabin aisle with seating rows, grab poles, and dual bi-fold doors",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-03",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "North American diesel-electric locomotive and passenger commuter coach visual anatomy",
+      "Evidence": "Pacific Locomotive features wide-nose safety cab, twin articulated 2-axle bogies with flanged steel wheelsets, knuckle couplers, undercarriage fuel tank, and Bombardier BiLevel coaches with octagonal carbody",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-04",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "Physical kinematic and dynamic animation architecture",
+      "Evidence": "Wheel spin (v = omega * r), Ackermann steering articulation, dynamic motorcycle cornering roll lean, bus passenger doors opening at stops, railway bogies yawing with track curvature, and spinning propellers/fans",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-05",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "Multi-LOD geometric scaling and polygon budget compliance",
+      "Evidence": "LOD0 High, LOD1 Medium, and LOD2 Low exhibit monotonic triangle reduction adhering to strict real-time budget caps (<=5,000 LOD0, <=2,000 LOD1, <=1,000 LOD2)",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "VEH-06",
+      "Category": "Multimodal Vehicle Visual and Animation Overhaul",
+      "Requirement": "Khronos glTF 2.0 / GLB binary roundtrip export and PBR material fidelity",
+      "Evidence": "Batch exporter generates valid binary GLB assets with standard semantic node names, PBR metallic/roughness materials, and lossless re-parsing via GltfParser::parse_glb",
       "Status": "VERIFIED"
     }
   ]

@@ -5347,6 +5347,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     self.vehicle.wheels[3].compression,
                                 ],
                                 lod: VehicleLodLevel::Lod0High,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&player_mesh);
                         }
@@ -5364,10 +5365,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
                                 lod: VehicleLodLevel::Lod0High,
+                                motorcycle_lean_angle: self.motorcycle.lean_angle,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&bike_mesh);
                         }
                         ActiveTransportMode::TransitBus => {
+                            let door_ratio = if self.transit_bus.speed_kph < 1.0 {
+                                0.85
+                            } else {
+                                0.0
+                            };
                             let bus_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                                 position: self.transit_bus.position,
                                 orientation: self.transit_bus.orientation,
@@ -5381,6 +5389,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
                                 lod: VehicleLodLevel::Lod0High,
+                                door_open_ratio: door_ratio,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&bus_mesh);
                         }
@@ -5398,6 +5408,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
                                 lod: VehicleLodLevel::Lod0High,
+                                ..Default::default()
                             });
                             fleet_mesh.append(&truck_mesh);
                         }
@@ -5526,6 +5537,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                         wheel_spin_angle: (agent.speed_ms * 2.5) % (2.0 * std::f32::consts::PI),
                         wheel_compressions: [0.0; 4],
                         lod: VehicleLodLevel::Lod1Medium,
+                        ..Default::default()
                     });
                     fleet_mesh.append(&t_mesh);
                 }

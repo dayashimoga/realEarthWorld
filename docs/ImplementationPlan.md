@@ -1725,6 +1725,39 @@
   - Zero deviations under `cargo fmt --check`.
   - 100% test pass rate across entire workspace.
 
+## STAGE 1.6-R: Premium Multimodal Vehicle Visual & Animation Overhaul (Completed & Certified)
+- [x] Phase 1.6-R.1 — Asset Quality, Audit, and Fleet Modeling:
+  - Audited all vehicle meshes and model catalogs in `engine/rendering/src/vehicle_models.rs`.
+  - Replaced box-shaped placeholder models across transit buses, trains, trucks, motorcycles, aircraft, and ferries with high-fidelity, convincing modern designs.
+  - Authentic Low-Floor Transit Bus: Curved aerodynamic front windshield, amber destination display, cabin aisle with passenger seating rows, grab poles, dual bi-fold entrance/exit doors.
+  - Authentic Pacific Locomotive & Rail Cars: Wide-nose diesel-electric safety cab, twin 2-axle articulated bogies with flanged steel wheelsets conforming to standard 1,435mm gauge, AAR knuckle couplers, undercarriage diesel fuel tank, and Bombardier BiLevel commuter coaches with octagonal carbody and dual-level windows.
+  - Articulated Class 8 Semi: Tractor with dual tandem drive axles, vertical chrome stacks, and 53ft dry van trailer pivoting on fifth-wheel plate.
+  - Multi-Transport Fleet: High-speed catamaran ferry with wave-piercing bows and rotating radar mast; Boeing 737 narrow-body airliner with spinning turbofan blades; Cessna 172 high-wing monoplane with spinning nose propeller; HyperSport 1000cc superbike with trellis frame and cornering roll lean body.
+- [x] Phase 1.6-R.2 — Versioned glTF 2.0 / GLB Pipeline & Semantic Submeshes:
+  - Extended `VehicleSubmeshType` in `engine/rendering/src/gltf_asset.rs` with semantic submesh types (`TrainBogieFront`, `TrainBogieRear`, `TrainWheelset`, `TrainCoupler`, `BusDoorFront`, `BusDoorCenter`, `InteriorPassengerSeats`, `TruckArticulatedTrailer`, `AircraftPropeller`, `AircraftTurbofanFan`, `AircraftControlSurface`, `MarineWaterjets`, `MarineRadarMast`, `MotorcycleLeanBody`).
+  - Implemented `LoadedVehicleModel::compose_multimodal_world_mesh` supporting per-submesh articulation around model-space pivots.
+  - Implemented batch exporter `export_all_certified_models_to_glb_directory` generating 16 binary `.glb` assets with PBR metallic/roughness materials, verified by `GltfParser::parse_glb`.
+- [x] Phase 1.6-R.3 — Physical Kinematic & Dynamic Animation Systems:
+  - Wheel spin ($\omega = v / r$) and Ackermann steering rack articulation with suspension compression.
+  - Dynamic motorcycle roll lean banking into turns up to 0.50 rad.
+  - Transit bus passenger bi-fold doors opening when stopped at stations ($< 1\text{ km/h}$).
+  - Railway bogies yawing independently to negotiate track curvature.
+  - Articulated semitrailer yawing around fifth-wheel hitch plate.
+  - Spinning aircraft propellers, turbofan blades, and rotating marine radar masts.
+  - Proved authoritative simulation invariance: zero drift or perturbation to underlying simulation physics.
+- [x] Phase 1.6-R.4 — Multi-LOD Geometric Scaling & Triangle Budgets:
+  - Verified monotonic triangle reduction across LOD0 High, LOD1 Medium, and LOD2 Low.
+  - All models adhere to strict budget caps ($\le 5,000$ LOD0, $\le 2,000$ LOD1, $\le 1,000$ LOD2).
+- [x] Phase 1.6-R.5 — Master Certification Test Suite & Quality Gates:
+  - Authored `tests/tests/stage1_6_vehicle_visual_and_animation_certification.rs` (6/6 tests passing).
+  - Authored ADR-0049 (`docs/adr/0049-stage-1-6-r-premium-multimodal-vehicle-visual-and-animation-overhaul.md`).
+  - Authored Certification Report (`docs/reports/stage1_6_certification_report.md`).
+  - Updated `assets/vehicles/LICENSE_ATTRIBUTION.md` with complete fleet specifications and licenses.
+  - Updated `dist/certification_matrix.json` (52 requirements, 48 verified, 0 broken, 4 toolchain blocked).
+  - Passed `cargo clippy --workspace --all-targets -- -D warnings` with zero warnings.
+  - Passed `cargo fmt --check` with zero discrepancies.
+  - Passed 100% of tests across entire workspace.
+
 
 
 
