@@ -122,8 +122,12 @@ impl MotorcycleModel {
             return;
         }
 
-        let speed_mps = self.linear_velocity.length();
-        self.speed_kph = speed_mps * 3.6;
+        let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
+        let rot_mat = Mat3::from_quat(Quat::from_rotation_y(current_yaw));
+        let forward = rot_mat.col(2);
+        let forward_speed = self.linear_velocity.dot(forward);
+        let current_speed = forward_speed.abs();
+        self.speed_kph = current_speed * 3.6;
 
         // Steering control with high agility
         let target_steer = inputs.steer * 0.45; // ~26 degrees max steer
@@ -131,7 +135,11 @@ impl MotorcycleModel {
 
         // Calculate dynamic equilibrium lean angle: tan(phi) = v^2 / (R * g)
         // With curvature kappa ~ steer_angle / wheelbase:
-        let lateral_accel = speed_mps * speed_mps * (self.steer_angle / self.wheelbase);
+        let lateral_accel = if forward_speed > 0.5 {
+            forward_speed * forward_speed * (self.steer_angle / self.wheelbase)
+        } else {
+            0.0
+        };
         let target_lean = (lateral_accel / 9.81)
             .atan()
             .clamp(-self.max_lean_angle, self.max_lean_angle);
@@ -145,7 +153,7 @@ impl MotorcycleModel {
         self.lean_angle += self.lean_velocity * dt;
 
         // Check if low-speed crash / dropped bike (< 3 km/h with high lean)
-        if speed_mps < 1.0 && self.lean_angle.abs() > 0.45 {
+        if current_speed < 1.0 && self.lean_angle.abs() > 0.45 {
             self.is_crashed = true;
             return;
         }
@@ -155,12 +163,15 @@ impl MotorcycleModel {
         let camber_force = self.lean_angle * camber_thrust_coeff;
 
         // Yaw rotation from steering and camber thrust
-        let yaw_rate = (speed_mps * (self.steer_angle / self.wheelbase))
-            + (camber_force / (self.mass_kg * (speed_mps.max(1.0))));
+        let yaw_rate = (forward_speed * (self.steer_angle / self.wheelbase))
+            + (if forward_speed.abs() > 0.5 {
+                camber_force / (self.mass_kg * forward_speed.abs())
+            } else {
+                0.0
+            });
         let yaw_delta = yaw_rate * dt;
 
         // Update orientation: composite of yaw heading and roll lean
-        let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
         let new_yaw = current_yaw + yaw_delta;
         self.orientation = Quat::from_rotation_y(new_yaw) * Quat::from_rotation_z(-self.lean_angle);
 
@@ -168,19 +179,42 @@ impl MotorcycleModel {
         let rot_mat = Mat3::from_quat(Quat::from_rotation_y(new_yaw));
         let forward = rot_mat.col(2);
 
-        let drive_force = if inputs.gear_mode == TransmissionMode::Reverse {
-            -self.engine_force * 0.2 * inputs.throttle
-        } else {
-            self.engine_force * inputs.throttle
+        let drive_force = match inputs.gear_mode {
+            TransmissionMode::Reverse => -self.engine_force * 0.35 * inputs.throttle,
+            TransmissionMode::Drive => self.engine_force * inputs.throttle,
+            TransmissionMode::Neutral | TransmissionMode::Park => 0.0,
         };
 
         let brake_force = inputs.brake * 3800.0; // High stopping power per kg
-        let drag_force = 0.5 * 1.225 * 0.45 * 0.7 * speed_mps * speed_mps; // Aero drag
-        let net_force_forward = drive_force - (speed_mps.signum() * (brake_force + drag_force));
+        let drag_force = 0.5 * 1.225 * 0.45 * 0.7 * forward_speed * forward_speed.abs(); // Aero drag
+        let rolling_res = self.mass_kg * 9.81 * 0.015 * forward_speed.signum();
+        let total_resistance = if current_speed > 0.05 {
+            forward_speed.signum() * brake_force + drag_force + rolling_res
+        } else {
+            0.0
+        };
 
+        let net_force_forward = drive_force - total_resistance;
         let linear_accel = (net_force_forward / self.mass_kg).clamp(-12.0, 9.0);
-        let new_speed = (speed_mps + linear_accel * dt).max(0.0);
-        self.linear_velocity = forward * new_speed;
+        let mut new_forward_speed = forward_speed + linear_accel * dt;
+
+        // Standstill zero-crossing clamp under braking
+        if current_speed > 0.0
+            && (new_forward_speed.signum() != forward_speed.signum())
+            && inputs.throttle == 0.0
+        {
+            new_forward_speed = 0.0;
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park
+            || (inputs.brake > 0.3 && inputs.throttle == 0.0 && new_forward_speed.abs() < 0.25)
+            || (inputs.throttle == 0.0 && new_forward_speed.abs() < 0.05)
+        {
+            new_forward_speed = 0.0;
+        }
+
+        self.linear_velocity = forward * new_forward_speed;
+        self.speed_kph = new_forward_speed.abs() * 3.6;
         self.position += self.linear_velocity * dt;
 
         if inputs.throttle > 0.5 && self.speed_kph > 5.0 {
@@ -312,8 +346,12 @@ impl TransitBusModel {
             return;
         }
 
-        let speed_mps = self.linear_velocity.length();
-        self.speed_kph = speed_mps * 3.6;
+        let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
+        let rot = Mat3::from_quat(self.orientation);
+        let forward = rot.col(2);
+        let forward_speed = self.linear_velocity.dot(forward);
+        let current_speed = forward_speed.abs();
+        self.speed_kph = current_speed * 3.6;
 
         // Slower heavy-vehicle steering rate (~0.35 rad/s)
         let max_bus_steer = 0.55; // ~31 degrees
@@ -322,18 +360,17 @@ impl TransitBusModel {
         self.steer_angle += (target_steer - self.steer_angle) * (steer_rate * dt).min(1.0);
 
         // Heavy vehicle yaw rate with rear-axle pivot
-        let yaw_rate = speed_mps * (self.steer_angle / self.wheelbase);
+        let yaw_rate = forward_speed * (self.steer_angle / self.wheelbase);
         let yaw_delta = yaw_rate * dt;
 
         // Monitor lateral passenger acceleration: a_lat = v * omega
-        let lateral_g = (speed_mps * yaw_rate) / 9.81;
+        let lateral_g = (current_speed * yaw_rate.abs()) / 9.81;
         if lateral_g > 0.25 {
             // Rough bus turn: deduct passenger comfort
             self.passenger_comfort_rating =
                 (self.passenger_comfort_rating - (lateral_g * 0.1 * dt)).max(1.0);
         }
 
-        let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
         let new_yaw = current_yaw + yaw_delta;
         self.orientation = Quat::from_rotation_y(new_yaw);
 
@@ -341,10 +378,10 @@ impl TransitBusModel {
         let forward = rot.col(2);
 
         // Powertrain and air brake application
-        let drive_force = if inputs.gear_mode == TransmissionMode::Reverse {
-            -self.peak_engine_force * 0.3 * inputs.throttle
-        } else {
-            self.peak_engine_force * inputs.throttle
+        let drive_force = match inputs.gear_mode {
+            TransmissionMode::Reverse => -self.peak_engine_force * 0.35 * inputs.throttle,
+            TransmissionMode::Drive => self.peak_engine_force * inputs.throttle,
+            TransmissionMode::Neutral | TransmissionMode::Park => 0.0,
         };
 
         // Pneumatic air brakes
@@ -363,16 +400,36 @@ impl TransitBusModel {
             // Compressor recharge
         }
 
-        let aero_drag = 0.5 * 1.225 * 0.75 * 7.5 * speed_mps * speed_mps; // Large frontal area
-        let rolling_resistance = self.total_mass_kg * 9.81 * 0.012;
-        let total_resistance = speed_mps.signum() * (brake_force + aero_drag + rolling_resistance);
+        let aero_drag = 0.5 * 1.225 * 0.75 * 7.5 * forward_speed * forward_speed.abs(); // Large frontal area
+        let rolling_resistance = self.total_mass_kg * 9.81 * 0.012 * forward_speed.signum();
+        let total_resistance = if current_speed > 0.05 {
+            forward_speed.signum() * brake_force + aero_drag + rolling_resistance
+        } else {
+            0.0
+        };
 
         let net_force = drive_force - total_resistance;
         let accel = (net_force / self.total_mass_kg).clamp(-6.5, 3.2);
 
-        let new_speed = (speed_mps + accel * dt).max(0.0);
-        self.linear_velocity = forward * new_speed;
-        self.speed_kph = new_speed * 3.6;
+        let mut new_forward_speed = forward_speed + accel * dt;
+
+        // Standstill zero crossing under braking
+        if current_speed > 0.0
+            && (new_forward_speed.signum() != forward_speed.signum())
+            && inputs.throttle == 0.0
+        {
+            new_forward_speed = 0.0;
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park
+            || (inputs.brake > 0.3 && inputs.throttle == 0.0 && new_forward_speed.abs() < 0.25)
+            || (inputs.throttle == 0.0 && new_forward_speed.abs() < 0.05)
+        {
+            new_forward_speed = 0.0;
+        }
+
+        self.linear_velocity = forward * new_forward_speed;
+        self.speed_kph = new_forward_speed.abs() * 3.6;
         self.position += self.linear_velocity * dt;
 
         // Ground height tracking
@@ -481,8 +538,12 @@ impl HeavyTruckModel {
             return;
         }
 
-        let speed_mps = self.linear_velocity.length();
-        self.speed_kph = speed_mps * 3.6;
+        let current_yaw = self.tractor_orientation.to_euler(glam::EulerRot::YXZ).0;
+        let rot = Mat3::from_quat(self.tractor_orientation);
+        let forward = rot.col(2);
+        let forward_speed = self.linear_velocity.dot(forward);
+        let current_speed = forward_speed.abs();
+        self.speed_kph = current_speed * 3.6;
 
         // Heavy steering rate
         let max_truck_steer = 0.52; // ~30 degrees
@@ -490,24 +551,24 @@ impl HeavyTruckModel {
         self.steer_angle += (target_steer - self.steer_angle) * (1.2 * dt).min(1.0);
 
         // Tractor yaw rate
-        let yaw_rate = speed_mps * (self.steer_angle / self.tractor_wheelbase);
+        let yaw_rate = forward_speed * (self.steer_angle / self.tractor_wheelbase);
         let yaw_delta = yaw_rate * dt;
 
         // Fifth-wheel trailer articulation kinematics:
         // d(theta_trailer)/dt = (v / L_trailer) * sin(theta_tractor - theta_trailer) - yaw_rate_tractor
-        let d_articulation =
-            -(speed_mps / self.trailer_length) * self.trailer_articulation_angle.sin() - yaw_rate;
+        let d_articulation = -(forward_speed / self.trailer_length)
+            * self.trailer_articulation_angle.sin()
+            - yaw_rate;
         self.trailer_articulation_angle += d_articulation * dt;
         self.trailer_articulation_angle = self.trailer_articulation_angle.clamp(-1.25, 1.25); // Jackknife limit ~72 deg
 
         // Rollover stability verification
-        let lateral_accel = speed_mps * yaw_rate.abs();
+        let lateral_accel = current_speed * yaw_rate.abs();
         if lateral_accel > self.rollover_threshold_accel {
             self.is_rolled_over = true;
             return;
         }
 
-        let current_yaw = self.tractor_orientation.to_euler(glam::EulerRot::YXZ).0;
         let new_yaw = current_yaw + yaw_delta;
         self.tractor_orientation = Quat::from_rotation_y(new_yaw);
 
@@ -516,10 +577,10 @@ impl HeavyTruckModel {
 
         // Heavy powertrain integration
         let total_mass = self.gross_mass_kg();
-        let drive_force = if inputs.gear_mode == TransmissionMode::Reverse {
-            -self.peak_tractive_force * 0.25 * inputs.throttle
-        } else {
-            self.peak_tractive_force * inputs.throttle
+        let drive_force = match inputs.gear_mode {
+            TransmissionMode::Reverse => -self.peak_tractive_force * 0.30 * inputs.throttle,
+            TransmissionMode::Drive => self.peak_tractive_force * inputs.throttle,
+            TransmissionMode::Neutral | TransmissionMode::Park => 0.0,
         };
 
         let brake_force = inputs.brake * 65000.0; // Multi-axle S-cam drum brakes
@@ -527,16 +588,36 @@ impl HeavyTruckModel {
             self.audio_events
                 .push(MultimodalAudioEvent::TruckJakeBrake { rpm: 2100.0 });
         }
-        let aero_drag = 0.5 * 1.225 * 0.85 * 9.5 * speed_mps * speed_mps;
-        let rolling_resistance = total_mass * 9.81 * 0.014;
-        let total_resistance = speed_mps.signum() * (brake_force + aero_drag + rolling_resistance);
+        let aero_drag = 0.5 * 1.225 * 0.85 * 9.5 * forward_speed * forward_speed.abs();
+        let rolling_resistance = total_mass * 9.81 * 0.014 * forward_speed.signum();
+        let total_resistance = if current_speed > 0.05 {
+            forward_speed.signum() * brake_force + aero_drag + rolling_resistance
+        } else {
+            0.0
+        };
 
         let net_force = drive_force - total_resistance;
         let accel = (net_force / total_mass).clamp(-7.0, 2.5);
 
-        let new_speed = (speed_mps + accel * dt).max(0.0);
-        self.linear_velocity = forward * new_speed;
-        self.speed_kph = new_speed * 3.6;
+        let mut new_forward_speed = forward_speed + accel * dt;
+
+        // Standstill zero crossing under braking
+        if current_speed > 0.0
+            && (new_forward_speed.signum() != forward_speed.signum())
+            && inputs.throttle == 0.0
+        {
+            new_forward_speed = 0.0;
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park
+            || (inputs.brake > 0.3 && inputs.throttle == 0.0 && new_forward_speed.abs() < 0.25)
+            || (inputs.throttle == 0.0 && new_forward_speed.abs() < 0.05)
+        {
+            new_forward_speed = 0.0;
+        }
+
+        self.linear_velocity = forward * new_forward_speed;
+        self.speed_kph = new_forward_speed.abs() * 3.6;
         self.tractor_position += self.linear_velocity * dt;
 
         // Ground height tracking

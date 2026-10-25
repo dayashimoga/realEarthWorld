@@ -1037,4 +1037,41 @@
   - [x] Authored dedicated 6-test master certification suite in `tests/tests/stage1_2_automated_regression_performance_and_release_certification.rs` (6/6 passing).
   - [x] Workspace quality gates: 100% test pass (`cargo test --workspace`), 0 clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), 0 formatting deviations (`cargo fmt --check`).
 
+## STAGE 1.3-R: Permanent Vehicle Control, Motion and Braking Repair (Completed)
+- [x] Phase 1.3-R.1: Forensic Input and Motion Audit
+  - [x] Traced winit keyboard/mouse events -> pressed keys -> normalized input -> simulation -> transforms -> renderer.
+  - [x] Identified inverted marine rudder hydrodynamic yaw moment sign in `marine.rs`.
+  - [x] Identified inverted aircraft 6-DOF aileron roll moment sign in `aviation.rs`.
+  - [x] Identified speed-clamping `.max(0.0)` in road transport models preventing reverse driving in `road_transport.rs`.
+  - [x] Identified train reverser flutter in 60 Hz physics loop in `interactive.rs`.
+  - [x] Identified window focus loss input sticking in `interactive.rs`.
+- [x] Phase 1.3-R.2: Authoritative Input Action Router & Focus Clearing
+  - [x] Defined `AuthoritativeVehicleState` enum (`Parked`, `Idle`, `Driving`, `Braking`, `Reversing`, `Rail`, `Marine`, `Flight`, `Paused`).
+  - [x] Implemented `reset_all_inputs()` on `Focused(false)`, `Occluded(true)`, minimize, and mode switching.
+  - [x] Replaced train continuous reverser toggle with single-edge `KeyR` control.
+- [x] Phase 1.3-R.3: Canonical Coordinate and Steering Repair
+  - [x] Verified left input turns left relative to vehicle heading, and right turns right across all 4 compass headings (N, E, S, W).
+  - [x] Repaired marine rudder moment: left rudder now turns port, right rudder turns starboard.
+  - [x] Repaired aviation roll moment: left stick rolls left ($\omega_z > 0$), right stick rolls right ($\omega_z < 0$).
+- [x] Phase 1.3-R.4: Road Transport Signed Speed & Reverse Transmission
+  - [x] Replaced speed clamps with signed longitudinal speed `forward_speed = linear_velocity.dot(forward)`.
+  - [x] Added proper reverse tractive effort in `TransmissionMode::Reverse` for Motorcycle, Transit Bus, and Heavy Truck.
+  - [x] Implemented zero-crossing clamp under service braking and standstill hold in Park mode.
+- [x] Phase 1.3-R.5: Master Certification Test Suite
+  - [x] Authored `tests/tests/stage1_3_vehicle_control_motion_and_braking_certification.rs` (6/6 passed).
+  - [x] Part 1: Steering direction fidelity at all 4 compass headings across all transport modes.
+  - [x] Part 2: Signed velocity, reverse drive, and full stopping across road modes.
+  - [x] Part 3: Railway train single-edge reverser, service braking, and emergency brake venting to 0 bar.
+  - [x] Part 4: Standstill anti-drift hold (< 0.002m over 1200 frames), 18% slope hold, coasting vs active service stopping.
+  - [x] Part 5: Action router input clearing on focus loss and mode isolation.
+  - [x] Part 6: Multi-framerate (30 / 60 / 120 FPS) fixed-timestep replay bitwise invariance.
+- [x] Phase 1.3-R.6: Documentation & Workspace Certification
+  - [x] Authored ADR-0046 (`docs/adr/0046-stage-1-3-r-permanent-vehicle-control-motion-and-braking-repair.md`).
+  - [x] Authored Certification Report (`docs/reports/stage1_3_certification_report.md`).
+  - [x] Updated `dist/certification_matrix.json`.
+  - [x] Zero warnings on `cargo clippy --workspace --all-targets -- -D warnings`.
+  - [x] Zero deviations on `cargo fmt --check`.
+  - [x] 100% tests passed on `cargo test --workspace`.
+
+
 

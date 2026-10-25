@@ -52,11 +52,11 @@ use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
 use realearth_vehicles::{
-    AircraftFlight, DynamicVehicle, FlightInputs, GroundQuery, HeavyTruckModel,
-    IntersectionStopLine, LocomotiveType, MarineInputs, MarineVessel, MotorcycleModel,
-    PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainCar, TrainConsist,
-    TransitBusModel, TransmissionMode, VehicleCameraController, VehicleCameraPerspective,
-    VehicleConfig, VehicleInputs,
+    AircraftFlight, AuthoritativeVehicleState, DynamicVehicle, FlightInputs, GroundQuery,
+    HeavyTruckModel, IntersectionStopLine, LocomotiveType, MarineInputs, MarineVessel,
+    MotorcycleModel, PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainCar,
+    TrainConsist, TransitBusModel, TransmissionMode, VehicleCameraController,
+    VehicleCameraPerspective, VehicleConfig, VehicleInputs,
 };
 
 /// Verified authentic roadway spawn location candidate.
@@ -310,6 +310,7 @@ pub struct InteractiveViewerApp {
     previous_vehicle_orient: glam::Quat,
     smoothed_steer_input: f32,
     pub park_engaged: bool,
+    pub vehicle_sim_state: AuthoritativeVehicleState,
     pub wheel_spin_angle: f32,
     traffic_sim: TrafficSimulation,
     vehicle_visual_type: VehicleVisualType,
@@ -533,6 +534,7 @@ impl InteractiveViewerApp {
             physics_accumulator: 0.0,
             smoothed_steer_input: 0.0,
             park_engaged: false,
+            vehicle_sim_state: AuthoritativeVehicleState::Idle,
             wheel_spin_angle: 0.0,
             traffic_sim: TrafficSimulation::new(),
             vehicle_visual_type: VehicleVisualType::SportsCoupe,
@@ -1037,8 +1039,17 @@ impl InteractiveViewerApp {
         }
     }
 
+    /// Authoritatively resets all user inputs and control surfaces to prevent stale carryover or uncontrolled drift.
+    pub fn reset_all_inputs(&mut self) {
+        self.pressed_keys.clear();
+        self.mouse_drag_active = false;
+        self.smoothed_steer_input = 0.0;
+        self.aircraft_throttle = 0.0;
+    }
+
     /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
     pub fn perform_roadside_recovery(&mut self) {
+        self.reset_all_inputs();
         let ground_y = if let Some(ref gq) = self.ground_query {
             match self.active_transport_mode {
                 ActiveTransportMode::Car => {
@@ -1102,6 +1113,7 @@ impl InteractiveViewerApp {
         self.previous_vehicle_pos = self.vehicle.position;
         self.previous_vehicle_orient = self.vehicle.orientation;
         self.smoothed_steer_input = 0.0;
+        self.vehicle_sim_state = AuthoritativeVehicleState::Idle;
         self.vehicle_cam.reset();
         let label = format!(
             "🛠️ {} Safely Recovered to Surface",
@@ -2538,9 +2550,22 @@ impl ApplicationHandler for InteractiveViewerApp {
                 event_loop.exit();
             }
 
+            WindowEvent::Focused(is_focused) => {
+                if !is_focused {
+                    self.reset_all_inputs();
+                }
+            }
+
+            WindowEvent::Occluded(is_occluded) => {
+                if is_occluded {
+                    self.reset_all_inputs();
+                }
+            }
+
             WindowEvent::Resized(physical_size) => {
                 if physical_size.width == 0 || physical_size.height == 0 {
                     self.is_minimized = true;
+                    self.reset_all_inputs();
                     return;
                 }
                 self.is_minimized = false;
@@ -3312,7 +3337,24 @@ impl ApplicationHandler for InteractiveViewerApp {
 
                             KeyCode::KeyR => {
                                 if self.config.is_drive {
-                                    self.perform_roadside_recovery();
+                                    if self.active_transport_mode == ActiveTransportMode::Train {
+                                        self.train_consist.reverser =
+                                            if self.train_consist.reverser == 1 {
+                                                -1
+                                            } else {
+                                                1
+                                            };
+                                        let dir_str = if self.train_consist.reverser == 1 {
+                                            "FORWARD"
+                                        } else {
+                                            "REVERSE"
+                                        };
+                                        let label = format!("🚆 Train Reverser: [{}]", dir_str);
+                                        println!("{}", label);
+                                        self.status_notification = Some((label, Instant::now()));
+                                    } else {
+                                        self.perform_roadside_recovery();
+                                    }
                                 } else {
                                     self.region_cycle_idx =
                                         (self.region_cycle_idx + 1) % self.region_cycle.len();
@@ -3435,6 +3477,7 @@ impl ApplicationHandler for InteractiveViewerApp {
 
                             KeyCode::Digit1 | KeyCode::Numpad1 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::Car;
                                     self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
                                     self.vehicle.config = VehicleConfig::sports_coupe();
@@ -3458,6 +3501,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit2 | KeyCode::Numpad2 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::Motorcycle;
                                     let label =
                                         "🏍️ Mode: Motorcycle (2-Wheel Lean Dynamics)".to_string();
@@ -3478,6 +3522,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit3 | KeyCode::Numpad3 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::TransitBus;
                                     let label =
                                         "🚌 Mode: Transit Bus (Pneumatic Air Brakes)".to_string();
@@ -3498,6 +3543,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit4 | KeyCode::Numpad4 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::HeavyTruck;
                                     let label =
                                         "🚛 Mode: Heavy Truck (Trailer Articulation)".to_string();
@@ -3518,6 +3564,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit5 | KeyCode::Numpad5 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::Train;
                                     let label = "🚆 Mode: Train Consist (Davis Drag & Air Brakes)"
                                         .to_string();
@@ -3538,6 +3585,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit6 | KeyCode::Numpad6 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::Marine;
                                     let label =
                                         "🚢 Mode: Marine Vessel (Archimedes Buoyancy)".to_string();
@@ -3558,7 +3606,12 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             KeyCode::Digit7 | KeyCode::Numpad7 => {
                                 if self.config.is_drive {
+                                    self.reset_all_inputs();
                                     self.active_transport_mode = ActiveTransportMode::Aviation;
+                                    let label = "✈️ Mode: Aviation Aircraft (6-DOF Flight Polar)"
+                                        .to_string();
+                                    println!("{}", label);
+                                    self.status_notification = Some((label, Instant::now()));
                                     let label = "✈️ Mode: Aviation Aircraft (6-DOF Flight Polar)"
                                         .to_string();
                                     println!("{}", label);
@@ -3663,12 +3716,6 @@ impl ApplicationHandler for InteractiveViewerApp {
                 let solar = sim_world.current_solar_position();
 
                 let is_gameplay = self.ui_state == AppUiState::InGame;
-                let is_braking = if is_gameplay {
-                    self.pressed_keys.contains(&KeyCode::KeyS)
-                        || self.pressed_keys.contains(&KeyCode::ArrowDown)
-                } else {
-                    true
-                };
 
                 const PHYSICS_DT: f32 = 1.0 / 60.0;
                 self.physics_accumulator = (self.physics_accumulator + dt as f32).min(0.20);
@@ -3735,18 +3782,35 @@ impl ApplicationHandler for InteractiveViewerApp {
                             ..Default::default()
                         };
 
+                        let active_forward_speed = match self.active_transport_mode {
+                            ActiveTransportMode::Car => {
+                                let rot = glam::Mat3::from_quat(self.vehicle.orientation);
+                                self.vehicle.linear_velocity.dot(rot.col(2))
+                            }
+                            ActiveTransportMode::Motorcycle => {
+                                let rot = glam::Mat3::from_quat(self.motorcycle.orientation);
+                                self.motorcycle.linear_velocity.dot(rot.col(2))
+                            }
+                            ActiveTransportMode::TransitBus => {
+                                let rot = glam::Mat3::from_quat(self.transit_bus.orientation);
+                                self.transit_bus.linear_velocity.dot(rot.col(2))
+                            }
+                            ActiveTransportMode::HeavyTruck => {
+                                let rot =
+                                    glam::Mat3::from_quat(self.heavy_truck.tractor_orientation);
+                                self.heavy_truck.linear_velocity.dot(rot.col(2))
+                            }
+                            _ => 0.0,
+                        };
+
                         if self.park_engaged || !is_gameplay {
                             road_inputs.gear_mode = TransmissionMode::Park;
                             road_inputs.brake = 1.0;
                             road_inputs.handbrake = true;
                             road_inputs.throttle = 0.0;
                         } else {
-                            let rot = glam::Mat3::from_quat(self.vehicle.orientation);
-                            let forward = rot.col(2);
-                            let forward_speed = self.vehicle.linear_velocity.dot(forward);
-
                             if is_forward_key {
-                                if forward_speed < -0.3 {
+                                if active_forward_speed < -0.3 {
                                     road_inputs.brake = 0.95;
                                     road_inputs.gear_mode = TransmissionMode::Reverse;
                                 } else {
@@ -3754,7 +3818,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     road_inputs.gear_mode = TransmissionMode::Drive;
                                 }
                             } else if is_reverse_or_brake_key {
-                                if forward_speed > 0.35 {
+                                if active_forward_speed > 0.35 {
                                     road_inputs.brake = 0.95;
                                     road_inputs.gear_mode = TransmissionMode::Drive;
                                 } else {
@@ -3771,6 +3835,38 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 road_inputs.handbrake = true;
                             }
                         }
+
+                        self.vehicle_sim_state = if !is_gameplay {
+                            if self.ui_state == AppUiState::PauseMenu {
+                                AuthoritativeVehicleState::Paused
+                            } else {
+                                AuthoritativeVehicleState::Parked
+                            }
+                        } else if self.park_engaged {
+                            AuthoritativeVehicleState::Parked
+                        } else {
+                            match self.active_transport_mode {
+                                ActiveTransportMode::Car
+                                | ActiveTransportMode::Motorcycle
+                                | ActiveTransportMode::TransitBus
+                                | ActiveTransportMode::HeavyTruck => {
+                                    if road_inputs.brake > 0.1 || road_inputs.handbrake {
+                                        AuthoritativeVehicleState::Braking
+                                    } else if road_inputs.gear_mode == TransmissionMode::Reverse {
+                                        AuthoritativeVehicleState::Reversing
+                                    } else if active_forward_speed.abs() > 0.15
+                                        || road_inputs.throttle > 0.05
+                                    {
+                                        AuthoritativeVehicleState::Driving
+                                    } else {
+                                        AuthoritativeVehicleState::Idle
+                                    }
+                                }
+                                ActiveTransportMode::Train => AuthoritativeVehicleState::Rail,
+                                ActiveTransportMode::Marine => AuthoritativeVehicleState::Marine,
+                                ActiveTransportMode::Aviation => AuthoritativeVehicleState::Flight,
+                            }
+                        };
 
                         // Step physics for active multimodal mode
                         match self.active_transport_mode {
@@ -3825,16 +3921,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         (self.train_consist.throttle + 0.35 * PHYSICS_DT).min(1.0);
                                     self.train_consist.apply_service_brake(0.0);
                                 } else if is_reverse_or_brake_key {
-                                    if self.train_consist.velocity_mps.abs() < 0.15
-                                        && self.train_consist.throttle < 0.05
-                                    {
-                                        self.train_consist.reverser = -self.train_consist.reverser;
-                                    } else {
-                                        self.train_consist.apply_service_brake(0.85);
-                                        self.train_consist.throttle = (self.train_consist.throttle
-                                            - 0.6 * PHYSICS_DT)
-                                            .max(0.0);
-                                    }
+                                    self.train_consist.apply_service_brake(0.85);
+                                    self.train_consist.throttle =
+                                        (self.train_consist.throttle - 0.6 * PHYSICS_DT).max(0.0);
                                 } else {
                                     self.train_consist.apply_service_brake(0.0);
                                 }
@@ -4090,12 +4179,18 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             _ => 2200.0,
                         },
-                        throttle: if is_braking { 0.0 } else { 0.8 },
+                        throttle: if self.park_engaged
+                            || self.vehicle_sim_state == AuthoritativeVehicleState::Braking
+                        {
+                            0.0
+                        } else {
+                            last_road_inputs.throttle
+                        },
                         speed_kph: active_speed_kph,
-                        brake_input: if is_braking || self.park_engaged {
+                        brake_input: if self.park_engaged {
                             1.0
                         } else {
-                            0.0
+                            last_road_inputs.brake
                         },
                         tire_slip_ratio: slip_ratio,
                         tire_slip_angle_deg: slip_angle,
@@ -4354,13 +4449,17 @@ impl ApplicationHandler for InteractiveViewerApp {
                 // 7. Render 3D Vehicles (Player Multimodal Fleet and AI Traffic)
                 let mut fleet_mesh = realearth_compiler::mesh::ChunkMesh::default();
                 if self.config.is_drive {
+                    let is_road_braking = self.vehicle_sim_state
+                        == AuthoritativeVehicleState::Braking
+                        || self.park_engaged
+                        || !is_gameplay;
+                    let is_road_reversing = (self.vehicle_sim_state
+                        == AuthoritativeVehicleState::Reversing
+                        || last_road_inputs.gear_mode == TransmissionMode::Reverse)
+                        && is_gameplay;
+
                     match self.active_transport_mode {
                         ActiveTransportMode::Car => {
-                            let rot_mat = glam::Mat3::from_quat(self.vehicle.orientation);
-                            let forward_vec = rot_mat.col(2);
-                            let is_in_reverse = self.vehicle.current_gear == -1
-                                || self.vehicle.linear_velocity.dot(forward_vec) < -0.05;
-
                             let player_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                                 position: render_pos,
                                 orientation: render_orient,
@@ -4379,8 +4478,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_steer_angle: self.vehicle.wheels[0].steer_angle,
                                 trailer_angle: 0.0,
                                 headlights_on: true,
-                                brake_lights_on: is_braking,
-                                reverse_lights_on: is_in_reverse,
+                                brake_lights_on: is_road_braking,
+                                reverse_lights_on: is_road_reversing,
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [
                                     self.vehicle.wheels[0].compression,
@@ -4401,7 +4500,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_steer_angle: self.motorcycle.steer_angle,
                                 trailer_angle: 0.0,
                                 headlights_on: true,
-                                brake_lights_on: is_braking,
+                                brake_lights_on: is_road_braking,
                                 reverse_lights_on: false,
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
@@ -4418,8 +4517,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_steer_angle: self.transit_bus.steer_angle,
                                 trailer_angle: 0.0,
                                 headlights_on: true,
-                                brake_lights_on: is_braking,
-                                reverse_lights_on: false,
+                                brake_lights_on: is_road_braking,
+                                reverse_lights_on: is_road_reversing,
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
                                 lod: VehicleLodLevel::Lod0High,
@@ -4435,8 +4534,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 wheel_steer_angle: self.heavy_truck.steer_angle,
                                 trailer_angle: self.heavy_truck.trailer_articulation_angle,
                                 headlights_on: true,
-                                brake_lights_on: is_braking,
-                                reverse_lights_on: false,
+                                brake_lights_on: is_road_braking,
+                                reverse_lights_on: is_road_reversing,
                                 wheel_spin_angle: self.wheel_spin_angle,
                                 wheel_compressions: [0.0; 4],
                                 lod: VehicleLodLevel::Lod0High,

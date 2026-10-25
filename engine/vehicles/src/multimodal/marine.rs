@@ -224,9 +224,9 @@ impl MarineVessel {
             * 2.5
             * self.current_rudder_angle;
 
-        // Turning moment around vertical (Y) axis
+        // Turning moment around vertical (Y) axis (rudder deflection to port pushes stern starboard, rotating bow port/left)
         let rudder_arm = -self.length_beam_meters * 0.45;
-        let yaw_moment = rudder_lift * rudder_arm;
+        let yaw_moment = -rudder_lift * rudder_arm;
         let yaw_inertia = pitch_inertia; // Approximates yaw inertia for slender beam
         let yaw_damping = -yaw_inertia * 0.9 * self.angular_velocity.y;
         let yaw_accel = (yaw_moment + yaw_damping) / yaw_inertia;

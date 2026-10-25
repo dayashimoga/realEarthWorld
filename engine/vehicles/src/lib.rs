@@ -17,10 +17,10 @@ pub use dynamics::{
 pub use ground::{FlatGround, FunctionalGroundQuery, GroundQuery, SlopedGround};
 pub use kinematics::AckermannVehicle;
 pub use multimodal::{
-    ActiveTransportMode, AircraftFlight, AviationCategory, DavisCoefficients, FlightInputs,
-    HeavyTruckModel, LocomotiveType, MarineInputs, MarineVessel, MarineVesselType, MotorcycleModel,
-    MultimodalAudioEvent, RoadAccessRestriction, RoadVehicleCategory, TrainBrakeState, TrainCar,
-    TrainConsist, TransitBusModel,
+    ActiveTransportMode, AircraftFlight, AuthoritativeVehicleState, AviationCategory,
+    DavisCoefficients, FlightInputs, HeavyTruckModel, LocomotiveType, MarineInputs, MarineVessel,
+    MarineVesselType, MotorcycleModel, MultimodalAudioEvent, RoadAccessRestriction,
+    RoadVehicleCategory, TrainBrakeState, TrainCar, TrainConsist, TransitBusModel,
 };
 pub use physics::{
     PhysicsWorld, GROUP_BUILDING, GROUP_OBSTACLE, GROUP_ROAD, GROUP_TERRAIN, GROUP_VEHICLE,

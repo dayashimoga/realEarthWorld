@@ -1674,6 +1674,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     6. `test_stage1_2_five_platform_release_packaging_and_ci_gates`
   - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
 
+## [0.1.3] - 2026-10-25
+### Fixed & Improved — STAGE 1.3-R: Permanent Vehicle Control, Motion and Braking Repair
+- **Authoritative Vehicle State Lifecycle**:
+  - Introduced `AuthoritativeVehicleState` enum (`Parked`, `Idle`, `Driving`, `Braking`, `Reversing`, `Rail`, `Marine`, `Flight`, `Paused`) in `engine/vehicles/src/multimodal/mod.rs` and re-exported it in `realearth_vehicles`.
+  - Deterministically updated authoritative vehicle state every 60 Hz physics step in `InteractiveViewerApp`.
+- **Window Focus Loss & Input Sticking Remediation**:
+  - Implemented `reset_all_inputs()` purging `pressed_keys`, resetting `smoothed_steer_input`, and resetting multimodal throttle inputs.
+  - Bound input clearing to `WindowEvent::Focused(false)`, `WindowEvent::Occluded(true)`, window minimization, mode switching, and roadside recovery.
+- **Marine Hydrodynamic Rudder Sign Fix**:
+  - Fixed inverted yaw moment sign in `engine/vehicles/src/multimodal/marine.rs:229`: `yaw_moment = -rudder_lift * rudder_arm`.
+  - Certified: Left rudder turns port (heading decreases), right rudder turns starboard (heading increases).
+- **Aviation 6-DOF Aileron Roll Sign Fix**:
+  - Fixed inverted roll moment sign in `engine/vehicles/src/multimodal/aviation.rs:355`: `roll_moment = -q_s * wingspan * (0.35 * aileron_authority)`.
+  - Certified: Left stick banks left ($\omega_z > 0$), right stick banks right ($\omega_z < 0$).
+- **Road Transport Signed Speed & Reverse Transmission**:
+  - Replaced `.max(0.0)` speed clamps in `MotorcycleModel`, `TransitBusModel`, and `HeavyTruckModel` in `road_transport.rs` with signed longitudinal speed `forward_speed = linear_velocity.dot(forward)`.
+  - Implemented authentic reverse tractive effort in `TransmissionMode::Reverse`, directional resistance opposing motion, zero-crossing clamp under braking, and absolute lock in Park.
+  - Decoupled forward speed in `interactive.rs` to query the active vehicle's own orientation and linear velocity.
+- **Railway Train Reverser Flutter Elimination**:
+  - Decoupled train reverser from continuous brake-hold logic in `interactive.rs`.
+  - Single-edge `KeyCode::KeyR` event controls reverser direction; service brake provides smooth deceleration to complete stop without toggling reverser at 60 Hz.
+- **Visual & Audio Telemetry Polish**:
+  - Tied 3D vehicle mesh brake lights and reverse lights directly to authoritative state (`is_road_braking` and `is_road_reversing`).
+  - Fed true driver throttle and brake inputs into `AudioTelemetry`.
+- **Master Certification Test Suite (`tests/tests/stage1_3_vehicle_control_motion_and_braking_certification.rs`)**:
+  - Authored comprehensive 6-part test suite (6/6 passed in 0.01s):
+    1. `test_part1_steering_direction_fidelity_across_all_headings`
+    2. `test_part2_reverse_transmission_and_braking_for_all_road_modes`
+    3. `test_part3_railway_train_reverser_service_and_emergency_braking`
+    4. `test_part4_standstill_anti_drift_and_coasting_physics`
+    5. `test_part5_input_router_focus_loss_and_mode_switching_isolation`
+    6. `test_part6_multi_framerate_physics_accumulator_invariance`
+- **Architecture & Certification Reports**:
+  - Authored ADR-0046 (`docs/adr/0046-stage-1-3-r-permanent-vehicle-control-motion-and-braking-repair.md`).
+  - Authored Certification Report (`docs/reports/stage1_3_certification_report.md`).
+  - Updated `dist/certification_matrix.json` (30 Verified, 4 Blocked Pending Toolchain, 0 Broken, 0 Missing).
+  - 100% test pass rate across workspace (`cargo test --workspace`), zero clippy warnings (`cargo clippy --workspace --all-targets -- -D warnings`), zero formatting deviations (`cargo fmt --check`).
+
+
 
 
 

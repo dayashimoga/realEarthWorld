@@ -352,7 +352,7 @@ impl AircraftFlight {
 
         // Control moments (pitch, roll, yaw)
         let pitch_moment = -q_s * self.mean_chord_meters * (0.85 * elevator_authority);
-        let roll_moment = q_s * self.wingspan_meters * (0.35 * aileron_authority);
+        let roll_moment = -q_s * self.wingspan_meters * (0.35 * aileron_authority);
         let yaw_moment = q_s * self.wingspan_meters * (0.22 * rudder_authority);
 
         // Rotational inertia approximations for transport category

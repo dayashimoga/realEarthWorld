@@ -1,7 +1,7 @@
 {
-  "SchemaVersion": "1.2.0",
-  "GeneratedAt": "2026-10-25T09:55:00Z",
-  "Stage": "STAGE 1.2 — AUTOMATED REGRESSION, PERFORMANCE AND FIVE-PLATFORM RELEASE",
+  "SchemaVersion": "1.3.0",
+  "GeneratedAt": "2026-10-25T11:30:00Z",
+  "Stage": "STAGE 1.3-R — PERMANENT VEHICLE CONTROL, MOTION AND BRAKING REPAIR",
   "HostEnvironment": {
     "OperatingSystem": "Windows 11 x86_64",
     "RustToolchain": "stable-x86_64-pc-windows-msvc",
@@ -9,8 +9,8 @@
     "GitBranch": "feature/stage0_9_road_terrain_spatial_integrity"
   },
   "StatusSummary": {
-    "TotalRequirements": 28,
-    "VerifiedCount": 24,
+    "TotalRequirements": 34,
+    "VerifiedCount": 30,
     "BlockedCount": 4,
     "BrokenCount": 0,
     "MissingCount": 0,
@@ -212,6 +212,48 @@
       "Requirement": "iOS physical device IPA signed distribution package",
       "Evidence": "Blocked on build host: Requires Apple Developer Certificate & mobileprovision profile",
       "Status": "BLOCKED_PENDING_TOOLCHAIN"
+    },
+    {
+      "Id": "CTRL-01",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Authoritative vehicle simulation state lifecycle",
+      "Evidence": "AuthoritativeVehicleState enum integrated and updated deterministically across all 7 modes in engine/vehicles and apps/world-viewer",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "CTRL-02",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Window focus, occlusion, minimize, and mode-switch input clearing",
+      "Evidence": "reset_all_inputs() purges pressed_keys, smoothed steering, and drags on focus loss, preventing runaway acceleration",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "CTRL-03",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Steering compass fidelity across all 7 transport modes at N, E, S, W",
+      "Evidence": "Canonical left/right steering and sign-fixed hydrodynamic rudder and aileron roll moments verified at all 4 cardinal directions",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "CTRL-04",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Reverse transmission, signed longitudinal velocity and stopping on road transport",
+      "Evidence": "Motorcycle, Transit Bus, and Heavy Truck reverse drive verified; clamps removed; reverse tractive effort and directional resistance active",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "CTRL-05",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Railway train single-edge reverser and independent Westinghouse pneumatic braking",
+      "Evidence": "60 Hz reverser flutter eliminated; single-edge KeyR reverser toggle; service brake smooth deceleration to complete stop",
+      "Status": "VERIFIED"
+    },
+    {
+      "Id": "CTRL-06",
+      "Category": "Vehicle Motion, Control and Braking",
+      "Requirement": "Standstill anti-drift hold and multi-framerate replay invariance",
+      "Evidence": "Zero stationary drift (< 0.002m over 1200 frames); 18% slope hold; bitwise identical outcomes at 30, 60, and 120 FPS accumulators",
+      "Status": "VERIFIED"
     }
   ]
 }
