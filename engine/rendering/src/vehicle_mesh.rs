@@ -56,15 +56,15 @@ pub struct VehicleMeshParams {
     pub wheel_spin_angle: f32,
     pub wheel_compressions: [f32; 4],
     pub lod: VehicleLodLevel,
-    /// Passenger door opening animation ratio [0.0 = closed, 1.0 = fully open].
+    /// Passenger door opening animation ratio (0.0 = closed, 1.0 = fully open).
     pub door_open_ratio: f32,
-    /// Front and rear railway truck / bogie yaw articulation angles [rad].
+    /// Front and rear railway truck / bogie yaw articulation angles in radians.
     pub bogie_angles: [f32; 2],
-    /// Propeller or turbofan fan blade rotation angle [rad].
+    /// Propeller or turbofan fan blade rotation angle in radians.
     pub propeller_angle: f32,
-    /// Aircraft flight control surfaces: [elevator pitch, aileron roll, rudder yaw] [rad].
+    /// Aircraft flight control surfaces: (elevator pitch, aileron roll, rudder yaw) in radians.
     pub control_surfaces: [f32; 3],
-    /// Motorcycle dynamic cornering bank / roll lean angle [rad].
+    /// Motorcycle dynamic cornering bank / roll lean angle in radians.
     pub motorcycle_lean_angle: f32,
 }
 
