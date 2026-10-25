@@ -9,10 +9,18 @@ pub enum CareerType {
     FreeRoam,
     /// Point-to-point passenger transport with ride comfort scoring.
     TaxiPassenger,
+    /// Scheduled urban low-floor transit bus services with designated passenger stops.
+    TransitBus,
     /// Time-sensitive parcel and express deliveries between urban logistics depots.
     PackageDelivery,
     /// Long-distance commercial logistics haulage across intercity transport corridors.
     HeavyFreight,
+    /// Intercity and regional commuter train operations adhering to track signals and stations.
+    RailEngineer,
+    /// High-speed passenger catamaran ferry navigation across bays, straits, and waterways.
+    FerryCaptain,
+    /// Commercial airline and general aviation flight operations between regional airfields.
+    AviationPilot,
 }
 
 impl CareerType {
@@ -21,8 +29,12 @@ impl CareerType {
         match self {
             Self::FreeRoam => "Free Roam & Exploration",
             Self::TaxiPassenger => "Urban Taxi & Chauffeur",
+            Self::TransitBus => "Municipal Transit Bus Lines",
             Self::PackageDelivery => "Express Courier & Delivery",
             Self::HeavyFreight => "Intercity Freight Logistics",
+            Self::RailEngineer => "Passenger & Freight Railroad Engineer",
+            Self::FerryCaptain => "Maritime Passenger Ferry Captain",
+            Self::AviationPilot => "Commercial & General Aviation Pilot",
         }
     }
 
@@ -31,8 +43,12 @@ impl CareerType {
         match self {
             Self::FreeRoam => "Freely explore authentic surveyed world cities, discover real architectural landmarks, and earn distance exploration milestones.",
             Self::TaxiPassenger => "Transport authentic passengers across surveyed city streets, maintaining smooth driving and zero-collision comfort for generous customer tips.",
+            Self::TransitBus => "Operate 40ft low-floor transit buses along scheduled municipal routes, timing arrivals, boarding commuters at curbside shelters, and executing smooth pneumatic stops.",
             Self::PackageDelivery => "Dispatch fragile parcels and high-priority packages to businesses within tight delivery windows across metropolitan street networks.",
-            Self::HeavyFreight => "Haul massive tonnage across regional expressways and transport corridors (NH 275, NH 48, NH 44) while obeying legal highway safety limits.",
+            Self::HeavyFreight => "Haul massive tonnage across regional expressways and transport corridors (NH 275, NH 48, NH 44, I-80, I-5) with 53ft semitrailers while obeying legal highway safety limits.",
+            Self::RailEngineer => "Command diesel-electric locomotives and bi-level commuter coaches, managing tractive throttle, Westinghouse air brakes, track switch turnouts, and terminal platform stops.",
+            Self::FerryCaptain => "Navigate high-speed catamaran passenger ferries across open bay shipping fairways, combating currents and berthing at passenger terminal slips.",
+            Self::AviationPilot => "Fly turbofan airliners and general aviation monoplanes along airway waypoints, executing instrument ILS approaches, runway takeoffs, and crosswind landings.",
         }
     }
 
@@ -41,8 +57,12 @@ impl CareerType {
         match self {
             Self::FreeRoam => 1.0,
             Self::TaxiPassenger => 1.25,
-            Self::PackageDelivery => 1.5,
-            Self::HeavyFreight => 2.2,
+            Self::TransitBus => 1.40,
+            Self::PackageDelivery => 1.50,
+            Self::HeavyFreight => 2.20,
+            Self::RailEngineer => 2.40,
+            Self::FerryCaptain => 1.80,
+            Self::AviationPilot => 2.80,
         }
     }
 
@@ -51,8 +71,12 @@ impl CareerType {
         match self {
             Self::FreeRoam => 1.0,
             Self::TaxiPassenger => 1.2,
+            Self::TransitBus => 1.35,
             Self::PackageDelivery => 1.4,
             Self::HeavyFreight => 2.0,
+            Self::RailEngineer => 2.2,
+            Self::FerryCaptain => 1.7,
+            Self::AviationPilot => 2.5,
         }
     }
 }

@@ -301,4 +301,61 @@ impl MultiRegionStreamer {
             active_region_ids,
         }
     }
+
+    /// Evaluates proximity of vehicle to active geographic coverage perimeter.
+    /// Issues honest boundary status and package acquisition prompts when nearing or crossing outer bounds.
+    pub fn check_coverage_boundary(
+        &self,
+        coord: Wgs84Coord,
+        buffer_meters: f64,
+    ) -> Option<CoverageBoundaryAlert> {
+        if self.regions.is_empty() {
+            return None;
+        }
+
+        let m_per_deg_lat = 111_000.0;
+        let lat_rad = coord.lat.to_radians();
+        let m_per_deg_lon = 111_320.0 * lat_rad.cos().abs().max(0.1);
+
+        for (id, reg) in &self.regions {
+            let b = &reg.bounds;
+            let d_north = (b.max_lat - coord.lat) * m_per_deg_lat;
+            let d_south = (coord.lat - b.min_lat) * m_per_deg_lat;
+            let d_east = (b.max_lon - coord.lon) * m_per_deg_lon;
+            let d_west = (coord.lon - b.min_lon) * m_per_deg_lon;
+
+            let min_d = d_north.min(d_south).min(d_east).min(d_west);
+            if min_d < 0.0 {
+                return Some(CoverageBoundaryAlert {
+                    region_id: id.clone(),
+                    distance_to_edge_m: min_d.abs(),
+                    is_outside: true,
+                    warning_message: format!(
+                        "⚠️ Beyond compiled {} coverage. Install additional regional packages to navigate further.",
+                        id
+                    ),
+                });
+            } else if min_d <= buffer_meters {
+                return Some(CoverageBoundaryAlert {
+                    region_id: id.clone(),
+                    distance_to_edge_m: min_d,
+                    is_outside: false,
+                    warning_message: format!(
+                        "ℹ️ Nearing edge of surveyed {} boundary ({:.0}m remaining).",
+                        id, min_d
+                    ),
+                });
+            }
+        }
+        None
+    }
+}
+
+/// Geographic boundary notification alerting when approaching boundary of installed packages.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CoverageBoundaryAlert {
+    pub region_id: String,
+    pub distance_to_edge_m: f64,
+    pub is_outside: bool,
+    pub warning_message: String,
 }

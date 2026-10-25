@@ -24,7 +24,9 @@ pub use diagnostics::{
 };
 pub use lod::{select_lod, select_lod_with_hysteresis};
 pub use lru_cache::{CachedChunk, ChunkKey, LruChunkCache};
-pub use multi_region::{MountedRegion, MultiRegionStreamer, MultiRegionTelemetry};
+pub use multi_region::{
+    CoverageBoundaryAlert, MountedRegion, MultiRegionStreamer, MultiRegionTelemetry,
+};
 pub use package_delivery::{
     ChunkTransferState, CountryPackageManifest, InstalledPackageRecord,
     ResumableAcquisitionSession, StorageQuotaManager,

@@ -37,8 +37,12 @@ impl PlayerProfile {
         let mut rep = HashMap::new();
         rep.insert(CareerType::FreeRoam, 0);
         rep.insert(CareerType::TaxiPassenger, 0);
+        rep.insert(CareerType::TransitBus, 0);
         rep.insert(CareerType::PackageDelivery, 0);
         rep.insert(CareerType::HeavyFreight, 0);
+        rep.insert(CareerType::RailEngineer, 0);
+        rep.insert(CareerType::FerryCaptain, 0);
+        rep.insert(CareerType::AviationPilot, 0);
 
         Self {
             player_id: player_id.into(),

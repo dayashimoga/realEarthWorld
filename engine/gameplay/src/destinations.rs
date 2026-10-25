@@ -676,7 +676,7 @@ impl JobCatalogGenerator {
         // 8f. Multimodal Transit Bus: Fisherman's Wharf -> Salesforce Transit Center
         jobs.push(Job::new(
             "transit-sf-01",
-            CareerType::TaxiPassenger,
+            CareerType::TransitBus,
             "Muni Waterfront Transit Bus Route",
             "Operate a scheduled transit bus along the Embarcadero corridor boarding 42 passengers with smooth acceleration and zero hard braking.",
             SurveyedDestinations::sf_fishermans_wharf(),
@@ -686,10 +686,10 @@ impl JobCatalogGenerator {
             380.0,
             240,
             ReputationTier::Novice,
-            CargoOrPassenger::Passenger {
-                name: "Muni Waterfront Commuters".to_string(),
-                party_size: 42,
-                destination_note: "Salesforce Transit Bus Deck".to_string(),
+            CargoOrPassenger::BusTransit {
+                route_line: "Muni Line F Market & Wharves".to_string(),
+                passenger_count: 42,
+                next_stop_name: "Salesforce Transit Bus Deck".to_string(),
             },
             JobDifficulty::Standard,
         ));
@@ -697,7 +697,7 @@ impl JobCatalogGenerator {
         // 8g. Multimodal Commuter Rail: 4th & King -> Millbrae SFO Intermodal
         jobs.push(Job::new(
             "rail-sf-01",
-            CareerType::TaxiPassenger,
+            CareerType::RailEngineer,
             "Caltrain Peninsula Passenger Express",
             "Drive bi-level commuter train consist along the electrified mainline from San Francisco 4th & King to Millbrae SFO Intermodal, obeying track block signals.",
             SurveyedDestinations::sf_caltrain_4th_king(),
@@ -707,10 +707,10 @@ impl JobCatalogGenerator {
             850.0,
             500,
             ReputationTier::Novice,
-            CargoOrPassenger::Passenger {
-                name: "Peninsula Caltrain Commuters".to_string(),
-                party_size: 220,
-                destination_note: "Millbrae Station Platform 2".to_string(),
+            CargoOrPassenger::RailPassenger {
+                train_number: "Caltrain 142 Express".to_string(),
+                passenger_count: 220,
+                scheduled_departure: "08:15 AM PST".to_string(),
             },
             JobDifficulty::Challenging,
         ));
@@ -718,7 +718,7 @@ impl JobCatalogGenerator {
         // 8h. Multimodal Maritime Ferry: Ferry Building Gate B -> Port of Oakland
         jobs.push(Job::new(
             "ferry-sf-01",
-            CareerType::TaxiPassenger,
+            CareerType::FerryCaptain,
             "San Francisco Bay Passenger Ferry Route",
             "Navigate a passenger ferry across the central Bay shipping fairway from Ferry Building Gate B to the Port of Oakland Terminal.",
             SurveyedDestinations::sf_ferry_building(),
@@ -728,10 +728,10 @@ impl JobCatalogGenerator {
             520.0,
             320,
             ReputationTier::Novice,
-            CargoOrPassenger::Passenger {
-                name: "Transbay Ferry Commuters".to_string(),
-                party_size: 110,
-                destination_note: "Oakland Ferry Concourse".to_string(),
+            CargoOrPassenger::MarineFerry {
+                crossing_name: "Golden Gate Transbay Ferry".to_string(),
+                vehicle_deck_count: 0,
+                passenger_count: 110,
             },
             JobDifficulty::Standard,
         ));
@@ -739,7 +739,7 @@ impl JobCatalogGenerator {
         // 8i. Multimodal Aviation Cargo Approach: SFO Runway 28L ILS Approach
         jobs.push(Job::new(
             "air-sf-01",
-            CareerType::HeavyFreight,
+            CareerType::AviationPilot,
             "SFO Runway 28L Air Cargo Approach",
             "Execute precision instrument landing approach on Runway 28L at KSFO delivering 18 metric tons of high-priority air cargo.",
             SurveyedDestinations::sf_sfo_runway_approach(),
@@ -749,10 +749,10 @@ impl JobCatalogGenerator {
             1200.0,
             650,
             ReputationTier::Novice,
-            CargoOrPassenger::Freight {
-                cargo_type: "Express Air Freight Cargo Containers".to_string(),
-                tonnage: 18.0,
-                hazardous: false,
+            CargoOrPassenger::AviationFlight {
+                flight_number: "SkyCourier Cargo 782".to_string(),
+                cruising_altitude_ft: 4000,
+                passenger_or_cargo: "18 Metric Tons Priority Air Freight".to_string(),
             },
             JobDifficulty::Extreme,
         ));

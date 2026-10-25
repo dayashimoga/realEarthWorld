@@ -68,6 +68,30 @@ pub enum CargoOrPassenger {
         tonnage: f32,
         hazardous: bool,
     },
+    /// Municipal scheduled bus transit with commuter passenger load.
+    BusTransit {
+        route_line: String,
+        passenger_count: u16,
+        next_stop_name: String,
+    },
+    /// Intercity or commuter railway train passenger consist.
+    RailPassenger {
+        train_number: String,
+        passenger_count: u32,
+        scheduled_departure: String,
+    },
+    /// High-speed passenger catamaran ferry transport.
+    MarineFerry {
+        crossing_name: String,
+        vehicle_deck_count: u16,
+        passenger_count: u16,
+    },
+    /// Commercial or general aviation flight mission.
+    AviationFlight {
+        flight_number: String,
+        cruising_altitude_ft: u32,
+        passenger_or_cargo: String,
+    },
     /// Open exploration without payload constraints.
     Exploration,
 }
@@ -328,6 +352,59 @@ impl Job {
                                     job_id: self.id.clone(),
                                     cargo_name: cargo_type.clone(),
                                     weight_kg: *tonnage * 1000.0,
+                                });
+                            }
+                            CargoOrPassenger::BusTransit {
+                                route_line,
+                                passenger_count,
+                                ..
+                            } => {
+                                event_bus.emit(GameplayEvent::PassengerBoarded {
+                                    job_id: self.id.clone(),
+                                    passenger_name: format!(
+                                        "{} Commuters ({})",
+                                        route_line, passenger_count
+                                    ),
+                                });
+                            }
+                            CargoOrPassenger::RailPassenger {
+                                train_number,
+                                passenger_count,
+                                ..
+                            } => {
+                                event_bus.emit(GameplayEvent::PassengerBoarded {
+                                    job_id: self.id.clone(),
+                                    passenger_name: format!(
+                                        "Train {} Passengers ({})",
+                                        train_number, passenger_count
+                                    ),
+                                });
+                            }
+                            CargoOrPassenger::MarineFerry {
+                                crossing_name,
+                                passenger_count,
+                                ..
+                            } => {
+                                event_bus.emit(GameplayEvent::PassengerBoarded {
+                                    job_id: self.id.clone(),
+                                    passenger_name: format!(
+                                        "{} Ferry Travelers ({})",
+                                        crossing_name, passenger_count
+                                    ),
+                                });
+                            }
+                            CargoOrPassenger::AviationFlight {
+                                flight_number,
+                                passenger_or_cargo,
+                                ..
+                            } => {
+                                event_bus.emit(GameplayEvent::CargoLoaded {
+                                    job_id: self.id.clone(),
+                                    cargo_name: format!(
+                                        "Flight {} Manifest ({})",
+                                        flight_number, passenger_or_cargo
+                                    ),
+                                    weight_kg: 5000.0,
                                 });
                             }
                             CargoOrPassenger::Exploration => {}

@@ -15,8 +15,10 @@ pub mod vehicle_models;
 
 pub use camera::FloatingOriginCamera;
 pub use city_interactions_mesh::{
-    generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh, RoadSignType,
-    TrafficSignalVisualState,
+    generate_bus_stop_shelter_mesh, generate_detailed_tree_mesh, generate_marine_ferry_dock_mesh,
+    generate_pedestrian_mesh, generate_rail_station_platform_mesh, generate_road_sign_mesh,
+    generate_runway_papi_lights_mesh, generate_streetlight_mesh, generate_traffic_signal_mesh,
+    DetailedTreeType, RoadSignType, TrafficSignalVisualState,
 };
 pub use culling::{Frustum, FrustumPlane};
 pub use gltf_asset::{

@@ -40,8 +40,10 @@ use realearth_navigation::{
     RailRoutePlan, RoadNetworkGraph, RouteTracker, RoutingPreference, RuleOfTheRoad,
 };
 use realearth_rendering::{
-    generate_pedestrian_mesh, generate_road_sign_mesh, generate_traffic_signal_mesh,
-    generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout,
+    generate_bus_stop_shelter_mesh, generate_detailed_tree_mesh, generate_marine_ferry_dock_mesh,
+    generate_pedestrian_mesh, generate_rail_station_platform_mesh, generate_road_sign_mesh,
+    generate_runway_papi_lights_mesh, generate_streetlight_mesh, generate_traffic_signal_mesh,
+    generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout, DetailedTreeType,
     FloatingOriginCamera, GarageHit, GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh,
     InGameHudHit, InGameHudLayout, JobBrowserHit, JobBrowserLayout, MultiplayerHit,
     MultiplayerLayout, PauseMenuHit, PauseMenuLayout, RailRouteHit, RailRouteLayout,
@@ -5585,6 +5587,55 @@ impl ApplicationHandler for InteractiveViewerApp {
                     fleet_mesh.append(&sign_mesh);
                 }
 
+                // Append 3D Roadside Streetlights and Bus Stop Shelters
+                for (idx, stop_line) in self.traffic_sim.stop_lines.iter().enumerate() {
+                    let light_pos = stop_line.position + glam::Vec3::new(-3.8, 0.0, 2.0);
+                    let light_mesh = generate_streetlight_mesh(light_pos, 0.0, true);
+                    fleet_mesh.append(&light_mesh);
+
+                    if idx % 2 == 0 {
+                        let shelter_pos = stop_line.position + glam::Vec3::new(4.5, 0.0, -5.0);
+                        let shelter_mesh = generate_bus_stop_shelter_mesh(shelter_pos, 0.0);
+                        fleet_mesh.append(&shelter_mesh);
+                    }
+                }
+
+                // Append 3D Roadside Trees
+                for (idx, stop_line) in self.traffic_sim.stop_lines.iter().enumerate() {
+                    if idx % 2 == 1 {
+                        let tree_pos = stop_line.position + glam::Vec3::new(6.0, 0.0, 3.0);
+                        let tree_type = if idx % 4 == 1 {
+                            DetailedTreeType::BroadleafDeciduous
+                        } else {
+                            DetailedTreeType::CoastalPalm
+                        };
+                        let tree_mesh = generate_detailed_tree_mesh(tree_pos, 1.0, tree_type);
+                        fleet_mesh.append(&tree_mesh);
+                    }
+                }
+
+                // Append multimodal infrastructure if relevant hubs are active
+                if self.vehicle_visual_type == VehicleVisualType::TrainLocomotive
+                    || self.vehicle_visual_type == VehicleVisualType::TrainWagon
+                {
+                    // Surveyed 4th & King terminal platform
+                    let platform_pos = glam::Vec3::new(12.0, 0.0, -10.0);
+                    let platform_mesh =
+                        generate_rail_station_platform_mesh(platform_pos, 0.0, 95.0);
+                    fleet_mesh.append(&platform_mesh);
+                } else if self.vehicle_visual_type == VehicleVisualType::MarineVessel {
+                    // Surveyed Ferry Building Gate B slip
+                    let dock_pos = glam::Vec3::new(0.0, 0.0, -30.0);
+                    let dock_mesh = generate_marine_ferry_dock_mesh(dock_pos, 0.0);
+                    fleet_mesh.append(&dock_mesh);
+                } else if self.vehicle_visual_type == VehicleVisualType::CommercialAirliner
+                    || self.vehicle_visual_type == VehicleVisualType::GeneralAviation
+                {
+                    // Runway 28L PAPI approach visual glide slope indicator
+                    let papi_pos = glam::Vec3::new(-24.0, 0.0, 40.0);
+                    let papi_mesh = generate_runway_papi_lights_mesh(papi_pos, 0.0, 3.0);
+                    fleet_mesh.append(&papi_mesh);
+                }
                 // Append 3D Animated Pedestrians
                 let ped_colors = [
                     [0.2, 0.5, 0.8, 1.0],
