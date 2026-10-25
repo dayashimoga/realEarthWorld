@@ -213,3 +213,7 @@ path = "tests/stage_a_artifact_smoke.rs"
 name = "stage_b_remediation_certification"
 path = "tests/stage_b_remediation_certification.rs"
 
+[[test]]
+name = "stage_b_authoritative_physics_and_inputs"
+path = "tests/stage_b_authoritative_physics_and_inputs.rs"
+

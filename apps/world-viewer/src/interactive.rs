@@ -1105,6 +1105,7 @@ impl InteractiveViewerApp {
             UiDomainAction::PauseSimulation => {
                 self.previous_ui_state = AppUiState::InGame;
                 self.ui_state = AppUiState::PauseMenu;
+                self.reset_all_inputs();
             }
             UiDomainAction::CycleCamera => {
                 self.vehicle_cam.cycle_perspective();
@@ -1964,9 +1965,34 @@ impl InteractiveViewerApp {
             _ => return Err(format!("Invalid vehicle fleet index: {}", idx)),
         }
 
-        self.previous_vehicle_pos = self.vehicle.position;
-        self.previous_vehicle_orient = self.vehicle.orientation;
+        let (active_pos, active_orient) = match self.active_transport_mode {
+            ActiveTransportMode::Car => (self.vehicle.position, self.vehicle.orientation),
+            ActiveTransportMode::Motorcycle => {
+                (self.motorcycle.position, self.motorcycle.orientation)
+            }
+            ActiveTransportMode::TransitBus => {
+                (self.transit_bus.position, self.transit_bus.orientation)
+            }
+            ActiveTransportMode::HeavyTruck => (
+                self.heavy_truck.tractor_position,
+                self.heavy_truck.tractor_orientation,
+            ),
+            ActiveTransportMode::Train => (
+                self.train_position,
+                glam::Quat::from_rotation_y(self.train_yaw),
+            ),
+            ActiveTransportMode::Marine => {
+                (self.marine_vessel.position, self.marine_vessel.orientation)
+            }
+            ActiveTransportMode::Aviation => {
+                (self.aircraft.position, self.aircraft.orientation)
+            }
+        };
+        self.previous_vehicle_pos = active_pos;
+        self.previous_vehicle_orient = active_orient;
         self.smoothed_steer_input = 0.0;
+        self.park_engaged = false;
+        self.reset_all_inputs();
         self.vehicle_cam.reset();
 
         self.vehicle_custom_color = Some(
@@ -4669,6 +4695,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                             road_inputs.brake = 1.0;
                             road_inputs.handbrake = true;
                             road_inputs.throttle = 0.0;
+                            road_inputs.steer = 0.0;
+                        } else {
                             if is_forward_key {
                                 road_inputs.throttle = 1.0;
                                 road_inputs.brake = 0.0;
@@ -4676,9 +4704,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             } else if is_reverse_or_brake_key {
                                 if active_forward_speed > 0.35 {
                                     road_inputs.brake = 0.95;
+                                    road_inputs.throttle = 0.0;
                                     road_inputs.gear_mode = TransmissionMode::Drive;
                                 } else {
                                     road_inputs.throttle = 0.85;
+                                    road_inputs.brake = 0.0;
                                     road_inputs.gear_mode = TransmissionMode::Reverse;
                                 }
                             } else {

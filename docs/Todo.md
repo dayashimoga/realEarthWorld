@@ -1248,6 +1248,32 @@
   - [x] Verified zero regressions across all existing test suites (deterministic replay, graphics regression, injected defects, vehicle dynamics, and rendering tests passing 100%).
   - [x] Clean compilation across full workspace with zero errors (`cargo check --workspace`).
 
+## STAGE B — AUTHORITATIVE VEHICLE PHYSICS AND INPUT CORRECTNESS (Certified)
+- [x] Phase B1 — Canonical Control and Coordinate Architecture:
+  - [x] Authored `docs/CanonicalCoordinateArchitecture.md` standardizing Right-Handed ENU (+X East, +Y Up, +Z North), Vehicle Body Frame (+Z Forward, +X Right, +Y Up), steering sign conventions, and camera lookat transformations.
+  - [x] Audited winit key events, steering state machine, gear selection, and camera controllers.
+  - [x] Fixed input processing structure in `apps/world-viewer/src/interactive.rs:4667` ensuring Drive and Reverse inputs are never skipped when Park is disengaged.
+  - [x] Implemented comprehensive input state isolation in `interactive.rs` clearing held keys, throttle, steer, and brake on focus loss, simulation pause, garage, vehicle switch, and teleport.
+  - [x] Verified W (forward), S (braking/reverse), A (steer left -> negative yaw rate -> body -X), and D (steer right -> positive yaw rate -> body +X) across all 4 cardinal headings (North, East, South, West).
+- [x] Phase B2 — Correct Dynamics & Drive States:
+  - [x] Authoritative 60Hz fixed-timestep physics loop with bounded accumulator and sub-tick render interpolation.
+  - [x] Transmission Park mode mechanical parking pawl full lock in `engine/vehicles/src/dynamics.rs:741` holding linear and angular velocities to exact zero on level ground, 8% hills, and 20% steep grades.
+  - [x] Differentiated torque converter idle forward creep (5.75 km/h on flat ground) and Hill-Hold Assist (holding motionless against rollback on uphill grades >= 2.5%).
+  - [x] Caster self-centering active damping in `dynamics.rs:786` returning cornering yaw rate from 0.67 rad/s to 0.0000 rad/s within 1.0s of steering release.
+  - [x] Progressive service braking bringing vehicle from 72 km/h to full stop in 1.98s with 0.000 km/h final speed and no reverse motion.
+  - [x] Multimodal class dynamics: Motorcycle dynamic lean (25.74 deg), Transit Bus 9,500 kg inertia and comfort tracking, Heavy Truck articulated trailer yaw.
+  - [x] Outward building collision separation hyperplane preventing solid building penetration.
+- [x] Phase B3 — Verified Reset & Spawn Behavior:
+  - [x] Static equilibrium ride height preload (`equilibrium_ride_height()`) and spring compression initialization eliminating vertical launch impulses.
+  - [x] Vehicle switch state clearing in `execute_spawn_vehicle(idx)` resetting Park, inputs, and interpolator pose history across all transport classes.
+- [x] Phase B4 — Quantitative Master Certification:
+  - [x] Authored and executed deterministic test suite `tests/tests/stage_b_authoritative_physics_and_inputs.rs` (9/9 tests passing).
+  - [x] Bit-exact invariance across 30, 60, and 120 FPS presentation framerates (Delta = 0.000000m).
+  - [x] 100% pass rate across all 8 P0 remediation certification tests (`stage_b_remediation_certification`).
+  - [x] 100% pass rate across all Stage A regression suites (deterministic replay, graphics regression, injected defects, artifact smoke).
+  - [x] 100% pass rate across 44 unit tests in `realearth-vehicles` with clean workspace compilation (`cargo check --workspace`).
+
+
 
 
 

@@ -738,28 +738,35 @@ impl DynamicVehicle {
         let is_nearly_stationary = speed < 0.25;
 
         // Static friction holding logic: Park, handbrake, service brake, and level-ground idle
-        if is_nearly_stationary {
-            let is_park = inputs.gear_mode == TransmissionMode::Park;
+        if inputs.gear_mode == TransmissionMode::Park {
+            // Mechanical parking pawl locks drivetrain and holds vehicle motionless on all slopes
+            if speed < 3.0 || is_nearly_stationary {
+                self.linear_velocity = Vec3::ZERO;
+                self.angular_velocity = Vec3::ZERO;
+            }
+        } else if is_nearly_stationary {
             let is_handbrake = inputs.handbrake && inputs.throttle == 0.0;
             let is_service_brake = inputs.brake > 0.3 && inputs.throttle == 0.0;
 
-            // On flat ground with zero throttle, static rolling resistance holds the car motionless without drift
-            let is_flat_idle = inputs.throttle == 0.0
+            // In Neutral or with brake applied on flat ground with zero throttle, hold motionless
+            let is_flat_idle = (inputs.gear_mode == TransmissionMode::Neutral || inputs.brake > 0.05)
+                && inputs.throttle == 0.0
                 && inputs.steer.abs() < 0.05
                 && speed < 0.12
                 && grounded_wheels >= 2
                 && slope_grade < 0.025;
 
-            // Automatic Hill-Hold Assist (HHA) & Automatic Drive Standstill Hold:
-            // When in Drive with zero throttle and grounded wheels, hold against backward rollback on grades up to 25% (0.25)
+            // Automatic Hill-Hold Assist (HHA) & Anti-Rollback:
+            // When in Drive on an uphill grade with zero throttle and grounded wheels, hold against backward rollback
             let forward_speed = self.linear_velocity.dot(forward);
             let is_hill_hold_drive = inputs.gear_mode == TransmissionMode::Drive
                 && inputs.throttle == 0.0
                 && grounded_wheels >= 2
-                && forward_speed <= 0.05
-                && slope_grade <= 0.25;
+                && forward_speed <= 0.001
+                && slope_grade >= 0.025
+                && slope_grade <= 0.30;
 
-            if is_park || is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
+            if is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
                 self.linear_velocity.x = 0.0;
                 self.linear_velocity.z = 0.0;
                 self.angular_velocity = Vec3::ZERO;
@@ -784,6 +791,10 @@ impl DynamicVehicle {
             self.angular_velocity.z *= 0.95;
         } else {
             self.angular_velocity *= 0.98; // Natural rotational damping
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park && (speed < 3.0 || is_nearly_stationary) {
+            self.angular_velocity = Vec3::ZERO;
         }
 
         // Update Position & Orientation

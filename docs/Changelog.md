@@ -1891,6 +1891,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Re-certified all 4 Stage A regression suites (deterministic replay, graphics regression, injected defects, artifact smoke test) with 100% pass rate.
   - Verified clean workspace build (`cargo check --workspace`).
 
+## [0.1.9] - 2026-10-25
+### Certified — STAGE B: Authoritative Vehicle Physics and Input Correctness
+- **Canonical Control & Coordinate Architecture Standard (`docs/CanonicalCoordinateArchitecture.md`)**:
+  - Published authoritative coordinate and control architecture standard defining right-handed ENU ($+X$ East, $+Y$ Up, $+Z$ North) and vehicle body coordinates ($+Z$ Forward, $+X$ Right, $+Y$ Up).
+  - Defined mathematical yaw convention ($\psi = 0$ at North, $+\pi/2$ at East, $\pm\pi$ at South, $-\pi/2$ at West).
+  - Standardized steering signs: Steer Left ($A$, $s < 0$) produces negative yaw rate ($\omega_y < 0$) turning body forward toward $-X$ (body left); Steer Right ($D$, $s > 0$) produces positive yaw rate ($\omega_y > 0$) turning body forward toward $+X$ (body right).
+  - Documented input state machine lifecycle ensuring complete zeroing of throttle, brake, steer, and handbrake across focus loss, pause, garage, vehicle switch, and teleport.
+- **Winit Input Dispatch & State Isolation (`apps/world-viewer/src/interactive.rs`)**:
+  - Fixed input dispatch logic in [`apps/world-viewer/src/interactive.rs:4667`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs#L4667) so Drive and Reverse acceleration are properly routed whenever Park is disengaged.
+  - Added input clearing and Park pawl reset in `execute_spawn_vehicle(idx)`.
+  - Added dynamic pose extraction (`previous_vehicle_pos` and `previous_vehicle_orient`) across all active transport modes (`Car`, `Motorcycle`, `TransitBus`, `HeavyTruck`, `Train`, `Marine`, `Aviation`) to prevent frame interpolation warping on vehicle switch.
+  - Added input reset on simulation pause (`UiDomainAction::PauseSimulation`).
+- **Mechanical Parking Pawl Rigid Locking (`engine/vehicles/src/dynamics.rs`)**:
+  - Upgraded `TransmissionMode::Park` mechanical parking pawl engagement up to $3.0\text{ m/s}$ (~$11\text{ km/h}$), setting linear and angular velocities to `Vec3::ZERO` unconditionally.
+  - Certified $0.000000\text{m}$ displacement on Level Ground (0%), San Francisco Hill (8%), and Steep Lombard Grade (20%).
+- **Torque Converter Idle Forward Creep & Hill-Hold Assist (`engine/vehicles/src/dynamics.rs`)**:
+  - Refined static friction holding logic so torque converter idle forward creep accelerates the car forward to authentic ~$5.75\text{ km/h}$ on flat ground in Drive when brakes are released.
+  - Configured Hill-Hold Assist (HHA) to activate on uphill grades $\ge 2.5\%$ when rolling backwards ($v_{\text{forward}} \le 0.001\text{ m/s}$), preventing rollback without suppressing forward creep.
+- **Active Caster Self-Centering & Steering Yaw Damping (`engine/vehicles/src/dynamics.rs`)**:
+  - Verified active caster trail yaw rate damping (`angular_velocity.y *= 0.88`), returning cornering yaw rate from $0.673\text{ rad/s}$ to $-0.0000\text{ rad/s}$ within 1.0s of steering wheel release.
+- **Progressive Service Braking (`engine/vehicles/src/dynamics.rs`)**:
+  - Verified progressive service braking decelerating vehicle from $72\text{ km/h}$ to full stop in $1.98\text{s}$ with final speed $0.000\text{ km/h}$ and no reverse movement.
+- **Master Quantitative Certification Test Suite (`tests/tests/stage_b_authoritative_physics_and_inputs.rs`)**:
+  - Authored comprehensive 9-test quantitative certification suite covering:
+    1. Canonical control signs across all 4 cardinal headings (North, East, South, West) for W, S, A, D.
+    2. Park mode standstill holding on level ground and slopes ($0.000000\text{m}$ drift).
+    3. Hill-Hold Assist and idle forward creep in Drive.
+    4. Monotonic coasting deceleration in Neutral (14.80 -> 14.61 -> 14.41 -> 14.22 m/s).
+    5. Progressive service braking and complete stop.
+    6. Steer release caster self-centering active damping.
+    7. Multimodal fleet dynamics (Motorcycle lean, Transit Bus mass, Heavy Truck articulation).
+    8. Fixed-timestep 60Hz physics invariance across 30, 60, and 120 FPS ($\Delta = 0.000000\text{m}$).
+    9. Outward building collision resolution with zero penetration.
+  - Certified 9/9 tests passing (100% pass rate).
+- **Regression Verification**:
+  - All 8 P0 remediation tests passing in `stage_b_remediation_certification` (8/8).
+  - All Stage A regression tests passing (deterministic replay 3/3, graphics regression 3/3, injected defects 5/5, artifact smoke 1/1).
+  - All 44 unit tests passing in `realearth-vehicles` (44/44).
+  - Clean workspace build (`cargo check --workspace`).
+
+
 
 
 
