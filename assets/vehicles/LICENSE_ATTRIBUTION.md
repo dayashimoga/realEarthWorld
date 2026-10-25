@@ -1,8 +1,9 @@
 # Real Earth Vehicle Fleet Series 2026 — Asset Attribution & Licensing Manifest
 
-**Release Stage**: Stage 0.8 (Complete Realistic Vehicle Visual Overhaul)  
+**Release Stage**: Stage 1.6-R (Premium Multimodal Vehicle Visual and Animation Overhaul)  
 **License**: Apache-2.0 / MIT Dual License (Open-Source, Royalty-Free, Fully Redistributable)  
 **Design Authority**: Real Earth Vehicle Art & Graphics Engineering Team  
+**Certification Standard**: STAGE 1.6-R Architectural Non-Box Multimodal Standards  
 **Trademark Policy**: All 3D vehicle geometries, body panels, badging, names, and visual designs are 100% original, non-infringing automotive engineering creations. No registered manufacturer trademarks, copyrighted brand emblems, or proprietary trade dresses are reproduced.
 
 ---

@@ -338,10 +338,12 @@ fn test_stage0_9_3_chunk_aware_road_partitioning_no_duplicates() {
 
 #[test]
 fn test_stage0_9_4_schema_aware_cache_invalidation() {
-    assert_eq!(
-        CHUNK_VERSION, 2,
-        "Stage 0.9 schema overhaul must be CHUNK_VERSION = 2"
-    );
+    const {
+        assert!(
+            CHUNK_VERSION >= 2,
+            "Stage 0.9+ schema overhaul must be CHUNK_VERSION >= 2"
+        );
+    }
 
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let db_path = temp_dir.path().join("chunks.db");

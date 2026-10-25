@@ -1082,8 +1082,8 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
     for i in 0..segs {
         let a0 = i as f32 * (2.0 * PI / segs as f32);
         let a1 = (i + 1) as f32 * (2.0 * PI / segs as f32);
-        let p0 = steer_pivot + Vec3::new(rim_r * a0.cos(), rim_r * a0.sin(), 0.0);
-        let p1 = steer_pivot + Vec3::new(rim_r * a1.cos(), rim_r * a1.sin(), 0.0);
+        let p0 = Vec3::new(rim_r * a0.cos(), rim_r * a0.sin(), 0.0);
+        let p1 = Vec3::new(rim_r * a1.cos(), rim_r * a1.sin(), 0.0);
         add_box_at(
             &mut steer_mesh,
             (p0 + p1) * 0.5,
@@ -1094,7 +1094,7 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
     // Center boss & spokes
     add_box_at(
         &mut steer_mesh,
-        steer_pivot,
+        Vec3::ZERO,
         Vec3::new(0.04, 0.04, 0.02),
         AutomotivePalette::ALLOY_SILVER,
     );
@@ -1250,7 +1250,7 @@ pub fn build_apex_gt_sports_coupe(lod: VehicleLodLevel) -> LoadedVehicleModel {
         submesh_type: VehicleSubmeshType::AerodynamicSpoiler,
         mesh: spoiler_mesh,
         local_transform: Affine3A::IDENTITY,
-        pivot: Vec3::new(0.0, wing_y, wing_z),
+        pivot: Vec3::ZERO,
         material: VehiclePbrMaterial {
             base_color: AutomotivePalette::CARBON_FIBER,
             metallic: 0.90,
@@ -2160,17 +2160,6 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         Vec3::new(0.24, 0.45, 0.24),
         [0.15, 0.18, 0.22, 1.0], // Driver high-back seat
     );
-    // 16 Contoured Modular Passenger Bucket Seats in Transit Blue
-    for sz in [-4.5, -3.5, -2.5, -1.5, 0.8, 1.8, 2.8, 3.8] {
-        for sx in [-0.78, 0.78] {
-            add_box_at(
-                &mut interior_mesh,
-                Vec3::new(sx, 0.88, sz),
-                Vec3::new(0.22, 0.40, 0.20),
-                [0.18, 0.35, 0.65, 1.0], // Transit Blue
-            );
-        }
-    }
     // Stainless Steel Vertical Stanchion Grab Poles
     for sz in [-3.8, -1.8, 1.2, 3.2] {
         add_cylinder_y(
@@ -2183,12 +2172,39 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         );
     }
     builder = builder.add_submesh(VehicleSubmesh {
-        name: "Interior".into(),
+        name: "Interior_Cockpit".into(),
         submesh_type: VehicleSubmeshType::InteriorCockpit,
         mesh: interior_mesh,
         local_transform: Affine3A::IDENTITY,
         pivot: Vec3::ZERO,
         material: VehiclePbrMaterial::default(),
+    });
+
+    // 16 Contoured Modular Passenger Bucket Seats in Transit Blue
+    let mut seats_mesh = ChunkMesh::default();
+    for sz in [-4.5, -3.5, -2.5, -1.5, 0.8, 1.8, 2.8, 3.8] {
+        for sx in [-0.78, 0.78] {
+            add_box_at(
+                &mut seats_mesh,
+                Vec3::new(sx, 0.88, sz),
+                Vec3::new(0.22, 0.40, 0.20),
+                [0.18, 0.35, 0.65, 1.0], // Transit Blue
+            );
+        }
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Passenger_Seats".into(),
+        submesh_type: VehicleSubmeshType::InteriorPassengerSeats,
+        mesh: seats_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: [0.18, 0.35, 0.65, 1.0],
+            metallic: 0.10,
+            roughness: 0.70,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
     });
 
     // 4. Articulated Passenger Doors (Front Entrance & Center Exit)
@@ -2541,14 +2557,29 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
         [0.15, 0.16, 0.18, 1.0],
     );
     // Knuckle Coupler and Pin Lifter Drawbar (Front and Rear)
+    let mut coupler_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
-            &mut chassis_mesh,
+            &mut coupler_mesh,
             Vec3::new(0.0, 0.85, sign * (half_l + 0.35)),
             Vec3::new(0.18, 0.18, 0.35),
             [0.25, 0.26, 0.28, 1.0], // AAR Type E Knuckle Coupler
         );
     }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Locomotive_Couplers".into(),
+        submesh_type: VehicleSubmeshType::TrainCoupler,
+        mesh: coupler_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: [0.25, 0.26, 0.28, 1.0],
+            metallic: 0.90,
+            roughness: 0.35,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
     // Long Machinery Hood with Dynamic Brake Blister & Exhaust Stack
     add_box_at(
         &mut chassis_mesh,
@@ -2744,13 +2775,31 @@ pub fn build_passenger_coach(lod: VehicleLodLevel) -> LoadedVehicleModel {
             Vec3::new(0.65, 1.20, 0.15),
             [0.15, 0.15, 0.16, 1.0], // Flexible rubber diaphragm
         );
+    }
+
+    let mut coach_coupler_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
         add_box_at(
-            &mut chassis_mesh,
+            &mut coach_coupler_mesh,
             Vec3::new(0.0, 0.85, sign * (half_l + 0.35)),
             Vec3::new(0.18, 0.18, 0.35),
             [0.25, 0.26, 0.28, 1.0], // Knuckle Coupler
         );
     }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Coach_Couplers".into(),
+        submesh_type: VehicleSubmeshType::TrainCoupler,
+        mesh: coach_coupler_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: [0.25, 0.26, 0.28, 1.0],
+            metallic: 0.90,
+            roughness: 0.35,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
 
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Coach_Chassis".into(),
@@ -3090,6 +3139,60 @@ pub fn build_skycourier_b737(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
+    // 5. Cockpit Windshield & Cabin Window Strips
+    let mut glass_mesh = ChunkMesh::default();
+    add_box_at(
+        &mut glass_mesh,
+        Vec3::new(0.0, 2.85, 16.0),
+        Vec3::new(1.10, 0.45, 0.85),
+        AutomotivePalette::TINTED_GLASS,
+    );
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Cockpit_Glass".into(),
+        submesh_type: VehicleSubmeshType::GlassGreenhouse,
+        mesh: glass_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TINTED_GLASS,
+            metallic: 0.10,
+            roughness: 0.05,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Blend,
+        },
+    });
+
+    // 6. Tricycle Landing Gear (Nose Gear & Dual Main Gear)
+    let mut gear_mesh = ChunkMesh::default();
+    add_box_at(
+        &mut gear_mesh,
+        Vec3::new(0.0, 0.35, 14.5),
+        Vec3::new(0.25, 0.35, 0.35),
+        [0.15, 0.15, 0.16, 1.0],
+    );
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut gear_mesh,
+            Vec3::new(sign * 2.85, 0.35, -0.65),
+            Vec3::new(0.35, 0.35, 0.45),
+            [0.15, 0.15, 0.16, 1.0],
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Landing_Gear".into(),
+        submesh_type: VehicleSubmeshType::WheelFrontLeft,
+        mesh: gear_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: [0.15, 0.15, 0.16, 1.0],
+            metallic: 0.70,
+            roughness: 0.30,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
     // 5. Spinning High-Bypass Turbofan Fan Blades
     let mut fan_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
@@ -3205,6 +3308,64 @@ pub fn build_skyhawk_c172(lod: VehicleLodLevel) -> LoadedVehicleModel {
             base_color: plane_white,
             metallic: 0.40,
             roughness: 0.30,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // Cabin Windshield & Side Windows
+    let mut glass_mesh = ChunkMesh::default();
+    add_box_at(
+        &mut glass_mesh,
+        Vec3::new(0.0, 1.45, 0.45),
+        Vec3::new(0.55, 0.35, 0.75),
+        AutomotivePalette::TINTED_GLASS,
+    );
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Cabin_Glass".into(),
+        submesh_type: VehicleSubmeshType::GlassGreenhouse,
+        mesh: glass_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TINTED_GLASS,
+            metallic: 0.10,
+            roughness: 0.05,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Blend,
+        },
+    });
+
+    // Tricycle Landing Gear Wheels
+    let mut gear_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        add_cylinder_z(
+            &mut gear_mesh,
+            Vec3::new(sign * 1.11, 0.20, 0.0),
+            0.18,
+            0.10,
+            12,
+            [0.15, 0.15, 0.16, 1.0],
+        );
+    }
+    add_cylinder_z(
+        &mut gear_mesh,
+        Vec3::new(0.0, 0.20, 1.65),
+        0.16,
+        0.08,
+        12,
+        [0.15, 0.15, 0.16, 1.0],
+    );
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Landing_Gear".into(),
+        submesh_type: VehicleSubmeshType::WheelRearLeft,
+        mesh: gear_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: [0.15, 0.15, 0.16, 1.0],
+            metallic: 0.80,
+            roughness: 0.25,
             emissive: [0.0, 0.0, 0.0],
             alpha_mode: VehicleAlphaMode::Opaque,
         },

@@ -6,6 +6,7 @@ pub mod compiler_pipeline;
 pub mod database;
 pub mod mesh;
 pub mod packager;
+pub mod railway_mesher;
 pub mod regional_catalog;
 pub mod road_mesher;
 pub mod terrain_mesher;
@@ -20,6 +21,7 @@ pub use mesh::{ChunkMesh, Vertex};
 pub use packager::{
     pack_chunk_to_bytes, read_chunk_file, unpack_chunk_from_bytes, write_chunk_file,
 };
+pub use railway_mesher::{mesh_railway, mesh_railway_with_options, RailwayMeshingOptions};
 pub use regional_catalog::{PackageManifest, PackageState, RegionalCatalog};
 pub use road_mesher::{
     mesh_road, mesh_road_infrastructure, mesh_road_infrastructure_with_options,

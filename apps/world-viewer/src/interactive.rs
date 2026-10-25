@@ -56,11 +56,11 @@ use realearth_simulation::RealEarthSimWorld;
 use realearth_streaming::{StreamingConfig, WorldStreamer};
 use realearth_validation::pipeline::validate_dataset;
 use realearth_vehicles::{
-    AircraftFlight, AuthoritativeVehicleState, DynamicVehicle, FlightInputs, GroundQuery,
-    HeavyTruckModel, IntersectionStopLine, MarineInputs, MarineVessel, MotorcycleModel,
-    PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation, TrainConsist,
-    TransitBusModel, TransmissionMode, VehicleCameraController, VehicleCameraPerspective,
-    VehicleConfig, VehicleInputs,
+    AircraftFlight, AuthoritativeVehicleState, BuildingCollisionWorld, DynamicVehicle,
+    FlightInputs, GroundQuery, HeavyTruckModel, IntersectionStopLine, MarineInputs, MarineVessel,
+    MotorcycleModel, PedestrianAgent, TrafficLight, TrafficLightState, TrafficSimulation,
+    TrainConsist, TransitBusModel, TransmissionMode, VehicleCameraController,
+    VehicleCameraPerspective, VehicleConfig, VehicleInputs,
 };
 
 /// Verified authentic roadway spawn location candidate.
@@ -257,6 +257,7 @@ struct RegionResources {
     raw_ports: Vec<realearth_ingestion::osm_types::OsmPortFeature>,
     rail_graph: Option<RailNetworkGraph>,
     streamer: WorldStreamer,
+    pub building_collision: BuildingCollisionWorld,
 }
 
 /// Explicit asynchronous region transition state machine phases.
@@ -2763,6 +2764,8 @@ impl InteractiveViewerApp {
 
         self.ground_query = Some(ground_query);
         self.sim_world = Some(sim_world);
+        let building_collision =
+            BuildingCollisionWorld::from_osm_buildings(&raw_buildings, package_anchor, &dem);
         self.region_resources = Some(RegionResources {
             _world_dir: world_dir,
             region_name,
@@ -2777,6 +2780,7 @@ impl InteractiveViewerApp {
             raw_ports,
             rail_graph,
             streamer,
+            building_collision,
         });
 
         // Initialize vehicle: spawn if in drive mode, otherwise prepare initial vehicle preview without hijacking camera
@@ -4745,9 +4749,20 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 self.wheel_spin_angle = (self.wheel_spin_angle
                                     + (forward_speed * PHYSICS_DT) / wheel_r)
                                     % (2.0 * std::f32::consts::PI);
+
+                                res.building_collision.resolve_collision(
+                                    &mut self.vehicle.position,
+                                    &mut self.vehicle.linear_velocity,
+                                    self.vehicle.config.half_extents,
+                                );
                             }
                             ActiveTransportMode::Motorcycle => {
                                 self.motorcycle.step(&road_inputs, gq, PHYSICS_DT);
+                                res.building_collision.resolve_collision(
+                                    &mut self.motorcycle.position,
+                                    &mut self.motorcycle.linear_velocity,
+                                    glam::Vec3::new(0.4, 0.6, 1.0),
+                                );
                                 let forward_speed = self.motorcycle.speed_kph / 3.6;
                                 let wheel_r = 0.31f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle
@@ -4756,6 +4771,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             ActiveTransportMode::TransitBus => {
                                 self.transit_bus.step(&road_inputs, gq, PHYSICS_DT);
+                                res.building_collision.resolve_collision(
+                                    &mut self.transit_bus.position,
+                                    &mut self.transit_bus.linear_velocity,
+                                    glam::Vec3::new(1.3, 1.6, 6.0),
+                                );
                                 let forward_speed = self.transit_bus.speed_kph / 3.6;
                                 let wheel_r = 0.52f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle
@@ -4764,6 +4784,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                             ActiveTransportMode::HeavyTruck => {
                                 self.heavy_truck.step(&road_inputs, gq, PHYSICS_DT);
+                                res.building_collision.resolve_collision(
+                                    &mut self.heavy_truck.tractor_position,
+                                    &mut self.heavy_truck.linear_velocity,
+                                    glam::Vec3::new(1.3, 1.8, 4.0),
+                                );
                                 let forward_speed = self.heavy_truck.speed_kph / 3.6;
                                 let wheel_r = 0.52f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle

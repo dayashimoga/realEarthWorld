@@ -2577,6 +2577,7 @@ dependencies = [
  "petgraph",
  "rapier3d",
  "realearth-geospatial",
+ "realearth-ingestion",
  "realearth-navigation",
  "realearth-shared",
  "serde",

@@ -2,7 +2,9 @@
 
 use crate::aeroway_port_validator::{validate_aeroways, validate_ports};
 use crate::building_deep_validator::validate_buildings_deep;
-use crate::building_road_validator::validate_building_road_conflicts;
+use crate::building_road_validator::{
+    validate_building_railway_conflicts, validate_building_road_conflicts,
+};
 use crate::chunk_integrity_validator::validate_chunk_boundary_continuity;
 use crate::diagnostic::ValidationTolerance;
 use crate::polygon_validator::ValidatedBuilding;
@@ -64,6 +66,9 @@ pub fn validate_dataset_with_tolerances(
         &mut repair_engine,
         tolerance,
     );
+
+    // 4b. Building / Railway corridor conflicts
+    validate_building_railway_conflicts(&valid_buildings, &valid_railways, &mut repair_engine);
 
     // 5. Water bodies
     let valid_water = validate_water_bodies(&dataset.water_bodies, &mut repair_engine, tolerance);

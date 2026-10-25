@@ -5,6 +5,7 @@ use crate::chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUN
 use crate::database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 use crate::mesh::ChunkMesh;
 use crate::packager::write_chunk_file;
+use crate::railway_mesher::{mesh_railway_with_options, RailwayMeshingOptions};
 use crate::road_mesher::{
     mesh_road, mesh_road_infrastructure_with_options, mesh_road_with_options, RoadMeshingOptions,
 };
@@ -362,24 +363,11 @@ pub fn compile_world_package(
                 }
 
                 if !runs.is_empty() {
-                    let pseudo_road = realearth_ingestion::osm_types::OsmRoadFeature {
-                        way_id: r.way_id,
-                        name: r.name.clone(),
-                        highway_type: realearth_ingestion::osm_types::HighwayType::Secondary,
-                        geometry: r.geometry.clone(),
-                        lanes: 2,
-                        speed_limit_kph: 80,
-                        is_oneway: false,
-                        layer: r.layer,
-                        is_bridge: r.is_bridge,
-                        is_tunnel: r.is_tunnel,
-                    };
                     for (s_start, s_end) in runs {
-                        let opt = RoadMeshingOptions {
+                        let opt = RailwayMeshingOptions {
                             segment_range: Some((s_start, s_end)),
-                            junction_coords: None,
                         };
-                        let m = mesh_road_with_options(&pseudo_road, &chunk_converter, dem, &opt);
+                        let m = mesh_railway_with_options(r, &chunk_converter, dem, &opt);
                         road_mesh.append(&m);
                     }
                 }

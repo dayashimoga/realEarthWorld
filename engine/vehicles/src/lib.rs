@@ -1,5 +1,6 @@
 //! Vehicle kinematics, automotive dynamics, camera controllers, and Rapier3D physics.
 
+pub mod building_collision;
 pub mod camera;
 pub mod dynamics;
 pub mod ground;
@@ -9,6 +10,7 @@ pub mod physics;
 pub mod traffic;
 pub mod vehicle_agent;
 
+pub use building_collision::{BuildingCollisionWorld, BuildingFootprintCollider};
 pub use camera::{VehicleCameraController, VehicleCameraPerspective};
 pub use dynamics::{
     DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs, VehicleStateSnapshot,

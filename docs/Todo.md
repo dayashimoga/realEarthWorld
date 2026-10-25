@@ -1172,7 +1172,7 @@
   - [x] Monotonic triangle reduction verified across LOD0 High, LOD1 Medium, and LOD2 Low.
   - [x] All 10 models strictly adhere to real-time triangle budget caps (<= 5,000 LOD0, <= 2,000 LOD1, <= 1,000 LOD2).
 - [x] Phase 1.6-R.5: Master Certification Test Suite & Quality Gates
-  - [x] Authored `tests/tests/stage1_6_vehicle_visual_and_animation_certification.rs` (6/6 tests passing).
+  - [x] Authored `tests/tests/stage1_6_vehicle_visual_and_animation_certification.rs` (10/10 tests passing).
   - [x] Authored ADR-0049 (`docs/adr/0049-stage-1-6-r-premium-multimodal-vehicle-visual-and-animation-overhaul.md`).
   - [x] Authored Certification Report (`docs/reports/stage1_6_certification_report.md`).
   - [x] Updated `assets/vehicles/LICENSE_ATTRIBUTION.md` with full fleet specs and Apache-2.0 / MIT licenses.

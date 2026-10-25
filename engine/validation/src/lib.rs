@@ -20,7 +20,10 @@ pub mod terrain_water_validator;
 
 pub use aeroway_port_validator::{validate_aeroways, validate_ports};
 pub use building_deep_validator::validate_buildings_deep;
-pub use building_road_validator::validate_building_road_conflicts;
+pub use building_road_validator::{
+    validate_building_infrastructure_conflicts, validate_building_railway_conflicts,
+    validate_building_road_conflicts,
+};
 pub use chunk_integrity_validator::validate_chunk_boundary_continuity;
 pub use city_catalog_validator::{
     audit_all_us_cities, validate_and_certify_us_city, CatalogAuditSummary,

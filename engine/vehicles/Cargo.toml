@@ -8,6 +8,7 @@ license.workspace = true
 realearth-shared = { path = "../shared" }
 realearth-geospatial = { path = "../geospatial" }
 realearth-navigation = { path = "../navigation" }
+realearth-ingestion = { path = "../ingestion" }
 bevy_ecs.workspace = true
 rapier3d.workspace = true
 glam.workspace = true

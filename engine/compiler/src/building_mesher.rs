@@ -598,18 +598,99 @@ fn mesh_standard_building(
         indices.push(parapet_base + 1);
     }
 
-    // 4. Triangulate flat roof using earcut
+    // 4. Triangulate flat roof with hole preservation using earcut
     let mut flat_coords: Vec<f64> = Vec::with_capacity((enu_pts.len() - 1) * 2);
+    let mut roof_pts: Vec<Vec3> = Vec::with_capacity(enu_pts.len());
     for pt in enu_pts.iter().take(enu_pts.len() - 1) {
         flat_coords.push(pt.x as f64);
         flat_coords.push(pt.z as f64);
+        roof_pts.push(*pt);
     }
 
-    if let Ok(roof_indices) = earcut(&flat_coords, &[], 2) {
+    let mut hole_indices: Vec<usize> = Vec::new();
+    for inner in &building.inner_rings {
+        if inner.len() < 3 {
+            continue;
+        }
+        let hole_start = flat_coords.len() / 2;
+        hole_indices.push(hole_start);
+
+        let inner_slice = if inner.len() > 1 && inner.first() == inner.last() {
+            &inner[..inner.len() - 1]
+        } else {
+            &inner[..]
+        };
+
+        let mut inner_enu_pts = Vec::with_capacity(inner_slice.len());
+        for pt in inner_slice {
+            let enu = converter.wgs84_to_enu(*pt);
+            let p = Vec3::new(enu.east as f32, 0.0, enu.north as f32);
+            flat_coords.push(p.x as f64);
+            flat_coords.push(p.z as f64);
+            roof_pts.push(p);
+            inner_enu_pts.push(p);
+        }
+
+        // Extrude inner courtyard walls down to ground
+        let inner_count = inner_enu_pts.len();
+        for i in 0..inner_count {
+            let next = (i + 1) % inner_count;
+            let p0 = inner_enu_pts[i];
+            let p1 = inner_enu_pts[next];
+            let edge = p1 - p0;
+            let edge_len = edge.length();
+            if edge_len < 1e-4 {
+                continue;
+            }
+            let normal = Vec3::new(-edge.z, 0.0, edge.x).normalize();
+            let norm_arr = [normal.x, normal.y, normal.z];
+
+            let ground0 = dem.sample_bilinear(&inner_slice[i]);
+            let ground1 = dem.sample_bilinear(&inner_slice[next]);
+            let bot0 = ground0.min(base_elev) - 0.20;
+            let bot1 = ground1.min(base_elev) - 0.20;
+
+            let base_idx = vertices.len() as u32;
+            vertices.push(Vertex::new(
+                [p0.x, bot0, p0.z],
+                norm_arr,
+                [0.0, 0.0],
+                wall_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, bot1, p1.z],
+                norm_arr,
+                [edge_len, 0.0],
+                wall_color,
+            ));
+            vertices.push(Vertex::new(
+                [p1.x, roof_elev, p1.z],
+                norm_arr,
+                [edge_len, building_height],
+                wall_color,
+            ));
+            vertices.push(Vertex::new(
+                [p0.x, roof_elev, p0.z],
+                norm_arr,
+                [0.0, building_height],
+                wall_color,
+            ));
+
+            indices.push(base_idx);
+            indices.push(base_idx + 1);
+            indices.push(base_idx + 2);
+
+            indices.push(base_idx);
+            indices.push(base_idx + 2);
+            indices.push(base_idx + 3);
+        }
+    }
+
+    if let Ok(roof_indices) = earcut(&flat_coords, &hole_indices, 2) {
         let roof_base_idx = vertices.len() as u32;
         let up_norm = [0.0, 1.0, 0.0];
 
-        for pt in enu_pts.iter().take(enu_pts.len() - 1) {
+        for pt in &roof_pts {
             vertices.push(Vertex::new(
                 [pt.x, roof_elev, pt.z],
                 up_norm,

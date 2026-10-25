@@ -834,6 +834,30 @@ impl DynamicVehicle {
         }
     }
 
+    /// Resolves horizontal building solid collision, preventing chassis penetration.
+    pub fn resolve_building_collision(
+        &mut self,
+        world: &crate::building_collision::BuildingCollisionWorld,
+    ) -> bool {
+        world.resolve_collision(
+            &mut self.position,
+            &mut self.linear_velocity,
+            self.config.half_extents,
+        )
+    }
+
+    /// Advances vehicle dynamics by dt seconds, taking into account ground elevation and solid building collisions.
+    pub fn step_with_solids(
+        &mut self,
+        inputs: &VehicleInputs,
+        ground: &dyn GroundQuery,
+        solids: &crate::building_collision::BuildingCollisionWorld,
+        dt: f32,
+    ) -> bool {
+        self.step(inputs, ground, dt);
+        self.resolve_building_collision(solids)
+    }
+
     /// Safe full reset: places vehicle at given position and yaw with zero velocities, level chassis, and equilibrium preload.
     pub fn reset_at_pose(&mut self, position: Vec3, yaw: f32) {
         self.position = position;
