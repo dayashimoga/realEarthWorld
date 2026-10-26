@@ -33,13 +33,18 @@ const DT: f32 = 1.0 / 60.0;
 
 #[test]
 fn test_certify_p0_1_steering_and_road_spawn_alignment() {
-    println!("\n✅ [P0-1 CERTIFICATION] Validating Steering Sign Convention & Road Spawn Alignment...");
+    println!(
+        "\n✅ [P0-1 CERTIFICATION] Validating Steering Sign Convention & Road Spawn Alignment..."
+    );
 
     // 1. Steering direction: steer_left produces negative steer angle and wheel rotation toward -X
     let target_steer_left = -0.65f32;
     let car_config = VehicleConfig::sports_coupe();
     let steer_rad = target_steer_left * car_config.max_steer_angle;
-    assert!(steer_rad < 0.0, "Steering angle must be negative for steer_left");
+    assert!(
+        steer_rad < 0.0,
+        "Steering angle must be negative for steer_left"
+    );
 
     let steer_rot = Quat::from_rotation_y(steer_rad);
     let forward_local = Vec3::Z;
@@ -137,7 +142,9 @@ fn test_certify_p0_2_zero_input_steering_stability() {
 
 #[test]
 fn test_certify_p0_3_slope_hill_hold_and_drive_power() {
-    println!("\n✅ [P0-3 CERTIFICATION] Validating Hill-Hold Assist & Forward Acceleration in Drive...");
+    println!(
+        "\n✅ [P0-3 CERTIFICATION] Validating Hill-Hold Assist & Forward Acceleration in Drive..."
+    );
 
     // San Francisco standard 8% hill slope (0.08 grade)
     let ground = SlopedGround::new(0.0, 0.0, 0.08);
@@ -355,7 +362,8 @@ fn test_certify_p0_7_aircraft_airspace_boundary_enforcement() {
         }
     }
 
-    let final_distance = (plane.position.x * plane.position.x + plane.position.z * plane.position.z).sqrt();
+    let final_distance =
+        (plane.position.x * plane.position.x + plane.position.z * plane.position.z).sqrt();
     println!(
         "  • Final Distance from Anchor: {:.1}m (Limit: {:.1}m) | Boundary Triggers: {}",
         final_distance, boundary_radius, boundary_advisory_count
@@ -382,7 +390,11 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
     println!("\n✅ [P0-8 CERTIFICATION] Validating US City Transitions & Authentic Synthesis...");
 
     let cities = all_us_cities();
-    assert_eq!(cities.len(), 38, "Catalog must contain all 38 mandatory US metropolitan cities");
+    assert_eq!(
+        cities.len(),
+        38,
+        "Catalog must contain all 38 mandatory US metropolitan cities"
+    );
 
     let sample_catalog_cities = ["austin", "denver", "dallas", "nashville"];
 
@@ -398,15 +410,32 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
         let (dataset, dem, meta) = load_res.unwrap();
         println!(
             "  • City '{}' ({}) Synthesized: Roads={}, Buildings={}, DEM accuracy=±{:.1}m",
-            meta.name, meta.state, dataset.roads.len(), dataset.buildings.len(), meta.dem_accuracy_m
+            meta.name,
+            meta.state,
+            dataset.roads.len(),
+            dataset.buildings.len(),
+            meta.dem_accuracy_m
         );
-        assert!(dataset.roads.len() > 0, "Roads must be present in synthesized extract");
-        assert!(dataset.buildings.len() > 0, "Buildings must be present in synthesized extract");
+        assert!(
+            dataset.roads.len() > 0,
+            "Roads must be present in synthesized extract"
+        );
+        assert!(
+            dataset.buildings.len() > 0,
+            "Buildings must be present in synthesized extract"
+        );
         assert!(dem.width > 0 && dem.height > 0, "DEM grid must be valid");
     }
 
     // Verify surveyed benchmark cities have verified status
-    let surveyed_cities = ["san-francisco", "new-york", "chicago", "los-angeles", "seattle", "miami"];
+    let surveyed_cities = [
+        "san-francisco",
+        "new-york",
+        "chicago",
+        "los-angeles",
+        "seattle",
+        "miami",
+    ];
     for city_id in &surveyed_cities {
         assert!(
             verify_city_playable(city_id).is_ok(),

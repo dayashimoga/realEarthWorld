@@ -19,10 +19,10 @@ use realearth_shared::us_catalog::{
     all_us_cities, audit_all_catalog_entries, audit_catalog_entry, find_city_by_id,
     RegionPackageReadiness,
 };
-use realearth_streaming::{
-    InstallProgress, InstallState, PackageManifest, RegionInstaller,
+use realearth_streaming::{InstallProgress, InstallState, PackageManifest, RegionInstaller};
+use realearth_vehicles::dynamics::{
+    DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs,
 };
-use realearth_vehicles::dynamics::{DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs};
 use realearth_vehicles::ground::FlatGround;
 
 #[test]
@@ -50,7 +50,10 @@ fn test_d1_38_city_catalog_and_completeness_audit() {
 
     // Verify Minneapolis–Saint Paul is explicitly DownloadRequired
     let msp_audit = audit_catalog_entry("minneapolis").expect("Minneapolis audit record");
-    assert_eq!(msp_audit.readiness, RegionPackageReadiness::DownloadRequired);
+    assert_eq!(
+        msp_audit.readiness,
+        RegionPackageReadiness::DownloadRequired
+    );
     assert_eq!(msp_audit.horizontal_crs, "WGS84 (EPSG:4326)");
     assert_eq!(msp_audit.projected_crs, "UTM Zone 15N (EPSG:32615)");
     assert_eq!(msp_audit.vertical_datum, "NAVD88 (GEOID18/EGM96)");
@@ -64,12 +67,36 @@ fn test_d1_38_city_catalog_and_completeness_audit() {
         assert!(!record.city_id.is_empty());
         assert!(!record.name.is_empty());
         assert!(!record.state.is_empty());
-        assert!(!record.horizontal_crs.is_empty(), "Horizontal CRS must be defined for {}", record.name);
-        assert!(!record.projected_crs.is_empty(), "Projected CRS must be defined for {}", record.name);
-        assert!(!record.vertical_datum.is_empty(), "Vertical datum must be defined for {}", record.name);
-        assert!(!record.osm_license.is_empty(), "OSM license must be defined for {}", record.name);
-        assert!(!record.elevation_license.is_empty(), "Elevation license must be defined for {}", record.name);
-        assert!(!record.attribution.is_empty(), "Attribution must be defined for {}", record.name);
+        assert!(
+            !record.horizontal_crs.is_empty(),
+            "Horizontal CRS must be defined for {}",
+            record.name
+        );
+        assert!(
+            !record.projected_crs.is_empty(),
+            "Projected CRS must be defined for {}",
+            record.name
+        );
+        assert!(
+            !record.vertical_datum.is_empty(),
+            "Vertical datum must be defined for {}",
+            record.name
+        );
+        assert!(
+            !record.osm_license.is_empty(),
+            "OSM license must be defined for {}",
+            record.name
+        );
+        assert!(
+            !record.elevation_license.is_empty(),
+            "Elevation license must be defined for {}",
+            record.name
+        );
+        assert!(
+            !record.attribution.is_empty(),
+            "Attribution must be defined for {}",
+            record.name
+        );
         assert!(!record.source_version.is_empty());
         assert!(record.data_resolution_m > 0.0);
         assert!(record.bounds.max_lat > record.bounds.min_lat);
@@ -98,7 +125,11 @@ fn test_d2_on_demand_geographic_installation() {
         recorded_states.push(p.state);
     });
 
-    assert!(install_res.is_ok(), "Minneapolis installation failed: {:?}", install_res);
+    assert!(
+        install_res.is_ok(),
+        "Minneapolis installation failed: {:?}",
+        install_res
+    );
     let installed_dir = install_res.unwrap();
     assert!(installed_dir.exists());
     assert!(installed_dir.join("chunks.db").exists());
@@ -148,7 +179,10 @@ fn test_d3_endless_streaming_and_horizon_continuity() {
 
     // 2. Camera Far Plane expanded to 50,000m to eliminate clipping at flight altitudes
     let mut camera = FloatingOriginCamera::new(sf_anchor, 16.0 / 9.0);
-    assert_eq!(camera.z_far, 50_000.0, "Camera far plane must span at least 50km");
+    assert_eq!(
+        camera.z_far, 50_000.0,
+        "Camera far plane must span at least 50km"
+    );
     camera.set_far_plane(60_000.0);
     assert_eq!(camera.z_far, 60_000.0);
 
@@ -199,7 +233,13 @@ fn test_d3_endless_streaming_and_horizon_continuity() {
 #[test]
 fn test_d4_transactional_us_city_warping_and_atomic_rollback() {
     // Test the 4-city grand tour: San Francisco -> New York -> Chicago -> Los Angeles -> San Francisco
-    let tour = ["san-francisco", "new-york", "chicago", "los-angeles", "san-francisco"];
+    let tour = [
+        "san-francisco",
+        "new-york",
+        "chicago",
+        "los-angeles",
+        "san-francisco",
+    ];
     let mut visited_coords = Vec::new();
     let mut visited_landmarks = Vec::new();
 
@@ -241,7 +281,10 @@ fn test_d4_transactional_us_city_warping_and_atomic_rollback() {
 
     // Simulate a failed warp attempt (e.g. invalid region)
     let bad_city_res = find_city_by_id("atlantis_underwater");
-    assert!(bad_city_res.is_none(), "Unsurveyed fictional city must not be in catalog");
+    assert!(
+        bad_city_res.is_none(),
+        "Unsurveyed fictional city must not be in catalog"
+    );
 
     // Atomic rollback invariant: vehicle position and state must remain 100% unaltered
     assert_eq!(vehicle.position, initial_pos);
@@ -299,7 +342,10 @@ fn test_d5_no_regression_authoritative_physics_and_assets() {
     };
     vehicle.step(&inputs_steer, &ground, 0.016);
     let steered = vehicle.wheels[0].steer_angle;
-    assert!(steered > 0.0, "Steer input 0.5 must deflect front wheels to positive angle");
+    assert!(
+        steered > 0.0,
+        "Steer input 0.5 must deflect front wheels to positive angle"
+    );
 
     let inputs_center = VehicleInputs {
         throttle: 0.0,
@@ -331,7 +377,11 @@ fn test_d5_no_regression_authoritative_physics_and_assets() {
     ];
     for vt in model_types {
         let m = get_certified_vehicle_model(vt, VehicleLodLevel::Lod0High);
-        assert!(!m.submeshes.is_empty(), "Model {:?} must contain submeshes", vt);
+        assert!(
+            !m.submeshes.is_empty(),
+            "Model {:?} must contain submeshes",
+            vt
+        );
         assert!(m.dimensions.x > 0.0);
         assert!(m.dimensions.y > 0.0);
         assert!(m.dimensions.z > 0.0);

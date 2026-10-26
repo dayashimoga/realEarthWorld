@@ -980,13 +980,21 @@ impl JobCatalogGenerator {
 
             // 1. Free Roam Exploration
             let p1 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 30.0);
-            let d1 = JobLocation::new(format!("{} Civic Plaza", city.name), civic_plaza_coord, city.id, 30.0);
+            let d1 = JobLocation::new(
+                format!("{} Civic Plaza", city.name),
+                civic_plaza_coord,
+                city.id,
+                30.0,
+            );
             let dist1 = p1.distance_to(d1.coord).max(1200.0);
             jobs.push(Job::new(
                 format!("roam-{}-01", city.id),
                 CareerType::FreeRoam,
                 format!("{} Metropolitan Scenic Tour", city.name),
-                format!("Freely cruise and explore {} centered around {}.", city.name, city.anchor_landmark_name),
+                format!(
+                    "Freely cruise and explore {} centered around {}.",
+                    city.name, city.anchor_landmark_name
+                ),
                 p1,
                 d1,
                 dist1,
@@ -1000,13 +1008,21 @@ impl JobCatalogGenerator {
 
             // 2. Urban Taxi Commute
             let p2 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0);
-            let d2 = JobLocation::new(format!("{} Commercial Tech Center", city.name), commercial_center_coord, city.id, 25.0);
+            let d2 = JobLocation::new(
+                format!("{} Commercial Tech Center", city.name),
+                commercial_center_coord,
+                city.id,
+                25.0,
+            );
             let dist2 = p2.distance_to(d2.coord).max(1100.0);
             jobs.push(Job::new(
                 format!("taxi-{}-01", city.id),
                 CareerType::TaxiPassenger,
                 format!("{} Executive Chauffeur", city.name),
-                format!("Chauffeur corporate delegates from {} to the Commercial Tech Center.", city.anchor_landmark_name),
+                format!(
+                    "Chauffeur corporate delegates from {} to the Commercial Tech Center.",
+                    city.anchor_landmark_name
+                ),
                 p2,
                 d2,
                 dist2,
@@ -1023,8 +1039,18 @@ impl JobCatalogGenerator {
             ));
 
             // 3. Municipal Transit Bus Service
-            let p3 = JobLocation::new(format!("{} Central Bus Depot", city.name), bus_depot_coord, city.id, 30.0);
-            let d3 = JobLocation::new(format!("{} Intermodal Transit Center", city.name), transit_center_coord, city.id, 30.0);
+            let p3 = JobLocation::new(
+                format!("{} Central Bus Depot", city.name),
+                bus_depot_coord,
+                city.id,
+                30.0,
+            );
+            let d3 = JobLocation::new(
+                format!("{} Intermodal Transit Center", city.name),
+                transit_center_coord,
+                city.id,
+                30.0,
+            );
             let dist3 = p3.distance_to(d3.coord).max(1800.0);
             jobs.push(Job::new(
                 format!("transit-{}-01", city.id),
@@ -1047,14 +1073,22 @@ impl JobCatalogGenerator {
             ));
 
             // 4. Express Package Courier
-            let p4 = JobLocation::new(format!("{} Logistics Park", city.name), logistics_park_coord, city.id, 30.0);
+            let p4 = JobLocation::new(
+                format!("{} Logistics Park", city.name),
+                logistics_park_coord,
+                city.id,
+                30.0,
+            );
             let d4 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0);
             let dist4 = p4.distance_to(d4.coord).max(1500.0);
             jobs.push(Job::new(
                 format!("del-{}-01", city.id),
                 CareerType::PackageDelivery,
                 format!("{} Priority Courier ({})", city.name, primary_interstate),
-                format!("Deliver high-priority parcels via the {} corridor to {}.", primary_interstate, city.anchor_landmark_name),
+                format!(
+                    "Deliver high-priority parcels via the {} corridor to {}.",
+                    primary_interstate, city.anchor_landmark_name
+                ),
                 p4,
                 d4,
                 dist4,
@@ -1071,8 +1105,18 @@ impl JobCatalogGenerator {
             ));
 
             // 5. Heavy Freight Logistics
-            let p5 = JobLocation::new(format!("{} Freight Terminal", city.name), freight_terminal_coord, city.id, 40.0);
-            let d5 = JobLocation::new(format!("{} Central Industrial Park", city.name), industrial_park_coord, city.id, 40.0);
+            let p5 = JobLocation::new(
+                format!("{} Freight Terminal", city.name),
+                freight_terminal_coord,
+                city.id,
+                40.0,
+            );
+            let d5 = JobLocation::new(
+                format!("{} Central Industrial Park", city.name),
+                industrial_park_coord,
+                city.id,
+                40.0,
+            );
             let dist5 = p5.distance_to(d5.coord).max(2500.0);
             jobs.push(Job::new(
                 format!("freight-{}-01", city.id),
@@ -1095,14 +1139,30 @@ impl JobCatalogGenerator {
             ));
 
             // 6. Regional Aviation Flight Approach
-            let p6 = JobLocation::new(format!("{} Flight Approach Waypoint", city.primary_airport_iata), airport_waypoint_coord, city.id, 150.0);
-            let d6 = JobLocation::new(format!("{} Air Cargo Terminal", city.primary_airport_iata), airport_cargo_coord, city.id, 80.0);
+            let p6 = JobLocation::new(
+                format!("{} Flight Approach Waypoint", city.primary_airport_iata),
+                airport_waypoint_coord,
+                city.id,
+                150.0,
+            );
+            let d6 = JobLocation::new(
+                format!("{} Air Cargo Terminal", city.primary_airport_iata),
+                airport_cargo_coord,
+                city.id,
+                80.0,
+            );
             let dist6 = p6.distance_to(d6.coord).max(3500.0);
             jobs.push(Job::new(
                 format!("air-{}-01", city.id),
                 CareerType::AviationPilot,
-                format!("{} Airfield Express Cargo ({})", city.name, city.primary_airport_iata),
-                format!("Fly regional courier air cargo into {} International Airport ({}).", city.name, city.primary_airport_iata),
+                format!(
+                    "{} Airfield Express Cargo ({})",
+                    city.name, city.primary_airport_iata
+                ),
+                format!(
+                    "Fly regional courier air cargo into {} International Airport ({}).",
+                    city.name, city.primary_airport_iata
+                ),
                 p6,
                 d6,
                 dist6,
@@ -1120,14 +1180,35 @@ impl JobCatalogGenerator {
 
             // 7. Optional Maritime Harbor Ferry (if city has maritime port)
             if city.has_maritime_port {
-                let p7 = JobLocation::new(format!("{} Passenger Ferry Slip", city.name), Wgs84Coord::new(city.anchor.lat - d_lat_neg * 0.40, city.anchor.lon + d_lon_pos * 0.35, 1.0), city.id, 35.0);
-                let d7 = JobLocation::new(format!("{} Harbor Terminal", city.name), Wgs84Coord::new(city.anchor.lat + d_lat_pos * 0.40, city.anchor.lon + d_lon_pos * 0.65, 1.0), city.id, 35.0);
+                let p7 = JobLocation::new(
+                    format!("{} Passenger Ferry Slip", city.name),
+                    Wgs84Coord::new(
+                        city.anchor.lat - d_lat_neg * 0.40,
+                        city.anchor.lon + d_lon_pos * 0.35,
+                        1.0,
+                    ),
+                    city.id,
+                    35.0,
+                );
+                let d7 = JobLocation::new(
+                    format!("{} Harbor Terminal", city.name),
+                    Wgs84Coord::new(
+                        city.anchor.lat + d_lat_pos * 0.40,
+                        city.anchor.lon + d_lon_pos * 0.65,
+                        1.0,
+                    ),
+                    city.id,
+                    35.0,
+                );
                 let dist7 = p7.distance_to(d7.coord).max(1800.0);
                 jobs.push(Job::new(
                     format!("ferry-{}-01", city.id),
                     CareerType::FerryCaptain,
                     format!("{} Bayfront Harbor Ferry Crossing", city.name),
-                    format!("Navigate a scheduled passenger catamaran across {} coastal harbor waters.", city.name),
+                    format!(
+                        "Navigate a scheduled passenger catamaran across {} coastal harbor waters.",
+                        city.name
+                    ),
                     p7,
                     d7,
                     dist7,

@@ -8,8 +8,8 @@
 
 use glam::Vec3;
 use realearth_vehicles::{
-    DynamicVehicle, FlatGround, HeavyTruckModel, MotorcycleModel, TransitBusModel, TransmissionMode,
-    VehicleConfig, VehicleInputs, VehicleStateSnapshot,
+    DynamicVehicle, FlatGround, HeavyTruckModel, MotorcycleModel, TransitBusModel,
+    TransmissionMode, VehicleConfig, VehicleInputs, VehicleStateSnapshot,
 };
 
 const DT: f32 = 1.0 / 60.0;
@@ -215,7 +215,11 @@ fn test_multimodal_replay_determinism() {
         bus2.step(inp, &ground, DT);
     }
     let bus_diff = (bus1.position - bus2.position).length();
-    assert!(bus_diff < 1e-5, "Transit Bus replay diverged: diff={}", bus_diff);
+    assert!(
+        bus_diff < 1e-5,
+        "Transit Bus replay diverged: diff={}",
+        bus_diff
+    );
     println!("  ✓ Transit Bus Replay: Delta pos = {:.2e}m", bus_diff);
 
     // 3. Heavy Truck

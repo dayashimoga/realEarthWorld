@@ -58,6 +58,24 @@ jobs:
       - name: Stage 11 Final Production Lifecycle Certification
         run: cargo test --test final_production_certification --verbose
 
+      - name: Recovery Stage B Authoritative Physics & Inputs Certification
+        run: cargo test --test stage_b_authoritative_physics_and_inputs --verbose
+
+      - name: Recovery Stage B Remediation Certification
+        run: cargo test --test stage_b_remediation_certification --verbose
+
+      - name: Recovery Stage C Premium Models & Animation Certification
+        run: cargo test --test stage_c_premium_models_and_animation --verbose
+
+      - name: Recovery Stage D Real GIS Streaming & City Transitions Certification
+        run: cargo test --test stage_d_gis_streaming_and_city_transitions --verbose
+
+      - name: Recovery Stage E Multimodal Gameplay & UX Certification
+        run: cargo test --test stage_e_multimodal_gameplay_and_ux --verbose
+
+      - name: Recovery Stage F Production Performance & Five-Platform Certification
+        run: cargo test --test stage_f_production_performance_and_five_platform_certification --verbose
+
       - name: Criterion Performance Benchmark Baselines
         run: cargo bench -p realearth-benchmarks -- --test
 

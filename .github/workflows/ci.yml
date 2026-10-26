@@ -121,6 +121,24 @@ jobs:
       - name: Run Performance & Anti-Fake Certification Suite
         run: cargo test --test performance_anti_fake_certification --verbose
 
+      - name: Run Stage B Authoritative Physics & Inputs Suite
+        run: cargo test --test stage_b_authoritative_physics_and_inputs --verbose
+
+      - name: Run Stage B Remediation Certification Suite
+        run: cargo test --test stage_b_remediation_certification --verbose
+
+      - name: Run Stage C Premium Models & Animation Suite
+        run: cargo test --test stage_c_premium_models_and_animation --verbose
+
+      - name: Run Stage D GIS Streaming & City Transitions Suite
+        run: cargo test --test stage_d_gis_streaming_and_city_transitions --verbose
+
+      - name: Run Stage E Multimodal Gameplay & UX Suite
+        run: cargo test --test stage_e_multimodal_gameplay_and_ux --verbose
+
+      - name: Run Stage F Production Performance & Five-Platform Certification Suite
+        run: cargo test --test stage_f_production_performance_and_five_platform_certification --verbose
+
       - name: Check Core Engine Coverage Threshold (>=90%)
         run: |
           echo "Verifying coverage threshold for core architectural crates..."

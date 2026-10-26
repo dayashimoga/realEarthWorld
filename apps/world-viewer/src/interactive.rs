@@ -24,7 +24,6 @@ use realearth_gameplay::{
 use realearth_geospatial::transforms::EnuConverter;
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::load_authentic_city;
-use realearth_ingestion::sample_minneapolis::create_minneapolis_dataset;
 use realearth_ingestion::osm_types::HighwayType;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
@@ -33,6 +32,7 @@ use realearth_ingestion::sample_corridors::create_intercity_corridors_dataset;
 use realearth_ingestion::sample_hyderabad::create_hyderabad_dataset;
 use realearth_ingestion::sample_los_angeles::create_los_angeles_dataset;
 use realearth_ingestion::sample_miami::create_miami_dataset;
+use realearth_ingestion::sample_minneapolis::create_minneapolis_dataset;
 use realearth_ingestion::sample_mysuru::create_mysuru_dataset;
 use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
@@ -45,13 +45,13 @@ use realearth_rendering::{
     generate_bus_stop_shelter_mesh, generate_coarse_horizon_mesh, generate_detailed_tree_mesh,
     generate_marine_ferry_dock_mesh, generate_pedestrian_mesh, generate_rail_station_platform_mesh,
     generate_road_sign_mesh, generate_runway_papi_lights_mesh, generate_streetlight_mesh,
-    generate_traffic_signal_mesh, generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout, DetailedTreeType,
-    FloatingOriginCamera, GarageHit, GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh,
-    InGameHudHit, InGameHudLayout, JobBrowserHit, JobBrowserLayout, MultiplayerHit,
-    MultiplayerLayout, PauseMenuHit, PauseMenuLayout, RailRouteHit, RailRouteLayout,
-    RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout, StartScreenHit,
-    StartScreenLayout, TrafficSignalVisualState, VehicleLodLevel, VehicleMeshParams,
-    VehicleVisualType,
+    generate_traffic_signal_mesh, generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit,
+    DebriefLayout, DetailedTreeType, FloatingOriginCamera, GarageHit, GarageLayout,
+    GraphicsPresetLevel, GraphicsSettings, HudMesh, InGameHudHit, InGameHudLayout, JobBrowserHit,
+    JobBrowserLayout, MultiplayerHit, MultiplayerLayout, PauseMenuHit, PauseMenuLayout,
+    RailRouteHit, RailRouteLayout, RealEarthRenderer, RoadSignType, SettingsHit, SettingsLayout,
+    StartScreenHit, StartScreenLayout, TrafficSignalVisualState, VehicleLodLevel,
+    VehicleMeshParams, VehicleVisualType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::metrics::get_current_process_memory;
@@ -1086,7 +1086,8 @@ impl InteractiveViewerApp {
                     self.catalog_selected_idx = idx;
                     let city = &cities[idx];
 
-                    let is_ready = city.package_readiness() == realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady;
+                    let is_ready = city.package_readiness()
+                        == realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady;
                     if !is_ready {
                         let notice = format!("🌐 Acquiring & installing authentic surveyed GIS package for {} ({})...", city.name, city.state);
                         println!("{}", notice);
@@ -1692,7 +1693,12 @@ impl InteractiveViewerApp {
             } else {
                 ground_y
             };
-            (lm_enu.east as f32, lm_enu.north as f32, landmark_vehicle_yaw, e)
+            (
+                lm_enu.east as f32,
+                lm_enu.north as f32,
+                landmark_vehicle_yaw,
+                e,
+            )
         } else if idx == 8 {
             (250.0, -100.0, landmark_vehicle_yaw, 0.5)
         } else if idx == 9 {
@@ -2006,9 +2012,7 @@ impl InteractiveViewerApp {
             ActiveTransportMode::Marine => {
                 (self.marine_vessel.position, self.marine_vessel.orientation)
             }
-            ActiveTransportMode::Aviation => {
-                (self.aircraft.position, self.aircraft.orientation)
-            }
+            ActiveTransportMode::Aviation => (self.aircraft.position, self.aircraft.orientation),
         };
         self.previous_vehicle_pos = active_pos;
         self.previous_vehicle_orient = active_orient;
@@ -2229,7 +2233,8 @@ impl InteractiveViewerApp {
                 let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
                 let landmark = Landmark::from_us_city(city);
                 let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
-                if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
+                if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256))
+                {
                     println!(
                         "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
                         meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
@@ -2634,11 +2639,7 @@ impl InteractiveViewerApp {
     }
 
     /// Atomically commits a staged region payload into the active viewer state.
-    pub fn activate_staged_region(
-        &mut self,
-        region_id: &str,
-        staged: StagedRegionPayload,
-    ) {
+    pub fn activate_staged_region(&mut self, region_id: &str, staged: StagedRegionPayload) {
         self.transition_phase = RegionTransitionPhase::Activating;
 
         // 1. Purge GPU chunk cache and upload coarse 50km horizon apron mesh
@@ -2666,7 +2667,8 @@ impl InteractiveViewerApp {
             staged.initial_elevation,
             staged.lm_enu.north as f32,
         );
-        self.vehicle = DynamicVehicle::new(VehicleConfig::default(), spawn_pos, staged.landmark.yaw);
+        self.vehicle =
+            DynamicVehicle::new(VehicleConfig::default(), spawn_pos, staged.landmark.yaw);
         self.vehicle.recover_on_surface(staged.initial_elevation);
 
         self.motorcycle = MotorcycleModel::new(
@@ -2909,7 +2911,10 @@ impl InteractiveViewerApp {
         self.transition_phase = RegionTransitionPhase::Complete;
 
         self.status_notification = Some((
-            format!("📍 Region: {} loaded at {}", staged.region_name, staged.landmark.name),
+            format!(
+                "📍 Region: {} loaded at {}",
+                staged.region_name, staged.landmark.name
+            ),
             Instant::now(),
         ));
     }
@@ -5015,7 +5020,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 let ground_y = gq
                                     .elevation(self.aircraft.position.x, self.aircraft.position.z);
                                 self.aircraft.step(&flight_inputs, ground_y, PHYSICS_DT);
-                                if self.aircraft.enforce_airspace_boundary(2400.0) && self.status_notification.is_none() {
+                                if self.aircraft.enforce_airspace_boundary(2400.0)
+                                    && self.status_notification.is_none()
+                                {
                                     let msg = "⚠️ AIRSPACE ADVISORY: Approaching regional boundary (2400m). Automated turnback vectoring active.".to_string();
                                     self.status_notification = Some((msg, Instant::now()));
                                 }

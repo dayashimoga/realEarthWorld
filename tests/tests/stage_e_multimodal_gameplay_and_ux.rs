@@ -30,7 +30,9 @@ use realearth_rendering::{
 };
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::us_catalog::{all_us_cities, find_city_by_id};
-use realearth_vehicles::dynamics::{DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs};
+use realearth_vehicles::dynamics::{
+    DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs,
+};
 use realearth_vehicles::ground::FlatGround;
 use realearth_vehicles::multimodal::aviation::{AircraftFlight, FlightInputs};
 use realearth_vehicles::multimodal::road_transport::TransitBusModel;
@@ -49,11 +51,7 @@ fn test_e1_san_francisco_sports_car_drive_and_stop() {
     let ground = FlatGround::new(5.0);
     let car_config = VehicleConfig::sports_coupe();
     let eq_y = 5.0 + car_config.equilibrium_ride_height();
-    let mut car = DynamicVehicle::new(
-        car_config,
-        Vec3::new(100.0, eq_y, 200.0),
-        0.0,
-    );
+    let mut car = DynamicVehicle::new(car_config, Vec3::new(100.0, eq_y, 200.0), 0.0);
     car.recover_on_surface(5.0);
 
     assert_eq!(car.speed_kph, 0.0);
@@ -344,11 +342,19 @@ fn test_e5_installed_us_city_transition_and_multimodal_spawning() {
 
     // Verify presence of multimodal career types in generated city catalog
     let has_roam = msp_jobs.iter().any(|j| j.career == CareerType::FreeRoam);
-    let has_taxi = msp_jobs.iter().any(|j| j.career == CareerType::TaxiPassenger);
+    let has_taxi = msp_jobs
+        .iter()
+        .any(|j| j.career == CareerType::TaxiPassenger);
     let has_bus = msp_jobs.iter().any(|j| j.career == CareerType::TransitBus);
-    let has_freight = msp_jobs.iter().any(|j| j.career == CareerType::HeavyFreight);
-    let has_courier = msp_jobs.iter().any(|j| j.career == CareerType::PackageDelivery);
-    let has_air = msp_jobs.iter().any(|j| j.career == CareerType::AviationPilot);
+    let has_freight = msp_jobs
+        .iter()
+        .any(|j| j.career == CareerType::HeavyFreight);
+    let has_courier = msp_jobs
+        .iter()
+        .any(|j| j.career == CareerType::PackageDelivery);
+    let has_air = msp_jobs
+        .iter()
+        .any(|j| j.career == CareerType::AviationPilot);
 
     assert!(has_roam, "Missing FreeRoam in Minneapolis");
     assert!(has_taxi, "Missing Taxi in Minneapolis");
@@ -491,9 +497,7 @@ fn test_e6_mission_completion_wallet_rewards_save_and_resume() {
         500.0 + result.final_payout
     );
     assert_eq!(
-        loaded_save
-            .profile
-            .career_tier(CareerType::TaxiPassenger),
+        loaded_save.profile.career_tier(CareerType::TaxiPassenger),
         profile.career_tier(CareerType::TaxiPassenger)
     );
 }
@@ -629,10 +633,7 @@ fn test_e7_mouse_and_ui_interaction_at_multiple_dpi_scales() {
         // 9. Debrief Modal Layout
         let debrief_layout = DebriefLayout::compute(w, h);
         let (dcx, dcy) = debrief_layout.claim_btn.center();
-        assert_eq!(
-            debrief_layout.hit_test(dcx, dcy),
-            Some(DebriefHit::Claim)
-        );
+        assert_eq!(debrief_layout.hit_test(dcx, dcy), Some(DebriefHit::Claim));
 
         // 10. In-Game HUD Layout and Chip Dock
         let in_game_layout = InGameHudLayout::compute(w, h, true);

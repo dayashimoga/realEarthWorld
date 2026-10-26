@@ -5,9 +5,13 @@
 
 use glam::{Mat3, Quat, Vec2, Vec3};
 use realearth_vehicles::building_collision::{BuildingCollisionWorld, BuildingFootprintCollider};
-use realearth_vehicles::dynamics::{DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs};
+use realearth_vehicles::dynamics::{
+    DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs,
+};
 use realearth_vehicles::ground::{FlatGround, SlopedGround};
-use realearth_vehicles::multimodal::road_transport::{HeavyTruckModel, MotorcycleModel, TransitBusModel};
+use realearth_vehicles::multimodal::road_transport::{
+    HeavyTruckModel, MotorcycleModel, TransitBusModel,
+};
 use std::f32::consts::{FRAC_PI_2, PI};
 
 const DT: f32 = 1.0 / 60.0;
@@ -22,10 +26,30 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
     let ground = FlatGround::new(0.0);
 
     let headings = [
-        ("North", 0.0f32, Vec3::new(0.0, 0.0, 1.0), Vec3::new(1.0, 0.0, 0.0)),
-        ("East", FRAC_PI_2, Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -1.0)),
-        ("South", PI, Vec3::new(0.0, 0.0, -1.0), Vec3::new(-1.0, 0.0, 0.0)),
-        ("West", -FRAC_PI_2, Vec3::new(-1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
+        (
+            "North",
+            0.0f32,
+            Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(1.0, 0.0, 0.0),
+        ),
+        (
+            "East",
+            FRAC_PI_2,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, -1.0),
+        ),
+        (
+            "South",
+            PI,
+            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(-1.0, 0.0, 0.0),
+        ),
+        (
+            "West",
+            -FRAC_PI_2,
+            Vec3::new(-1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        ),
     ];
 
     let config = VehicleConfig::sports_coupe();
@@ -38,8 +62,16 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
         let fwd = rot.col(2);
         let right = rot.col(0);
 
-        assert!((fwd - expected_fwd).length() < 0.01, "{}: Forward vector mismatch", name);
-        assert!((right - expected_right).length() < 0.01, "{}: Right vector mismatch", name);
+        assert!(
+            (fwd - expected_fwd).length() < 0.01,
+            "{}: Forward vector mismatch",
+            name
+        );
+        assert!(
+            (right - expected_right).length() < 0.01,
+            "{}: Right vector mismatch",
+            name
+        );
 
         let inputs_fwd = VehicleInputs {
             throttle: 1.0,
@@ -54,9 +86,19 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
         }
 
         let fwd_displacement = car.position.dot(expected_fwd);
-        assert!(fwd_displacement > 1.0, "{}: [W] must produce forward displacement (got {:.2}m)", name, fwd_displacement);
+        assert!(
+            fwd_displacement > 1.0,
+            "{}: [W] must produce forward displacement (got {:.2}m)",
+            name,
+            fwd_displacement
+        );
         let lat_drift = car.position.dot(expected_right).abs();
-        assert!(lat_drift < 0.05, "{}: Straight forward acceleration must not drift laterally (got {:.3}m)", name, lat_drift);
+        assert!(
+            lat_drift < 0.05,
+            "{}: Straight forward acceleration must not drift laterally (got {:.3}m)",
+            name,
+            lat_drift
+        );
 
         // B. Reverse Motion [S]
         let mut car_rev = DynamicVehicle::new(config.clone(), Vec3::new(0.0, eq_y, 0.0), yaw);
@@ -73,7 +115,12 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
         }
 
         let rev_displacement = car_rev.position.dot(expected_fwd);
-        assert!(rev_displacement < -1.0, "{}: [S] Reverse must produce backward displacement (got {:.2}m)", name, rev_displacement);
+        assert!(
+            rev_displacement < -1.0,
+            "{}: [S] Reverse must produce backward displacement (got {:.2}m)",
+            name,
+            rev_displacement
+        );
 
         // C. Steer Left [A]
         let mut car_left = DynamicVehicle::new(config.clone(), Vec3::new(0.0, eq_y, 0.0), yaw);
@@ -90,9 +137,19 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
         }
 
         // Steer left produces negative yaw rate in right-handed convention
-        assert!(car_left.angular_velocity.y < -0.05, "{}: Steer Left [A] must produce negative yaw rate (got {:.3} rad/s)", name, car_left.angular_velocity.y);
+        assert!(
+            car_left.angular_velocity.y < -0.05,
+            "{}: Steer Left [A] must produce negative yaw rate (got {:.3} rad/s)",
+            name,
+            car_left.angular_velocity.y
+        );
         let left_displacement = car_left.position.dot(expected_right);
-        assert!(left_displacement < -0.02, "{}: Steer Left [A] must deflect vehicle to the left (got {:.3}m)", name, left_displacement);
+        assert!(
+            left_displacement < -0.02,
+            "{}: Steer Left [A] must deflect vehicle to the left (got {:.3}m)",
+            name,
+            left_displacement
+        );
 
         // D. Steer Right [D]
         let mut car_right = DynamicVehicle::new(config.clone(), Vec3::new(0.0, eq_y, 0.0), yaw);
@@ -109,11 +166,24 @@ fn test_canonical_control_signs_across_all_cardinal_headings() {
         }
 
         // Steer right produces positive yaw rate in right-handed convention
-        assert!(car_right.angular_velocity.y > 0.05, "{}: Steer Right [D] must produce positive yaw rate (got {:.3} rad/s)", name, car_right.angular_velocity.y);
+        assert!(
+            car_right.angular_velocity.y > 0.05,
+            "{}: Steer Right [D] must produce positive yaw rate (got {:.3} rad/s)",
+            name,
+            car_right.angular_velocity.y
+        );
         let right_displacement = car_right.position.dot(expected_right);
-        assert!(right_displacement > 0.02, "{}: Steer Right [D] must deflect vehicle to the right (got {:.3}m)", name, right_displacement);
+        assert!(
+            right_displacement > 0.02,
+            "{}: Steer Right [D] must deflect vehicle to the right (got {:.3}m)",
+            name,
+            right_displacement
+        );
 
-        println!("  ✓ Cardinal Heading {} ({:.1} rad): W/S/A/D Verified Cleanly", name, yaw);
+        println!(
+            "  ✓ Cardinal Heading {} ({:.1} rad): W/S/A/D Verified Cleanly",
+            name, yaw
+        );
     }
 }
 
@@ -157,10 +227,26 @@ fn test_park_mode_hold_stationary_level_and_slopes() {
         let displacement = delta.length();
         let speed = car.linear_velocity.length();
 
-        println!("  • {}: Δx={:.6}m, Δy={:.6}m, Δz={:.6}m, Total={:.6}m, Speed={:.6} m/s", desc, delta.x, delta.y, delta.z, displacement, speed);
-        assert!(displacement < 1e-4, "Park mode on {} must remain motionless (moved {:.6}m)", desc, displacement);
-        assert!(speed < 1e-4, "Park mode on {} velocity must be zero (got {:.6} m/s)", desc, speed);
-        assert!(car.angular_velocity.length() < 1e-4, "Park mode angular velocity must be zero");
+        println!(
+            "  • {}: Δx={:.6}m, Δy={:.6}m, Δz={:.6}m, Total={:.6}m, Speed={:.6} m/s",
+            desc, delta.x, delta.y, delta.z, displacement, speed
+        );
+        assert!(
+            displacement < 1e-4,
+            "Park mode on {} must remain motionless (moved {:.6}m)",
+            desc,
+            displacement
+        );
+        assert!(
+            speed < 1e-4,
+            "Park mode on {} velocity must be zero (got {:.6} m/s)",
+            desc,
+            speed
+        );
+        assert!(
+            car.angular_velocity.length() < 1e-4,
+            "Park mode angular velocity must be zero"
+        );
     }
 }
 
@@ -193,21 +279,40 @@ fn test_hill_hold_assist_and_idle_creep_in_drive() {
     }
 
     let rollback = car_hill.position.z - initial_z;
-    println!("  • 8% Hill in Drive (zero throttle): Z-displacement = {:.6}m (speed={:.2} km/h)", rollback, car_hill.speed_kph);
-    assert!(rollback >= -0.01, "Hill-Hold Assist must prevent backward rollback (got {:.4}m)", rollback);
+    println!(
+        "  • 8% Hill in Drive (zero throttle): Z-displacement = {:.6}m (speed={:.2} km/h)",
+        rollback, car_hill.speed_kph
+    );
+    assert!(
+        rollback >= -0.01,
+        "Hill-Hold Assist must prevent backward rollback (got {:.4}m)",
+        rollback
+    );
 
     // B. Idle Forward Creep on Level Ground in Drive
     let flat_ground = FlatGround::new(0.0);
     let mut car_flat = DynamicVehicle::new(config.clone(), Vec3::new(0.0, eq_y, 0.0), 0.0);
 
-    for _ in 0..180 { // 3 seconds
+    for _ in 0..180 {
+        // 3 seconds
         car_flat.step(&inputs_idle_drive, &flat_ground, DT);
     }
 
     let creep_speed = car_flat.linear_velocity.z;
-    println!("  • Flat Ground Idle Creep in Drive: Speed = {:.2} km/h (vz={:.3} m/s)", car_flat.speed_kph, creep_speed);
-    assert!(creep_speed > 0.05, "Idle in Drive must produce gentle forward creep (got vz={:.3} m/s)", creep_speed);
-    assert!(creep_speed < 2.5, "Idle creep speed must not exceed ~8 km/h (got vz={:.3} m/s)", creep_speed);
+    println!(
+        "  • Flat Ground Idle Creep in Drive: Speed = {:.2} km/h (vz={:.3} m/s)",
+        car_flat.speed_kph, creep_speed
+    );
+    assert!(
+        creep_speed > 0.05,
+        "Idle in Drive must produce gentle forward creep (got vz={:.3} m/s)",
+        creep_speed
+    );
+    assert!(
+        creep_speed < 2.5,
+        "Idle creep speed must not exceed ~8 km/h (got vz={:.3} m/s)",
+        creep_speed
+    );
 }
 
 // ============================================================================
@@ -241,10 +346,22 @@ fn test_coasting_and_gradual_deceleration_in_neutral() {
             car.step(&inputs_neutral, &ground, DT);
         }
         let current_speed = car.linear_velocity.z;
-        println!("  • Second {}: Speed = {:.2} m/s ({:.1} km/h)", second, current_speed, car.speed_kph);
-        assert!(current_speed < prev_speed, "Speed must decrease monotonically during coasting");
-        assert!(current_speed > 0.0, "Car should not come to an abrupt dead stop while coasting");
-        assert!(car.linear_velocity.x.abs() < 0.05, "Coasting on level road must not develop lateral drift");
+        println!(
+            "  • Second {}: Speed = {:.2} m/s ({:.1} km/h)",
+            second, current_speed, car.speed_kph
+        );
+        assert!(
+            current_speed < prev_speed,
+            "Speed must decrease monotonically during coasting"
+        );
+        assert!(
+            current_speed > 0.0,
+            "Car should not come to an abrupt dead stop while coasting"
+        );
+        assert!(
+            car.linear_velocity.x.abs() < 0.05,
+            "Coasting on level road must not develop lateral drift"
+        );
         prev_speed = current_speed;
     }
 }
@@ -284,11 +401,27 @@ fn test_progressive_service_braking_and_full_stop() {
         }
     }
 
-    println!("  • Full stop achieved in {:.2} seconds. Final Speed = {:.3} km/h, Final Vel = {:?}", stop_time, car.speed_kph, car.linear_velocity);
-    assert!(stopped, "Vehicle must come to a complete stop under 0.85 service brake");
-    assert!(stop_time > 0.8 && stop_time < 2.5, "Stopping time ({:.2}s) must be physically realistic (0.8s - 2.5s)", stop_time);
-    assert!(car.linear_velocity.z >= 0.0, "Service braking in Drive must not trigger backward reverse motion");
-    assert!(car.linear_velocity.length() < 0.01, "Vehicle must remain stopped under sustained brake");
+    println!(
+        "  • Full stop achieved in {:.2} seconds. Final Speed = {:.3} km/h, Final Vel = {:?}",
+        stop_time, car.speed_kph, car.linear_velocity
+    );
+    assert!(
+        stopped,
+        "Vehicle must come to a complete stop under 0.85 service brake"
+    );
+    assert!(
+        stop_time > 0.8 && stop_time < 2.5,
+        "Stopping time ({:.2}s) must be physically realistic (0.8s - 2.5s)",
+        stop_time
+    );
+    assert!(
+        car.linear_velocity.z >= 0.0,
+        "Service braking in Drive must not trigger backward reverse motion"
+    );
+    assert!(
+        car.linear_velocity.length() < 0.01,
+        "Vehicle must remain stopped under sustained brake"
+    );
 }
 
 // ============================================================================
@@ -317,8 +450,14 @@ fn test_steer_release_self_centering() {
     }
 
     let initial_yaw_rate = car.angular_velocity.y;
-    println!("  • Peak Yaw Rate during cornering: {:.3} rad/s", initial_yaw_rate);
-    assert!(initial_yaw_rate.abs() > 0.15, "Car must develop turning yaw rate under steering");
+    println!(
+        "  • Peak Yaw Rate during cornering: {:.3} rad/s",
+        initial_yaw_rate
+    );
+    assert!(
+        initial_yaw_rate.abs() > 0.15,
+        "Car must develop turning yaw rate under steering"
+    );
 
     // Driver releases the steering wheel
     let inputs_release = VehicleInputs {
@@ -334,8 +473,15 @@ fn test_steer_release_self_centering() {
     }
 
     let settled_yaw_rate = car.angular_velocity.y;
-    println!("  • Settled Yaw Rate 1.0s after releasing steer: {:.4} rad/s", settled_yaw_rate);
-    assert!(settled_yaw_rate.abs() < 0.04, "Caster self-centering must damp yaw rate toward zero (got {:.4} rad/s)", settled_yaw_rate);
+    println!(
+        "  • Settled Yaw Rate 1.0s after releasing steer: {:.4} rad/s",
+        settled_yaw_rate
+    );
+    assert!(
+        settled_yaw_rate.abs() < 0.04,
+        "Caster self-centering must damp yaw rate toward zero (got {:.4} rad/s)",
+        settled_yaw_rate
+    );
 }
 
 // ============================================================================
@@ -360,9 +506,16 @@ fn test_multimodal_class_appropriate_physics() {
     for _ in 0..60 {
         moto.step(&inputs_moto_turn, &ground, DT);
     }
-    println!("  • Motorcycle: Speed={:.1} km/h, Lean Angle={:.2}°", moto.speed_kph, moto.lean_angle.to_degrees());
+    println!(
+        "  • Motorcycle: Speed={:.1} km/h, Lean Angle={:.2}°",
+        moto.speed_kph,
+        moto.lean_angle.to_degrees()
+    );
     assert!(moto.speed_kph > 10.0, "Motorcycle must accelerate cleanly");
-    assert!(moto.lean_angle.abs() > 0.05, "Motorcycle must lean dynamically into corner");
+    assert!(
+        moto.lean_angle.abs() > 0.05,
+        "Motorcycle must lean dynamically into corner"
+    );
 
     // Park mode for motorcycle
     let mut moto_park = MotorcycleModel::new(Vec3::new(0.0, 0.35, 0.0), 0.0);
@@ -376,7 +529,10 @@ fn test_multimodal_class_appropriate_physics() {
     for _ in 0..60 {
         moto_park.step(&inputs_park, &ground, DT);
     }
-    assert!(moto_park.speed_kph < 0.01, "Motorcycle in Park must remain motionless");
+    assert!(
+        moto_park.speed_kph < 0.01,
+        "Motorcycle in Park must remain motionless"
+    );
 
     // B. Transit Bus: heavy inertia & air brake response
     let mut bus = TransitBusModel::new(Vec3::new(0.0, 0.95, 0.0), 0.0);
@@ -390,8 +546,14 @@ fn test_multimodal_class_appropriate_physics() {
     for _ in 0..60 {
         bus.step(&inputs_bus, &ground, DT);
     }
-    println!("  • Transit Bus (9,500 kg): Speed after 1.0s = {:.1} km/h, Comfort={:.2}", bus.speed_kph, bus.passenger_comfort_rating);
-    assert!(bus.speed_kph > 2.0 && bus.speed_kph < 25.0, "Bus heavy mass must accelerate gradually");
+    println!(
+        "  • Transit Bus (9,500 kg): Speed after 1.0s = {:.1} km/h, Comfort={:.2}",
+        bus.speed_kph, bus.passenger_comfort_rating
+    );
+    assert!(
+        bus.speed_kph > 2.0 && bus.speed_kph < 25.0,
+        "Bus heavy mass must accelerate gradually"
+    );
 
     // C. Heavy Truck: articulated trailer yaw & rollover safety
     let mut truck = HeavyTruckModel::new(Vec3::new(0.0, 1.2, 0.0), 0.0);
@@ -405,9 +567,19 @@ fn test_multimodal_class_appropriate_physics() {
     for _ in 0..90 {
         truck.step(&inputs_truck_turn, &ground, DT);
     }
-    println!("  • Heavy Truck (14,000 kg + trailer): Speed={:.1} km/h, Articulation Angle={:.2}°", truck.speed_kph, truck.trailer_articulation_angle.to_degrees());
-    assert!(!truck.is_rolled_over, "Truck must remain stable without rollover during normal turn");
-    assert!(truck.trailer_articulation_angle.abs() > 0.02, "Trailer must articulate around fifth wheel");
+    println!(
+        "  • Heavy Truck (14,000 kg + trailer): Speed={:.1} km/h, Articulation Angle={:.2}°",
+        truck.speed_kph,
+        truck.trailer_articulation_angle.to_degrees()
+    );
+    assert!(
+        !truck.is_rolled_over,
+        "Truck must remain stable without rollover during normal turn"
+    );
+    assert!(
+        truck.trailer_articulation_angle.abs() > 0.02,
+        "Trailer must articulate around fifth wheel"
+    );
 }
 
 // ============================================================================
@@ -416,7 +588,9 @@ fn test_multimodal_class_appropriate_physics() {
 
 #[test]
 fn test_fixed_timestep_invariance_30_60_120_fps() {
-    println!("\n🔍 [STAGE B.8] Auditing Fixed-Timestep Physics Invariance Across Presentation Rates...");
+    println!(
+        "\n🔍 [STAGE B.8] Auditing Fixed-Timestep Physics Invariance Across Presentation Rates..."
+    );
     let ground = FlatGround::new(0.0);
 
     let inputs = VehicleInputs {
@@ -446,8 +620,8 @@ fn test_fixed_timestep_invariance_30_60_120_fps() {
         (car.position, car.orientation)
     };
 
-    let (pos_30, orient_30) = simulate_accumulated(1.0 / 30.0, 30);   // 30 FPS for 1.0s
-    let (pos_60, orient_60) = simulate_accumulated(1.0 / 60.0, 60);   // 60 FPS for 1.0s
+    let (pos_30, orient_30) = simulate_accumulated(1.0 / 30.0, 30); // 30 FPS for 1.0s
+    let (pos_60, orient_60) = simulate_accumulated(1.0 / 60.0, 60); // 60 FPS for 1.0s
     let (pos_120, orient_120) = simulate_accumulated(1.0 / 120.0, 120); // 120 FPS for 1.0s
 
     let diff_30_60 = (pos_30 - pos_60).length();
@@ -459,10 +633,24 @@ fn test_fixed_timestep_invariance_30_60_120_fps() {
     println!("  • Δ(30 vs 60):  {:.6}m", diff_30_60);
     println!("  • Δ(60 vs 120): {:.6}m", diff_60_120);
 
-    assert!(diff_30_60 < 1e-4, "Fixed-step simulation must be identical between 30 and 60 FPS (got {:.6}m)", diff_30_60);
-    assert!(diff_60_120 < 1e-4, "Fixed-step simulation must be identical between 60 and 120 FPS (got {:.6}m)", diff_60_120);
-    assert!((orient_30.dot(orient_60) - 1.0).abs() < 1e-5, "Orientations must match between 30 and 60 FPS");
-    assert!((orient_60.dot(orient_120) - 1.0).abs() < 1e-5, "Orientations must match between 60 and 120 FPS");
+    assert!(
+        diff_30_60 < 1e-4,
+        "Fixed-step simulation must be identical between 30 and 60 FPS (got {:.6}m)",
+        diff_30_60
+    );
+    assert!(
+        diff_60_120 < 1e-4,
+        "Fixed-step simulation must be identical between 60 and 120 FPS (got {:.6}m)",
+        diff_60_120
+    );
+    assert!(
+        (orient_30.dot(orient_60) - 1.0).abs() < 1e-5,
+        "Orientations must match between 30 and 60 FPS"
+    );
+    assert!(
+        (orient_60.dot(orient_120) - 1.0).abs() < 1e-5,
+        "Orientations must match between 60 and 120 FPS"
+    );
 }
 
 // ============================================================================
@@ -490,13 +678,28 @@ fn test_building_collision_zero_penetration_outward_resolution() {
 
     // Car attempts to penetrate from street (x=9.5) into building interior (x=10.5)
     let mut vehicle_pos = Vec3::new(10.5, 0.35, 20.0); // Inside building by 0.5m
-    let mut vehicle_vel = Vec3::new(15.0, 0.0, 0.0);   // Velocity heading deeper inside (+X)
+    let mut vehicle_vel = Vec3::new(15.0, 0.0, 0.0); // Velocity heading deeper inside (+X)
     let half_extents = Vec3::new(0.9, 0.7, 2.3);
 
-    let had_collision = collision_world.resolve_collision(&mut vehicle_pos, &mut vehicle_vel, half_extents);
+    let had_collision =
+        collision_world.resolve_collision(&mut vehicle_pos, &mut vehicle_vel, half_extents);
 
-    println!("  • Collision Resolved: {} | New Pos: x={:.2}, z={:.2} | New Vel: vx={:.2}", had_collision, vehicle_pos.x, vehicle_pos.z, vehicle_vel.x);
-    assert!(had_collision, "Collision must be detected when inside building polygon");
-    assert!(vehicle_pos.x < 10.0, "Vehicle must be ejected OUTWARD toward street exterior (x < 10.0, got x={:.2})", vehicle_pos.x);
-    assert!(vehicle_vel.x <= 0.0, "Inward velocity component must be zeroed or repelled (got vx={:.2})", vehicle_vel.x);
+    println!(
+        "  • Collision Resolved: {} | New Pos: x={:.2}, z={:.2} | New Vel: vx={:.2}",
+        had_collision, vehicle_pos.x, vehicle_pos.z, vehicle_vel.x
+    );
+    assert!(
+        had_collision,
+        "Collision must be detected when inside building polygon"
+    );
+    assert!(
+        vehicle_pos.x < 10.0,
+        "Vehicle must be ejected OUTWARD toward street exterior (x < 10.0, got x={:.2})",
+        vehicle_pos.x
+    );
+    assert!(
+        vehicle_vel.x <= 0.0,
+        "Inward velocity component must be zeroed or repelled (got vx={:.2})",
+        vehicle_vel.x
+    );
 }

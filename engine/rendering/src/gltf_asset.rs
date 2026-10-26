@@ -480,9 +480,7 @@ impl LoadedVehicleModel {
                 VehicleSubmeshType::ChassisBody => {
                     (Vec3::ZERO, Quat::IDENTITY, override_paint_color)
                 }
-                VehicleSubmeshType::TurnSignals => {
-                    (Vec3::ZERO, Quat::IDENTITY, None)
-                }
+                VehicleSubmeshType::TurnSignals => (Vec3::ZERO, Quat::IDENTITY, None),
                 _ => (Vec3::ZERO, Quat::IDENTITY, None),
             };
 

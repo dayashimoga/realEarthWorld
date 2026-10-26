@@ -553,7 +553,8 @@ impl DynamicVehicle {
                         // Real torque converter creep produces ~5-8 km/h forward momentum or holds against mild rollback
                         if inputs.throttle < 0.01 && v_forward < 2.5 && inputs.brake < 0.05 {
                             let creep_scale = (1.0 - (v_forward / 2.5).max(0.0)).clamp(0.0, 1.0);
-                            drive_f += self.config.peak_engine_force * 0.08 * drive_mult * creep_scale;
+                            drive_f +=
+                                self.config.peak_engine_force * 0.08 * drive_mult * creep_scale;
                         }
                         f_long += drive_f;
                         f_long -= compute_brake(
@@ -639,7 +640,9 @@ impl DynamicVehicle {
                     let base_lat = -self.config.cornering_stiffness * wheel.slip_angle;
                     if v_forward < 0.0 && inputs.steer.abs() < 0.02 {
                         // Stabilize reverse tracking: prevent positive-feedback yaw divergence
-                        base_lat * 0.5 - (self.config.cornering_stiffness * 0.4) * (v_lateral / v_forward.abs()).clamp(-0.5, 0.5)
+                        base_lat * 0.5
+                            - (self.config.cornering_stiffness * 0.4)
+                                * (v_lateral / v_forward.abs()).clamp(-0.5, 0.5)
                     } else {
                         base_lat
                     }
@@ -749,7 +752,8 @@ impl DynamicVehicle {
             let is_service_brake = inputs.brake > 0.3 && inputs.throttle == 0.0;
 
             // In Neutral or with brake applied on flat ground with zero throttle, hold motionless
-            let is_flat_idle = (inputs.gear_mode == TransmissionMode::Neutral || inputs.brake > 0.05)
+            let is_flat_idle = (inputs.gear_mode == TransmissionMode::Neutral
+                || inputs.brake > 0.05)
                 && inputs.throttle == 0.0
                 && inputs.steer.abs() < 0.05
                 && speed < 0.12
@@ -763,8 +767,7 @@ impl DynamicVehicle {
                 && inputs.throttle == 0.0
                 && grounded_wheels >= 2
                 && forward_speed <= 0.001
-                && slope_grade >= 0.025
-                && slope_grade <= 0.30;
+                && (0.025..=0.30).contains(&slope_grade);
 
             if is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
                 self.linear_velocity.x = 0.0;

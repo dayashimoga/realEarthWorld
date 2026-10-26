@@ -221,7 +221,11 @@ impl UsCityDefinition {
         }
 
         let candidates = [
-            format!("assets/{}_sample/{}_downtown.osm.xml", self.id.replace('-', "_"), self.id.replace('-', "_")),
+            format!(
+                "assets/{}_sample/{}_downtown.osm.xml",
+                self.id.replace('-', "_"),
+                self.id.replace('-', "_")
+            ),
             format!("assets/regions/{}/chunks.db", self.id),
             format!("assets/regions/{}/{}.osm.xml", self.id, self.id),
             format!("dist/packages/{}/chunks.db", self.id),
@@ -326,7 +330,11 @@ impl UsCityDefinition {
             anchor: self.anchor,
             utm_zone: self.utm_zone,
             horizontal_crs: "WGS84 (EPSG:4326)".to_string(),
-            projected_crs: format!("UTM Zone {}N (EPSG:{})", self.utm_zone, 32600 + self.utm_zone as u32),
+            projected_crs: format!(
+                "UTM Zone {}N (EPSG:{})",
+                self.utm_zone,
+                32600 + self.utm_zone as u32
+            ),
             vertical_datum: "NAVD88 (GEOID18/EGM96)".to_string(),
             osm_license: "Open Data Commons Open Database License (ODbL 1.0)".to_string(),
             elevation_license: "USGS Public Domain (CC0 Compatible)".to_string(),
@@ -1371,4 +1379,3 @@ pub fn audit_all_catalog_entries() -> Vec<RegionAuditRecord> {
 pub fn audit_catalog_entry(city_id: &str) -> Option<RegionAuditRecord> {
     find_city_by_id(city_id).map(|c| c.audit_record())
 }
-

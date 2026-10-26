@@ -18,7 +18,10 @@ fn test_packaged_windows_release_artifact_smoke() {
         .parent()
         .expect("Workspace root")
         .to_path_buf();
-    let zip_path = workspace_root.join("dist").join("windows").join("realearth-windows-x64.zip");
+    let zip_path = workspace_root
+        .join("dist")
+        .join("windows")
+        .join("realearth-windows-x64.zip");
 
     assert!(
         zip_path.exists(),
@@ -28,21 +31,37 @@ fn test_packaged_windows_release_artifact_smoke() {
 
     let zip_metadata = fs::metadata(&zip_path).expect("Read zip metadata");
     let zip_size_mb = zip_metadata.len() as f64 / (1024.0 * 1024.0);
-    println!("  • Found release package: {} ({:.2} MB)", zip_path.display(), zip_size_mb);
-    assert!(zip_metadata.len() > 8_000_000, "Package must be complete (> 8MB)");
+    println!(
+        "  • Found release package: {} ({:.2} MB)",
+        zip_path.display(),
+        zip_size_mb
+    );
+    assert!(
+        zip_metadata.len() > 8_000_000,
+        "Package must be complete (> 8MB)"
+    );
 
     // Create isolated temporary directory
-    let temp_extract_dir = std::env::temp_dir().join(format!("realearth_smoke_{}", std::process::id()));
+    let temp_extract_dir =
+        std::env::temp_dir().join(format!("realearth_smoke_{}", std::process::id()));
     if temp_extract_dir.exists() {
         let _ = fs::remove_dir_all(&temp_extract_dir);
     }
     fs::create_dir_all(&temp_extract_dir).expect("Create clean temporary directory");
 
-    println!("  • Extracting artifact to isolated temp folder: {}", temp_extract_dir.display());
+    println!(
+        "  • Extracting artifact to isolated temp folder: {}",
+        temp_extract_dir.display()
+    );
 
     // Extract using Windows built-in tar.exe
     let extract_output = Command::new("tar.exe")
-        .args(["-xf", zip_path.to_str().unwrap(), "-C", temp_extract_dir.to_str().unwrap()])
+        .args([
+            "-xf",
+            zip_path.to_str().unwrap(),
+            "-C",
+            temp_extract_dir.to_str().unwrap(),
+        ])
         .output()
         .expect("Execute tar.exe to extract zip artifact");
 
@@ -55,10 +74,19 @@ fn test_packaged_windows_release_artifact_smoke() {
     // Locate extracted realearth-viewer.exe
     let exe_path = if temp_extract_dir.join("realearth-viewer.exe").exists() {
         temp_extract_dir.join("realearth-viewer.exe")
-    } else if temp_extract_dir.join("realearth-windows-x64").join("realearth-viewer.exe").exists() {
-        temp_extract_dir.join("realearth-windows-x64").join("realearth-viewer.exe")
+    } else if temp_extract_dir
+        .join("realearth-windows-x64")
+        .join("realearth-viewer.exe")
+        .exists()
+    {
+        temp_extract_dir
+            .join("realearth-windows-x64")
+            .join("realearth-viewer.exe")
     } else {
-        panic!("realearth-viewer.exe not found in extracted artifact at {}", temp_extract_dir.display());
+        panic!(
+            "realearth-viewer.exe not found in extracted artifact at {}",
+            temp_extract_dir.display()
+        );
     };
 
     let exe_work_dir = exe_path.parent().unwrap();
@@ -66,7 +94,10 @@ fn test_packaged_windows_release_artifact_smoke() {
     assert!(exe_path.exists(), "Standalone binary must exist");
 
     // Execute standalone binary in headless driving mode strictly within its own extracted directory
-    println!("  • Invoking standalone binary: {} --headless --drive --frames 10", exe_path.display());
+    println!(
+        "  • Invoking standalone binary: {} --headless --drive --frames 10",
+        exe_path.display()
+    );
     let run_output = Command::new(&exe_path)
         .current_dir(exe_work_dir)
         .args(["--headless", "--drive", "--frames", "10"])
@@ -76,9 +107,15 @@ fn test_packaged_windows_release_artifact_smoke() {
     let stdout_str = String::from_utf8_lossy(&run_output.stdout);
     let stderr_str = String::from_utf8_lossy(&run_output.stderr);
 
-    println!("  • Standalone execution exit status: {}", run_output.status);
+    println!(
+        "  • Standalone execution exit status: {}",
+        run_output.status
+    );
     if !stdout_str.is_empty() {
-        println!("  • Output snippet: {}", stdout_str.lines().next().unwrap_or(""));
+        println!(
+            "  • Output snippet: {}",
+            stdout_str.lines().next().unwrap_or("")
+        );
     }
 
     // Verify exit status

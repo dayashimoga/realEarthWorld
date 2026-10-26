@@ -9,7 +9,9 @@
 use glam::{Mat4, Vec3};
 use realearth_rendering::camera::FloatingOriginCamera;
 use realearth_rendering::gltf_asset::{VehicleLodLevel, VehicleSubmeshType};
-use realearth_rendering::vehicle_mesh::{generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType};
+use realearth_rendering::vehicle_mesh::{
+    generate_vehicle_mesh, VehicleMeshParams, VehicleVisualType,
+};
 use realearth_rendering::vehicle_models::get_certified_vehicle_model;
 use realearth_shared::coordinates::Wgs84Coord;
 
@@ -22,7 +24,9 @@ struct TestLandmark {
 
 #[test]
 fn test_fixed_geographic_cameras_at_san_francisco_landmarks() {
-    println!("\n📸 [GRAPHICS HARNESS] Auditing Fixed Geographic Cameras at San Francisco Landmarks...");
+    println!(
+        "\n📸 [GRAPHICS HARNESS] Auditing Fixed Geographic Cameras at San Francisco Landmarks..."
+    );
 
     let landmarks = [
         TestLandmark {
@@ -58,27 +62,48 @@ fn test_fixed_geographic_cameras_at_san_francisco_landmarks() {
 
         // Verify camera positions and relative ECEF offsets
         let rel_pos = cam.relative_pos_f32();
-        assert!(rel_pos.is_finite(), "Camera rel_pos must be finite for {}", lm.name);
+        assert!(
+            rel_pos.is_finite(),
+            "Camera rel_pos must be finite for {}",
+            lm.name
+        );
 
         let view = cam.view_matrix();
-        assert!(view.is_finite(), "Camera view matrix must be finite for {}", lm.name);
+        assert!(
+            view.is_finite(),
+            "Camera view matrix must be finite for {}",
+            lm.name
+        );
 
         // Verify projection matrix
         let proj = Mat4::perspective_rh(cam.fov_y, cam.aspect, cam.z_near, cam.z_far);
-        assert!(proj.is_finite(), "Projection matrix must be finite for {}", lm.name);
+        assert!(
+            proj.is_finite(),
+            "Projection matrix must be finite for {}",
+            lm.name
+        );
 
         let view_proj = proj * view;
-        assert!(view_proj.is_finite(), "View-Projection matrix must be finite for {}", lm.name);
+        assert!(
+            view_proj.is_finite(),
+            "View-Projection matrix must be finite for {}",
+            lm.name
+        );
 
         // Project point along camera forward vector into normalized device coordinates
         let front = Vec3::new(
             cam.yaw.cos() * cam.pitch.cos(),
             cam.pitch.sin(),
             cam.yaw.sin() * cam.pitch.cos(),
-        ).normalize();
+        )
+        .normalize();
         let target = rel_pos + front * 25.0;
         let ndc = view_proj.project_point3(target);
-        assert!(ndc.is_finite(), "NDC point projection must be finite for {}", lm.name);
+        assert!(
+            ndc.is_finite(),
+            "NDC point projection must be finite for {}",
+            lm.name
+        );
         assert!(
             ndc.z >= 0.0 && ndc.z <= 1.0,
             "Projected point must lie within normalized depth bounds [0, 1]: got z={}",
@@ -112,10 +137,26 @@ fn test_semantic_geometry_ids_and_vertex_integrity() {
     for vt in vehicle_types {
         let model = get_certified_vehicle_model(vt, VehicleLodLevel::Lod0High);
 
-        assert!(!model.submeshes.is_empty(), "Vehicle {:?} must contain semantic submeshes", vt);
-        assert!(model.dimensions.x > 0.0, "Vehicle {:?} width must be positive", vt);
-        assert!(model.dimensions.y > 0.0, "Vehicle {:?} height must be positive", vt);
-        assert!(model.dimensions.z > 0.0, "Vehicle {:?} length must be positive", vt);
+        assert!(
+            !model.submeshes.is_empty(),
+            "Vehicle {:?} must contain semantic submeshes",
+            vt
+        );
+        assert!(
+            model.dimensions.x > 0.0,
+            "Vehicle {:?} width must be positive",
+            vt
+        );
+        assert!(
+            model.dimensions.y > 0.0,
+            "Vehicle {:?} height must be positive",
+            vt
+        );
+        assert!(
+            model.dimensions.z > 0.0,
+            "Vehicle {:?} length must be positive",
+            vt
+        );
 
         let mut submesh_types = Vec::new();
         let mut total_vertices = 0;
@@ -132,7 +173,10 @@ fn test_semantic_geometry_ids_and_vertex_integrity() {
                 let norm = Vec3::from_array(v.normal);
                 assert!(pos.is_finite(), "Vertex position must be finite");
                 assert!(norm.is_finite(), "Vertex normal must be finite");
-                assert!(v.uv[0].is_finite() && v.uv[1].is_finite(), "UV coords must be finite");
+                assert!(
+                    v.uv[0].is_finite() && v.uv[1].is_finite(),
+                    "UV coords must be finite"
+                );
             }
         }
 
@@ -147,7 +191,11 @@ fn test_semantic_geometry_ids_and_vertex_integrity() {
 
         println!(
             "  ✓ Vehicle '{:?}' ({}) [LOD0]: {} submeshes, {} vertices, {} indices",
-            vt, model.display_name, model.submeshes.len(), total_vertices, total_indices
+            vt,
+            model.display_name,
+            model.submeshes.len(),
+            total_vertices,
+            total_indices
         );
     }
 }
@@ -164,7 +212,8 @@ fn test_camera_depth_clearance_and_occlusion_audit() {
     };
     let coupe_mesh = generate_vehicle_mesh(&coupe_params);
     assert!(!coupe_mesh.vertices.is_empty());
-    let coupe_model = get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
+    let coupe_model =
+        get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
     let coupe_chase_dist = coupe_model.camera_anchors.chase_distance;
     let coupe_half_len = coupe_model.dimensions.z * 0.5;
     let coupe_clearance = coupe_chase_dist - coupe_half_len;
@@ -178,7 +227,8 @@ fn test_camera_depth_clearance_and_occlusion_audit() {
     );
 
     // 2. Audit Heavy Truck Trailer Occlusion Defect
-    let truck_model = get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
+    let truck_model =
+        get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
     let truck_chase_dist = truck_model.camera_anchors.chase_distance;
     // Articulated trailer extends back by 15.0m
     let trailer_length = 15.0f32;

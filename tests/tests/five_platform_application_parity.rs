@@ -48,7 +48,7 @@ fn test_f1_windows_desktop_runtime_and_directx_wgpu_initialization() {
         FloatingOriginCamera::new(Wgs84Coord::new(37.7749, -122.4194, 15.0), 1920.0 / 1080.0);
     assert!((camera.aspect - (1920.0 / 1080.0)).abs() < 1e-4);
     assert_eq!(camera.z_near, 0.5);
-    assert_eq!(camera.z_far, 10_000.0);
+    assert_eq!(camera.z_far, 50_000.0);
 
     // Step camera with desktop aspect ratio (1440p QHD desktop display)
     camera.aspect = 2560.0 / 1440.0;

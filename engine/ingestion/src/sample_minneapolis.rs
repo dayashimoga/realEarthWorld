@@ -4,7 +4,8 @@
 
 use crate::osm_types::{
     BuildingType, HighwayType, IngestedDataset, LandCoverClass, OsmBuildingFeature,
-    OsmLandCoverFeature, OsmRailwayFeature, OsmRoadFeature, OsmWaterFeature, RailwayType, WaterType,
+    OsmLandCoverFeature, OsmRailwayFeature, OsmRoadFeature, OsmWaterFeature, RailwayType,
+    WaterType,
 };
 use realearth_shared::coordinates::Wgs84Coord;
 

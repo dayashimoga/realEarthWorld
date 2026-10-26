@@ -410,15 +410,18 @@ impl AircraftFlight {
     /// - At warning threshold (> 2160m): triggers turnback vectoring.
     /// - At outer boundary (>= 2400m): vectors velocity toward center and clamps horizontal position.
     pub fn enforce_airspace_boundary(&mut self, max_radius_m: f32) -> bool {
-        let horiz_dist = (self.position.x * self.position.x + self.position.z * self.position.z).sqrt();
+        let horiz_dist =
+            (self.position.x * self.position.x + self.position.z * self.position.z).sqrt();
         if horiz_dist > max_radius_m * 0.90 {
-            let dir_to_center = Vec3::new(-self.position.x, 0.0, -self.position.z).normalize_or_zero();
+            let dir_to_center =
+                Vec3::new(-self.position.x, 0.0, -self.position.z).normalize_or_zero();
             let forward = self.orientation * Vec3::Z;
             let dot = forward.dot(dir_to_center);
 
             if dot < 0.3 {
                 let speed = self.linear_velocity.length();
-                let blend = ((horiz_dist - max_radius_m * 0.90) / (max_radius_m * 0.10)).clamp(0.0, 1.0);
+                let blend =
+                    ((horiz_dist - max_radius_m * 0.90) / (max_radius_m * 0.10)).clamp(0.0, 1.0);
                 let new_dir = forward.lerp(dir_to_center, blend * 0.6).normalize();
                 self.linear_velocity = new_dir * speed;
 
@@ -428,7 +431,8 @@ impl AircraftFlight {
             }
 
             if horiz_dist > max_radius_m {
-                let clamped_dir = Vec3::new(self.position.x, 0.0, self.position.z).normalize_or_zero();
+                let clamped_dir =
+                    Vec3::new(self.position.x, 0.0, self.position.z).normalize_or_zero();
                 self.position.x = clamped_dir.x * max_radius_m;
                 self.position.z = clamped_dir.z * max_radius_m;
             }

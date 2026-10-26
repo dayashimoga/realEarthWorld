@@ -18,8 +18,8 @@ use realearth_rendering::vehicle_models::get_certified_vehicle_model;
 use realearth_shared::us_catalog::all_us_cities;
 use realearth_vehicles::building_collision::{BuildingCollisionWorld, BuildingFootprintCollider};
 use realearth_vehicles::{
-    AircraftFlight, DynamicVehicle, FlightInputs,
-    SlopedGround, TrainConsist, TransmissionMode, VehicleConfig, VehicleInputs,
+    AircraftFlight, DynamicVehicle, FlightInputs, SlopedGround, TrainConsist, TransmissionMode,
+    VehicleConfig, VehicleInputs,
 };
 
 const DT: f32 = 1.0 / 60.0;
@@ -91,7 +91,9 @@ fn test_reproduce_p0_1_car_steering_sign_inversion() {
 #[test]
 #[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_2_self_steering_divergence() {
-    println!("\n🔍 [P0-2 REPRODUCTION] Auditing Self-Steering Divergence under Zero Steering Input...");
+    println!(
+        "\n🔍 [P0-2 REPRODUCTION] Auditing Self-Steering Divergence under Zero Steering Input..."
+    );
 
     let car_config = VehicleConfig::sports_coupe();
     let eq_y = car_config.equilibrium_ride_height();
@@ -147,7 +149,9 @@ fn test_reproduce_p0_2_self_steering_divergence() {
 #[test]
 #[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_3_backward_movement_on_slope_zero_input() {
-    println!("\n🔍 [P0-3 REPRODUCTION] Auditing Backward Slope Drift with Transmission in Drive...");
+    println!(
+        "\n🔍 [P0-3 REPRODUCTION] Auditing Backward Slope Drift with Transmission in Drive..."
+    );
 
     // San Francisco standard hill slope: 8% grade (0.08)
     let ground = SlopedGround::new(0.0, 0.0, 0.08);
@@ -345,7 +349,9 @@ fn test_reproduce_p0_6_train_without_track_free_roam() {
 #[test]
 #[ignore = "Stage A forensic reproduction - superseded by Stage B remediation certification"]
 fn test_reproduce_p0_7_aircraft_leaving_geographic_world() {
-    println!("\n🔍 [P0-7 REPRODUCTION] Auditing Aircraft Flight Beyond Geographic Region Bounds...");
+    println!(
+        "\n🔍 [P0-7 REPRODUCTION] Auditing Aircraft Flight Beyond Geographic Region Bounds..."
+    );
 
     let mut plane = AircraftFlight::new_airliner(
         "FlightAlpha",

@@ -1306,13 +1306,7 @@ impl HudMesh {
             );
 
             // Readiness chip
-            self.add_text(
-                mx + 54.0,
-                iy + 10.0,
-                0.95,
-                readiness_badge,
-                badge_color,
-            );
+            self.add_text(mx + 54.0, iy + 10.0, 0.95, readiness_badge, badge_color);
 
             // City Name
             self.add_text(
@@ -1422,13 +1416,7 @@ impl HudMesh {
         };
         self.add_rect(wb.x, wb.y, wb.w, wb.h, wb_bg);
         self.add_rect_outline(wb.x, wb.y, wb.w, wb.h, 1.0, wb_border);
-        self.add_text(
-            wb.x + 8.0,
-            wb.y + 7.0,
-            1.05,
-            wb_label,
-            wb_text_color,
-        );
+        self.add_text(wb.x + 8.0, wb.y + 7.0, 1.05, wb_label, wb_text_color);
 
         // Clickable Back Button
         let bb = layout.back_btn;

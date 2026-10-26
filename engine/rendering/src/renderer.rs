@@ -902,4 +902,3 @@ pub fn generate_coarse_horizon_mesh(
 
     mesh
 }
-

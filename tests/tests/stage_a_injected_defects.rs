@@ -12,7 +12,9 @@
 use glam::Vec3;
 use realearth_compiler::mesh::ChunkMesh;
 use realearth_ingestion::authentic::verify_city_playable;
-use realearth_rendering::gltf_asset::{LoadedVehicleModel, VehicleCameraAnchors, VehicleLodLevel, VehicleSubmesh};
+use realearth_rendering::gltf_asset::{
+    LoadedVehicleModel, VehicleCameraAnchors, VehicleLodLevel, VehicleSubmesh,
+};
 use realearth_vehicles::{
     DynamicVehicle, FlatGround, TransmissionMode, VehicleConfig, VehicleInputs,
 };
@@ -56,7 +58,10 @@ fn test_injected_defect_reversed_steering_detection() {
 
     // Clean Steering: Steering Left (-0.5) must displace toward -X (left)
     let clean_displacement = evaluate_steering_direction(-0.5, false);
-    println!("  • Clean Steer-Left Displacement: {:.4}m (< 0 = Left)", clean_displacement);
+    println!(
+        "  • Clean Steer-Left Displacement: {:.4}m (< 0 = Left)",
+        clean_displacement
+    );
     assert!(
         clean_displacement < -0.05,
         "Clean steering must turn left toward -X"
@@ -64,7 +69,10 @@ fn test_injected_defect_reversed_steering_detection() {
 
     // Injected Inverted Steering: Steering Left with inverted sign turns to +X (Right)
     let inverted_displacement = evaluate_steering_direction(-0.5, true);
-    println!("  • Injected Inverted Displacement: {:.4}m (> 0 = Right)", inverted_displacement);
+    println!(
+        "  • Injected Inverted Displacement: {:.4}m (> 0 = Right)",
+        inverted_displacement
+    );
 
     // Assert that the regression harness catches the defect:
     let defect_detected = inverted_displacement > 0.05;
@@ -112,7 +120,10 @@ fn test_injected_defect_uncontrolled_acceleration_detection() {
     // Injected Phantom Throttle in Park:
     // Even if throttle is erroneously injected while in Park, physics must clamp drive force
     let phantom_drift = evaluate_park_throttle(true);
-    println!("  • Injected Phantom Throttle Drift in Park: {:.6}m", phantom_drift);
+    println!(
+        "  • Injected Phantom Throttle Drift in Park: {:.6}m",
+        phantom_drift
+    );
     assert!(
         phantom_drift < 0.01,
         "Park mode brake lock must override phantom throttle inputs"
@@ -137,7 +148,10 @@ fn test_injected_defect_missing_city_package_transition_rejection() {
     );
 
     let err_msg = result.unwrap_err().to_string();
-    println!("  • Successfully caught unbundled city transition error: '{}'", err_msg);
+    println!(
+        "  • Successfully caught unbundled city transition error: '{}'",
+        err_msg
+    );
     assert!(
         err_msg.contains("requires GIS data package"),
         "Error message must specify missing GIS data package"
@@ -165,22 +179,22 @@ fn validate_loaded_vehicle_mesh(model: &LoadedVehicleModel) -> Result<(), &'stat
 
 #[test]
 fn test_injected_defect_absent_gpu_mesh_detection() {
-    println!("\n💥 [INJECTED DEFECT] Testing Sensitivity to Absent GPU Meshes & Empty Primitives...");
+    println!(
+        "\n💥 [INJECTED DEFECT] Testing Sensitivity to Absent GPU Meshes & Empty Primitives..."
+    );
 
     // Create corrupted vehicle model with empty submeshes
     let corrupted_model = LoadedVehicleModel {
         asset_id: "corrupted_placeholder".to_string(),
         display_name: "Corrupted Vehicle".to_string(),
-        submeshes: vec![
-            VehicleSubmesh {
-                name: "corrupted_chassis".to_string(),
-                submesh_type: realearth_rendering::gltf_asset::VehicleSubmeshType::ChassisBody,
-                mesh: ChunkMesh::default(), // INJECTED DEFECT: Empty mesh with 0 vertices
-                local_transform: glam::Affine3A::IDENTITY,
-                pivot: Vec3::ZERO,
-                material: Default::default(),
-            }
-        ],
+        submeshes: vec![VehicleSubmesh {
+            name: "corrupted_chassis".to_string(),
+            submesh_type: realearth_rendering::gltf_asset::VehicleSubmeshType::ChassisBody,
+            mesh: ChunkMesh::default(), // INJECTED DEFECT: Empty mesh with 0 vertices
+            local_transform: glam::Affine3A::IDENTITY,
+            pivot: Vec3::ZERO,
+            material: Default::default(),
+        }],
         dimensions: Vec3::new(2.0, 1.5, 4.5),
         wheelbase: 2.7,
         track_width: 1.6,
@@ -205,7 +219,14 @@ fn test_injected_defect_absent_gpu_mesh_detection() {
 // 5. INJECTED DEFECT: STALE GEOGRAPHIC CACHE
 // ============================================================================
 
-fn validate_geographic_chunk_cache(lat: f64, lon: f64, min_lat: f64, max_lat: f64, min_lon: f64, max_lon: f64) -> Result<(), &'static str> {
+fn validate_geographic_chunk_cache(
+    lat: f64,
+    lon: f64,
+    min_lat: f64,
+    max_lat: f64,
+    min_lon: f64,
+    max_lon: f64,
+) -> Result<(), &'static str> {
     if lat < min_lat || lat > max_lat || lon < min_lon || lon > max_lon {
         return Err("Geographic cache chunk coordinates outside valid bounding box");
     }
@@ -223,13 +244,18 @@ fn test_injected_defect_stale_geographic_cache_detection() {
     let sf_max_lon = -122.35;
 
     // Valid SF chunk
-    assert!(validate_geographic_chunk_cache(37.79, -122.40, sf_min_lat, sf_max_lat, sf_min_lon, sf_max_lon).is_ok());
+    assert!(validate_geographic_chunk_cache(
+        37.79, -122.40, sf_min_lat, sf_max_lat, sf_min_lon, sf_max_lon
+    )
+    .is_ok());
 
     // Injected Stale / Out-of-bounds cache chunk (e.g. from previous region or invalid cache key)
     let stale_lat = 34.05; // Los Angeles coordinate injected into SF cache
     let stale_lon = -118.25;
 
-    let stale_result = validate_geographic_chunk_cache(stale_lat, stale_lon, sf_min_lat, sf_max_lat, sf_min_lon, sf_max_lon);
+    let stale_result = validate_geographic_chunk_cache(
+        stale_lat, stale_lon, sf_min_lat, sf_max_lat, sf_min_lon, sf_max_lon,
+    );
     assert!(
         stale_result.is_err(),
         "DEFECT DETECTED: Stale geographic cache chunk outside SF bounds must be rejected"

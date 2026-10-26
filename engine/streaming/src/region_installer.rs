@@ -117,16 +117,14 @@ impl RegionInstaller {
     }
 
     /// Acquires, parses, validates, and compiles an authentic geographic package on demand.
-    pub fn install_region<F>(
-        &mut self,
-        region_id: &str,
-        mut progress_cb: F,
-    ) -> Result<PathBuf>
+    pub fn install_region<F>(&mut self, region_id: &str, mut progress_cb: F) -> Result<PathBuf>
     where
         F: FnMut(InstallProgress),
     {
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         let city = find_city_by_id(region_id).ok_or_else(|| {
@@ -145,7 +143,10 @@ impl RegionInstaller {
                 region_id: city.id.to_string(),
                 state: InstallState::Installed,
                 progress_pct: 100.0,
-                step_description: format!("Region {} ({}) already installed and verified.", city.name, city.state),
+                step_description: format!(
+                    "Region {} ({}) already installed and verified.",
+                    city.name, city.state
+                ),
                 bytes_downloaded: 0,
                 total_bytes: 0,
                 sha256_checksum: None,
@@ -154,7 +155,9 @@ impl RegionInstaller {
         }
 
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         // --------------------------------------------------------------------
@@ -216,7 +219,9 @@ impl RegionInstaller {
         };
 
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         // --------------------------------------------------------------------
@@ -245,7 +250,9 @@ impl RegionInstaller {
         }
 
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         // --------------------------------------------------------------------
@@ -255,7 +262,8 @@ impl RegionInstaller {
             region_id: city.id.to_string(),
             state: InstallState::Validating,
             progress_pct: 55.0,
-            step_description: "Running topological GIS validation and bounding integrity tests...".to_string(),
+            step_description: "Running topological GIS validation and bounding integrity tests..."
+                .to_string(),
             bytes_downloaded: 380_000,
             total_bytes: 500_000,
             sha256_checksum: None,
@@ -270,7 +278,9 @@ impl RegionInstaller {
         }
 
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         // --------------------------------------------------------------------
@@ -298,7 +308,9 @@ impl RegionInstaller {
         compile_world_package(&val, &dem, &target_dir, &options)?;
 
         if self.is_cancelled {
-            return Err(RealEarthError::Ingestion("Installation cancelled by user".to_string()));
+            return Err(RealEarthError::Ingestion(
+                "Installation cancelled by user".to_string(),
+            ));
         }
 
         // --------------------------------------------------------------------
