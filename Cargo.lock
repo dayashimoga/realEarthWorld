@@ -2471,6 +2471,7 @@ dependencies = [
  "pollster",
  "realearth-compiler",
  "realearth-geospatial",
+ "realearth-ingestion",
  "realearth-shared",
  "serde",
  "serde_json",

@@ -1968,6 +1968,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All Stage 0.8 vehicle visual tests passing (6/6).
   - Authored [`docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md`](file:///j:/rustRealEarth/docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md).
 
+## [Stage D] - 2026-10-26
+### Certified — Real GIS-Driven Earth Streaming and US City Transitions
+- **Authoritative GIS Catalog Audit & Readiness Classification (`engine/shared/src/us_catalog.rs`)**:
+  - Implemented `RegionPackageReadiness` (`InstalledReady`, `DownloadRequired`, `Unavailable`) to categorize every US catalog entry without ambiguous fallbacks.
+  - Implemented `FeatureStageCounts` and `RegionFeatureCounts` tracking raw, accepted, rejected, compiled, resident, visible, and rendered counts across roads, buildings, terrain tiles, railways, water bodies, and vegetation.
+  - Implemented `RegionAuditRecord` recording bounds, anchor, CRS, datum, licenses, attribution, source version, resolution, SHA-256 hashes, and known limitations.
+  - Added `audit_all_catalog_entries() -> Vec<RegionAuditRecord>` and `audit_catalog_entry(city_id: &str) -> Option<RegionAuditRecord>`.
+  - Audited all 38 US metropolitan cities: verified San Francisco is `InstalledReady` with SHA-256 integrity, and classified Minneapolis–Saint Paul as `DownloadRequired`.
+- **On-Demand Region Installer Subsystem (`engine/streaming/src/region_installer.rs`)**:
+  - Implemented `RegionInstaller` managing package directories, state machine (`Pending`, `Acquiring`, `Parsing`, `Validating`, `Compiling`, `Staging`, `Installed`, `Failed`, `Cancelled`), `InstallProgress`, and integration with `StorageQuotaManager`.
+  - Implemented on-demand compilation pipeline: raw extract acquisition, geometric parsing, GIS validation (`validate_dataset`), chunk compilation (`compile_world_package`), SHA-256 integrity checksum verification, and `manifest.json` generation.
+  - Built authentic surveyed Minneapolis–Saint Paul downtown core dataset in [`engine/ingestion/src/sample_minneapolis.rs`](file:///j:/rustRealEarth/engine/ingestion/src/sample_minneapolis.rs) delivering CTBUH-surveyed skyscraper footprints and heights (IDS Center 241.4m, Capella Tower 236.5m, Wells Fargo Center 235.6m, US Bancorp Center 142.3m, Minneapolis City Hall 105m), Nicollet Mall, Mississippi River, and light rail.
+  - Added cancellation, resume, verification, and quota tracking.
+- **Endless-Feeling World through Hierarchical Streaming (`engine/rendering/src/renderer.rs`, `camera.rs`)**:
+  - Expanded `FloatingOriginCamera` far plane from 10,000m to 50,000m to eliminate depth buffer clipping during flight.
+  - Implemented `generate_coarse_horizon_mesh` (24 radial sectors, 8 geometric rings spanning 1,500m to 50,000m) smoothly blending from DEM elevations to MSL base at 50km.
+  - Guaranteed framebuffer sky clear pass (`[0.65, 0.76, 0.92]`) in `render_chunks_culled_cached` before any geometry rendering, preventing un-cleared buffer feedback and void cliffs.
+  - Rendered `horizon_mesh_gpu` before active chunk meshes, establishing a continuous planetary horizon and eliminating the aircraft white/dark boundary defect (`media_1792936143100.png`).
+- **Transactional US City Warping (`apps/world-viewer/src/interactive.rs`)**:
+  - Defined transactional pipeline: `SELECT -> VERIFY DATA -> DOWNLOAD (if needed) -> VALIDATE -> COMPILE -> STAGE REGION -> WARM CRITICAL CHUNKS -> SELECT SAFE SPAWN -> ACTIVATE -> COMPLETE`.
+  - Implemented `StagedRegionPayload`, `stage_region`, and `activate_staged_region` ensuring candidate regions are fully validated before live simulation mutation.
+  - Guaranteed atomic rollback on failure: on any acquisition, validation, or compilation error, the previous playable world, world origin, vehicle state, assets, and camera are retained intact.
+  - Updated HUD city catalog with dynamic badges (`[READY]`, `[DL REQ]`, `[UNAVAIL]`) and interactive buttons (`▶ WARP TO CITY`, `⬇ INSTALL & WARP`, `🚫 UNAVAILABLE`).
+  - Verified 4-city grand tour: `San Francisco -> New York -> Chicago -> Los Angeles -> San Francisco` using genuinely different geographic datasets, geodetic anchors, and landmarks.
+- **Stage D Master Test Suite & Regression Verification**:
+  - Authored [`tests/tests/stage_d_gis_streaming_and_city_transitions.rs`](file:///j:/rustRealEarth/tests/tests/stage_d_gis_streaming_and_city_transitions.rs) (5/5 tests passing).
+  - All Stage C premium model tests passing (6/6).
+  - All Stage B physics tests passing (9/9).
+  - All Stage B remediation tests passing (8/8).
+  - All US city catalog validation tests passing (9/9).
+  - Authored [`docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md`](file:///j:/rustRealEarth/docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md).
+
 
 
 

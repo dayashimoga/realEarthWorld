@@ -451,7 +451,7 @@ impl CatalogLayout {
         }
 
         let footer_y = my + modal_h - 36.0;
-        let warp_btn = UiRect::new(mx + modal_w - 240.0, footer_y + 4.0, 140.0, 28.0);
+        let warp_btn = UiRect::new(mx + modal_w - 250.0, footer_y + 4.0, 150.0, 28.0);
         let back_btn = UiRect::new(mx + modal_w - 90.0, footer_y + 4.0, 80.0, 28.0);
 
         Self {
@@ -1244,7 +1244,7 @@ impl HudMesh {
         let start_idx = layout.start_idx;
         let visible_cities = &cities[start_idx..cities.len().min(start_idx + layout.visible_count)];
 
-        for (i, &(_id, name, state, landmark, elev_max, has_port, priority_str)) in
+        for (i, &(city_id, name, state, landmark, elev_max, has_port, priority_str)) in
             visible_cities.iter().enumerate()
         {
             let actual_idx = start_idx + i;
@@ -1278,21 +1278,47 @@ impl HudMesh {
                 self.add_rect(mx + 10.0, iy, 4.0, item_h, [0.0, 0.85, 1.0, 1.0]);
             }
 
+            // Readiness Badge
+            let readiness = realearth_shared::us_catalog::find_city_by_id(city_id)
+                .map(|c| c.package_readiness())
+                .unwrap_or(realearth_shared::us_catalog::RegionPackageReadiness::Unavailable);
+
+            let (readiness_badge, badge_color) = match readiness {
+                realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady => {
+                    ("[READY]", [0.25, 0.95, 0.55, 1.0])
+                }
+                realearth_shared::us_catalog::RegionPackageReadiness::DownloadRequired => {
+                    ("[DL REQ]", [1.0, 0.72, 0.18, 1.0])
+                }
+                realearth_shared::us_catalog::RegionPackageReadiness::Unavailable => {
+                    ("[UNAVAIL]", [0.60, 0.60, 0.65, 0.8])
+                }
+            };
+
             // State badge
             let state_badge = format!("[{}]", state);
             self.add_text(
-                mx + 20.0,
+                mx + 16.0,
                 iy + 10.0,
-                1.1,
+                1.0,
                 &state_badge,
                 [0.4, 0.85, 1.0, 1.0],
             );
 
+            // Readiness chip
+            self.add_text(
+                mx + 54.0,
+                iy + 10.0,
+                0.95,
+                readiness_badge,
+                badge_color,
+            );
+
             // City Name
             self.add_text(
-                mx + 55.0,
+                mx + 118.0,
                 iy + 10.0,
-                1.2,
+                1.15,
                 name,
                 if is_sel || is_hovered {
                     [1.0, 1.0, 1.0, 1.0]
@@ -1302,13 +1328,13 @@ impl HudMesh {
             );
 
             // Landmark
-            let truncated_landmark = if landmark.len() > 32 {
-                &landmark[..32]
+            let truncated_landmark = if landmark.len() > 30 {
+                &landmark[..30]
             } else {
                 landmark
             };
             self.add_text(
-                mx + 260.0,
+                mx + 280.0,
                 iy + 10.0,
                 1.1,
                 truncated_landmark,
@@ -1322,7 +1348,7 @@ impl HudMesh {
             // Port
             let port_str = if has_port { "⚓ Yes" } else { "—" };
             self.add_text(
-                mx + 630.0,
+                mx + 625.0,
                 iy + 10.0,
                 1.1,
                 port_str,
@@ -1355,25 +1381,53 @@ impl HudMesh {
             [0.35, 0.85, 1.0, 1.0],
         );
 
-        // Clickable Warp Button
+        // Clickable Warp / Install Button
         let wb = layout.warp_btn;
         let is_wb_hovered = hovered_btn == Some(CatalogHit::WarpCity);
         let is_wb_pressed = pressed_btn == Some(CatalogHit::WarpCity);
+
+        let selected_readiness = cities
+            .get(selected_idx)
+            .and_then(|(cid, ..)| realearth_shared::us_catalog::find_city_by_id(cid))
+            .map(|c| c.package_readiness())
+            .unwrap_or(realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady);
+
+        let (wb_label, wb_text_color, wb_default_bg, wb_default_border) = match selected_readiness {
+            realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady => (
+                "▶ WARP TO CITY",
+                [0.3, 1.0, 0.6, 1.0],
+                [0.08, 0.28, 0.20, 0.85],
+                [0.2, 0.75, 0.45, 0.7],
+            ),
+            realearth_shared::us_catalog::RegionPackageReadiness::DownloadRequired => (
+                "⬇ INSTALL & WARP",
+                [0.2, 0.9, 1.0, 1.0],
+                [0.08, 0.22, 0.32, 0.85],
+                [0.2, 0.65, 0.90, 0.7],
+            ),
+            realearth_shared::us_catalog::RegionPackageReadiness::Unavailable => (
+                "🚫 UNAVAILABLE",
+                [0.6, 0.6, 0.6, 0.8],
+                [0.12, 0.12, 0.14, 0.85],
+                [0.3, 0.3, 0.35, 0.5],
+            ),
+        };
+
         let (wb_bg, wb_border) = if is_wb_pressed {
             ([0.15, 0.50, 0.35, 0.98], [0.4, 1.0, 0.7, 1.0])
         } else if is_wb_hovered {
             ([0.12, 0.42, 0.28, 0.95], [0.3, 0.95, 0.6, 1.0])
         } else {
-            ([0.08, 0.28, 0.20, 0.85], [0.2, 0.75, 0.45, 0.7])
+            (wb_default_bg, wb_default_border)
         };
         self.add_rect(wb.x, wb.y, wb.w, wb.h, wb_bg);
         self.add_rect_outline(wb.x, wb.y, wb.w, wb.h, 1.0, wb_border);
         self.add_text(
-            wb.x + 12.0,
+            wb.x + 8.0,
             wb.y + 7.0,
-            1.1,
-            "▶ WARP TO CITY",
-            [0.3, 1.0, 0.6, 1.0],
+            1.05,
+            wb_label,
+            wb_text_color,
         );
 
         // Clickable Back Button

@@ -22,6 +22,8 @@ pub mod sample_los_angeles;
 #[doc(hidden)]
 pub mod sample_miami;
 #[doc(hidden)]
+pub mod sample_minneapolis;
+#[doc(hidden)]
 pub mod sample_mysuru;
 #[doc(hidden)]
 pub mod sample_new_york;
@@ -64,6 +66,8 @@ pub use sample_hyderabad::{create_hyderabad_dataset, generate_hyderabad_osm_xml}
 pub use sample_los_angeles::{create_los_angeles_dataset, generate_los_angeles_osm_xml};
 #[doc(hidden)]
 pub use sample_miami::{create_miami_dataset, generate_miami_osm_xml};
+#[doc(hidden)]
+pub use sample_minneapolis::create_minneapolis_dataset;
 #[doc(hidden)]
 pub use sample_mysuru::{create_mysuru_dataset, generate_mysuru_osm_xml};
 #[doc(hidden)]

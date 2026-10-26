@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 realearth-shared = { path = "../shared" }
 realearth-geospatial = { path = "../geospatial" }
+realearth-ingestion = { path = "../ingestion" }
 realearth-compiler = { path = "../compiler" }
 wgpu.workspace = true
 bytemuck.workspace = true

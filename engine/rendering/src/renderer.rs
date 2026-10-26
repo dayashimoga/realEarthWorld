@@ -8,6 +8,8 @@ use crate::uniforms::SceneUniforms;
 use bytemuck::cast_slice;
 use realearth_compiler::chunk::WorldChunk;
 use realearth_compiler::mesh::{ChunkMesh, Vertex};
+use realearth_ingestion::dem_grid::DemGrid;
+use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::errors::{RealEarthError, Result};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -45,6 +47,7 @@ pub struct RealEarthRenderer {
     pub surface_format: wgpu::TextureFormat,
     pub depth_format: wgpu::TextureFormat,
     pub gpu_cache: RwLock<HashMap<(i32, i32, u32), GpuChunkBuffers>>,
+    pub horizon_mesh_gpu: RwLock<Option<GpuChunkMesh>>,
     pub settings: GraphicsSettings,
     pub start_time: std::time::Instant,
 }
@@ -346,6 +349,7 @@ impl RealEarthRenderer {
             surface_format,
             depth_format,
             gpu_cache: RwLock::new(HashMap::new()),
+            horizon_mesh_gpu: RwLock::new(None),
             settings,
             start_time: std::time::Instant::now(),
         }
@@ -508,7 +512,14 @@ impl RealEarthRenderer {
         let mut cache = self.gpu_cache.write().unwrap();
         let count = cache.len();
         cache.clear();
+        *self.horizon_mesh_gpu.write().unwrap() = None;
         count
+    }
+
+    /// Uploads and assigns a coarse regional terrain horizon mesh to the GPU.
+    pub fn set_horizon_mesh(&self, mesh: &ChunkMesh) {
+        let gpu = self.upload_mesh("Coarse_Horizon", mesh);
+        *self.horizon_mesh_gpu.write().unwrap() = gpu;
     }
 
     /// Updates uniform buffer data with active camera and lighting conditions.
@@ -673,12 +684,8 @@ impl RealEarthRenderer {
             })
             .collect();
 
-        if visible.is_empty() {
-            return 0;
-        }
-
         // 2. Ensure all visible chunks are resident in persistent GPU cache
-        {
+        if !visible.is_empty() {
             let mut cache = self.gpu_cache.write().unwrap();
             for chunk in &visible {
                 let key = (
@@ -692,7 +699,7 @@ impl RealEarthRenderer {
             }
         }
 
-        // 3. Render all visible chunks in a SINGLE batched render pass!
+        // 3. Render all visible chunks and distant terrain horizon in a SINGLE batched render pass!
         let cache = self.gpu_cache.read().unwrap();
         let mut encoder = self
             .device
@@ -730,6 +737,13 @@ impl RealEarthRenderer {
 
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+
+            // Draw distant horizon terrain mesh if present (eliminating flight boundary voids!)
+            if let Some(ref horizon) = *self.horizon_mesh_gpu.read().unwrap() {
+                pass.set_vertex_buffer(0, horizon.vertex_buffer.slice(..));
+                pass.set_index_buffer(horizon.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..horizon.index_count, 0, 0..1);
+            }
 
             // Render submeshes in optimal depth order: terrain -> vegetation -> roads -> buildings -> water
             for chunk in &visible {
@@ -801,3 +815,91 @@ impl RealEarthRenderer {
         self.render_chunks_culled_cached(chunks, camera, color_view, depth_view)
     }
 }
+
+/// Generates a coarse regional terrain horizon apron mesh around the regional anchor.
+/// Spans from inner_radius (e.g. 1,500m) to outer_radius (e.g. 50,000m) around the regional anchor.
+/// Conforms to real elevations sampled from the regional DemGrid, smoothly tapering to base MSL.
+pub fn generate_coarse_horizon_mesh(
+    anchor: Wgs84Coord,
+    dem: &DemGrid,
+    inner_radius_m: f32,
+    outer_radius_m: f32,
+) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let num_angles = 24;
+    let num_rings = 8;
+
+    let conv = realearth_geospatial::transforms::EnuConverter::new(anchor);
+
+    // Build concentric rings of vertices from inner_radius_m to outer_radius_m
+    let mut ring_radii = Vec::with_capacity(num_rings);
+    for r in 0..num_rings {
+        let t = r as f32 / (num_rings - 1) as f32;
+        // Non-linear geometric spacing provides higher detail near city core and expands outwards
+        let radius = inner_radius_m + (outer_radius_m - inner_radius_m) * t.powf(1.6);
+        ring_radii.push(radius);
+    }
+
+    for (ring_idx, &radius) in ring_radii.iter().enumerate() {
+        let t_outer = ring_idx as f32 / (num_rings - 1) as f32;
+        for a in 0..num_angles {
+            let theta = (a as f32 / num_angles as f32) * std::f32::consts::TAU;
+            let x = radius * theta.sin();
+            let z = radius * theta.cos();
+
+            // Convert local ENU (x, 0, z) back to Wgs84 to sample regional DEM
+            let enu = realearth_shared::coordinates::EnuCoord::new(x as f64, z as f64, 0.0);
+            let wgs = conv.enu_to_wgs84(enu);
+
+            let elev = if dem.bounds.contains(&wgs) {
+                dem.sample_bilinear(&wgs)
+            } else {
+                // Taper smoothly towards anchor altitude or MSL sea level at distant boundary
+                let edge_dist = ((x * x + z * z).sqrt() - inner_radius_m).max(0.0);
+                let taper = (1.0 - (edge_dist / (outer_radius_m - inner_radius_m))).clamp(0.0, 1.0);
+                (anchor.alt as f32 * taper).max(0.0)
+            };
+
+            // Color based on elevation and distance
+            let (color, normal) = if elev <= 0.8 {
+                // Ocean / Bay water
+                ([0.18, 0.32, 0.48, 1.0], [0.0, 1.0, 0.0])
+            } else if elev > 300.0 {
+                // High ground / hills / mountains
+                ([0.45, 0.44, 0.40, 1.0], [0.0, 1.0, 0.0])
+            } else {
+                // Valley / rolling vegetation
+                ([0.34, 0.46, 0.28, 1.0], [0.0, 1.0, 0.0])
+            };
+
+            mesh.vertices.push(Vertex {
+                position: [x, elev, z],
+                normal,
+                color,
+                uv: [t_outer, a as f32 / num_angles as f32],
+            });
+        }
+    }
+
+    // Connect rings into triangle quads
+    for r in 0..(num_rings - 1) {
+        let r0_base = (r * num_angles) as u32;
+        let r1_base = ((r + 1) * num_angles) as u32;
+
+        for a in 0..num_angles {
+            let next_a = ((a + 1) % num_angles) as u32;
+            let a_curr = a as u32;
+
+            let v0 = r0_base + a_curr;
+            let v1 = r0_base + next_a;
+            let v2 = r1_base + next_a;
+            let v3 = r1_base + a_curr;
+
+            // Quad: (v0, v1, v2) and (v0, v2, v3)
+            mesh.indices.extend_from_slice(&[v0, v1, v2, v0, v2, v3]);
+        }
+    }
+
+    mesh
+}
+

@@ -37,8 +37,13 @@ impl FloatingOriginCamera {
             fov_y: 60.0_f32.to_radians(),
             aspect,
             z_near: 0.5,
-            z_far: 10_000.0,
+            z_far: 50_000.0,
         }
+    }
+
+    /// Sets camera far clip plane distance in meters.
+    pub fn set_far_plane(&mut self, far_meters: f32) {
+        self.z_far = far_meters.max(100.0);
     }
 
     /// Explicitly anchors the floating origin to a world package anchor.

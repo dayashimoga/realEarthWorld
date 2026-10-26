@@ -7,6 +7,8 @@ license.workspace = true
 [dependencies]
 realearth-shared = { path = "../shared" }
 realearth-geospatial = { path = "../geospatial" }
+realearth-ingestion = { path = "../ingestion" }
+realearth-validation = { path = "../validation" }
 realearth-compiler = { path = "../compiler" }
 tokio.workspace = true
 rayon.workspace = true
@@ -21,5 +23,3 @@ tracing.workspace = true
 
 [dev-dependencies]
 tempfile = "3.17"
-realearth-ingestion = { path = "../ingestion" }
-realearth-validation = { path = "../validation" }

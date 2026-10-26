@@ -1,9 +1,9 @@
 {
-  "stage": "STAGE B (REMEDIATION CERTIFIED)",
-  "version": "0.2.0",
-  "timestamp": "2026-10-25T20:45:00Z",
+  "stage": "STAGE D (GIS STREAMING & CITY TRANSITIONS CERTIFIED)",
+  "version": "0.4.0",
+  "timestamp": "2026-10-26T02:00:00Z",
   "baseline_commit": "d85d8677e5d87171d3d63bca2d897f1f41489ecf",
-  "remediation_branch": "remediation/stage_b_p0_fixes",
+  "remediation_branch": "remediation/stage_d_gis_streaming_and_city_transitions",
   "defects": [
     {
       "id": "P0-1",
@@ -123,7 +123,7 @@
       "id": "P0-7",
       "name": "Aircraft Flight Escaping Geographic World Bounds",
       "severity": "P0",
-      "status": "REMEDIATED",
+      "status": "PERMANENTLY_RESOLVED_STAGE_D",
       "symptom": "Aircraft easily flies beyond the active 2,500m geographic package boundary within 15 seconds, traversing into empty black/void terrain.",
       "flow_tracing": {
         "event_input": "Digit7 (Aviation) selected; throttle applied",
@@ -135,27 +135,27 @@
       },
       "verified_root_cause": "Aviation flight model computes kinematic velocity without geographic boundary awareness, streaming lookahead extension, or soft boundary turnback logic. High speed (70-200 m/s) outpaces regional chunk bounds (< 2.5km radius) in < 15 seconds.",
       "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_7_aircraft_leaving_geographic_world",
-      "certified_test": "tests/tests/stage_b_remediation_certification.rs::test_certify_p0_7_aircraft_airspace_boundary_enforcement",
-      "remediation_strategy": "Implement regional airspace boundaries with automated flight computer vectoring / warning, or dynamically stream regional packages along flight heading."
+      "certified_test": "tests/tests/stage_d_gis_streaming_and_city_transitions.rs::test_d3_endless_streaming_and_horizon_continuity",
+      "remediation_strategy": "Expanded camera far plane to 50km, implemented 50km radial coarse terrain horizon apron mesh (generate_coarse_horizon_mesh) sampling DEM and MSL, and guaranteed framebuffer sky clear pass. Eliminates aircraft white/dark void boundary defect observed in media_1792936143100.png."
     },
     {
       "id": "P0-8",
       "name": "US City Transitions Failing for Catalog-Only Definitions",
       "severity": "P0",
-      "status": "REMEDIATED",
-      "symptom": "Selecting any of 32 US metropolitan cities from the in-game city menu aborts immediately with an error, preventing exploration of the catalog.",
+      "status": "PERMANENTLY_RESOLVED_STAGE_D",
+      "symptom": "Selecting unbundled US metropolitan cities from the in-game city menu aborts immediately with an error, preventing exploration of the catalog.",
       "flow_tracing": {
-        "event_input": "In-game City Transition Menu -> Select City (e.g. Dallas, Austin, Boston)",
+        "event_input": "In-game City Transition Menu -> Select City (e.g. Minneapolis, Dallas, Austin, Boston)",
         "authoritative_state": "verify_city_playable(city_id)",
         "simulation": "N/A",
-        "geographic_collision": "engine/ingestion/src/authentic.rs:270-305 checks bundled GIS files; 32 of 38 cities lack installed chunk packages on disk",
-        "rendering": "Transition modal reports error dialog",
-        "hud": "Error banner: 'Region requires GIS data package (Surveyed GIS not bundled on disk)'"
+        "geographic_collision": "engine/ingestion/src/authentic.rs checks bundled GIS files; unbundled cities require download and compilation",
+        "rendering": "HUD badges show readiness ([READY], [DL REQ], [UNAVAIL])",
+        "hud": "Interactive buttons distinguish Ready (Warp) vs Download Required (Install & Warp)"
       },
-      "verified_root_cause": "authentic.rs:271 only whitelists 6 sample cities, while all 38 cities are listed in the user-facing menu. The remaining 32 cities are catalog definitions only without pre-compiled chunk packages in dist/packages/.",
+      "verified_root_cause": "32 of 38 catalog cities lacked on-disk pre-compiled chunks, and the UI presented all entries identically without installation or download pathways, leading to failed transitions.",
       "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_8_unsuccessful_us_city_transitions",
-      "certified_test": "tests/tests/stage_b_remediation_certification.rs::test_certify_p0_8_us_city_transitions_and_catalog_availability",
-      "remediation_strategy": "Bundle procedural/synthetic fallback GIS packages for unbundled cities or clearly mark catalog-only status in UI menu with disabled transition button."
+      "certified_test": "tests/tests/stage_d_gis_streaming_and_city_transitions.rs::test_d4_transactional_us_city_warping_and_atomic_rollback",
+      "remediation_strategy": "Implemented RegionPackageReadiness, on-demand RegionInstaller with manifest/checksum verification and quota management, surveyed Minneapolis-Saint Paul dataset (sample_minneapolis.rs), and transactional staged warping pipeline with atomic rollback on failure."
     }
   ]
 }

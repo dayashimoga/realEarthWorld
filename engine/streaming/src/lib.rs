@@ -10,6 +10,7 @@ pub mod multi_region;
 pub mod package_delivery;
 pub mod planetary_streamer;
 pub mod prefetch;
+pub mod region_installer;
 pub mod streamer;
 
 pub use async_loader::{
@@ -33,6 +34,8 @@ pub use package_delivery::{
 };
 pub use planetary_streamer::{PlanetaryLodLevel, PlanetaryOriginCoordinator, RelevanceBudget};
 pub use prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkPriority};
+pub use realearth_compiler::regional_catalog::PackageManifest;
+pub use region_installer::{InstallProgress, InstallState, RegionInstaller};
 pub use streamer::{StreamingTelemetry, WorldStreamer};
 
 #[cfg(test)]

@@ -16,6 +16,7 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use crate::camera_controller::{CameraController, CameraMode, Landmark};
 use crate::screenshot::capture_texture_to_ppm;
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
+use realearth_compiler::mesh::ChunkMesh;
 use realearth_gameplay::{
     save::CURRENT_SAVE_SCHEMA_VERSION, CareerType, GameSettings, GameplayEventBus, Job,
     JobCatalogGenerator, PlayerProfile, SaveData, SaveManager,
@@ -23,6 +24,7 @@ use realearth_gameplay::{
 use realearth_geospatial::transforms::EnuConverter;
 use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::load_authentic_city;
+use realearth_ingestion::sample_minneapolis::create_minneapolis_dataset;
 use realearth_ingestion::osm_types::HighwayType;
 use realearth_ingestion::sample_bengaluru::create_bengaluru_central_dataset;
 use realearth_ingestion::sample_chennai::create_chennai_dataset;
@@ -40,10 +42,10 @@ use realearth_navigation::{
     RailRoutePlan, RoadNetworkGraph, RouteTracker, RoutingPreference, RuleOfTheRoad,
 };
 use realearth_rendering::{
-    generate_bus_stop_shelter_mesh, generate_detailed_tree_mesh, generate_marine_ferry_dock_mesh,
-    generate_pedestrian_mesh, generate_rail_station_platform_mesh, generate_road_sign_mesh,
-    generate_runway_papi_lights_mesh, generate_streetlight_mesh, generate_traffic_signal_mesh,
-    generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout, DetailedTreeType,
+    generate_bus_stop_shelter_mesh, generate_coarse_horizon_mesh, generate_detailed_tree_mesh,
+    generate_marine_ferry_dock_mesh, generate_pedestrian_mesh, generate_rail_station_platform_mesh,
+    generate_road_sign_mesh, generate_runway_papi_lights_mesh, generate_streetlight_mesh,
+    generate_traffic_signal_mesh, generate_vehicle_mesh, CatalogHit, CatalogLayout, DebriefHit, DebriefLayout, DetailedTreeType,
     FloatingOriginCamera, GarageHit, GarageLayout, GraphicsPresetLevel, GraphicsSettings, HudMesh,
     InGameHudHit, InGameHudLayout, JobBrowserHit, JobBrowserLayout, MultiplayerHit,
     MultiplayerLayout, PauseMenuHit, PauseMenuLayout, RailRouteHit, RailRouteLayout,
@@ -262,21 +264,44 @@ struct RegionResources {
     pub building_collision: BuildingCollisionWorld,
 }
 
-/// Explicit asynchronous region transition state machine phases.
+/// Explicit transactional region transition state machine phases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegionTransitionPhase {
     Idle,
     Selected,
-    CheckingAssets,
+    VerifyingData,
     Downloading,
-    Verifying,
+    Validating,
     Compiling,
-    Loading,
-    Ready,
+    StagingRegion,
+    WarmingCriticalChunks,
+    SelectingSafeSpawn,
     Activating,
     Complete,
     Failed,
     Cancelled,
+}
+
+/// Transactional staging payload containing candidate geographic and streaming assets
+/// prior to atomic activation into the active simulation.
+pub struct StagedRegionPayload {
+    pub world_dir: PathBuf,
+    pub region_name: &'static str,
+    pub landmark: Landmark,
+    pub package_anchor: Wgs84Coord,
+    pub dem: DemGrid,
+    pub raw_roads: Vec<realearth_ingestion::osm_types::OsmRoadFeature>,
+    pub raw_buildings: Vec<realearth_ingestion::osm_types::OsmBuildingFeature>,
+    pub raw_railways: Vec<realearth_ingestion::osm_types::OsmRailwayFeature>,
+    pub raw_aeroways: Vec<realearth_ingestion::osm_types::OsmAerowayFeature>,
+    pub raw_water_bodies: Vec<realearth_ingestion::osm_types::OsmWaterFeature>,
+    pub raw_ports: Vec<realearth_ingestion::osm_types::OsmPortFeature>,
+    pub streamer: WorldStreamer,
+    pub ground_query: DemGroundQuery,
+    pub horizon_mesh: ChunkMesh,
+    pub sim_world: RealEarthSimWorld,
+    pub initial_elevation: f32,
+    pub lm_enu: realearth_shared::coordinates::EnuCoord,
 }
 
 /// Stage 6 high-level user interface and gameplay navigation states.
@@ -1061,21 +1086,18 @@ impl InteractiveViewerApp {
                     self.catalog_selected_idx = idx;
                     let city = &cities[idx];
 
-                    let is_bundled = realearth_ingestion::authentic::verify_city_playable(city.id).is_ok();
-                    if !is_bundled {
-                        let notice = format!("🌐 Generating authentic surveyed extract for {} ({})...", city.name, city.state);
+                    let is_ready = city.package_readiness() == realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady;
+                    if !is_ready {
+                        let notice = format!("🌐 Acquiring & installing authentic surveyed GIS package for {} ({})...", city.name, city.state);
                         println!("{}", notice);
                         self.status_notification = Some((notice, Instant::now()));
                     }
 
                     self.transition_phase = RegionTransitionPhase::Selected;
                     println!(
-                        "🌐 Initiating region transition to {} ({})...",
+                        "🌐 Initiating transactional region transition to {} ({})...",
                         city.name, city.state
                     );
-                    self.transition_phase = RegionTransitionPhase::CheckingAssets;
-                    self.transition_phase = RegionTransitionPhase::Verifying;
-                    self.transition_phase = RegionTransitionPhase::Loading;
 
                     match self.load_region(city.id) {
                         Ok(()) => {
@@ -1093,7 +1115,7 @@ impl InteractiveViewerApp {
                         Err(e) => {
                             self.transition_phase = RegionTransitionPhase::Failed;
                             let msg = format!(
-                                "⚠️ Region Transition to {} ({}) Failed: {}",
+                                "⚠️ Region Transition to {} ({}) Failed: {} (Retaining active region)",
                                 city.name, city.state, e
                             );
                             eprintln!("{}", msg);
@@ -2134,8 +2156,13 @@ impl InteractiveViewerApp {
         self.status_notification = Some((label, Instant::now()));
     }
 
-    /// Loads or hot-reloads region geographic assets, DEM, and streaming database.
-    fn load_region(&mut self, region_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    /// Stages candidate region assets into an isolated payload without mutating active world state.
+    pub fn stage_region(
+        &mut self,
+        region_id: &str,
+    ) -> Result<StagedRegionPayload, Box<dyn std::error::Error>> {
+        self.transition_phase = RegionTransitionPhase::VerifyingData;
+
         let preset = self.config.preset_level;
         let streaming_config = StreamingConfig {
             max_memory_mb: 1024,
@@ -2168,37 +2195,70 @@ impl InteractiveViewerApp {
             raw_water_bodies,
             raw_ports,
         ) = if let Some(city) = find_city_by_id(region_id) {
-            let (raw, dem, meta) = load_authentic_city(city.id)?;
-            let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
-            let landmark = Landmark::from_us_city(city);
-            let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
-            if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
-                println!(
-                    "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
-                    meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
-                );
-                let (val, _) = validate_dataset(&raw);
-                let options = CompilerOptions {
-                    chunk_size_meters: 500.0,
-                    terrain_grid_resolution: 16,
-                    package_name: package_name.clone(),
-                    source_asset_sha256: Some(meta.source_osm_sha256.clone()),
-                    ..Default::default()
-                };
-                compile_world_package(&val, &dem, &dir, &options)?;
+            if city.id == "minneapolis" {
+                self.transition_phase = RegionTransitionPhase::Downloading;
+                let dir = resolve_world_package_dir("minneapolis");
+                let dem = DemGrid::create_us_city_dem(city, 64, 64);
+                let raw = create_minneapolis_dataset();
+                if !dir.join("chunks.db").exists() {
+                    self.transition_phase = RegionTransitionPhase::Validating;
+                    let (val, _) = validate_dataset(&raw);
+                    self.transition_phase = RegionTransitionPhase::Compiling;
+                    let options = CompilerOptions {
+                        chunk_size_meters: 500.0,
+                        terrain_grid_resolution: 16,
+                        package_name: "minneapolis_package".to_string(),
+                        ..Default::default()
+                    };
+                    compile_world_package(&val, &dem, &dir, &options)?;
+                }
+                (
+                    dir,
+                    city.name,
+                    Landmark::from_us_city(city),
+                    dem,
+                    raw.roads,
+                    raw.buildings,
+                    raw.railways,
+                    raw.aeroways,
+                    raw.water_bodies,
+                    raw.ports,
+                )
+            } else {
+                let (raw, dem, meta) = load_authentic_city(city.id)?;
+                let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
+                let landmark = Landmark::from_us_city(city);
+                let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
+                if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
+                    println!(
+                        "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
+                        meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
+                    );
+                    self.transition_phase = RegionTransitionPhase::Validating;
+                    let (val, _) = validate_dataset(&raw);
+                    self.transition_phase = RegionTransitionPhase::Compiling;
+                    let options = CompilerOptions {
+                        chunk_size_meters: 500.0,
+                        terrain_grid_resolution: 16,
+                        package_name: package_name.clone(),
+                        source_asset_sha256: Some(meta.source_osm_sha256.clone()),
+                        ..Default::default()
+                    };
+                    compile_world_package(&val, &dem, &dir, &options)?;
+                }
+                (
+                    dir,
+                    city.name,
+                    landmark,
+                    dem,
+                    raw.roads,
+                    raw.buildings,
+                    raw.railways,
+                    raw.aeroways,
+                    raw.water_bodies,
+                    raw.ports,
+                )
             }
-            (
-                dir,
-                city.name,
-                landmark,
-                dem,
-                raw.roads,
-                raw.buildings,
-                raw.railways,
-                raw.aeroways,
-                raw.water_bodies,
-                raw.ports,
-            )
         } else if region_id.contains("mysuru") {
             let dir = resolve_world_package_dir("mysuru");
             let dem = DemGrid::create_mysuru_dem(64, 64);
@@ -2502,27 +2562,20 @@ impl InteractiveViewerApp {
             )
         };
 
+        self.transition_phase = RegionTransitionPhase::StagingRegion;
         let mut streamer = WorldStreamer::open(&world_dir, streaming_config)?;
+
+        self.transition_phase = RegionTransitionPhase::WarmingCriticalChunks;
         let loaded = streamer.update(landmark.coord)?;
         let active_chunks = streamer.get_active_chunks();
         println!(
-            "🌍 Region Loaded: {} | Initial Chunks: {} ({} active in RAM)",
+            "🌍 Region Staged: {} | Initial Chunks: {} ({} active in RAM)",
             region_name,
             loaded,
             active_chunks.len()
         );
 
-        // Purge renderer persistent GPU chunk cache to avoid local coordinate key collision
-        if let Some(ref r) = self.renderer {
-            let cleared = r.clear_gpu_cache();
-            if cleared > 0 {
-                println!(
-                    "🧹 Cleared {} stale GPU chunk buffers from previous region",
-                    cleared
-                );
-            }
-        }
-
+        self.transition_phase = RegionTransitionPhase::SelectingSafeSpawn;
         let package_anchor = active_chunks
             .first()
             .map(|c| c.header.anchor)
@@ -2532,6 +2585,9 @@ impl InteractiveViewerApp {
         let conv = EnuConverter::new(package_anchor);
         let lm_enu = conv.wgs84_to_enu(landmark.coord);
         let initial_elevation = ground_query.elevation(lm_enu.east as f32, lm_enu.north as f32);
+
+        // Generate 50km coarse horizon apron mesh to eliminate boundary void cliffs
+        let horizon_mesh = generate_coarse_horizon_mesh(package_anchor, &dem, 1500.0, 50000.0);
 
         // Initialize Bevy ECS simulation world
         let mut sim_world = RealEarthSimWorld::new(package_anchor);
@@ -2556,65 +2612,101 @@ impl InteractiveViewerApp {
             );
         }
 
-        // Initialize vehicle and multimodal fleet at ground surface
-        self.vehicle = DynamicVehicle::new(
-            VehicleConfig::default(),
-            glam::Vec3::new(lm_enu.east as f32, initial_elevation, lm_enu.north as f32),
-            landmark.yaw,
+        Ok(StagedRegionPayload {
+            world_dir,
+            region_name,
+            landmark,
+            package_anchor,
+            dem,
+            raw_roads,
+            raw_buildings,
+            raw_railways,
+            raw_aeroways,
+            raw_water_bodies,
+            raw_ports,
+            streamer,
+            ground_query,
+            horizon_mesh,
+            sim_world,
+            initial_elevation,
+            lm_enu,
+        })
+    }
+
+    /// Atomically commits a staged region payload into the active viewer state.
+    pub fn activate_staged_region(
+        &mut self,
+        region_id: &str,
+        staged: StagedRegionPayload,
+    ) {
+        self.transition_phase = RegionTransitionPhase::Activating;
+
+        // 1. Purge GPU chunk cache and upload coarse 50km horizon apron mesh
+        if let Some(ref r) = self.renderer {
+            let cleared = r.clear_gpu_cache();
+            if cleared > 0 {
+                println!(
+                    "🧹 Cleared {} stale GPU chunk buffers from previous region",
+                    cleared
+                );
+            }
+            r.set_horizon_mesh(&staged.horizon_mesh);
+        }
+
+        // 2. Reposition camera floating origin anchor to package anchor coordinates
+        self.camera.set_anchor(staged.package_anchor);
+        self.camera_ctrl.coord = staged.landmark.coord;
+        self.camera_ctrl.yaw = staged.landmark.yaw;
+        self.camera_ctrl.pitch = staged.landmark.pitch;
+        self.camera_ctrl.update_camera(&mut self.camera);
+
+        // 3. Initialize vehicle and multimodal fleet at ground surface
+        let spawn_pos = glam::Vec3::new(
+            staged.lm_enu.east as f32,
+            staged.initial_elevation,
+            staged.lm_enu.north as f32,
         );
-        self.vehicle.recover_on_surface(initial_elevation);
+        self.vehicle = DynamicVehicle::new(VehicleConfig::default(), spawn_pos, staged.landmark.yaw);
+        self.vehicle.recover_on_surface(staged.initial_elevation);
 
         self.motorcycle = MotorcycleModel::new(
-            glam::Vec3::new(
-                lm_enu.east as f32 + 3.0,
-                initial_elevation,
-                lm_enu.north as f32,
-            ),
-            landmark.yaw,
+            glam::Vec3::new(spawn_pos.x + 3.0, staged.initial_elevation, spawn_pos.z),
+            staged.landmark.yaw,
         );
         self.transit_bus = TransitBusModel::new(
-            glam::Vec3::new(
-                lm_enu.east as f32 - 5.0,
-                initial_elevation,
-                lm_enu.north as f32,
-            ),
-            landmark.yaw,
+            glam::Vec3::new(spawn_pos.x - 5.0, staged.initial_elevation, spawn_pos.z),
+            staged.landmark.yaw,
         );
         self.heavy_truck = HeavyTruckModel::new(
-            glam::Vec3::new(
-                lm_enu.east as f32 + 8.0,
-                initial_elevation,
-                lm_enu.north as f32,
-            ),
-            landmark.yaw,
+            glam::Vec3::new(spawn_pos.x + 8.0, staged.initial_elevation, spawn_pos.z),
+            staged.landmark.yaw,
         );
-        if self.train_consist.track_pose.is_none() {
-            self.train_position = glam::Vec3::new(
-                lm_enu.east as f32,
-                initial_elevation + 0.6,
-                lm_enu.north as f32 + 20.0,
-            );
-            self.train_yaw = landmark.yaw;
-        }
+        self.train_position = glam::Vec3::new(
+            spawn_pos.x,
+            staged.initial_elevation + 0.6,
+            spawn_pos.z + 20.0,
+        );
+        self.train_yaw = staged.landmark.yaw;
+
         self.marine_vessel = MarineVessel::new_ferry(
             "Harbor Passenger Ferry",
             glam::Vec3::new(250.0, 0.0, -100.0),
-            landmark.yaw,
+            staged.landmark.yaw,
         );
         self.aircraft = AircraftFlight::new_airliner(
             "Commercial Airliner",
-            glam::Vec3::new(0.0, initial_elevation + 350.0, -500.0),
-            landmark.yaw,
+            glam::Vec3::new(0.0, staged.initial_elevation + 350.0, -500.0),
+            staged.landmark.yaw,
         );
         self.aircraft.linear_velocity =
-            glam::Quat::from_rotation_y(landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+            glam::Quat::from_rotation_y(staged.landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
 
         self.previous_vehicle_pos = self.vehicle.position;
         self.previous_vehicle_orient = self.vehicle.orientation;
         self.smoothed_steer_input = 0.0;
         self.vehicle_cam.reset();
 
-        // Populate traffic fleet, signals, and pedestrians
+        // 4. Populate traffic fleet, signals, and pedestrians
         self.traffic_sim = TrafficSimulation::new();
         let is_left_hand = matches!(
             region_id,
@@ -2626,8 +2718,8 @@ impl InteractiveViewerApp {
             RuleOfTheRoad::DriveOnRight
         };
 
-        if !raw_roads.is_empty() {
-            let road_graph = RoadNetworkGraph::from_roads(&raw_roads);
+        if !staged.raw_roads.is_empty() {
+            let road_graph = RoadNetworkGraph::from_roads(&staged.raw_roads);
             if self.config.traffic_count > 0 {
                 self.traffic_sim.populate_from_road_network(
                     &road_graph,
@@ -2636,12 +2728,11 @@ impl InteractiveViewerApp {
                 );
             }
 
-            // Populate Navigation Route from Landmark if genuine route exists
-            let start_coord = landmark.coord;
+            let start_coord = staged.landmark.coord;
             let dest_coord = Wgs84Coord::new(
-                landmark.coord.lat + 0.005,
-                landmark.coord.lon + 0.004,
-                landmark.coord.alt,
+                staged.landmark.coord.lat + 0.005,
+                staged.landmark.coord.lon + 0.004,
+                staged.landmark.coord.alt,
             );
             match find_route(
                 &road_graph,
@@ -2665,11 +2756,10 @@ impl InteractiveViewerApp {
             self.route_tracker = None;
         }
 
-        // Add intersection traffic lights, stop lines, and procedural pedestrians
         let tl_pos = glam::Vec3::new(
-            lm_enu.east as f32 + 6.0,
-            initial_elevation,
-            lm_enu.north as f32 + 60.0,
+            staged.lm_enu.east as f32 + 6.0,
+            staged.initial_elevation,
+            staged.lm_enu.north as f32 + 60.0,
         );
         let tl = TrafficLight::new(101, tl_pos);
         self.traffic_sim.add_traffic_light(tl);
@@ -2677,26 +2767,25 @@ impl InteractiveViewerApp {
             id: 201,
             traffic_light_id: 101,
             position: glam::Vec3::new(
-                lm_enu.east as f32,
-                initial_elevation,
-                lm_enu.north as f32 + 45.0,
+                staged.lm_enu.east as f32,
+                staged.initial_elevation,
+                staged.lm_enu.north as f32 + 45.0,
             ),
             is_ns_direction: true,
         });
 
-        // Procedural pedestrians walking across crosswalks and along sidewalks
         let ped1 = PedestrianAgent::new(
             501,
             vec![
                 glam::Vec3::new(
-                    lm_enu.east as f32 - 7.0,
-                    initial_elevation,
-                    lm_enu.north as f32 + 55.0,
+                    staged.lm_enu.east as f32 - 7.0,
+                    staged.initial_elevation,
+                    staged.lm_enu.north as f32 + 55.0,
                 ),
                 glam::Vec3::new(
-                    lm_enu.east as f32 + 7.0,
-                    initial_elevation,
-                    lm_enu.north as f32 + 55.0,
+                    staged.lm_enu.east as f32 + 7.0,
+                    staged.initial_elevation,
+                    staged.lm_enu.north as f32 + 55.0,
                 ),
             ],
             1.2,
@@ -2705,14 +2794,14 @@ impl InteractiveViewerApp {
             502,
             vec![
                 glam::Vec3::new(
-                    lm_enu.east as f32 + 7.5,
-                    initial_elevation,
-                    lm_enu.north as f32 + 25.0,
+                    staged.lm_enu.east as f32 + 7.5,
+                    staged.initial_elevation,
+                    staged.lm_enu.north as f32 + 25.0,
                 ),
                 glam::Vec3::new(
-                    lm_enu.east as f32 + 7.5,
-                    initial_elevation,
-                    lm_enu.north as f32 + 85.0,
+                    staged.lm_enu.east as f32 + 7.5,
+                    staged.initial_elevation,
+                    staged.lm_enu.north as f32 + 85.0,
                 ),
             ],
             1.35,
@@ -2749,21 +2838,14 @@ impl InteractiveViewerApp {
             let _ = job.accept(&self.player_profile, &self.gameplay_bus);
         }
 
-        // Reposition camera floating origin anchor to package anchor coordinates
-        self.camera.set_anchor(package_anchor);
-        self.camera_ctrl.coord = landmark.coord;
-        self.camera_ctrl.yaw = landmark.yaw;
-        self.camera_ctrl.pitch = landmark.pitch;
-        self.camera_ctrl.update_camera(&mut self.camera);
-
         // Initialize Caltrain rail corridor for San Francisco or from surveyed railways
         let rail_graph = if region_id.contains("san_francisco")
             || region_id.contains("san-francisco")
-            || region_name.contains("San Francisco")
+            || staged.region_name.contains("San Francisco")
         {
             Some(RailNetworkGraph::create_san_francisco_caltrain_corridor())
-        } else if !raw_railways.is_empty() {
-            let g = RailNetworkGraph::from_railways(&raw_railways);
+        } else if !staged.raw_railways.is_empty() {
+            let g = RailNetworkGraph::from_railways(&staged.raw_railways);
             if g.is_empty() {
                 None
             } else {
@@ -2777,7 +2859,7 @@ impl InteractiveViewerApp {
             let route = RailNetworkGraph::build_caltrain_mainline_route();
             self.train_consist = TrainConsist::new_caltrain_diesel();
             self.train_consist
-                .bind_route(rg, route.segment_ids.clone(), package_anchor);
+                .bind_route(rg, route.segment_ids.clone(), staged.package_anchor);
             if let Some(ref pose) = self.train_consist.track_pose {
                 self.train_position = pose.position;
                 self.train_yaw = pose.yaw;
@@ -2790,28 +2872,31 @@ impl InteractiveViewerApp {
             self.rail_route_selected_idx = 0;
         }
 
-        self.ground_query = Some(ground_query);
-        self.sim_world = Some(sim_world);
-        let building_collision =
-            BuildingCollisionWorld::from_osm_buildings(&raw_buildings, package_anchor, &dem);
+        let building_collision = BuildingCollisionWorld::from_osm_buildings(
+            &staged.raw_buildings,
+            staged.package_anchor,
+            &staged.dem,
+        );
+
+        self.ground_query = Some(staged.ground_query);
+        self.sim_world = Some(staged.sim_world);
         self.region_resources = Some(RegionResources {
-            _world_dir: world_dir,
-            region_name,
-            landmark,
-            package_anchor,
-            dem,
-            raw_roads,
-            raw_buildings,
-            raw_railways,
-            raw_aeroways,
-            raw_waterways: raw_water_bodies,
-            raw_ports,
+            _world_dir: staged.world_dir,
+            region_name: staged.region_name,
+            landmark: staged.landmark,
+            package_anchor: staged.package_anchor,
+            dem: staged.dem,
+            raw_roads: staged.raw_roads,
+            raw_buildings: staged.raw_buildings,
+            raw_railways: staged.raw_railways,
+            raw_aeroways: staged.raw_aeroways,
+            raw_waterways: staged.raw_water_bodies,
+            raw_ports: staged.raw_ports,
             rail_graph,
-            streamer,
+            streamer: staged.streamer,
             building_collision,
         });
 
-        // Initialize vehicle: spawn if in drive mode, otherwise prepare initial vehicle preview without hijacking camera
         if self.config.is_drive {
             if let Err(e) = self.execute_spawn_vehicle(self.garage_selected_idx) {
                 eprintln!("⚠️ Failed to spawn vehicle on region load: {}", e);
@@ -2820,11 +2905,19 @@ impl InteractiveViewerApp {
             self.prepare_initial_vehicle(self.garage_selected_idx);
         }
 
+        self.config.region_id = region_id.to_string();
+        self.transition_phase = RegionTransitionPhase::Complete;
+
         self.status_notification = Some((
-            format!("📍 Region: {} loaded at {}", region_name, landmark.name),
+            format!("📍 Region: {} loaded at {}", staged.region_name, staged.landmark.name),
             Instant::now(),
         ));
+    }
 
+    /// Loads or hot-reloads region geographic assets, DEM, and streaming database transactionally.
+    pub fn load_region(&mut self, region_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let staged = self.stage_region(region_id)?;
+        self.activate_staged_region(region_id, staged);
         Ok(())
     }
 

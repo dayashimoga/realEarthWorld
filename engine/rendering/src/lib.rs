@@ -34,7 +34,7 @@ pub use hud::{
     GARAGE_PAINT_PALETTE,
 };
 pub use preset::{GraphicsPresetLevel, GraphicsSettings};
-pub use renderer::{GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
+pub use renderer::{generate_coarse_horizon_mesh, GpuChunkBuffers, GpuChunkMesh, RealEarthRenderer};
 pub use shaders::{HUD_SHADER_WGSL, WORLD_SHADER_WGSL};
 pub use typography::{
     measure_proportional_text, render_proportional_text, FontSize, FontWeight, VectorGlyph,

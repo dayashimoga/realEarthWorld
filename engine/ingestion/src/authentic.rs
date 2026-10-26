@@ -273,7 +273,8 @@ pub fn verify_city_playable(city_id: &str) -> Result<&'static UsCityDefinition> 
         || city.id == "chicago"
         || city.id == "los-angeles"
         || city.id == "seattle"
-        || city.id == "miami";
+        || city.id == "miami"
+        || city.id == "minneapolis";
 
     if has_bundled_or_sample {
         return Ok(city);

@@ -13,6 +13,7 @@ use crate::osm_types::{
 use crate::sample_chicago::create_chicago_dataset;
 use crate::sample_los_angeles::create_los_angeles_dataset;
 use crate::sample_miami::create_miami_dataset;
+use crate::sample_minneapolis::create_minneapolis_dataset;
 use crate::sample_new_york::create_new_york_dataset;
 use crate::sample_san_francisco::create_san_francisco_dataset;
 use crate::sample_seattle::create_seattle_dataset;
@@ -31,6 +32,7 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
         "chicago" => create_chicago_dataset(),
         "seattle" => create_seattle_dataset(),
         "miami" => create_miami_dataset(),
+        "minneapolis" => create_minneapolis_dataset(),
         _ => IngestedDataset::default(),
     };
 

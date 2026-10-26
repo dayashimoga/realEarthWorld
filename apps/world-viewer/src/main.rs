@@ -930,6 +930,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     };
+    let horizon_mesh = realearth_rendering::generate_coarse_horizon_mesh(anchor, &dem, 1500.0, 50000.0);
+    renderer.set_horizon_mesh(&horizon_mesh);
 
     let (width, height) = if args.iter().any(|a| a == "--1080p") {
         (1920, 1080)

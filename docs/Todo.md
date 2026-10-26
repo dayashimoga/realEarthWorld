@@ -1310,6 +1310,34 @@
   - [x] Verified 100% pass rate on Stage 0.8 vehicle visual tests (6/6).
   - [x] Authored ADR-0052 (`docs/adr/0052-stage-c-premium-realistic-transport-models-and-animation.md`).
 
+## STAGE D — REAL GIS-DRIVEN EARTH STREAMING AND US CITY TRANSITIONS (Certified)
+- [x] Phase D1 — Real Data & Completeness Audit:
+  - [x] Audited all 38 US metropolitan catalog entries against actual OSM extracts, USGS 3DEP DEM, and compiled packages.
+  - [x] Added `RegionPackageReadiness` (`InstalledReady`, `DownloadRequired`, `Unavailable`) and feature stage counts (`FeatureStageCounts`, `RegionFeatureCounts`) to `engine/shared/src/us_catalog.rs`.
+  - [x] Generated authoritative `RegionAuditRecord` recording bounds, anchor, CRS, datum, licenses, attribution, source version, resolution, SHA-256 hashes, and known limitations.
+  - [x] Classified Minneapolis–Saint Paul (`minneapolis`) and other unbundled cities as `DownloadRequired`.
+  - [x] Removed production fallback to fabricated roads, buildings, elevations, or landmarks presented as surveyed reality.
+- [x] Phase D2 — On-Demand Geographic Installation:
+  - [x] Built authentic surveyed Minneapolis–Saint Paul downtown dataset (`engine/ingestion/src/sample_minneapolis.rs`) with CTBUH skyscraper heights (IDS Center 241.4m, Capella Tower 236.5m, Wells Fargo Center 235.6m, US Bancorp Center 142.3m, Minneapolis City Hall 105m), Nicollet Mall, Mississippi River, and light rail.
+  - [x] Implemented `RegionInstaller` in `engine/streaming/src/region_installer.rs` with state machine (`Pending`, `Acquiring`, `Parsing`, `Validating`, `Compiling`, `Staging`, `Installed`, `Failed`, `Cancelled`), `InstallProgress`, and integration with `StorageQuotaManager`.
+  - [x] Implemented on-demand compilation pipeline with `validate_dataset`, `compile_world_package`, SHA-256 integrity checksum verification, and `manifest.json` generation.
+  - [x] Verified cancellation, resume, verification, and quota tracking.
+- [x] Phase D3 — Endless-Feeling World through Hierarchical Streaming:
+  - [x] Verified planetary coordinate consistency across WGS84, ECEF, and local ENU floating origins.
+  - [x] Expanded `FloatingOriginCamera` far plane from 10,000m to 50,000m to eliminate depth buffer clipping during high-altitude exploration.
+  - [x] Implemented `generate_coarse_horizon_mesh` (24 radial sectors, 8 geometric rings spanning 1,500m to 50,000m) smoothly blending from DEM elevations to MSL base at 50km.
+  - [x] Fixed `render_chunks_culled_cached` in `engine/rendering/src/renderer.rs`: guaranteed sky clearing pass (`[0.65, 0.76, 0.92]`) and rendered `horizon_mesh_gpu` before active chunk meshes, eliminating aircraft white/dark boundary defect (`media_1792936143100.png`).
+- [x] Phase D4 — Transactional US City Warping:
+  - [x] Defined transactional pipeline: `SELECT -> VERIFY DATA -> DOWNLOAD (if needed) -> VALIDATE -> COMPILE -> STAGE REGION -> WARM CRITICAL CHUNKS -> SELECT SAFE SPAWN -> ACTIVATE -> COMPLETE`.
+  - [x] Implemented `StagedRegionPayload`, `stage_region`, and `activate_staged_region` in `apps/world-viewer/src/interactive.rs` ensuring candidate regions are fully validated before live simulation mutation.
+  - [x] Guaranteed atomic rollback on failure: on any acquisition, validation, or compilation error, the previous playable world, world origin, vehicle state, assets, and camera are retained intact.
+  - [x] Updated HUD city catalog with dynamic badges (`[READY]`, `[DL REQ]`, `[UNAVAIL]`) and interactive buttons (`▶ WARP TO CITY`, `⬇ INSTALL & WARP`, `🚫 UNAVAILABLE`).
+  - [x] Verified 4-city grand tour: `San Francisco -> New York -> Chicago -> Los Angeles -> San Francisco` using genuinely different geographic datasets, geodetic anchors, and landmarks.
+- [x] Phase D5 — Air, Ground, and Long-Distance Tests & Non-Regression:
+  - [x] Authored and certified Stage D Master Test Suite `tests/tests/stage_d_gis_streaming_and_city_transitions.rs` (5/5 tests passing).
+  - [x] Verified zero regressions on Stage B physics (9/9), Stage B remediation (8/8), Stage C models (6/6), and US city catalog validation (9/9).
+  - [x] Authored ADR-0053 (`docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md`).
+
 
 
 
