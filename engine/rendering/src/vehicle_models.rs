@@ -23,35 +23,35 @@ use std::sync::OnceLock;
 pub struct AutomotivePalette;
 
 impl AutomotivePalette {
-    // Exterior Body Finishes
-    pub const APEX_CHERRY_RED: [f32; 4] = [0.92, 0.10, 0.12, 1.0];
-    pub const SEDAN_SAPPHIRE_BLUE: [f32; 4] = [0.12, 0.30, 0.82, 1.0];
-    pub const SUV_GRANITE_GRAY: [f32; 4] = [0.22, 0.24, 0.28, 1.0];
-    pub const TAXI_MUNICIPAL_YELLOW: [f32; 4] = [0.96, 0.80, 0.10, 1.0];
-    pub const TRUCK_CRIMSON_HAULER: [f32; 4] = [0.85, 0.20, 0.15, 1.0];
-    pub const BUS_TRANSIT_GREEN: [f32; 4] = [0.10, 0.65, 0.40, 1.0];
-    pub const BIKE_RACING_ORANGE: [f32; 4] = [0.95, 0.40, 0.08, 1.0];
+    // Exterior Body Finishes (alpha = 0.99 for Clearcoat Metallic PBR Shading)
+    pub const APEX_CHERRY_RED: [f32; 4] = [0.92, 0.10, 0.12, 0.99];
+    pub const SEDAN_SAPPHIRE_BLUE: [f32; 4] = [0.12, 0.30, 0.82, 0.99];
+    pub const SUV_GRANITE_GRAY: [f32; 4] = [0.22, 0.24, 0.28, 0.99];
+    pub const TAXI_MUNICIPAL_YELLOW: [f32; 4] = [0.96, 0.80, 0.10, 0.99];
+    pub const TRUCK_CRIMSON_HAULER: [f32; 4] = [0.85, 0.20, 0.15, 0.99];
+    pub const BUS_TRANSIT_GREEN: [f32; 4] = [0.10, 0.65, 0.40, 0.99];
+    pub const BIKE_RACING_ORANGE: [f32; 4] = [0.95, 0.40, 0.08, 0.99];
 
     // Automotive Materials
-    pub const TINTED_GLASS: [f32; 4] = [0.12, 0.18, 0.25, 0.85];
-    pub const CARBON_FIBER: [f32; 4] = [0.08, 0.08, 0.09, 1.0];
-    pub const TIRE_RUBBER: [f32; 4] = [0.10, 0.10, 0.10, 1.0];
-    pub const ALLOY_SILVER: [f32; 4] = [0.75, 0.78, 0.82, 1.0];
-    pub const BRAKE_DISC_STEEL: [f32; 4] = [0.65, 0.66, 0.68, 1.0];
-    pub const BREMBO_RED_CALIPER: [f32; 4] = [0.95, 0.05, 0.05, 1.0];
-    pub const POLISHED_CHROME: [f32; 4] = [0.92, 0.94, 0.96, 1.0];
-    pub const INTERIOR_CHARCOAL: [f32; 4] = [0.14, 0.15, 0.17, 1.0];
-    pub const LEATHER_ACCENT: [f32; 4] = [0.22, 0.18, 0.15, 1.0];
-    pub const CONTACT_SHADOW: [f32; 4] = [0.02, 0.02, 0.03, 0.70];
+    pub const TINTED_GLASS: [f32; 4] = [0.12, 0.18, 0.25, 0.78];
+    pub const CARBON_FIBER: [f32; 4] = [0.08, 0.08, 0.09, 0.98];
+    pub const TIRE_RUBBER: [f32; 4] = [0.10, 0.10, 0.10, 0.98];
+    pub const ALLOY_SILVER: [f32; 4] = [0.75, 0.78, 0.82, 0.97];
+    pub const BRAKE_DISC_STEEL: [f32; 4] = [0.65, 0.66, 0.68, 0.97];
+    pub const BREMBO_RED_CALIPER: [f32; 4] = [0.95, 0.05, 0.05, 0.99];
+    pub const POLISHED_CHROME: [f32; 4] = [0.92, 0.94, 0.96, 0.97];
+    pub const INTERIOR_CHARCOAL: [f32; 4] = [0.14, 0.15, 0.17, 0.98];
+    pub const LEATHER_ACCENT: [f32; 4] = [0.22, 0.18, 0.15, 0.98];
+    pub const CONTACT_SHADOW: [f32; 4] = [0.02, 0.02, 0.03, 0.65];
 
-    // Lighting Emissives
-    pub const HEADLIGHT_XENON_ON: [f32; 4] = [1.0, 0.98, 0.90, 1.0];
-    pub const HEADLIGHT_OFF: [f32; 4] = [0.35, 0.35, 0.38, 1.0];
-    pub const BRAKELIGHT_ON: [f32; 4] = [1.0, 0.05, 0.05, 1.0];
-    pub const TAILLIGHT_RUNNING: [f32; 4] = [0.55, 0.04, 0.04, 1.0];
-    pub const REVERSE_WHITE_ON: [f32; 4] = [0.98, 0.98, 1.0, 1.0];
-    pub const REVERSE_OFF: [f32; 4] = [0.30, 0.30, 0.32, 1.0];
-    pub const TURN_SIGNAL_AMBER: [f32; 4] = [1.0, 0.65, 0.05, 1.0];
+    // Lighting Emissives (alpha = 0.95 for Active Light Emitters)
+    pub const HEADLIGHT_XENON_ON: [f32; 4] = [1.0, 0.98, 0.90, 0.95];
+    pub const HEADLIGHT_OFF: [f32; 4] = [0.35, 0.35, 0.38, 0.98];
+    pub const BRAKELIGHT_ON: [f32; 4] = [1.0, 0.05, 0.05, 0.95];
+    pub const TAILLIGHT_RUNNING: [f32; 4] = [0.75, 0.05, 0.05, 0.95];
+    pub const REVERSE_WHITE_ON: [f32; 4] = [0.98, 0.98, 1.0, 0.95];
+    pub const REVERSE_OFF: [f32; 4] = [0.30, 0.30, 0.32, 0.98];
+    pub const TURN_SIGNAL_AMBER: [f32; 4] = [1.0, 0.65, 0.05, 0.95];
 }
 
 /// Helper to add a flat quad with custom normal, UVs, and color.
@@ -102,7 +102,7 @@ pub fn add_tri(mesh: &mut ChunkMesh, p0: Vec3, p1: Vec3, p2: Vec3, normal: Vec3,
         .extend_from_slice(&[base_idx, base_idx + 1, base_idx + 2]);
 }
 
-/// Adds a curved cylindrical extrusion along the X-axis (axle orientation).
+/// Adds a curved cylindrical extrusion along the X-axis (axle orientation) with CCW outward normals.
 pub fn add_cylinder_x(
     mesh: &mut ChunkMesh,
     center: Vec3,
@@ -128,13 +128,13 @@ pub fn add_cylinder_x(
         let n1 = Vec3::new(0.0, a1.cos(), a1.sin()).normalize();
         let face_n = (n0 + n1) * 0.5;
 
-        // Outer surface quad
+        // Outer surface quad (CCW outward normal)
         add_quad(
             mesh,
-            Vec3::new(x_left, y0, z0),
             Vec3::new(x_right, y0, z0),
-            Vec3::new(x_right, y1, z1),
+            Vec3::new(x_left, y0, z0),
             Vec3::new(x_left, y1, z1),
+            Vec3::new(x_right, y1, z1),
             face_n,
             color,
         );
@@ -161,7 +161,7 @@ pub fn add_cylinder_x(
     }
 }
 
-/// Adds a curved cylindrical extrusion along the Y-axis (vertical orientation).
+/// Adds a curved cylindrical extrusion along the Y-axis (vertical orientation) with CCW outward normals.
 pub fn add_cylinder_y(
     mesh: &mut ChunkMesh,
     center: Vec3,
@@ -187,13 +187,13 @@ pub fn add_cylinder_y(
         let n1 = Vec3::new(a1.cos(), 0.0, a1.sin()).normalize();
         let face_n = (n0 + n1) * 0.5;
 
-        // Outer surface quad
+        // Outer surface quad (CCW outward normal)
         add_quad(
             mesh,
-            Vec3::new(x0, y_bottom, z0),
             Vec3::new(x1, y_bottom, z1),
-            Vec3::new(x1, y_top, z1),
+            Vec3::new(x0, y_bottom, z0),
             Vec3::new(x0, y_top, z0),
+            Vec3::new(x1, y_top, z1),
             face_n,
             color,
         );
@@ -202,8 +202,8 @@ pub fn add_cylinder_y(
         add_tri(
             mesh,
             Vec3::new(center.x, y_bottom, center.z),
-            Vec3::new(x1, y_bottom, z1),
             Vec3::new(x0, y_bottom, z0),
+            Vec3::new(x1, y_bottom, z1),
             -Vec3::Y,
             color,
         );
@@ -212,15 +212,15 @@ pub fn add_cylinder_y(
         add_tri(
             mesh,
             Vec3::new(center.x, y_top, center.z),
-            Vec3::new(x0, y_top, z0),
             Vec3::new(x1, y_top, z1),
+            Vec3::new(x0, y_top, z0),
             Vec3::Y,
             color,
         );
     }
 }
 
-/// Adds a curved cylindrical extrusion along the Z-axis (longitudinal orientation).
+/// Adds a curved cylindrical extrusion along the Z-axis (longitudinal orientation) with CCW outward normals.
 pub fn add_cylinder_z(
     mesh: &mut ChunkMesh,
     center: Vec3,
@@ -246,13 +246,13 @@ pub fn add_cylinder_z(
         let n1 = Vec3::new(a1.cos(), a1.sin(), 0.0).normalize();
         let face_n = (n0 + n1) * 0.5;
 
-        // Outer surface quad
+        // Outer surface quad (CCW outward normal)
         add_quad(
             mesh,
-            Vec3::new(x0, y0, z_rear),
-            Vec3::new(x0, y0, z_front),
-            Vec3::new(x1, y1, z_front),
             Vec3::new(x1, y1, z_rear),
+            Vec3::new(x1, y1, z_front),
+            Vec3::new(x0, y0, z_front),
+            Vec3::new(x0, y0, z_rear),
             face_n,
             color,
         );
@@ -2032,7 +2032,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         &mut trailer_mesh,
         rel_center,
         Vec3::new(tr_w, tr_h, tr_l),
-        [0.90, 0.92, 0.95, 1.0], // Clean white aluminum freight trailer
+        [0.90, 0.92, 0.95, 0.99], // Clean white aluminum freight trailer (alpha 0.99)
     );
 
     // 3b. Vertical Corrugated Aluminum Side Siding Ribs (Left & Right)
@@ -2049,7 +2049,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
                 &mut trailer_mesh,
                 Vec3::new(sign * (tr_w + 0.012), rel_center.y, rz),
                 Vec3::new(0.012, tr_h * 0.92, 0.045),
-                [0.86, 0.88, 0.92, 1.0], // Embossed aluminum corrugation rib
+                [0.86, 0.88, 0.92, 0.97], // Embossed aluminum corrugation rib (alpha 0.97)
             );
         }
     }
@@ -2074,9 +2074,9 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         for s in 0..12 {
             let tz = rel_center.z - tr_l + 0.5 + s as f32 * (tr_l * 2.0 - 1.0) / 12.0;
             let tape_color = if s % 2 == 0 {
-                [0.95, 0.10, 0.10, 1.0] // Red
+                [0.95, 0.10, 0.10, 0.98] // Red
             } else {
-                [0.98, 0.98, 0.98, 1.0] // White
+                [0.98, 0.98, 0.98, 0.98] // White
             };
             add_box_at(
                 &mut trailer_mesh,
@@ -2103,7 +2103,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         0.04,
         0.05,
         8,
-        [0.85, 0.15, 0.15, 1.0], // Red emergency
+        [0.85, 0.15, 0.15, 0.98], // Red emergency
     );
     add_cylinder_z(
         &mut trailer_mesh,
@@ -2111,7 +2111,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         0.04,
         0.05,
         8,
-        [0.15, 0.35, 0.85, 1.0], // Blue service
+        [0.15, 0.35, 0.85, 0.98], // Blue service
     );
 
     // 3e. Dual Rear Swing Doors with Locking Rods, Cam Keepers & Hinges
@@ -2120,7 +2120,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
         &mut trailer_mesh,
         Vec3::new(0.0, rel_center.y, rel_center.z - tr_l - 0.01),
         Vec3::new(tr_w * 0.97, tr_h * 0.97, 0.02),
-        [0.18, 0.20, 0.22, 1.0], // Dark rubber weather gasket
+        [0.18, 0.20, 0.22, 0.98], // Dark rubber weather gasket
     );
     // Left & right door leaves
     for sign in [-1.0f32, 1.0f32] {
@@ -2128,7 +2128,7 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
             &mut trailer_mesh,
             Vec3::new(sign * tr_w * 0.48, rel_center.y, rel_center.z - tr_l - 0.02),
             Vec3::new(tr_w * 0.46, tr_h * 0.95, 0.015),
-            [0.88, 0.90, 0.94, 1.0],
+            [0.88, 0.90, 0.94, 0.99],
         );
     }
     // 4 Galvanized Vertical Locking Rods with Cam Latches
@@ -2372,27 +2372,56 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
     let half_l = 5.90;
     let mut chassis_mesh = ChunkMesh::default();
 
-    // 1. Aerodynamic Front Cap, Bumper & Lower Skirts
-    // Lower body transit skirt panels in transit green
+    // 1. Aerodynamic Front Cap, Bumper & Lower Skirts with Arched Wheel Cutouts
+    // Mid-body skirt between front and rear axles (transit green)
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 0.85, 0.0),
-        Vec3::new(half_w, 0.55, half_l),
+        Vec3::new(half_w, 0.55, 2.50),
         AutomotivePalette::BUS_TRANSIT_GREEN,
     );
+    // Front overhang skirt (forward of front axle)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.85, 4.85),
+        Vec3::new(half_w, 0.55, 1.05),
+        AutomotivePalette::BUS_TRANSIT_GREEN,
+    );
+    // Rear overhang skirt (behind rear axle)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.85, -4.95),
+        Vec3::new(half_w, 0.55, 0.95),
+        AutomotivePalette::BUS_TRANSIT_GREEN,
+    );
+    // Arch liners over front and rear wheel wells (dark matte composite)
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w - 0.08), 1.15, 3.40),
+            Vec3::new(0.08, 0.25, 0.85),
+            [0.10, 0.10, 0.12, 0.98],
+        );
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w - 0.08), 1.15, -3.40),
+            Vec3::new(0.08, 0.25, 0.85),
+            [0.10, 0.10, 0.12, 0.98],
+        );
+    }
     // Aerodynamic curved front bumper fascia with fog lights
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 0.52, half_l - 0.05),
         Vec3::new(half_w * 0.98, 0.22, 0.15),
-        [0.15, 0.16, 0.18, 1.0], // Dark charcoal bumper
+        [0.15, 0.16, 0.18, 0.98], // Dark charcoal bumper
     );
-    // Front Destination Header Box above windshield with amber LED sign
+    // Front Destination Header Box above windshield with glowing amber LED sign
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 2.85, half_l - 0.08),
         Vec3::new(half_w * 0.95, 0.22, 0.16),
-        [0.12, 0.14, 0.16, 1.0],
+        [0.12, 0.14, 0.16, 0.98],
     );
     add_quad(
         &mut chassis_mesh,
@@ -2401,7 +2430,7 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         Vec3::new(1.05, 2.96, half_l + 0.08),
         Vec3::new(-1.05, 2.96, half_l + 0.08),
         Vec3::Z,
-        [1.0, 0.75, 0.10, 1.0], // Amber LED destination matrix
+        [1.0, 0.75, 0.10, 0.95], // Glowing amber LED destination matrix (alpha 0.95)
     );
     // Vertical Black Window Pillars along passenger saloon
     for pz in [-4.2, -2.8, -1.4, 0.0, 1.4, 2.8, 4.2] {
@@ -2410,7 +2439,7 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
                 &mut chassis_mesh,
                 Vec3::new(sign * (half_w - 0.02), 2.05, pz),
                 Vec3::new(0.02, 0.65, 0.06),
-                [0.08, 0.08, 0.10, 1.0],
+                [0.08, 0.08, 0.10, 0.98],
             );
         }
     }
@@ -2419,7 +2448,7 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         &mut chassis_mesh,
         Vec3::new(0.0, 2.95, 0.0),
         Vec3::new(half_w * 0.98, 0.15, half_l),
-        [0.92, 0.94, 0.96, 1.0], // Crisp white roof
+        [0.92, 0.94, 0.96, 0.99], // Crisp white roof
     );
     // Rooftop Dual HVAC Air Conditioning Units
     for hz in [-2.5f32, 2.0f32] {
@@ -2427,7 +2456,7 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
             &mut chassis_mesh,
             Vec3::new(0.0, 3.25, hz),
             Vec3::new(0.85, 0.16, 1.10),
-            [0.85, 0.88, 0.92, 1.0],
+            [0.85, 0.88, 0.92, 0.98],
         );
     }
     // Rooftop Aerodynamic CNG Fuel Tank Enclosure Pod
@@ -2435,7 +2464,7 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         &mut chassis_mesh,
         Vec3::new(0.0, 3.32, -0.20),
         Vec3::new(0.92, 0.22, 1.60),
-        [0.92, 0.94, 0.96, 1.0],
+        [0.92, 0.94, 0.96, 0.99],
     );
     // High-Mounted Aerodynamic Transit Mirrors on Tubular Arms
     for sign in [-1.0f32, 1.0f32] {
@@ -3279,37 +3308,68 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
         &mut chassis_mesh,
         Vec3::new(0.0, 1.15, 0.0),
         Vec3::new(half_w, 0.15, half_l),
-        [0.18, 0.20, 0.22, 1.0], // Deep graphite underframe steel
+        [0.18, 0.20, 0.22, 0.97], // Deep graphite underframe steel
     );
-    // 2. Streamlined Comfort Cab & Collision Deflection Nose
-    // Forward Collision Nose
-    add_box_at(
+
+    // 2. Streamlined Comfort Cab & Aerodynamic Angled Collision Nose
+    // 2a. Sloped Aerodynamic Nose Face & Chamfered Cheeks
+    let nose_top_w = half_w * 0.88;
+    let nose_bot_w = half_w * 0.96;
+    add_quad(
         &mut chassis_mesh,
-        Vec3::new(0.0, 2.10, 7.80),
-        Vec3::new(half_w * 0.95, 0.80, 1.25),
+        Vec3::new(-nose_bot_w * 0.75, 1.30, half_l - 0.10),
+        Vec3::new(nose_bot_w * 0.75, 1.30, half_l - 0.10),
+        Vec3::new(nose_top_w * 0.70, 2.70, 7.20),
+        Vec3::new(-nose_top_w * 0.70, 2.70, 7.20),
+        Vec3::new(0.0, 0.55, 0.84).normalize(),
         AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
     );
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(sign * nose_bot_w * 0.75, 1.30, half_l - 0.10),
+            Vec3::new(sign * nose_bot_w, 1.30, 7.20),
+            Vec3::new(sign * nose_top_w, 2.70, 7.20),
+            Vec3::new(sign * nose_top_w * 0.70, 2.70, 7.20),
+            Vec3::new(sign * 0.75, 0.35, 0.55).normalize(),
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+    }
     // High Isolated Crew Cab
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 2.85, 5.80),
-        Vec3::new(half_w * 0.98, 1.55, 1.25),
+        Vec3::new(0.0, 3.10, 5.80),
+        Vec3::new(half_w * 0.96, 1.30, 1.35),
         AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+    );
+    // Beveled Cab Roof Cap
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 4.42, 5.80),
+        Vec3::new(half_w * 0.88, 0.08, 1.30),
+        [0.85, 0.88, 0.92, 0.97],
     );
     // Rooftop Cyclops Headlight Binnacle & 5-Chime Nathan Air Horn
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 4.45, 6.50),
-        Vec3::new(0.35, 0.15, 0.45),
-        [0.22, 0.24, 0.28, 1.0],
+        Vec3::new(0.0, 4.52, 6.50),
+        Vec3::new(0.35, 0.12, 0.45),
+        [0.22, 0.24, 0.28, 0.98],
     );
-    // Cast Steel Pilot (Snowplow / Cowcatcher) with Ditch Light Housings
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 0.55, half_l - 0.15),
-        Vec3::new(half_w * 0.95, 0.35, 0.18),
-        [0.15, 0.16, 0.18, 1.0],
-    );
+
+    // Cast Steel V-Wedge Pilot (Snowplow / Cowcatcher) with Ditch Light Housings
+    let plow_w = half_w * 0.96;
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(0.0, 0.30, half_l + 0.15),
+            Vec3::new(sign * plow_w, 0.30, half_l - 0.30),
+            Vec3::new(sign * plow_w, 0.90, half_l - 0.20),
+            Vec3::new(0.0, 0.90, half_l + 0.05),
+            Vec3::new(sign * 0.65, 0.25, 0.72).normalize(),
+            [0.15, 0.16, 0.18, 0.98],
+        );
+    }
     // Knuckle Coupler and Pin Lifter Drawbar (Front and Rear)
     let mut coupler_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
@@ -3317,7 +3377,7 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
             &mut coupler_mesh,
             Vec3::new(0.0, 0.85, sign * (half_l + 0.35)),
             Vec3::new(0.18, 0.18, 0.35),
-            [0.25, 0.26, 0.28, 1.0], // AAR Type E Knuckle Coupler
+            [0.25, 0.26, 0.28, 0.97], // AAR Type E Knuckle Coupler
         );
     }
     builder = builder.add_submesh(VehicleSubmesh {
@@ -3327,7 +3387,7 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
         local_transform: Affine3A::IDENTITY,
         pivot: Vec3::ZERO,
         material: VehiclePbrMaterial {
-            base_color: [0.25, 0.26, 0.28, 1.0],
+            base_color: [0.25, 0.26, 0.28, 0.97],
             metallic: 0.90,
             roughness: 0.35,
             emissive: [0.0, 0.0, 0.0],
@@ -3341,6 +3401,17 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
         Vec3::new(half_w * 0.88, 1.35, 5.50),
         AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
     );
+    // Dynamic Brake Cooling Fan Housings on Machinery Roof
+    for fz in [-2.5f32, -0.5f32, 1.5f32] {
+        add_cylinder_y(
+            &mut chassis_mesh,
+            Vec3::new(0.0, 4.05, fz),
+            0.62,
+            0.08,
+            14,
+            [0.18, 0.20, 0.22, 0.97],
+        );
+    }
     // Rooftop Exhaust Silencer Stack
     add_cylinder_y(
         &mut chassis_mesh,
@@ -3348,14 +3419,14 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
         0.28,
         0.22,
         14,
-        [0.15, 0.15, 0.16, 1.0],
+        [0.15, 0.15, 0.16, 0.98],
     );
     // Massive 2,200-Gallon Belly Diesel Fuel Tank and Air Reservoirs
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 0.65, 0.0),
         Vec3::new(half_w * 0.82, 0.35, 2.80),
-        [0.12, 0.14, 0.16, 1.0],
+        [0.12, 0.14, 0.16, 0.98],
     );
     for sign in [-1.0f32, 1.0f32] {
         add_cylinder_z(
@@ -3364,7 +3435,7 @@ pub fn build_pacific_locomotive(lod: VehicleLodLevel) -> LoadedVehicleModel {
             0.18,
             2.20,
             12,
-            [0.25, 0.28, 0.32, 1.0], // Main reservoir tanks
+            [0.25, 0.28, 0.32, 0.97], // Main reservoir tanks
         );
     }
     // Full Perimeter Safety Handrails along Walkways (Yellow Safety Steel)

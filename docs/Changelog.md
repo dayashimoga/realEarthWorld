@@ -2158,3 +2158,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `dist/windows/realearth-windows-x64.zip` (8.95 MB, SHA-256: `cb3702f4b81d5b94478a5d09ddcccedd81bd21689dad851112d647791b8983e8`).
 - **Architectural Decision Record**:
   - Authored [`docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md`](file:///j:/rustRealEarth/docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md).
+
+### Stage G3: Genuine Production 3D Assets and World Visual Overhaul (2026-10-26)
+- **Dual-Pass Graphics Pipeline & Transparency Resolution ([`engine/rendering/src/renderer.rs`](file:///j:/rustRealEarth/engine/rendering/src/renderer.rs))**:
+  - Eliminated the root cause of translucent/hollow vehicle bodies: single pipeline had `blend: Some(ALPHA_BLENDING)` AND `depth_write_enabled: true`, causing transparent triangles (windows, shadows) to occlude subsequent opaque chassis geometry.
+  - Separated render pipelines in `RealEarthRenderer`: opaque pipeline (`blend: None`, `depth_write_enabled: true`) and transparent pipeline (`blend: Some(ALPHA_BLENDING)`, `depth_write_enabled: false`).
+  - Partitioned per-mesh draw calls: draws opaque geometry first with full depth writes, followed by transparent glass and contact shadows without depth writes in the same render pass.
+- **Dedicated Automotive PBR Shading & Terrain Noise Isolation ([`engine/rendering/src/shaders.rs`](file:///j:/rustRealEarth/engine/rendering/src/shaders.rs))**:
+  - Enforced distinct PBR semantic alpha tags: 0.99 (exterior clearcoat paint), 0.98 (matte carbon/rubber/interior), 0.97 (chrome/alloy/steel), 0.95 (active light emissives), 0.78 (tinted glass), 0.65 (contact shadow).
+  - Strictly guarded `is_terrain` with `!is_vehicle && abs(alpha_tag - 1.0) < 0.015`, completely preventing procedural ground rock and sand noise from bleeding onto car and truck bodies.
+  - Implemented dual-lobe Clearcoat specular highlight for paint, metallic specular ($F_0 = 0.65$) for chrome/alloy, and active light emission for Xenon headlights, LED brake lights, and destination signs.
+  - Implemented dynamic hemisphere skylight ambient fill (`hemi_ambient`) for natural sky reflections.
+  - Enforced `out_alpha = 1.0` for all opaque materials, eliminating see-through vehicle panels.
+- **Cylinder Generator Normal Normalization ([`engine/rendering/src/vehicle_models.rs`](file:///j:/rustRealEarth/engine/rendering/src/vehicle_models.rs))**:
+  - Fixed inverted quad winding orders and endcap triangle orientations in `add_cylinder_x`, `add_cylinder_y`, and `add_cylinder_z`.
+  - Triangles now strictly follow counter-clockwise (CCW) winding with outward geometric normals matching vertex normals.
+- **Real Multimodal Vehicle 3D Geometry Overhaul ([`engine/rendering/src/vehicle_models.rs`](file:///j:/rustRealEarth/engine/rendering/src/vehicle_models.rs))**:
+  - **Apex GT Sports Coupe**: Sculpted curved body panels, non-clipping wheel arches with dark matte cavity liners, solid rear fascia enclosing tail details, 3D GT wing with solid stanchions and cambered airfoil, quad exhaust pipes, and calibrated cockpit camera anchors with steering wheel submesh.
+  - **HyperSport RR-1000 Motorcycle**: Exposed steel trellis spaceframe, teardrop fuel tank, swingarm monoshock, drilled disc brake rotors with Brembo calipers, and dynamic cornering roll banking around ground contact axis.
+  - **CityLine Transit Bus**: Open wheel arch cutouts over front and rear axles replacing solid skirts, illuminated LED destination matrix (`alpha = 0.95`), white fiberglass roof, and bi-fold passenger door kinematics.
+  - **TransContinental Semi**: Sleeper cab with chrome exhaust stacks and fuel tanks, 53ft trailer with embossed aluminum corrugation ribs (`alpha = 0.97`), rear dual swing doors with locking hardware, DOT C2 safety tape, and fifth-wheel yaw articulation.
+  - **Pacific Locomotive**: Aerodynamic wide-nose safety cab with sloped collision nose face and chamfered cheeks, raked windshield, heavy underframe sill, V-wedge snowplow pilot, 3 rooftop dynamic brake cooling fans, standard 1,435mm gauge bogies, and AAR knuckle couplers.
+  - Re-exported all 16 certified vehicle GLB assets to `assets/vehicles/`.
+- **Environmental Foliage & Urban Infrastructure Overhaul ([`engine/rendering/src/city_interactions_mesh.rs`](file:///j:/rustRealEarth/engine/rendering/src/city_interactions_mesh.rs))**:
+  - Completely replaced primitive stacked box foliage with smooth organic geometry.
+  - Implemented `add_tapered_cylinder` for 8-sided smooth organic tapered wooden trunks.
+  - Broadleaf deciduous: multi-layered canopy domes (`add_foliage_dome`) with varying natural green hues and spreading branches.
+  - Evergreen conifers: central mast trunk with 4 cascading drooping conical needle bough tiers (`add_foliage_cone`).
+  - Coastal palms: slender segmented curving trunk with crown fruit pod and 10 radiating arching fronds with natural droop.
+  - Roadside infrastructure: validated cobra-head LED streetlights and municipal bus stop passenger shelters.
+- **Master Certification Suite ([`tests/tests/stage_g3_production_assets_and_visual_overhaul_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage_g3_production_assets_and_visual_overhaul_certification.rs))**:
+  - Implemented 8 comprehensive master tests passing with 0 failures: runtime pipeline & transparency resolution, automotive PBR palette & cylinder winding, Apex GT curved topology & cockpit, HyperSport RR-1000 trellis frame & lean, Transit Bus & Semi heavy commercial assets, Pacific Locomotive & aerospace/maritime assets, environmental foliage overhaul, and multi-LOD monotonicity & GPU budgets.
+  - Zero regression across all existing suites: Stage G2 (8/8), Stage G1 (8/8), Stage G0 (13/13), Stage D (5/5), Stage B (8/8), and Stage C (6/6).
+- **Release Packaging**:
+  - Compiled release binaries `realearth-viewer.exe` and `realearth-cli.exe`.
+  - Packaged standalone Windows distribution zip (`dist/windows/realearth-windows-x64.zip`, 9.17 MB, SHA-256: `60c87e8972bc14e0ae1e6148c78f1a71a31138468aa9f2c2c627433561af5ff6`).
+  - Updated `dist/certification_matrix.json` with entries `G3-01` through `G3-08` marked `VERIFIED`.
+- **Architectural Decision Record**:
+  - Authored [`docs/adr/0059-stage-g3-genuine-production-3d-assets-and-world-visual-overhaul.md`](file:///j:/rustRealEarth/docs/adr/0059-stage-g3-genuine-production-3d-assets-and-world-visual-overhaul.md).

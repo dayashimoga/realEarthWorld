@@ -455,30 +455,34 @@ impl LoadedVehicleModel {
                 }
                 VehicleSubmeshType::Headlights => {
                     let color = if headlights_on {
-                        [1.0, 0.98, 0.88, 1.0] // Brilliant xenon white
+                        [1.0, 0.98, 0.88, 0.95] // Brilliant xenon white (alpha 0.95 = emissive light tag)
                     } else {
-                        [0.35, 0.35, 0.38, 1.0] // Inactive lens
+                        [0.35, 0.35, 0.38, 0.98] // Inactive lens
                     };
                     (Vec3::ZERO, Quat::IDENTITY, Some(color))
                 }
                 VehicleSubmeshType::BrakeLights => {
                     let color = if brake_lights_on {
-                        [1.0, 0.05, 0.05, 1.0] // Brilliant brake red
+                        [1.0, 0.05, 0.05, 0.95] // Brilliant brake red (alpha 0.95 = emissive light tag)
                     } else {
-                        [0.55, 0.04, 0.04, 1.0] // Running taillight
+                        [0.75, 0.05, 0.05, 0.95] // Running taillight
                     };
                     (Vec3::ZERO, Quat::IDENTITY, Some(color))
                 }
                 VehicleSubmeshType::ReverseLights => {
                     let color = if reverse_lights_on {
-                        [0.98, 0.98, 1.0, 1.0] // Reverse white
+                        [0.98, 0.98, 1.0, 0.95] // Reverse white (alpha 0.95 = emissive light tag)
                     } else {
-                        [0.30, 0.30, 0.32, 1.0] // Inactive reverse
+                        [0.30, 0.30, 0.32, 0.98] // Inactive reverse
                     };
                     (Vec3::ZERO, Quat::IDENTITY, Some(color))
                 }
                 VehicleSubmeshType::ChassisBody => {
-                    (Vec3::ZERO, Quat::IDENTITY, override_paint_color)
+                    let paint = override_paint_color.map(|mut c| {
+                        c[3] = 0.99; // Automotive Clearcoat Paint tag
+                        c
+                    });
+                    (Vec3::ZERO, Quat::IDENTITY, paint)
                 }
                 VehicleSubmeshType::TurnSignals => (Vec3::ZERO, Quat::IDENTITY, None),
                 _ => (Vec3::ZERO, Quat::IDENTITY, None),

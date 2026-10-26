@@ -743,15 +743,183 @@ pub fn generate_marine_ferry_dock_mesh(position: Vec3, yaw: f32) -> ChunkMesh {
     mesh
 }
 
+/// Helper to add a smooth tapered cylindrical extrusion between two 3D points.
+fn add_tapered_cylinder(
+    mesh: &mut ChunkMesh,
+    p_bot: Vec3,
+    p_top: Vec3,
+    r_bot: f32,
+    r_top: f32,
+    segments: usize,
+    color: [f32; 4],
+) {
+    let segs = segments.max(6);
+    let step = 2.0 * std::f32::consts::PI / segs as f32;
+    let axis = (p_top - p_bot).normalize_or_zero();
+    let up = if axis.y.abs() > 0.95 {
+        Vec3::Z
+    } else {
+        Vec3::Y
+    };
+    let radial_x = axis.cross(up).normalize();
+    let radial_z = axis.cross(radial_x).normalize();
+
+    let base_idx = mesh.vertices.len() as u32;
+
+    for i in 0..segs {
+        let a = i as f32 * step;
+        let cos_a = a.cos();
+        let sin_a = a.sin();
+        let norm = (radial_x * cos_a + radial_z * sin_a).normalize();
+
+        // Bottom vertex
+        let v_bot = p_bot + (radial_x * cos_a + radial_z * sin_a) * r_bot;
+        mesh.vertices.push(Vertex::new(
+            [v_bot.x, v_bot.y, v_bot.z],
+            [norm.x, norm.y, norm.z],
+            [i as f32 / segs as f32, 0.0],
+            color,
+        ));
+
+        // Top vertex
+        let v_top = p_top + (radial_x * cos_a + radial_z * sin_a) * r_top;
+        mesh.vertices.push(Vertex::new(
+            [v_top.x, v_top.y, v_top.z],
+            [norm.x, norm.y, norm.z],
+            [i as f32 / segs as f32, 1.0],
+            color,
+        ));
+    }
+
+    // Outer side quads (CCW outward normal)
+    for i in 0..segs {
+        let i0 = base_idx + (i * 2) as u32;
+        let i1 = base_idx + (i * 2 + 1) as u32;
+        let next_i = (i + 1) % segs;
+        let i2 = base_idx + (next_i * 2 + 1) as u32;
+        let i3 = base_idx + (next_i * 2) as u32;
+
+        mesh.indices.extend_from_slice(&[i0, i1, i2, i0, i2, i3]);
+    }
+}
+
+/// Helper to add a rounded organic foliage dome with multi-faceted shading.
+fn add_foliage_dome(
+    mesh: &mut ChunkMesh,
+    center: Vec3,
+    radius: f32,
+    height: f32,
+    segments: usize,
+    color: [f32; 4],
+) {
+    let segs = segments.max(8);
+    let step = 2.0 * std::f32::consts::PI / segs as f32;
+
+    let base_idx = mesh.vertices.len() as u32;
+    let apex_pos = center + Vec3::new(0.0, height * 0.5, 0.0);
+    let apex_norm = Vec3::Y;
+
+    // Apex vertex
+    mesh.vertices.push(Vertex::new(
+        [apex_pos.x, apex_pos.y, apex_pos.z],
+        [apex_norm.x, apex_norm.y, apex_norm.z],
+        [0.5, 0.5],
+        color,
+    ));
+
+    // Mid ring
+    for i in 0..segs {
+        let a = i as f32 * step;
+        let cos_a = a.cos();
+        let sin_a = a.sin();
+        let p_mid = center + Vec3::new(cos_a * radius, 0.0, sin_a * radius);
+        let n_mid = Vec3::new(cos_a, 0.35, sin_a).normalize();
+        mesh.vertices.push(Vertex::new(
+            [p_mid.x, p_mid.y, p_mid.z],
+            [n_mid.x, n_mid.y, n_mid.z],
+            [cos_a * 0.5 + 0.5, sin_a * 0.5 + 0.5],
+            color,
+        ));
+    }
+
+    // Bottom center
+    let bot_pos = center - Vec3::new(0.0, height * 0.5, 0.0);
+    let bot_idx = mesh.vertices.len() as u32;
+    mesh.vertices.push(Vertex::new(
+        [bot_pos.x, bot_pos.y, bot_pos.z],
+        [0.0, -1.0, 0.0],
+        [0.5, 0.5],
+        color,
+    ));
+
+    // Connect upper crown triangles
+    for i in 0..segs {
+        let m0 = base_idx + 1 + i as u32;
+        let m1 = base_idx + 1 + ((i + 1) % segs) as u32;
+        mesh.indices.extend_from_slice(&[base_idx, m0, m1]);
+    }
+
+    // Connect lower skirt triangles
+    for i in 0..segs {
+        let m0 = base_idx + 1 + i as u32;
+        let m1 = base_idx + 1 + ((i + 1) % segs) as u32;
+        mesh.indices.extend_from_slice(&[bot_idx, m1, m0]);
+    }
+}
+
+/// Helper to add a drooping conical needle bough tier for conifers.
+fn add_foliage_cone(
+    mesh: &mut ChunkMesh,
+    base_center: Vec3,
+    apex: Vec3,
+    radius: f32,
+    segments: usize,
+    color: [f32; 4],
+) {
+    let segs = segments.max(8);
+    let step = 2.0 * std::f32::consts::PI / segs as f32;
+
+    let base_idx = mesh.vertices.len() as u32;
+
+    // Apex
+    mesh.vertices.push(Vertex::new(
+        [apex.x, apex.y, apex.z],
+        [0.0, 1.0, 0.0],
+        [0.5, 0.5],
+        color,
+    ));
+
+    // Skirt vertices (drooping slightly)
+    for i in 0..segs {
+        let a = i as f32 * step;
+        let cos_a = a.cos();
+        let sin_a = a.sin();
+        let p_skirt = base_center + Vec3::new(cos_a * radius, -0.15 * radius, sin_a * radius);
+        let norm = Vec3::new(cos_a, 0.45, sin_a).normalize();
+        mesh.vertices.push(Vertex::new(
+            [p_skirt.x, p_skirt.y, p_skirt.z],
+            [norm.x, norm.y, norm.z],
+            [cos_a * 0.5 + 0.5, sin_a * 0.5 + 0.5],
+            color,
+        ));
+    }
+
+    // Cone triangles
+    for i in 0..segs {
+        let s0 = base_idx + 1 + i as u32;
+        let s1 = base_idx + 1 + ((i + 1) % segs) as u32;
+        mesh.indices.extend_from_slice(&[base_idx, s0, s1]);
+    }
+}
+
 /// Generates a high-fidelity 3D ChunkMesh for an authentic tree conforming to regional ecological classifications.
-/// Scaled dynamically with organic branch structuring and multi-layered foliage crowns.
+/// Features organic cylindrical tapered trunks, branching structures, and multi-layered foliage crowns.
 pub fn generate_detailed_tree_mesh(
     position: Vec3,
     scale: f32,
     tree_type: DetailedTreeType,
 ) -> ChunkMesh {
     let mut mesh = ChunkMesh::default();
-    let rot = Quat::IDENTITY;
     let s = scale.clamp(0.4, 3.0);
 
     match tree_type {
@@ -759,133 +927,216 @@ pub fn generate_detailed_tree_mesh(
             let bark_color = [0.38, 0.28, 0.20, 1.0];
             let leaf_color_a = [0.22, 0.54, 0.24, 1.0];
             let leaf_color_b = [0.18, 0.48, 0.20, 1.0];
+            let leaf_color_c = [0.26, 0.60, 0.28, 1.0];
 
-            // 1. Main trunk
-            add_box(
+            // 1. Tapered organic trunk
+            add_tapered_cylinder(
                 &mut mesh,
-                position + Vec3::new(0.0, 1.8 * s, 0.0),
-                rot,
-                Vec3::new(0.25 * s, 1.8 * s, 0.25 * s),
+                position,
+                position + Vec3::new(0.0, 2.2 * s, 0.0),
+                0.28 * s,
+                0.18 * s,
+                8,
                 bark_color,
             );
 
-            // 2. Crown base layer (wide)
-            add_box(
+            // 2. Primary spreading branches
+            let branch_targets = [
+                Vec3::new(0.65 * s, 3.4 * s, 0.35 * s),
+                Vec3::new(-0.70 * s, 3.2 * s, -0.40 * s),
+                Vec3::new(0.10 * s, 3.6 * s, -0.65 * s),
+            ];
+            for &b_top in &branch_targets {
+                add_tapered_cylinder(
+                    &mut mesh,
+                    position + Vec3::new(0.0, 2.0 * s, 0.0),
+                    position + b_top,
+                    0.12 * s,
+                    0.06 * s,
+                    6,
+                    bark_color,
+                );
+            }
+
+            // 3. Multi-layered organic foliage canopy clusters
+            // Main central crown
+            add_foliage_dome(
                 &mut mesh,
                 position + Vec3::new(0.0, 4.2 * s, 0.0),
-                rot,
-                Vec3::new(1.8 * s, 1.2 * s, 1.8 * s),
+                1.9 * s,
+                2.2 * s,
+                10,
                 leaf_color_a,
             );
-
-            // 3. Crown mid layer (offset for organic asymmetry)
-            add_box(
+            // Lateral canopy lobes
+            add_foliage_dome(
                 &mut mesh,
-                position + Vec3::new(0.15 * s, 5.8 * s, -0.1 * s),
-                rot,
-                Vec3::new(1.5 * s, 1.1 * s, 1.5 * s),
+                position + Vec3::new(0.85 * s, 4.0 * s, 0.45 * s),
+                1.3 * s,
+                1.8 * s,
+                8,
                 leaf_color_b,
             );
-
-            // 4. Crown top layer
-            add_box(
+            add_foliage_dome(
                 &mut mesh,
-                position + Vec3::new(0.0, 7.2 * s, 0.0),
-                rot,
-                Vec3::new(1.0 * s, 0.8 * s, 1.0 * s),
+                position + Vec3::new(-0.90 * s, 3.8 * s, -0.50 * s),
+                1.4 * s,
+                1.9 * s,
+                8,
+                leaf_color_c,
+            );
+            // Upper dome crown
+            add_foliage_dome(
+                &mut mesh,
+                position + Vec3::new(0.10 * s, 5.6 * s, -0.15 * s),
+                1.2 * s,
+                1.6 * s,
+                8,
                 leaf_color_a,
             );
         }
         DetailedTreeType::EvergreenConifer => {
             let bark_color = [0.32, 0.24, 0.18, 1.0];
-            let needle_color_a = [0.12, 0.38, 0.18, 1.0];
-            let needle_color_b = [0.15, 0.44, 0.22, 1.0];
+            let needle_a = [0.12, 0.38, 0.18, 1.0];
+            let needle_b = [0.15, 0.44, 0.22, 1.0];
 
-            // 1. Tall slender trunk
-            add_box(
+            // 1. Slender tapered central mast trunk
+            add_tapered_cylinder(
                 &mut mesh,
-                position + Vec3::new(0.0, 2.5 * s, 0.0),
-                rot,
-                Vec3::new(0.20 * s, 2.5 * s, 0.20 * s),
+                position,
+                position + Vec3::new(0.0, 8.0 * s, 0.0),
+                0.22 * s,
+                0.05 * s,
+                8,
                 bark_color,
             );
 
-            // 2. Tiered conical boughs (Tier 1 bottom)
-            add_box(
+            // 2. Cascading tiered needle boughs
+            // Tier 1 (Lowest, widest)
+            add_foliage_cone(
                 &mut mesh,
-                position + Vec3::new(0.0, 3.8 * s, 0.0),
-                rot,
-                Vec3::new(1.6 * s, 0.8 * s, 1.6 * s),
-                needle_color_a,
+                position + Vec3::new(0.0, 2.8 * s, 0.0),
+                position + Vec3::new(0.0, 4.5 * s, 0.0),
+                1.8 * s,
+                10,
+                needle_a,
             );
-
             // Tier 2
-            add_box(
+            add_foliage_cone(
                 &mut mesh,
-                position + Vec3::new(0.0, 5.2 * s, 0.0),
-                rot,
-                Vec3::new(1.3 * s, 0.8 * s, 1.3 * s),
-                needle_color_b,
+                position + Vec3::new(0.0, 4.2 * s, 0.0),
+                position + Vec3::new(0.0, 5.8 * s, 0.0),
+                1.4 * s,
+                10,
+                needle_b,
             );
-
             // Tier 3
-            add_box(
+            add_foliage_cone(
                 &mut mesh,
-                position + Vec3::new(0.0, 6.6 * s, 0.0),
-                rot,
-                Vec3::new(0.9 * s, 0.7 * s, 0.9 * s),
-                needle_color_a,
+                position + Vec3::new(0.0, 5.5 * s, 0.0),
+                position + Vec3::new(0.0, 7.0 * s, 0.0),
+                1.0 * s,
+                8,
+                needle_a,
             );
-
-            // Spire top
-            add_box(
+            // Tier 4 (Spire top)
+            add_foliage_cone(
                 &mut mesh,
-                position + Vec3::new(0.0, 7.8 * s, 0.0),
-                rot,
-                Vec3::new(0.4 * s, 0.7 * s, 0.4 * s),
-                needle_color_b,
+                position + Vec3::new(0.0, 6.8 * s, 0.0),
+                position + Vec3::new(0.0, 8.4 * s, 0.0),
+                0.55 * s,
+                8,
+                needle_b,
             );
         }
         DetailedTreeType::CoastalPalm => {
             let trunk_color = [0.55, 0.48, 0.38, 1.0];
             let frond_color = [0.28, 0.62, 0.22, 1.0];
 
-            // 1. Slender tall trunk with curved segment offsets
-            add_box(
+            // 1. Gracefully curving 4-segment trunk
+            let p0 = position;
+            let p1 = position + Vec3::new(0.05 * s, 2.2 * s, 0.02 * s);
+            let p2 = position + Vec3::new(0.18 * s, 4.4 * s, 0.08 * s);
+            let p3 = position + Vec3::new(0.38 * s, 6.6 * s, 0.18 * s);
+
+            add_tapered_cylinder(&mut mesh, p0, p1, 0.22 * s, 0.19 * s, 8, trunk_color);
+            add_tapered_cylinder(&mut mesh, p1, p2, 0.19 * s, 0.16 * s, 8, trunk_color);
+            add_tapered_cylinder(&mut mesh, p2, p3, 0.16 * s, 0.13 * s, 8, trunk_color);
+
+            // 2. Crown fruit/pod cluster
+            add_foliage_dome(
                 &mut mesh,
-                position + Vec3::new(0.0, 2.0 * s, 0.0),
-                rot,
-                Vec3::new(0.18 * s, 2.0 * s, 0.18 * s),
-                trunk_color,
-            );
-            add_box(
-                &mut mesh,
-                position + Vec3::new(0.12 * s, 5.2 * s, 0.08 * s),
-                rot,
-                Vec3::new(0.14 * s, 1.6 * s, 0.14 * s),
-                trunk_color,
+                p3,
+                0.35 * s,
+                0.40 * s,
+                8,
+                [0.42, 0.36, 0.24, 1.0],
             );
 
-            // 2. Radiating palm fronds at crown (Y ~ 7.0s)
-            let crown_y = 6.8 * s;
-            for i in 0..6 {
-                let frond_angle = (i as f32) * (std::f32::consts::PI / 3.0);
-                let f_rot = Quat::from_rotation_y(frond_angle);
-                let frond_pos = position
-                    + Vec3::new(0.15 * s, crown_y, 0.10 * s)
-                    + f_rot.mul_vec3(Vec3::new(0.0, -0.15 * s, 1.1 * s));
-                add_box(
-                    &mut mesh,
-                    frond_pos,
-                    f_rot,
-                    Vec3::new(0.35 * s, 0.04 * s, 1.1 * s),
-                    frond_color,
-                );
+            // 3. 10 Radiating arching palm fronds with outward/downward droop
+            let frond_count = 10;
+            let step = 2.0 * std::f32::consts::PI / frond_count as f32;
+            for i in 0..frond_count {
+                let a = i as f32 * step;
+                let dir_x = a.cos();
+                let dir_z = a.sin();
+
+                // 2-segment curved arching leaf
+                let p_stem = p3;
+                let p_mid = p3 + Vec3::new(dir_x * 1.1 * s, 0.35 * s, dir_z * 1.1 * s);
+                let p_tip = p3 + Vec3::new(dir_x * 2.2 * s, -0.65 * s, dir_z * 2.2 * s);
+
+                // Leaf base quad
+                let perp = Vec3::new(-dir_z, 0.0, dir_x) * (0.22 * s);
+                let b0 = p_stem - perp * 0.5;
+                let b1 = p_stem + perp * 0.5;
+                let m0 = p_mid - perp;
+                let m1 = p_mid + perp;
+                let t_end = p_tip;
+
+                let norm = Vec3::new(0.0, 0.8, 0.0).normalize();
+                add_quad_mesh(&mut mesh, b0, b1, m1, m0, norm, frond_color);
+                add_tri_mesh(&mut mesh, m0, m1, t_end, norm, frond_color);
             }
         }
     }
 
     mesh
+}
+
+fn add_quad_mesh(
+    mesh: &mut ChunkMesh,
+    p0: Vec3,
+    p1: Vec3,
+    p2: Vec3,
+    p3: Vec3,
+    norm: Vec3,
+    color: [f32; 4],
+) {
+    let base = mesh.vertices.len() as u32;
+    let n = [norm.x, norm.y, norm.z];
+    mesh.vertices
+        .push(Vertex::new([p0.x, p0.y, p0.z], n, [0.0, 0.0], color));
+    mesh.vertices
+        .push(Vertex::new([p1.x, p1.y, p1.z], n, [1.0, 0.0], color));
+    mesh.vertices
+        .push(Vertex::new([p2.x, p2.y, p2.z], n, [1.0, 1.0], color));
+    mesh.vertices
+        .push(Vertex::new([p3.x, p3.y, p3.z], n, [0.0, 1.0], color));
+    mesh.indices
+        .extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+}
+
+fn add_tri_mesh(mesh: &mut ChunkMesh, p0: Vec3, p1: Vec3, p2: Vec3, norm: Vec3, color: [f32; 4]) {
+    let base = mesh.vertices.len() as u32;
+    let n = [norm.x, norm.y, norm.z];
+    mesh.vertices
+        .push(Vertex::new([p0.x, p0.y, p0.z], n, [0.0, 0.0], color));
+    mesh.vertices
+        .push(Vertex::new([p1.x, p1.y, p1.z], n, [1.0, 0.0], color));
+    mesh.vertices
+        .push(Vertex::new([p2.x, p2.y, p2.z], n, [0.5, 1.0], color));
+    mesh.indices.extend_from_slice(&[base, base + 1, base + 2]);
 }
 
 #[cfg(test)]

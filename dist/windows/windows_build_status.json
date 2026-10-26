@@ -2,8 +2,8 @@
     "PackageValid":  true,
     "Platform":  "Windows",
     "PackagePath":  "dist/windows/realearth-windows-x64.zip",
-    "Sha256":  "CB3702F4B81D5B94478A5D09DDCCCEDD81BD21689DAD851112D647791B8983E8",
-    "Reason":  "Native Windows x86_64 PE32+ executables compiled, authentic benchmark city samples embedded, and standalone package verified",
+    "Sha256":  "60C87E8972BC14E0AE1E6148C78F1A71A31138468AA9F2C2C627433561AF5FF6",
+    "Reason":  "Native Windows x86_64 PE32+ executables compiled, Stage G3 certified 3D vehicle assets embedded, authentic benchmark city samples embedded, and standalone package verified",
     "BinaryFormat":  "PE32+ (x86_64)",
     "VerifiedOfflineExecution":  true,
     "Status":  "CERTIFIED",
@@ -11,5 +11,5 @@
                                 "realearth-viewer.exe",
                                 "realearth-cli.exe"
                             ],
-    "PackageSizeMb":  8.95
+    "PackageSizeMb":  9.17
 }

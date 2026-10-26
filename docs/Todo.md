@@ -1487,7 +1487,39 @@
     - [x] Verified full regression suite: 42/42 tests passing green across Stage G2, G1, G0, D, B, F.
     - [x] Rebuilt release executables `realearth-viewer.exe` and `realearth-cli.exe`.
     - [x] Updated standalone Windows distribution zip (`dist/windows/realearth-windows-x64.zip`, 8.95 MB, SHA-256: `cb3702f4b81d5b94478a5d09ddcccedd81bd21689dad851112d647791b8983e8`).
-    - [x] Authored ADR-0058 (`docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md`).
+- [x] Stage G3 — Genuine Production 3D Assets and World Visual Overhaul:
+  - [x] Phase 1: Audit Runtime Graphics Pipeline & Transparency Defect Elimination:
+    - [x] Traced vehicle selection, asset registry, byte ingestion, submesh transforms, PBR materials, GPU vertex buffers, and draw calls.
+    - [x] Identified and resolved single-pipeline depth-write conflict and fragment shader alpha blending bug that caused transparent car bodies.
+    - [x] Implemented separated dual-pass rendering in `RealEarthRenderer`: opaque pipeline (`blend: None`, `depth_write: true`) and transparent pipeline (`blend: ALPHA_BLENDING`, `depth_write: false`).
+    - [x] Partitioned per-mesh draw calls into opaque pass followed by transparent pass without depth writes.
+    - [x] Eliminated terrain procedural noise pollution on vehicles: guarded `is_terrain` with `!is_vehicle && abs(alpha_tag - 1.0) < 0.015`.
+    - [x] Added hemisphere skylight ambient fill `hemi_ambient` for dynamic natural sky reflections.
+  - [x] Phase 2: Automotive Palette PBR Classification & Geometry Normal Normalization:
+    - [x] Standardized semantic alpha tags: 0.99 clearcoat paint, 0.98 matte/rubber, 0.97 metal/alloy, 0.95 active lights, 0.78 glass, 0.65 shadow.
+    - [x] Corrected quad winding orders and endcap triangle orientations in `add_cylinder_x`, `add_cylinder_y`, and `add_cylinder_z` to CCW with outward geometric normals.
+  - [x] Phase 3: Real Multimodal Vehicle Asset Overhaul:
+    - [x] Apex GT Sports Coupe: sculpted curved body panels, non-clipping wheel arches with dark cavity liners, solid rear fascia, 3D GT wing with cambered airfoil and stanchions, quad exhaust, cockpit camera anchors, and steering wheel submesh.
+    - [x] HyperSport RR-1000 Motorcycle: exposed steel trellis spaceframe, teardrop fuel tank, swingarm monoshock, disc brake rotors, and dynamic cornering roll banking around ground contact axis.
+    - [x] CityLine Transit Bus: open wheel arch cutouts over front and rear axles, illuminated LED destination sign, white fiberglass roof, and bi-fold door opening kinematics.
+    - [x] TransContinental Semi: sleeper cab with chrome stacks, 53ft trailer with embossed aluminum corrugations, dual rear locking doors, DOT C2 safety tape, and fifth-wheel yaw articulation.
+    - [x] Pacific Locomotive: sloped aerodynamic collision nose face, chamfered corner cheeks, raked cab windshield, heavy underframe sill, V-wedge snowplow pilot, 3 rooftop dynamic cooling fans, twin 1,435mm standard-gauge bogies, and AAR knuckle couplers.
+    - [x] SkyCourier B737, Skyhawk C172, and Golden Gate Ferry verified and re-exported.
+  - [x] Phase 4: Environmental Foliage & Urban Infrastructure Overhaul:
+    - [x] Completely eliminated primitive stacked box foliage.
+    - [x] Implemented `add_tapered_cylinder` for 8-sided smooth organic tapered wooden trunks.
+    - [x] Implemented `DetailedTreeType::BroadleafDeciduous` with multi-layered canopy domes (`add_foliage_dome`) and spreading branches.
+    - [x] Implemented `DetailedTreeType::EvergreenConifer` with 4 cascading drooping cone bough tiers (`add_foliage_cone`).
+    - [x] Implemented `DetailedTreeType::CoastalPalm` with curved segmented trunk, crown fruit pod, and 10 arching radiating fronds with natural droop.
+    - [x] Validated roadside cobra-head LED streetlights and municipal bus stop passenger shelters.
+  - [x] Phase 5: Master Certification, Regression Invariance & Production Release:
+    - [x] Authored `tests/tests/stage_g3_production_assets_and_visual_overhaul_certification.rs` with 8 master tests (100% pass rate).
+    - [x] Re-exported all 16 certified vehicle GLB assets to `assets/vehicles/`.
+    - [x] Verified zero regression across Stage G2 (8/8), Stage G1 (8/8), Stage G0 (13/13), Stage D (5/5), Stage B (8/8), and Stage C (6/6).
+    - [x] Rebuilt release executables `realearth-viewer.exe` and `realearth-cli.exe`.
+    - [x] Packaged standalone Windows distribution zip (`dist/windows/realearth-windows-x64.zip`, 9.17 MB, SHA-256: `60c87e8972bc14e0ae1e6148c78f1a71a31138468aa9f2c2c627433561af5ff6`).
+    - [x] Updated `dist/certification_matrix.json` with entries `G3-01` through `G3-08` marked `VERIFIED`.
+    - [x] Authored ADR-0059 (`docs/adr/0059-stage-g3-genuine-production-3d-assets-and-world-visual-overhaul.md`).
 
 
 

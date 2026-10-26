@@ -39,6 +39,7 @@ pub struct RealEarthRenderer {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     pub pipeline: wgpu::RenderPipeline,
+    pub transparent_pipeline: wgpu::RenderPipeline,
     pub uniform_buffer: wgpu::Buffer,
     pub uniform_bind_group: wgpu::BindGroup,
     pub hud_pipeline: wgpu::RenderPipeline,
@@ -204,7 +205,47 @@ impl RealEarthRenderer {
         };
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("World Render Pipeline"),
+            label: Some("World Render Pipeline (Opaque)"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &world_shader,
+                entry_point: Some("vs_main"),
+                buffers: std::slice::from_ref(&vertex_layout),
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &world_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: surface_format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: depth_format,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        let transparent_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("World Render Pipeline (Transparent/Glass/Shadow)"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &world_shader,
@@ -233,8 +274,8 @@ impl RealEarthRenderer {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: depth_format,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::Less,
+                depth_write_enabled: false, // CRITICAL: NEVER write depth for blended/transparent geometry!
+                depth_compare: wgpu::CompareFunction::LessEqual,
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }),
@@ -341,6 +382,7 @@ impl RealEarthRenderer {
             device,
             queue,
             pipeline,
+            transparent_pipeline,
             uniform_buffer,
             uniform_bind_group,
             hud_pipeline,
@@ -585,20 +627,36 @@ impl RealEarthRenderer {
             return;
         }
 
+        // Partition triangles into opaque and transparent passes to eliminate alpha occlusion bugs
+        let mut opaque_indices = Vec::with_capacity(mesh.indices.len());
+        let mut transparent_indices = Vec::new();
+
+        for tri in mesh.indices.chunks_exact(3) {
+            let i0 = tri[0] as usize;
+            let i1 = tri[1] as usize;
+            let i2 = tri[2] as usize;
+            if i0 < mesh.vertices.len() && i1 < mesh.vertices.len() && i2 < mesh.vertices.len() {
+                let a0 = mesh.vertices[i0].color[3];
+                let a1 = mesh.vertices[i1].color[3];
+                let a2 = mesh.vertices[i2].color[3];
+                // True transparent geometries: vehicle glass, contact shadows, transparent props
+                let is_transparent = a0 < 0.80 || a1 < 0.80 || a2 < 0.80;
+                if is_transparent {
+                    transparent_indices.extend_from_slice(tri);
+                } else {
+                    opaque_indices.extend_from_slice(tri);
+                }
+            } else {
+                opaque_indices.extend_from_slice(tri);
+            }
+        }
+
         let vertex_buf = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Mesh Vertex Buffer"),
                 contents: cast_slice(&mesh.vertices),
                 usage: wgpu::BufferUsages::VERTEX,
-            });
-
-        let index_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Mesh Index Buffer"),
-                contents: cast_slice(&mesh.indices),
-                usage: wgpu::BufferUsages::INDEX,
             });
 
         let mut encoder = self
@@ -645,11 +703,36 @@ impl RealEarthRenderer {
                 occlusion_query_set: None,
             });
 
-            pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &self.uniform_bind_group, &[]);
             pass.set_vertex_buffer(0, vertex_buf.slice(..));
-            pass.set_index_buffer(index_buf.slice(..), wgpu::IndexFormat::Uint32);
-            pass.draw_indexed(0..mesh.indices.len() as u32, 0, 0..1);
+
+            // Pass 1: Opaque geometry with full depth writes
+            if !opaque_indices.is_empty() {
+                let opaque_buf =
+                    self.device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Opaque Mesh Index Buffer"),
+                            contents: cast_slice(&opaque_indices),
+                            usage: wgpu::BufferUsages::INDEX,
+                        });
+                pass.set_pipeline(&self.pipeline);
+                pass.set_index_buffer(opaque_buf.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..opaque_indices.len() as u32, 0, 0..1);
+            }
+
+            // Pass 2: Transparent geometry (glass, shadows) with depth writing disabled
+            if !transparent_indices.is_empty() {
+                let trans_buf = self
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Transparent Mesh Index Buffer"),
+                        contents: cast_slice(&transparent_indices),
+                        usage: wgpu::BufferUsages::INDEX,
+                    });
+                pass.set_pipeline(&self.transparent_pipeline);
+                pass.set_index_buffer(trans_buf.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..transparent_indices.len() as u32, 0, 0..1);
+            }
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

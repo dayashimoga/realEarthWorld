@@ -71,6 +71,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let alpha_tag = in.color.a;
 
     // Material Classification Tags:
+    // 0.99 = Vehicle Body Paint (PBR Clearcoat metallic, 100% opaque)
+    // 0.98 = Vehicle Matte / Carbon Fiber / Rubber / Interior (100% opaque)
+    // 0.97 = Vehicle Chrome / Polished Alloy / Steel (high metallic specular)
+    // 0.96 = Vehicle Tinted Glass (subtle transparency, Fresnel reflection)
+    // 0.95 = Vehicle Emissive Lights (headlights, taillights, indicators)
+    // 0.78 = Vehicle Tinted Glass (alternative dedicated tag)
+    // 0.65 = Vehicle Ground Contact Shadow plane
     // 0.90 = Asphalt carriageway
     // 0.92 = Concrete curb / sidewalk
     // 0.80 = Glass curtain wall skyscraper
@@ -83,6 +90,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // 0.50 = Tree foliage / canopy
     // 0.40 = Tree trunk wood bark
     // 1.00 = Natural terrain / ground
+
+    let is_vehicle_paint = abs(alpha_tag - 0.99) < 0.005;
+    let is_vehicle_matte = abs(alpha_tag - 0.98) < 0.005;
+    let is_vehicle_metal = abs(alpha_tag - 0.97) < 0.005;
+    let is_vehicle_glass = abs(alpha_tag - 0.78) < 0.015 || abs(alpha_tag - 0.96) < 0.005;
+    let is_vehicle_light = abs(alpha_tag - 0.95) < 0.005;
+    let is_contact_shadow = abs(alpha_tag - 0.65) < 0.015;
+    let is_vehicle = is_vehicle_paint || is_vehicle_matte || is_vehicle_metal || is_vehicle_glass || is_vehicle_light || is_contact_shadow;
 
     let is_asphalt = abs(alpha_tag - 0.90) < 0.015;
     let is_sidewalk = abs(alpha_tag - 0.92) < 0.015;
@@ -295,8 +310,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         base_color = mix(deep_water, shallow_water, shore_prox);
     }
 
-    // Natural & Urban Terrain Multi-Material Blending
-    let is_terrain = abs(alpha_tag - 1.0) < 0.015;
+    // Natural & Urban Terrain Multi-Material Blending (explicitly guarded against vehicles)
+    let is_terrain = !is_vehicle && abs(alpha_tag - 1.0) < 0.015;
     if (is_terrain) {
         let slope = 1.0 - normal.y;
         let p_world = in.world_pos.xz * 0.12;
@@ -318,7 +333,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // Street Furniture & Signal Luminaire Head night emission (alpha 0.70)
     var furniture_emissive = vec3<f32>(0.0);
-    if (abs(alpha_tag - 0.70) < 0.015) {
+    if (!is_vehicle && abs(alpha_tag - 0.70) < 0.015) {
         // Luminaire warm light head or yellow traffic signal
         if (in.color.r > 0.90 && in.color.g > 0.70 && in.color.b < 0.30) {
             furniture_emissive = in.color.rgb * (1.0 - day_factor * 0.4) * 1.6;
@@ -345,7 +360,42 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let spec_mult = select(uniforms.material_params.x, uniforms.material_params.x * 2.5, is_water || is_glass);
     let specular = uniforms.sun_color_intensity.rgb * spec_base * fresnel * spec_mult * day_factor;
 
-    let lit_color = base_color * (ambient + diffuse) + specular + furniture_emissive;
+    // Hemisphere skylight ambient for realistic vehicle and architectural fill
+    let hemi_ambient = mix(ambient * 0.80, ambient * 1.30, normal.y * 0.5 + 0.5);
+
+    // Dedicated Automotive PBR Shading
+    var vehicle_specular = vec3<f32>(0.0);
+    var vehicle_emissive = vec3<f32>(0.0);
+
+    if (is_vehicle_paint) {
+        // Automotive Clearcoat PBR: Sharp specular highlight + subtle sky reflections
+        let shininess_cc = 140.0;
+        let spec_cc = pow(max(dot(normal, half_dir), 0.0), shininess_cc);
+        let f0_cc = 0.06;
+        let fresnel_cc = f0_cc + (1.0 - f0_cc) * pow(1.0 - n_dot_v, 5.0);
+        let cc_color = uniforms.sun_color_intensity.rgb * spec_cc * fresnel_cc * 1.8 * day_factor;
+        let sky_refl = hemi_ambient * pow(1.0 - n_dot_v, 3.0) * 0.45;
+        vehicle_specular = cc_color + sky_refl;
+    } else if (is_vehicle_metal) {
+        // Metallic Chrome / Alloy PBR: High metallic reflectance F0 = 0.65
+        let shininess_m = 160.0;
+        let spec_m = pow(max(dot(normal, half_dir), 0.0), shininess_m);
+        let f0_m = 0.65;
+        let fresnel_m = f0_m + (1.0 - f0_m) * pow(1.0 - n_dot_v, 5.0);
+        vehicle_specular = uniforms.sun_color_intensity.rgb * spec_m * fresnel_m * 2.5 * day_factor;
+    } else if (is_vehicle_light) {
+        // Active automotive light emitter: Xenon headlights, LED brake lights, turn signals
+        vehicle_emissive = base_color * 2.8;
+    } else if (is_vehicle_glass) {
+        // Tinted automotive glass specular reflection
+        let spec_g = pow(max(dot(normal, half_dir), 0.0), 128.0);
+        let f0_g = 0.05;
+        let fresnel_g = f0_g + (1.0 - f0_g) * pow(1.0 - n_dot_v, 4.0);
+        vehicle_specular = uniforms.sun_color_intensity.rgb * spec_g * fresnel_g * 2.0 * day_factor + hemi_ambient * fresnel_g * 0.5;
+    }
+
+    let ambient_term = select(ambient, hemi_ambient, is_vehicle);
+    let lit_color = base_color * (ambient_term + diffuse) + specular + furniture_emissive + vehicle_specular + vehicle_emissive;
 
     // =========================================================================
     // 4. ATMOSPHERE, SKYLIGHT, DISTANCE FOG & VOLUMETRIC CLOUDS
@@ -400,7 +450,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let e_param = 0.14;
     let mapped_rgb = clamp((fogged_color * (a_param * fogged_color + b_param)) / (fogged_color * (c_param * fogged_color + d_param) + e_param), vec3<f32>(0.0), vec3<f32>(1.0));
 
-    return vec4<f32>(mapped_rgb, in.color.a);
+    // True PBR Alpha Output: Opaque geometry outputs 1.0, preserving solid car bodies & buildings
+    var out_alpha = 1.0;
+    if (is_vehicle_glass) {
+        out_alpha = mix(0.72, 0.90, pow(1.0 - n_dot_v, 3.0));
+    } else if (is_contact_shadow) {
+        out_alpha = 0.55;
+    } else if (is_water) {
+        out_alpha = 0.90;
+    }
+
+    return vec4<f32>(mapped_rgb, out_alpha);
 }
 "#;
 
