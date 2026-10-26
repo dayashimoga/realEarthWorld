@@ -1,9 +1,9 @@
 {
-  "stage": "STAGE D (GIS STREAMING & CITY TRANSITIONS CERTIFIED)",
-  "version": "0.4.0",
-  "timestamp": "2026-10-26T02:00:00Z",
+  "stage": "STAGE E (MULTIMODAL NAVIGATION, UX & GAMEPLAY CERTIFIED)",
+  "version": "0.5.0",
+  "timestamp": "2026-10-26T03:30:00Z",
   "baseline_commit": "d85d8677e5d87171d3d63bca2d897f1f41489ecf",
-  "remediation_branch": "remediation/stage_d_gis_streaming_and_city_transitions",
+  "remediation_branch": "remediation/stage_e_multimodal_navigation_ux_gameplay",
   "defects": [
     {
       "id": "P0-1",
@@ -156,6 +156,63 @@
       "reproducible_test": "tests/tests/stage_a_p0_defect_reproduction.rs::test_reproduce_p0_8_unsuccessful_us_city_transitions",
       "certified_test": "tests/tests/stage_d_gis_streaming_and_city_transitions.rs::test_d4_transactional_us_city_warping_and_atomic_rollback",
       "remediation_strategy": "Implemented RegionPackageReadiness, on-demand RegionInstaller with manifest/checksum verification and quota management, surveyed Minneapolis-Saint Paul dataset (sample_minneapolis.rs), and transactional staged warping pipeline with atomic rollback on failure."
+    },
+    {
+      "id": "P1-HUD-1",
+      "name": "Top-Right HUD Overlap Between Multiplayer Chip and Active Mission Card",
+      "severity": "P1",
+      "status": "PERMANENTLY_RESOLVED_STAGE_E",
+      "symptom": "Multiplayer status chip and active mission card rendered at colliding vertical bounds in the top-right screen quadrant.",
+      "flow_tracing": {
+        "event_input": "Multiplayer connection + Mission contract accepted",
+        "authoritative_state": "multiplayer_connected && active_job.is_some()",
+        "simulation": "N/A",
+        "geographic_collision": "N/A",
+        "rendering": "apps/world-viewer/src/interactive.rs:5093 (multiplayer_chip y = 54.0), interactive.rs:5115 (mission_hud_card y = 94.0)",
+        "hud": "Strictly disjoint vertical bounds: buttons y=16..46, multiplayer y=54..86, mission card y=94..194"
+      },
+      "verified_root_cause": "Uncoordinated absolute Y coordinate offsets in interactive.rs placed the multiplayer status badge directly over the active job HUD card.",
+      "reproducible_test": "N/A",
+      "certified_test": "tests/tests/stage_e_multimodal_gameplay_and_ux.rs::test_e7_mouse_and_ui_interaction_at_multiple_dpi_scales",
+      "remediation_strategy": "Enforced strictly disjoint Y bounds: top buttons at y=16..46, multiplayer chip at y=54..86, and mission card at y=94..194 across all DPI scales."
+    },
+    {
+      "id": "P1-HUD-2",
+      "name": "Aviation Primary Flight Display Minimap Crowding",
+      "severity": "P1",
+      "status": "PERMANENTLY_RESOLVED_STAGE_E",
+      "symptom": "Aviation PFD rendered in the bottom-right corner, obscuring the tactical GPS minimap and violating cockpit ergonomics.",
+      "flow_tracing": {
+        "event_input": "ActiveTransportMode::Aviation",
+        "authoritative_state": "aircraft.is_active",
+        "simulation": "N/A",
+        "geographic_collision": "N/A",
+        "rendering": "apps/world-viewer/src/interactive.rs:5185 (PFD relocated to x = 16.0, matching vehicle instrument clusters)",
+        "hud": "Tactical GPS minimap at width - 85.0, height - 85.0 rendered completely uncrowded"
+      },
+      "verified_root_cause": "Aviation PFD layout placed HUD instrumentation at width - 390.0, height - 280.0, occupying the same quadrant as the tactical GPS minimap.",
+      "reproducible_test": "N/A",
+      "certified_test": "tests/tests/stage_e_multimodal_gameplay_and_ux.rs::test_e7_mouse_and_ui_interaction_at_multiple_dpi_scales",
+      "remediation_strategy": "Relocated aviation PFD to bottom-left (x = 16.0), standardizing cockpit instrument placement with automobiles, trains, and marine vessels."
+    },
+    {
+      "id": "P1-GAME-1",
+      "name": "Synthetic Placeholder Job Destinations Across Metropolitan Regions",
+      "severity": "P1",
+      "status": "PERMANENTLY_RESOLVED_STAGE_E",
+      "symptom": "Job contracts outside San Francisco generated unverified placeholder coordinates that fell outside city bounds or lacked authentic corridor distances.",
+      "flow_tracing": {
+        "event_input": "JobCatalogGenerator::jobs_for_region(city_id)",
+        "authoritative_state": "CityCatalog entry bounds",
+        "simulation": "N/A",
+        "geographic_collision": "engine/gameplay/src/destinations.rs:925-975",
+        "rendering": "In-game Job Browser",
+        "hud": "Contract distance displayed in km"
+      },
+      "verified_root_cause": "Catalog generator used static regional aliases and fixed degree offsets without referencing surveyed geodetic bounding boxes.",
+      "reproducible_test": "N/A",
+      "certified_test": "tests/tests/stage_e_multimodal_gameplay_and_ux.rs::test_e5_installed_us_city_transition_and_multimodal_spawning",
+      "remediation_strategy": "Implemented dynamic contract generation for all 38 US cities in destinations.rs using surveyed bounding boxes and proportional coordinate calculation, guaranteeing 100% boundary containment and authentic distances > 1000m."
     }
   ]
 }

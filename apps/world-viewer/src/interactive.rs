@@ -6632,7 +6632,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         }
                                         ActiveTransportMode::Aviation => {
                                             hud.add_aviation_pfd(
-                                                width_f - 390.0,
+                                                16.0,
                                                 height_f - 240.0,
                                                 self.aircraft.indicated_airspeed_knots,
                                                 self.aircraft.altitude_msl_meters,
@@ -6716,7 +6716,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     };
                                     hud.add_mission_hud_card(
                                         width_f - 420.0,
-                                        16.0,
+                                        94.0,
                                         404.0,
                                         100.0,
                                         job.career.display_name(),
@@ -6889,8 +6889,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     } else {
                                         (false, false, 0.0, 0)
                                     };
-                                hud.add_multiplayer_chip(
+                                hud.add_multiplayer_chip_at(
                                     width_f,
+                                    54.0,
                                     is_connected,
                                     is_reconnecting,
                                     ping_ms,
@@ -6903,7 +6904,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         realearth_gameplay::JobState::AtPickup { .. } => {
                                             hud.add_contextual_action_prompt(
                                                 width_f * 0.5,
-                                                height_f - 60.0,
+                                                height_f - 72.0,
                                                 "SPACE",
                                                 "HOLD TO BOARD PASSENGERS",
                                             );
@@ -6911,7 +6912,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         realearth_gameplay::JobState::AtDropoff { .. } => {
                                             hud.add_contextual_action_prompt(
                                                 width_f * 0.5,
-                                                height_f - 60.0,
+                                                height_f - 72.0,
                                                 "SPACE",
                                                 "HOLD TO COMPLETE CONTRACT",
                                             );
@@ -6919,7 +6920,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         _ => {
                                             hud.add_contextual_action_prompt(
                                                 width_f * 0.5,
-                                                height_f - 60.0,
+                                                height_f - 72.0,
                                                 "TAB / J",
                                                 "DISPATCH CONTRACTS",
                                             );
@@ -6928,29 +6929,29 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 } else {
                                     hud.add_contextual_action_prompt(
                                         width_f * 0.5,
-                                        height_f - 60.0,
+                                        height_f - 72.0,
                                         "J",
                                         "BROWSE DISPATCH CONTRACTS",
                                     );
                                 }
 
-                                // 8. Clean Keyboard Hint Footer
-                                let hint_str = "[W/S/A/D] Drive  |  [P] Park  |  [Esc] Pause  |  [N] Multiplayer  |  [J] Jobs  |  [G] Garage  |  [U] World Cities  |  [F3] Debug";
-                                let hint_w = hint_str.len() as f32 * 6.0 * 1.0;
-                                let hint_x = (width_f - hint_w) * 0.5;
-                                hud.add_rect(
-                                    hint_x - 10.0,
-                                    height_f - 24.0,
-                                    hint_w + 20.0,
-                                    20.0,
-                                    [0.05, 0.07, 0.10, 0.75],
+                                // 8. Interactive Glassmorphic Control Dock & Action Buttons
+                                let in_game_layout = InGameHudLayout::compute(
+                                    width_f,
+                                    height_f,
+                                    self.active_job.is_some(),
                                 );
-                                hud.add_text(
-                                    hint_x,
-                                    height_f - 18.0,
-                                    1.0,
-                                    hint_str,
-                                    [0.7, 0.8, 0.9, 0.8],
+                                let hit = self
+                                    .cursor_pos
+                                    .and_then(|(px, py)| in_game_layout.hit_test(px, py));
+                                let hovered_hit = hit;
+                                let pressed_hit = if self.mouse_left_down { hit } else { None };
+                                hud.add_ingame_control_dock(
+                                    &in_game_layout,
+                                    self.park_engaged,
+                                    self.show_debug_overlay,
+                                    hovered_hit,
+                                    pressed_hit,
                                 );
                             }
                         }

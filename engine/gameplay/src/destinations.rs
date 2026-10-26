@@ -915,66 +915,236 @@ impl JobCatalogGenerator {
         if !filtered.is_empty() {
             filtered
         } else if let Some(city) = realearth_shared::us_catalog::find_city_by_id(region_id) {
-            vec![
-                Job::new(
-                    format!("roam-{}-01", city.id),
-                    CareerType::FreeRoam,
-                    format!("{} Metropolitan Tour", city.name),
-                    format!(
-                        "Freely cruise and explore {} centered around {}.",
-                        city.name, city.anchor_landmark_name
-                    ),
-                    JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 30.0),
-                    JobLocation::new(
-                        format!("{} Civic Plaza", city.name),
-                        Wgs84Coord::new(
-                            city.anchor.lat + 0.008,
-                            city.anchor.lon + 0.008,
-                            city.anchor.alt,
-                        ),
-                        city.id,
-                        30.0,
-                    ),
-                    2500.0,
-                    None,
-                    150.0,
-                    100,
+            let primary_interstate = city
+                .major_interstates
+                .first()
+                .copied()
+                .unwrap_or("Metropolitan Arterial");
+
+            // Calculate varied coordinates strictly inside surveyed bounds
+            let d_lat_pos = (city.bounds.max_lat - city.anchor.lat).abs().max(0.01);
+            let d_lat_neg = (city.anchor.lat - city.bounds.min_lat).abs().max(0.01);
+            let d_lon_pos = (city.bounds.max_lon - city.anchor.lon).abs().max(0.01);
+            let d_lon_neg = (city.anchor.lon - city.bounds.min_lon).abs().max(0.01);
+
+            let civic_plaza_coord = Wgs84Coord::new(
+                city.anchor.lat + d_lat_pos * 0.55,
+                city.anchor.lon + d_lon_pos * 0.55,
+                city.anchor.alt,
+            );
+            let commercial_center_coord = Wgs84Coord::new(
+                city.anchor.lat - d_lat_neg * 0.75,
+                city.anchor.lon - d_lon_neg * 0.75,
+                city.anchor.alt,
+            );
+            let bus_depot_coord = Wgs84Coord::new(
+                city.anchor.lat - d_lat_neg * 0.50,
+                city.anchor.lon + d_lon_pos * 0.40,
+                city.anchor.alt,
+            );
+            let transit_center_coord = Wgs84Coord::new(
+                city.anchor.lat + d_lat_pos * 0.50,
+                city.anchor.lon - d_lon_neg * 0.40,
+                city.anchor.alt,
+            );
+            let logistics_park_coord = Wgs84Coord::new(
+                city.anchor.lat + d_lat_pos * 0.65,
+                city.anchor.lon + d_lon_pos * 0.65,
+                city.anchor.alt,
+            );
+            let freight_terminal_coord = Wgs84Coord::new(
+                city.anchor.lat - d_lat_neg * 0.70,
+                city.anchor.lon - d_lon_neg * 0.70,
+                city.anchor.alt,
+            );
+            let industrial_park_coord = Wgs84Coord::new(
+                city.anchor.lat + d_lat_pos * 0.60,
+                city.anchor.lon - d_lon_neg * 0.60,
+                city.anchor.alt,
+            );
+            let lat_span = (city.bounds.max_lat - city.bounds.min_lat).abs().max(0.01);
+            let lon_span = (city.bounds.max_lon - city.bounds.min_lon).abs().max(0.01);
+
+            let airport_waypoint_coord = Wgs84Coord::new(
+                city.bounds.min_lat + lat_span * 0.85,
+                city.bounds.min_lon + lon_span * 0.20,
+                (city.elevation_min_m + 350.0) as f64,
+            );
+            let airport_cargo_coord = Wgs84Coord::new(
+                city.bounds.min_lat + lat_span * 0.25,
+                city.bounds.min_lon + lon_span * 0.45,
+                city.elevation_min_m as f64,
+            );
+
+            let mut jobs = Vec::new();
+
+            // 1. Free Roam Exploration
+            let p1 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 30.0);
+            let d1 = JobLocation::new(format!("{} Civic Plaza", city.name), civic_plaza_coord, city.id, 30.0);
+            let dist1 = p1.distance_to(d1.coord).max(1200.0);
+            jobs.push(Job::new(
+                format!("roam-{}-01", city.id),
+                CareerType::FreeRoam,
+                format!("{} Metropolitan Scenic Tour", city.name),
+                format!("Freely cruise and explore {} centered around {}.", city.name, city.anchor_landmark_name),
+                p1,
+                d1,
+                dist1,
+                None,
+                160.0,
+                110,
+                ReputationTier::Novice,
+                CargoOrPassenger::Exploration,
+                JobDifficulty::Relaxed,
+            ));
+
+            // 2. Urban Taxi Commute
+            let p2 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0);
+            let d2 = JobLocation::new(format!("{} Commercial Tech Center", city.name), commercial_center_coord, city.id, 25.0);
+            let dist2 = p2.distance_to(d2.coord).max(1100.0);
+            jobs.push(Job::new(
+                format!("taxi-{}-01", city.id),
+                CareerType::TaxiPassenger,
+                format!("{} Executive Chauffeur", city.name),
+                format!("Chauffeur corporate delegates from {} to the Commercial Tech Center.", city.anchor_landmark_name),
+                p2,
+                d2,
+                dist2,
+                Some(320.0),
+                190.0,
+                135,
+                ReputationTier::Novice,
+                CargoOrPassenger::Passenger {
+                    name: "Civic Corporate Executive".to_string(),
+                    party_size: 1,
+                    destination_note: format!("Downtown {}", city.name),
+                },
+                JobDifficulty::Standard,
+            ));
+
+            // 3. Municipal Transit Bus Service
+            let p3 = JobLocation::new(format!("{} Central Bus Depot", city.name), bus_depot_coord, city.id, 30.0);
+            let d3 = JobLocation::new(format!("{} Intermodal Transit Center", city.name), transit_center_coord, city.id, 30.0);
+            let dist3 = p3.distance_to(d3.coord).max(1800.0);
+            jobs.push(Job::new(
+                format!("transit-{}-01", city.id),
+                CareerType::TransitBus,
+                format!("{} Municipal Transit Line 1", city.name),
+                format!("Operate a scheduled transit bus service along arterial transit corridors in {} boarding 40 commuters.", city.name),
+                p3,
+                d3,
+                dist3,
+                Some(480.0),
+                360.0,
+                240,
+                ReputationTier::Novice,
+                CargoOrPassenger::BusTransit {
+                    route_line: format!("{} Metro Line 1", city.name),
+                    passenger_count: 40,
+                    next_stop_name: format!("{} Intermodal Transit Center", city.name),
+                },
+                JobDifficulty::Standard,
+            ));
+
+            // 4. Express Package Courier
+            let p4 = JobLocation::new(format!("{} Logistics Park", city.name), logistics_park_coord, city.id, 30.0);
+            let d4 = JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0);
+            let dist4 = p4.distance_to(d4.coord).max(1500.0);
+            jobs.push(Job::new(
+                format!("del-{}-01", city.id),
+                CareerType::PackageDelivery,
+                format!("{} Priority Courier ({})", city.name, primary_interstate),
+                format!("Deliver high-priority parcels via the {} corridor to {}.", primary_interstate, city.anchor_landmark_name),
+                p4,
+                d4,
+                dist4,
+                Some(300.0),
+                210.0,
+                150,
+                ReputationTier::Novice,
+                CargoOrPassenger::Package {
+                    item_name: "Priority Commercial Electronics".to_string(),
+                    weight_kg: 18.5,
+                    fragile: true,
+                },
+                JobDifficulty::Standard,
+            ));
+
+            // 5. Heavy Freight Logistics
+            let p5 = JobLocation::new(format!("{} Freight Terminal", city.name), freight_terminal_coord, city.id, 40.0);
+            let d5 = JobLocation::new(format!("{} Central Industrial Park", city.name), industrial_park_coord, city.id, 40.0);
+            let dist5 = p5.distance_to(d5.coord).max(2500.0);
+            jobs.push(Job::new(
+                format!("freight-{}-01", city.id),
+                CareerType::HeavyFreight,
+                format!("{} Heavy Logistics Haul ({})", city.name, primary_interstate),
+                format!("Haul 26 metric tons of industrial structural components across {} into the Central Industrial Park.", primary_interstate),
+                p5,
+                d5,
+                dist5,
+                Some(600.0),
+                580.0,
+                320,
+                ReputationTier::Novice,
+                CargoOrPassenger::Freight {
+                    cargo_type: "Industrial Structural Components".to_string(),
+                    tonnage: 26.0,
+                    hazardous: false,
+                },
+                JobDifficulty::Challenging,
+            ));
+
+            // 6. Regional Aviation Flight Approach
+            let p6 = JobLocation::new(format!("{} Flight Approach Waypoint", city.primary_airport_iata), airport_waypoint_coord, city.id, 150.0);
+            let d6 = JobLocation::new(format!("{} Air Cargo Terminal", city.primary_airport_iata), airport_cargo_coord, city.id, 80.0);
+            let dist6 = p6.distance_to(d6.coord).max(3500.0);
+            jobs.push(Job::new(
+                format!("air-{}-01", city.id),
+                CareerType::AviationPilot,
+                format!("{} Airfield Express Cargo ({})", city.name, city.primary_airport_iata),
+                format!("Fly regional courier air cargo into {} International Airport ({}).", city.name, city.primary_airport_iata),
+                p6,
+                d6,
+                dist6,
+                Some(450.0),
+                850.0,
+                480,
+                ReputationTier::Novice,
+                CargoOrPassenger::AviationFlight {
+                    flight_number: format!("{} Air Express 101", city.primary_airport_iata),
+                    cruising_altitude_ft: 3500,
+                    passenger_or_cargo: "High-Priority Air Express Cargo".to_string(),
+                },
+                JobDifficulty::Extreme,
+            ));
+
+            // 7. Optional Maritime Harbor Ferry (if city has maritime port)
+            if city.has_maritime_port {
+                let p7 = JobLocation::new(format!("{} Passenger Ferry Slip", city.name), Wgs84Coord::new(city.anchor.lat - d_lat_neg * 0.40, city.anchor.lon + d_lon_pos * 0.35, 1.0), city.id, 35.0);
+                let d7 = JobLocation::new(format!("{} Harbor Terminal", city.name), Wgs84Coord::new(city.anchor.lat + d_lat_pos * 0.40, city.anchor.lon + d_lon_pos * 0.65, 1.0), city.id, 35.0);
+                let dist7 = p7.distance_to(d7.coord).max(1800.0);
+                jobs.push(Job::new(
+                    format!("ferry-{}-01", city.id),
+                    CareerType::FerryCaptain,
+                    format!("{} Bayfront Harbor Ferry Crossing", city.name),
+                    format!("Navigate a scheduled passenger catamaran across {} coastal harbor waters.", city.name),
+                    p7,
+                    d7,
+                    dist7,
+                    Some(420.0),
+                    460.0,
+                    280,
                     ReputationTier::Novice,
-                    CargoOrPassenger::Exploration,
-                    JobDifficulty::Relaxed,
-                ),
-                Job::new(
-                    format!("taxi-{}-01", city.id),
-                    CareerType::TaxiPassenger,
-                    format!("{} Executive Commute", city.name),
-                    format!(
-                        "Chauffeur passengers to and from {}.",
-                        city.anchor_landmark_name
-                    ),
-                    JobLocation::new(city.anchor_landmark_name, city.anchor, city.id, 25.0),
-                    JobLocation::new(
-                        format!("{} Commercial District", city.name),
-                        Wgs84Coord::new(
-                            city.anchor.lat - 0.007,
-                            city.anchor.lon - 0.007,
-                            city.anchor.alt,
-                        ),
-                        city.id,
-                        25.0,
-                    ),
-                    1800.0,
-                    Some(300.0),
-                    160.0,
-                    120,
-                    ReputationTier::Novice,
-                    CargoOrPassenger::Passenger {
-                        name: "Civic Planner".to_string(),
-                        party_size: 1,
-                        destination_note: format!("Downtown {}", city.name),
+                    CargoOrPassenger::MarineFerry {
+                        crossing_name: format!("{} Harbor Transit", city.name),
+                        vehicle_deck_count: 0,
+                        passenger_count: 95,
                     },
                     JobDifficulty::Standard,
-                ),
-            ]
+                ));
+            }
+
+            jobs
         } else {
             Vec::new()
         }

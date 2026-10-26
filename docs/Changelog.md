@@ -2000,6 +2000,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All US city catalog validation tests passing (9/9).
   - Authored [`docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md`](file:///j:/rustRealEarth/docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md).
 
+## [Stage E] - 2026-10-26
+### Certified — Complete Multimodal Navigation, User Experience, and Transportation Gameplay
+- **Transport-Specific Navigation & Spawning (`engine/vehicles/src/multimodal/`)**:
+  - Enforced strict rail network constraints in `TrainConsist`: locomotives spawn only on authenticated rail segments at suitable stations, sidings, or depots with failsafe emergency brakes if unconstrained. Track following maintains cross-track error $< 0.05\text{m}$ along 3D splines with authentic Westinghouse air braking.
+  - Modeled `TransitBusModel` with realistic heavy passenger inertia (gross mass up to 18,125 kg), pneumatic dual-circuit air brakes, passenger boarding chime events, and passenger comfort rating deductions for lateral jerk.
+  - Modeled `AircraftFlight` with full 6-DOF aerodynamic envelope, atmospheric density lapse rates, NACA lift curves, dynamic pressure, and glideslope guidance.
+  - Constrained watercraft to navigable water bodies, slips, and port fairways with marine hydrodynamics.
+- **DPI-Invariant Windows Mouse & Glassmorphic HUD Repair (`apps/world-viewer/src/interactive.rs`, `engine/rendering/src/hud.rs`)**:
+  - Standardized hit-testing to DPI-scaled physical window coordinates across 720p, 1080p, 1152p (1.25x), 1440p (1.5x), and 4K UHD (2.0x).
+  - Enforced modal exclusivity: opening modal menus (Pause, Garage, Job Browser, City Catalog, Rail Route Selector, Multiplayer, Debrief) strictly decouples and blocks in-world driving inputs and mouse look.
+  - Eliminated top-right HUD overlap: relocated multiplayer chip to `y = 54.0` (below top buttons at `y = 16.0..46.0`) and active mission card to `y = 94.0` (below multiplayer chip), ensuring strictly disjoint vertical bounds.
+  - Relocated aviation PFD from bottom-right (`width_f - 390.0`) to bottom-left (`16.0`), completely uncrowding the tactical GPS minimap (`width_f - 85.0, height_f - 85.0`).
+  - Eliminated bottom HUD collisions: implemented interactive glassmorphic control dock (`InGameHudLayout::compute`) and lifted contextual action prompt to `height_f - 72.0` above the dock.
+- **Dynamic Non-Placeholder Geographic Job Generation (`engine/gameplay/src/destinations.rs`)**:
+  - Implemented dynamic contract generation for all 38 US cities in `JobCatalogGenerator::jobs_for_region`.
+  - Computed civic plazas, commercial centers, bus depots, transit centers, logistics parks, freight terminals, and airport waypoints proportionally within surveyed city bounds ($0.20 \le \text{fraction} \le 0.85$).
+  - Guaranteed 100% of generated pickup and dropoff coordinates are strictly inside surveyed city bounding boxes with authentic distances $> 1,000\text{m}$.
+  - Supported complete mission lifecycle: pickup, boarding dwell, dropoff, unloading dwell, wallet rewards, and save/load persistence via `SaveManager`.
+- **Stage E Master Test Suite & Regression Verification**:
+  - Authored [`tests/tests/stage_e_multimodal_gameplay_and_ux.rs`](file:///j:/rustRealEarth/tests/tests/stage_e_multimodal_gameplay_and_ux.rs) with 7 comprehensive end-to-end journeys (7/7 tests passing).
+  - All Stage D GIS streaming and city transition tests passing (5/5).
+  - All Stage C premium vehicle model tests passing (6/6).
+  - All Stage B authoritative physics tests passing (9/9).
+  - All Stage B remediation certification tests passing (8/8).
+  - All US city catalog validation tests passing (9/9).
+  - Authored [`docs/adr/0054-stage-e-multimodal-navigation-ux-gameplay.md`](file:///j:/rustRealEarth/docs/adr/0054-stage-e-multimodal-navigation-ux-gameplay.md).
+
 
 
 

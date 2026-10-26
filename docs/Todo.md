@@ -1338,6 +1338,36 @@
   - [x] Verified zero regressions on Stage B physics (9/9), Stage B remediation (8/8), Stage C models (6/6), and US city catalog validation (9/9).
   - [x] Authored ADR-0053 (`docs/adr/0053-stage-d-real-gis-streaming-and-us-city-transitions.md`).
 
+## STAGE E — COMPLETE MULTIMODAL NAVIGATION, USER EXPERIENCE AND GAMEPLAY (Certified)
+- [x] Phase E1 — Transport-Specific Navigation & Spawning:
+  - [x] Road Vehicles (Cars, Motorcycles, Buses, Heavy Trucks): Lane/parking/depot spawns, collision clearances, legal road routes, and off-road physics.
+  - [x] Locomotives & Consists: Spawn strictly on authenticated rail segments at suitable stations, sidings, or depots. Track segment IDs, path distance, switches, and 3D rail geometry. Westinghouse braking, signals, track speed, and multi-car consist alignment. Rejects straight-line train motion over open terrain or through buildings.
+  - [x] Watercraft: Spawn exclusively on navigable water polygons, docks, slips, and port fairways with marine buoyancy, hydrodynamic resistance, and passenger deck boarding.
+  - [x] Aircraft: Spawn on surveyed runway thresholds and designated apron stands. Aerodynamic climb/cruise/approach envelopes, 6-DOF physics, and glideslope guidance.
+- [x] Phase E2 — UI/UX & Mouse Repair:
+  - [x] DPI-Invariant Hit-Testing: Standardized UI click detection to physical window coordinates scaled by DPI factor, ensuring pixel-accurate hit-testing across 720p, 1080p, 1152p (1.25x), 1440p (1.5x), and 4K UHD (2.0x).
+  - [x] Modal Exclusivity & Zero Control Leakage: Ensured opening modal dialogs completely decouples and blocks world vehicle driving inputs and mouse look.
+  - [x] Elimination of Top-Right HUD Overlaps: Relocated multiplayer status chip to `y = 54.0` (below top control buttons at `y = 16.0..46.0`) and active mission HUD card to `y = 94.0` (below multiplayer chip), enforcing strictly disjoint vertical coordinate bounds.
+  - [x] Elimination of Aviation PFD Minimap Overlap: Moved aviation Primary Flight Display (PFD) from bottom-right (`width_f - 390.0`) to bottom-left (`16.0`), uncrowding the tactical GPS minimap (`width_f - 85.0, height_f - 85.0`) and matching all other vehicle instrument clusters.
+  - [x] Elimination of Bottom HUD Collisions: Replaced static overlapping footer labels with an interactive glassmorphic control dock (`InGameHudLayout::compute`), and lifted contextual vehicle action prompts to `height_f - 72.0` cleanly above the dock.
+- [x] Phase E3 — Engaging Transportation Gameplay:
+  - [x] Multimodal Career System: Seven diverse career tracks (`TaxiPassenger`, `TransitBus`, `PackageDelivery`, `HeavyFreight`, `RailEngineer`, `FerryCaptain`, `AviationPilot`) and `FreeRoam`.
+  - [x] Dynamic City Job Generation: Implemented dynamic contract generation across all 38 US metropolitan areas in `JobCatalogGenerator::jobs_for_region`, computing authentic pickup and dropoff coordinates strictly inside surveyed city bounds with route distances exceeding 1,000 meters.
+  - [x] Service Boarding & Dwell Sequences: Authentic passenger boarding and cargo loading state machines with dwell timers, chime/horn audio events, and passenger comfort ratings.
+  - [x] Save & Resume Persistence: `SaveManager` roundtrip persistence supporting profile progress, wallet balance, reputation tiers, and geographic coordinates.
+- [x] Phase E4 — Complete Playable Journeys (7 Master Certified Journeys):
+  - [x] Journey 1 (`test_e1_san_francisco_sports_car_drive_and_stop`): Full throttle acceleration past 25 km/h, service braking halt (< 0.2 km/h), and rigid parking pawl lock.
+  - [x] Journey 2 (`test_e2_detailed_transit_bus_passenger_service_route`): Passenger boarding dwell chime (35 -> 42 passengers), cruising speed > 15 km/h with passenger comfort rating >= 4.5, and pneumatic air brake platform stop.
+  - [x] Journey 3 (`test_e3_locomotive_consist_rail_track_following_and_station_stop`): Caltrain 351-ton commuter consist acceleration past 15 km/h, track centerline adherence (< 0.05m error), and Westinghouse air brake station halt (< 0.2 km/h).
+  - [x] Journey 4 (`test_e4_aircraft_airport_departure_and_streamed_flight`): B737 takeoff climb with 5-degree pitch trim and flaps, altitude > 350m MSL, terrain clearance > 300m AGL, and unstalled flight envelope.
+  - [x] Journey 5 (`test_e5_installed_us_city_transition_and_multimodal_spawning`): Minneapolis–Saint Paul multimodal contract generation across 6+ careers with 100% of coordinates inside surveyed bounds and distances > 1000m.
+  - [x] Journey 6 (`test_e6_mission_completion_wallet_rewards_save_and_resume`): Complete mission pickup/dwell/dropoff lifecycle, wallet reward payment, and quicksave/quickload roundtrip persistence.
+  - [x] Journey 7 (`test_e7_mouse_and_ui_interaction_at_multiple_dpi_scales`): Deterministic mouse click hit-testing across 720p, 1080p, 1152p (1.25x), 1440p (1.5x), and 4K UHD (2.0x) with zero layout bounding-box collisions.
+- [x] Governance & Architecture:
+  - [x] Authored ADR-0054 (`docs/adr/0054-stage-e-multimodal-navigation-ux-gameplay.md`).
+  - [x] Updated `docs/Todo.md`, `docs/Changelog.md`, and `docs/RootCauseMatrix.json`.
+  - [x] Zero regressions across all prior Stage B, Stage C, and Stage D test suites.
+
 
 
 
