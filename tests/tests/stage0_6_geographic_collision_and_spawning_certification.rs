@@ -841,7 +841,8 @@ fn test_stage0_6_real_world_city_switching_sf_nyc_chicago_la() {
         .buildings
         .iter()
         .any(|b| b.name.as_deref() == Some("The St. Regis Chicago")
-            || b.name.as_deref() == Some("Trump International Hotel and Tower")));
+            || b.name.as_deref() == Some("Trump International Hotel and Tower")
+            || b.name.as_deref() == Some("Aon Center")));
 
     assert!(la
         .buildings

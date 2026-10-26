@@ -16,11 +16,11 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
         name: Some("Vidhana Soudha".to_string()),
         building_type: BuildingType::Civic,
         outer_ring: vec![
-            Wgs84Coord::new(12.9791, 77.5901, 0.0),
-            Wgs84Coord::new(12.9803, 77.5901, 0.0),
-            Wgs84Coord::new(12.9803, 77.5913, 0.0),
-            Wgs84Coord::new(12.9791, 77.5913, 0.0),
-            Wgs84Coord::new(12.9791, 77.5901, 0.0),
+            Wgs84Coord::new(12.9793, 77.5885, 0.0),
+            Wgs84Coord::new(12.9805, 77.5885, 0.0),
+            Wgs84Coord::new(12.9805, 77.5898, 0.0),
+            Wgs84Coord::new(12.9793, 77.5898, 0.0),
+            Wgs84Coord::new(12.9793, 77.5885, 0.0),
         ],
         inner_rings: Vec::new(),
         explicit_height: Some(46.0), // Real height ~46 meters with central dome
@@ -61,17 +61,17 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
         levels: Some(5),
     });
 
-    // 4. Commercial Towers along MG Road
+    // 4. Commercial Towers along MG Road (Public Utility Building positioned north of MG Road)
     dataset.buildings.push(OsmBuildingFeature {
         id: 100_004,
         name: Some("Utility Building (MG Road)".to_string()),
         building_type: BuildingType::Commercial,
         outer_ring: vec![
-            Wgs84Coord::new(12.9745, 77.6070, 0.0),
-            Wgs84Coord::new(12.9752, 77.6070, 0.0),
-            Wgs84Coord::new(12.9752, 77.6078, 0.0),
-            Wgs84Coord::new(12.9745, 77.6078, 0.0),
-            Wgs84Coord::new(12.9745, 77.6070, 0.0),
+            Wgs84Coord::new(12.9758, 77.6070, 0.0),
+            Wgs84Coord::new(12.9765, 77.6070, 0.0),
+            Wgs84Coord::new(12.9765, 77.6078, 0.0),
+            Wgs84Coord::new(12.9758, 77.6078, 0.0),
+            Wgs84Coord::new(12.9758, 77.6070, 0.0),
         ],
         inner_rings: Vec::new(),
         explicit_height: Some(85.0), // 24-storey high-rise
@@ -160,7 +160,7 @@ pub fn create_bengaluru_central_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(12.9800, 77.5950, 0.0),
-            Wgs84Coord::new(12.9782, 77.5985, 0.0),
+            Wgs84Coord::new(12.9775, 77.5980, 0.0),
             Wgs84Coord::new(12.9740, 77.6000, 0.0),
         ],
         lanes: 4,

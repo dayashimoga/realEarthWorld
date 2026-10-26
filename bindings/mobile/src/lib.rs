@@ -238,6 +238,7 @@ pub extern "C" fn realearth_init(region_str: *const c_char) -> c_int {
             DemGrid::create_bengaluru_plateau_dem(32, 32),
         )
     } else if let Some(city) = find_city_by_id(&region) {
+        #[allow(deprecated)]
         (
             Wgs84Coord::new(
                 (city.bounds.min_lat + city.bounds.max_lat) * 0.5,

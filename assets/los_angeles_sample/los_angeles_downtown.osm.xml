@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="RealEarth-GIS-LA-Authoritative-StageG2">
   <!-- Wilshire Blvd, Grand Ave, Figueroa St, I-110 Harbor Freeway -->
   <!-- Wilshire Grand Center (335.3m), US Bank Tower (310.3m), Aon Center (260.6m) -->
@@ -19,10 +19,10 @@
   <node id="90024" lat="34.0500" lon="-118.2480"/>
 
   <!-- Building 1: Wilshire Grand Center (335.3m, 73 floors) -->
-  <node id="91001" lat="34.0495" lon="-118.2605"/>
-  <node id="91002" lat="34.0505" lon="-118.2605"/>
-  <node id="91003" lat="34.0505" lon="-118.2595"/>
-  <node id="91004" lat="34.0495" lon="-118.2595"/>
+  <node id="91001" lat="34.0508" lon="-118.2605"/>
+  <node id="91002" lat="34.0518" lon="-118.2605"/>
+  <node id="91003" lat="34.0518" lon="-118.2595"/>
+  <node id="91004" lat="34.0508" lon="-118.2595"/>
 
   <!-- Building 2: US Bank Tower (310.3m, 73 floors) -->
   <node id="91011" lat="34.0506" lon="-118.2550"/>

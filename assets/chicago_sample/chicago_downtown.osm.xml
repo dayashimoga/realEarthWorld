@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="RealEarth-GIS-Chicago-Authoritative-StageG2">
   <!-- Michigan Ave, State St, Wacker Dr, Adams St -->
   <!-- Willis Tower (442.1m), Aon Center (346m), John Hancock (343.7m) -->
@@ -13,10 +13,10 @@
   <node id="80013" lat="41.8850" lon="-87.6278"/>
   <node id="80014" lat="41.8900" lon="-87.6278"/>
 
-  <node id="80021" lat="41.8789" lon="-87.6380"/>
-  <node id="80022" lat="41.8789" lon="-87.6320"/>
-  <node id="80023" lat="41.8789" lon="-87.6278"/>
-  <node id="80024" lat="41.8789" lon="-87.6244"/>
+  <node id="80021" lat="41.8798" lon="-87.6380"/>
+  <node id="80022" lat="41.8798" lon="-87.6320"/>
+  <node id="80023" lat="41.8798" lon="-87.6278"/>
+  <node id="80024" lat="41.8798" lon="-87.6244"/>
 
   <!-- Building 1: Willis Tower (442.1m, 108 floors) -->
   <node id="81001" lat="41.8784" lon="-87.6364"/>
@@ -74,11 +74,35 @@
     <tag k="building:levels" v="83"/>
   </way>
 
+  <!-- Water: Lake Michigan -->
+  <node id="82001" lat="41.8650" lon="-87.6150"/>
+  <node id="82002" lat="41.9050" lon="-87.6150"/>
+  <node id="82003" lat="41.9050" lon="-87.6000"/>
+  <node id="82004" lat="41.8650" lon="-87.6000"/>
+
+  <!-- Railway: Metra / Amtrak Union Station Corridor -->
+  <node id="83001" lat="41.8750" lon="-87.6400"/>
+  <node id="83002" lat="41.8800" lon="-87.6400"/>
+  <node id="83003" lat="41.8850" lon="-87.6400"/>
+
   <way id="86003">
     <nd ref="81021"/><nd ref="81022"/><nd ref="81023"/><nd ref="81024"/><nd ref="81021"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="875 North Michigan Avenue (John Hancock)"/>
     <tag k="height" v="343.7m"/>
     <tag k="building:levels" v="100"/>
+  </way>
+
+  <way id="87001">
+    <nd ref="82001"/><nd ref="82002"/><nd ref="82003"/><nd ref="82004"/><nd ref="82001"/>
+    <tag k="natural" v="water"/>
+    <tag k="water" v="lake"/>
+    <tag k="name" v="Lake Michigan"/>
+  </way>
+
+  <way id="88001">
+    <nd ref="83001"/><nd ref="83002"/><nd ref="83003"/>
+    <tag k="railway" v="rail"/>
+    <tag k="name" v="Metra / Amtrak Union Station Corridor"/>
   </way>
 </osm>

@@ -105,7 +105,7 @@ pub fn create_hyderabad_dataset() -> IngestedDataset {
         geometry: vec![
             Wgs84Coord::new(17.3500, 78.4600, 0.0),
             Wgs84Coord::new(17.3600, 78.4700, 0.0),
-            Wgs84Coord::new(17.3620, 78.4740, 0.0), // Near Charminar
+            Wgs84Coord::new(17.3635, 78.4735, 0.0), // Charminar corridor
             Wgs84Coord::new(17.3700, 78.4800, 0.0),
         ],
         lanes: 6,
@@ -159,7 +159,7 @@ pub fn create_hyderabad_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(17.4450, 78.3750, 0.0),
-            Wgs84Coord::new(17.4505, 78.3810, 0.0), // Past Cyber Towers
+            Wgs84Coord::new(17.4480, 78.3810, 0.0), // Cyber Towers south concourse
             Wgs84Coord::new(17.4550, 78.3880, 0.0),
         ],
         lanes: 6,

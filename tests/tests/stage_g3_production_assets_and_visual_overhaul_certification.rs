@@ -230,7 +230,7 @@ fn test_g3_phase2_automotive_palette_and_pbr_semantic_classification() {
     // Verify CCW triangle winding (geometric cross product aligns with normal)
     for (cyl_name, mesh) in [("cyl_x", &cyl_x), ("cyl_y", &cyl_y), ("cyl_z", &cyl_z)] {
         let mut ccw_valid = 0;
-        for chunk in mesh.indices.chunks_exact(3) {
+        for chunk in mesh.indices.as_chunks::<3>().0 {
             let p0 = Vec3::from_array(mesh.vertices[chunk[0] as usize].position);
             let p1 = Vec3::from_array(mesh.vertices[chunk[1] as usize].position);
             let p2 = Vec3::from_array(mesh.vertices[chunk[2] as usize].position);

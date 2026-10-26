@@ -117,7 +117,7 @@ pub fn create_seattle_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(47.6000, -122.3380, 0.0), // Pioneer Square ferry dock
-            Wgs84Coord::new(47.6060, -122.3415, 0.0), // Pier 57 Great Wheel
+            Wgs84Coord::new(47.6060, -122.3405, 0.0), // Alaskan Way corridor inland of Pier 57
             Wgs84Coord::new(47.6120, -122.3480, 0.0), // Bell Harbor
             Wgs84Coord::new(47.6200, -122.3550, 0.0), // Olympic Sculpture Park
         ],
@@ -154,7 +154,7 @@ pub fn create_seattle_dataset() -> IngestedDataset {
         name: Some("Pike Street".to_string()),
         highway_type: HighwayType::Secondary,
         geometry: vec![
-            Wgs84Coord::new(47.6090, -122.3425, 0.0), // Pike Place Market
+            Wgs84Coord::new(47.6090, -122.3405, 0.0), // 1st Ave & Pike St (Pike Place Market entrance)
             Wgs84Coord::new(47.6110, -122.3370, 0.0), // 4th Ave
             Wgs84Coord::new(47.6130, -122.3310, 0.0), // Convention Center
         ],
@@ -209,8 +209,9 @@ pub fn create_seattle_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(47.6010, -122.3340, 0.0), // Pioneer Square
-            Wgs84Coord::new(47.6060, -122.3380, 0.0), // Financial district
-            Wgs84Coord::new(47.6130, -122.3450, 0.0), // Belltown
+            Wgs84Coord::new(47.6060, -122.3375, 0.0), // Financial district
+            Wgs84Coord::new(47.6095, -122.3398, 0.0), // 2nd & Pike (east of Pike Place Market)
+            Wgs84Coord::new(47.6130, -122.3425, 0.0), // Belltown
         ],
         lanes: 4,
         speed_limit_kph: 40,

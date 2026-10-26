@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <osm version="0.6" generator="RealEarth-GIS-Portland-Authoritative-StageG2">
   <!-- Surveyed Nodes: Road intersections and grid in Downtown Portland -->
   <!-- N-S Avenues: SW 6th, SW 5th (Transit Mall), SW 4th, SW 3rd, SW 2nd, SW 1st / Naito -->
@@ -104,11 +104,11 @@
   <node id="61034" lat="45.52185" lon="-122.68025"/>
 
   <!-- Building 5: US Bancorp Tower / Big Pink (163.4m, 42 floors) -->
-  <!-- Between 5th and 4th, Oak and Burnside (lat ~ 45.5225) -->
-  <node id="61041" lat="45.52210" lon="-122.67510"/>
-  <node id="61042" lat="45.52290" lon="-122.67510"/>
-  <node id="61043" lat="45.52290" lon="-122.67430"/>
-  <node id="61044" lat="45.52210" lon="-122.67430"/>
+  <!-- Between 5th and 4th, Oak and Burnside (lat ~ 45.5237) -->
+  <node id="61041" lat="45.52330" lon="-122.67510"/>
+  <node id="61042" lat="45.52410" lon="-122.67510"/>
+  <node id="61043" lat="45.52410" lon="-122.67430"/>
+  <node id="61044" lat="45.52330" lon="-122.67430"/>
 
   <!-- Building 6: KOIN Center (155.1m, 35 floors) -->
   <!-- Between 3rd and 2nd, Columbia and Jefferson -->

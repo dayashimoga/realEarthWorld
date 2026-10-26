@@ -137,7 +137,7 @@ pub fn create_intercity_corridors_dataset() -> IngestedDataset {
             Wgs84Coord::new(12.9100, 79.3400, 0.0),
             Wgs84Coord::new(12.9700, 79.9400, 0.0), // Sriperumbudur industrial hub
             Wgs84Coord::new(13.0500, 80.1100, 0.0), // Poonamallee junction
-            Wgs84Coord::new(13.0810, 80.2600, 0.0), // Connects seamlessly to Chennai EVR Periyar Salai (Way 510_001)
+            Wgs84Coord::new(13.0805, 80.2600, 0.0), // Connects seamlessly to Chennai EVR Periyar Salai (Way 510_001)
         ],
         lanes: 6,
         speed_limit_kph: 80,

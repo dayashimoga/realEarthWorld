@@ -86,8 +86,9 @@ pub fn create_mysuru_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(12.3060, 76.6570, 0.0), // K.R. Circle / Palace North Gate (Junction with NH 766 & Albert Victor Rd)
-            Wgs84Coord::new(12.3100, 76.6510, 0.0), // Near Devaraja Market
-            Wgs84Coord::new(12.3160, 76.6460, 0.0), // Near Station
+            Wgs84Coord::new(12.3100, 76.6530, 0.0), // Sayyaji Rao Road corridor in front of Devaraja Market
+            Wgs84Coord::new(12.3125, 76.6515, 0.0), // Ayurveda College Circle (north of Devaraja Market)
+            Wgs84Coord::new(12.3160, 76.6468, 0.0), // Station Circle concourse
         ],
         lanes: 4,
         speed_limit_kph: 50,
@@ -160,7 +161,7 @@ pub fn create_mysuru_dataset() -> IngestedDataset {
         geometry: vec![
             Wgs84Coord::new(12.3000, 76.6700, 0.0), // Base
             Wgs84Coord::new(12.2880, 76.6710, 0.0), // Mid-ascent
-            Wgs84Coord::new(12.2745, 76.6710, 0.0), // Summit temple
+            Wgs84Coord::new(12.2745, 76.6722, 0.0), // Summit temple bus stand & parking concourse
         ],
         lanes: 2,
         speed_limit_kph: 40,

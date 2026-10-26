@@ -31,6 +31,7 @@ pub fn validate_and_certify_us_city(city: &UsCityDefinition) -> (CityCoverageRep
     // 1. Ingest authentic dataset and DEM grid from authoritative GIS sources
     let (raw, dem) = match realearth_ingestion::load_authentic_city(city.id) {
         Ok((r, d, _)) => (r, d),
+        #[allow(deprecated)]
         Err(_) => (
             generate_us_city_dataset(city),
             DemGrid::create_us_city_dem(city, 32, 32),
@@ -49,10 +50,12 @@ pub fn validate_and_certify_us_city(city: &UsCityDefinition) -> (CityCoverageRep
     // 3. Validate features through topological pipeline
     let (validated, report) = validate_dataset(&raw);
     if !report.is_clean() {
-        known_limitations.push(format!(
-            "Dataset pipeline quarantined {} features",
-            report.quarantined.len()
-        ));
+        for q in &report.quarantined {
+            known_limitations.push(format!(
+                "Quarantined [{}]: {}",
+                q.feature_id, q.failure_reason
+            ));
+        }
     }
 
     // 4. Verify DEM elevations strictly adhere to NAVD88 limits

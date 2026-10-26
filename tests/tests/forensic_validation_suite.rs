@@ -42,12 +42,14 @@ fn test_forensic_detect_synthetic_city_geography() {
 
         let has_disk_files = sample_dir.exists() || region_dir.exists();
 
-        let (xml, _) = acquire_city_osm_xml(city).expect("Acquire city XML must succeed");
-
-        // Synthetic template XML contains exactly 2 buildings: the anchor landmark and City Hall
-        let is_synthetic_template = xml.contains("<tag k=\"building\" v=\"civic\"/>")
-            && xml.contains(&format!("{} City Hall", city.name))
-            && xml.lines().filter(|l| l.contains("<way id=")).count() <= 6;
+        let is_synthetic_template = match acquire_city_osm_xml(city) {
+            Ok((xml, _)) => {
+                xml.contains("<tag k=\"building\" v=\"civic\"/>")
+                    && xml.contains(&format!("{} City Hall", city.name))
+                    && xml.lines().filter(|l| l.contains("<way id=")).count() <= 6
+            }
+            Err(_) => true,
+        };
 
         if is_synthetic_template || !has_disk_files {
             synthetic_cities.push(city.id);

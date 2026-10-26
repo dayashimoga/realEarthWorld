@@ -41,11 +41,11 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         name: Some("Empire State Building".to_string()),
         building_type: BuildingType::Commercial,
         outer_ring: vec![
-            Wgs84Coord::new(40.7480, -73.9862, 0.0),
-            Wgs84Coord::new(40.7488, -73.9862, 0.0),
-            Wgs84Coord::new(40.7488, -73.9852, 0.0),
-            Wgs84Coord::new(40.7480, -73.9852, 0.0),
-            Wgs84Coord::new(40.7480, -73.9862, 0.0),
+            Wgs84Coord::new(40.7480, -73.9868, 0.0),
+            Wgs84Coord::new(40.7488, -73.9868, 0.0),
+            Wgs84Coord::new(40.7488, -73.9858, 0.0),
+            Wgs84Coord::new(40.7480, -73.9858, 0.0),
+            Wgs84Coord::new(40.7480, -73.9868, 0.0),
         ],
         inner_rings: Vec::new(),
         explicit_height: Some(381.0),
@@ -77,11 +77,11 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         name: Some("Woolworth Building".to_string()),
         building_type: BuildingType::Commercial,
         outer_ring: vec![
-            Wgs84Coord::new(40.7118, -74.0088, 0.0),
-            Wgs84Coord::new(40.7126, -74.0088, 0.0),
-            Wgs84Coord::new(40.7126, -74.0078, 0.0),
-            Wgs84Coord::new(40.7118, -74.0078, 0.0),
-            Wgs84Coord::new(40.7118, -74.0088, 0.0),
+            Wgs84Coord::new(40.7118, -74.0094, 0.0),
+            Wgs84Coord::new(40.7126, -74.0094, 0.0),
+            Wgs84Coord::new(40.7126, -74.0084, 0.0),
+            Wgs84Coord::new(40.7118, -74.0084, 0.0),
+            Wgs84Coord::new(40.7118, -74.0094, 0.0),
         ],
         inner_rings: Vec::new(),
         explicit_height: Some(241.4),
@@ -117,9 +117,11 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         highway_type: HighwayType::Primary,
         geometry: vec![
             Wgs84Coord::new(40.7040, -74.0135, 0.0), // Bowling Green
+            Wgs84Coord::new(40.7110, -74.0090, 0.0), // Fulton Street
             Wgs84Coord::new(40.7125, -74.0075, 0.0), // City Hall
             Wgs84Coord::new(40.7250, -73.9980, 0.0), // SoHo
             Wgs84Coord::new(40.7400, -73.9890, 0.0), // Flatiron / Madison Sq
+            Wgs84Coord::new(40.7492, -73.9880, 0.0), // Herald Square / 34th St (west of 6th Ave)
             Wgs84Coord::new(40.7540, -73.9840, 0.0), // Times Square South
         ],
         lanes: 4,
@@ -138,7 +140,7 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         geometry: vec![
             Wgs84Coord::new(40.7310, -73.9965, 0.0), // Washington Square Arch
             Wgs84Coord::new(40.7420, -73.9880, 0.0), // Flatiron
-            Wgs84Coord::new(40.7485, -73.9855, 0.0), // Empire State Building
+            Wgs84Coord::new(40.7485, -73.9850, 0.0), // Empire State Building
             Wgs84Coord::new(40.7535, -73.9810, 0.0), // Midtown
         ],
         lanes: 4,
@@ -175,7 +177,7 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         highway_type: HighwayType::Trunk,
         geometry: vec![
             Wgs84Coord::new(40.7020, -74.0165, 0.0), // Battery Place
-            Wgs84Coord::new(40.7130, -74.0150, 0.0), // World Trade Center
+            Wgs84Coord::new(40.7110, -74.0150, 0.0), // World Trade Center / Fulton St
             Wgs84Coord::new(40.7350, -74.0105, 0.0), // Greenwich Village Piers
             Wgs84Coord::new(40.7530, -74.0040, 0.0), // Hudson Yards
         ],
@@ -229,8 +231,8 @@ pub fn create_new_york_dataset() -> IngestedDataset {
         name: Some("Fulton Street".to_string()),
         highway_type: HighwayType::Secondary,
         geometry: vec![
-            Wgs84Coord::new(40.7130, -74.0150, 0.0), // West Side Highway / WTC
-            Wgs84Coord::new(40.7125, -74.0075, 0.0), // Broadway / City Hall Park
+            Wgs84Coord::new(40.7110, -74.0150, 0.0), // West Side Highway / WTC South
+            Wgs84Coord::new(40.7110, -74.0090, 0.0), // Broadway junction
         ],
         lanes: 2,
         speed_limit_kph: 35,

@@ -1,4 +1,5 @@
 //! STAGE 8 — AUTHENTIC MAJOR US CITIES, INTERSTATE CONNECTIVITY & REGIONAL STREAMING CERTIFICATION
+#![allow(deprecated)]
 //!
 //! Comprehensive end-to-end verification of Stage 8 requirements:
 //! 1. Phase 8.1 — Configurable US Geography Catalog:

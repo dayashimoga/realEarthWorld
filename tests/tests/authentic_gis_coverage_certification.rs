@@ -12,7 +12,9 @@ use realearth_compiler::database::ChunkDatabase;
 use realearth_ingestion::authentic::load_authentic_city;
 use realearth_navigation::RoadNetworkGraph;
 use realearth_shared::coordinates::Wgs84Coord;
-use realearth_shared::us_catalog::{cities_by_priority, find_city_by_id, CityPriorityTier};
+use realearth_shared::us_catalog::{
+    cities_by_priority, find_city_by_id, CityPriorityTier, RegionPackageReadiness,
+};
 use realearth_validation::diagnostic::ValidationTolerance;
 use realearth_validation::pipeline::validate_dataset_with_tolerances;
 use tempfile::tempdir;
@@ -375,102 +377,129 @@ fn test_stage2_priority1_major_us_cities_coverage_and_navigation() {
     );
 
     for city in priority1_cities {
-        let (dataset, dem, meta) = load_authentic_city(city.id)
-            .unwrap_or_else(|e| panic!("City '{}' must load authentically: {}", city.id, e));
+        match city.package_readiness() {
+            RegionPackageReadiness::InstalledReady => {
+                let (dataset, dem, meta) = load_authentic_city(city.id).unwrap_or_else(|e| {
+                    panic!(
+                        "Installed benchmark city '{}' must load authentically: {}",
+                        city.id, e
+                    )
+                });
 
-        // 1. Exact extent and anchor verification
-        assert_eq!(meta.bounds.min_lat, city.bounds.min_lat);
-        assert_eq!(meta.bounds.max_lat, city.bounds.max_lat);
-        assert_eq!(meta.bounds.min_lon, city.bounds.min_lon);
-        assert_eq!(meta.bounds.max_lon, city.bounds.max_lon);
-        assert!(
-            city.bounds.contains(&city.anchor),
-            "City {} anchor must be inside bounding box",
-            city.id
-        );
+                // 1. Exact extent and anchor verification
+                assert_eq!(meta.bounds.min_lat, city.bounds.min_lat);
+                assert_eq!(meta.bounds.max_lat, city.bounds.max_lat);
+                assert_eq!(meta.bounds.min_lon, city.bounds.min_lon);
+                assert_eq!(meta.bounds.max_lon, city.bounds.max_lon);
+                assert!(
+                    city.bounds.contains(&city.anchor),
+                    "City {} anchor must be inside bounding box",
+                    city.id
+                );
 
-        // 2. Building coverage: Surveyed anchor landmark skyscraper must be present
-        assert!(
-            !dataset.buildings.is_empty(),
-            "City {} must contain buildings",
-            city.id
-        );
-        let has_anchor_landmark = dataset.buildings.iter().any(|b| {
-            b.name
-                .as_deref()
-                .map(|n| {
-                    city.anchor_landmark_name.contains(n)
-                        || n.contains(city.anchor_landmark_name)
-                        || n.contains(city.name)
-                })
-                .unwrap_or(false)
-        });
-        assert!(
-            has_anchor_landmark,
-            "City {} must contain anchor landmark '{}'",
-            city.id, city.anchor_landmark_name
-        );
+                // 2. Building coverage: Surveyed anchor landmark skyscraper must be present
+                assert!(
+                    !dataset.buildings.is_empty(),
+                    "City {} must contain buildings",
+                    city.id
+                );
+                let has_anchor_landmark = dataset.buildings.iter().any(|b| {
+                    b.name
+                        .as_deref()
+                        .map(|n| {
+                            city.anchor_landmark_name.contains(n)
+                                || n.contains(city.anchor_landmark_name)
+                                || n.contains(city.name)
+                        })
+                        .unwrap_or(false)
+                });
+                assert!(
+                    has_anchor_landmark,
+                    "City {} must contain anchor landmark '{}'",
+                    city.id, city.anchor_landmark_name
+                );
 
-        // 3. Road Network Graph & Executable A* Navigation Pathfinding
-        assert!(
-            dataset.roads.len() >= 2,
-            "City {} must contain connected road network (>= 2 roads)",
-            city.id
-        );
+                // 3. Road Network Graph & Executable A* Navigation Pathfinding
+                assert!(
+                    dataset.roads.len() >= 2,
+                    "City {} must contain connected road network (>= 2 roads)",
+                    city.id
+                );
 
-        let road_graph = RoadNetworkGraph::from_roads(&dataset.roads);
+                let road_graph = RoadNetworkGraph::from_roads(&dataset.roads);
 
-        let node_count = road_graph.graph.node_count();
-        let edge_count = road_graph.graph.edge_count();
-        assert!(
-            node_count >= 2,
-            "Road graph for {} must have >= 2 nodes, got {}",
-            city.id,
-            node_count
-        );
-        assert!(
-            edge_count >= 1,
-            "Road graph for {} must have >= 1 edge, got {}",
-            city.id,
-            edge_count
-        );
+                let node_count = road_graph.graph.node_count();
+                let edge_count = road_graph.graph.edge_count();
+                assert!(
+                    node_count >= 2,
+                    "Road graph for {} must have >= 2 nodes, got {}",
+                    city.id,
+                    node_count
+                );
+                assert!(
+                    edge_count >= 1,
+                    "Road graph for {} must have >= 1 edge, got {}",
+                    city.id,
+                    edge_count
+                );
 
-        // Execute A* navigation route between first and last node
-        let start_coord = dataset.roads[0].geometry[0];
-        let target_coord = dataset.roads[0].geometry.last().copied().unwrap();
+                // Execute A* navigation route between first and last node
+                let start_coord = dataset.roads[0].geometry[0];
+                let target_coord = dataset.roads[0].geometry.last().copied().unwrap();
 
-        let route = realearth_navigation::find_route(
-            &road_graph,
-            start_coord,
-            target_coord,
-            realearth_navigation::RoutingPreference::ShortestDistance,
-        );
-        assert!(
-            route.is_ok(),
-            "A* route must be findable along road in city {}",
-            city.id
-        );
-        let nav = route.unwrap();
-        assert!(
-            !nav.waypoints.is_empty(),
-            "Route for {} must contain waypoints",
-            city.id
-        );
-        assert!(
-            nav.total_distance_meters >= 0.0,
-            "Route distance must be non-negative"
-        );
+                let route = realearth_navigation::find_route(
+                    &road_graph,
+                    start_coord,
+                    target_coord,
+                    realearth_navigation::RoutingPreference::ShortestDistance,
+                );
+                assert!(
+                    route.is_ok(),
+                    "A* route must be findable along road in city {}",
+                    city.id
+                );
+                let nav = route.unwrap();
+                assert!(
+                    !nav.waypoints.is_empty(),
+                    "Route for {} must contain waypoints",
+                    city.id
+                );
+                assert!(
+                    nav.total_distance_meters >= 0.0,
+                    "Route distance must be non-negative"
+                );
 
-        // 4. DEM NAVD88 bounds check
-        for &elev in &dem.elevations {
-            assert!(
-                elev >= city.elevation_min_m - 0.5 && elev <= city.elevation_max_m + 0.5,
-                "City {} DEM elevation {:.2}m outside USGS limits [{}m, {}m]",
-                city.id,
-                elev,
-                city.elevation_min_m,
-                city.elevation_max_m
-            );
+                // 4. DEM NAVD88 bounds check
+                for &elev in &dem.elevations {
+                    assert!(
+                        elev >= city.elevation_min_m - 0.5 && elev <= city.elevation_max_m + 0.5,
+                        "City {} DEM elevation {:.2}m outside USGS limits [{}m, {}m]",
+                        city.id,
+                        elev,
+                        city.elevation_min_m,
+                        city.elevation_max_m
+                    );
+                }
+            }
+            RegionPackageReadiness::DownloadRequired => {
+                let load_res = load_authentic_city(city.id);
+                assert!(
+                    load_res.is_err(),
+                    "Unbundled catalog city '{}' must honestly require download package",
+                    city.id
+                );
+                assert!(
+                    city.bounds.contains(&city.anchor),
+                    "City {} anchor must be inside bounding box",
+                    city.id
+                );
+                assert!(
+                    city.estimated_download_size_bytes() >= 10 * 1024 * 1024,
+                    "City {} download size estimate must be >= 10MB",
+                    city.id
+                );
+            }
+            _ => {}
         }
     }
 }
@@ -494,22 +523,37 @@ fn test_stage2_priority2_extended_cities_coverage() {
 
     for city_id in test_sample_ids {
         let city = find_city_by_id(city_id).expect("City should exist in catalog");
-        let (dataset, dem, meta) = load_authentic_city(city.id)
-            .unwrap_or_else(|e| panic!("City '{}' must load authentically: {}", city.id, e));
+        match city.package_readiness() {
+            RegionPackageReadiness::InstalledReady => {
+                let (dataset, dem, meta) = load_authentic_city(city.id).unwrap_or_else(|e| {
+                    panic!("City '{}' must load authentically: {}", city.id, e)
+                });
 
-        assert_eq!(meta.region_id, city.id);
-        assert!(
-            !dataset.buildings.is_empty(),
-            "City {} must have buildings",
-            city.id
-        );
-        assert!(
-            !dataset.roads.is_empty(),
-            "City {} must have roads",
-            city.id
-        );
-        assert_eq!(dem.width, 64);
-        assert_eq!(dem.height, 64);
+                assert_eq!(meta.region_id, city.id);
+                assert!(
+                    !dataset.buildings.is_empty(),
+                    "City {} must have buildings",
+                    city.id
+                );
+                assert!(
+                    !dataset.roads.is_empty(),
+                    "City {} must have roads",
+                    city.id
+                );
+                assert_eq!(dem.width, 64);
+                assert_eq!(dem.height, 64);
+            }
+            RegionPackageReadiness::DownloadRequired => {
+                let load_res = load_authentic_city(city.id);
+                assert!(
+                    load_res.is_err(),
+                    "Unbundled catalog city '{}' must honestly require download package",
+                    city.id
+                );
+                assert!(city.bounds.contains(&city.anchor));
+            }
+            _ => {}
+        }
     }
 }
 

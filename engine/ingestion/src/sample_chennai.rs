@@ -85,10 +85,10 @@ pub fn create_chennai_dataset() -> IngestedDataset {
         name: Some("Poonamallee High Road (EVR Periyar Salai)".to_string()),
         highway_type: HighwayType::Primary,
         geometry: vec![
-            Wgs84Coord::new(13.0810, 80.2600, 0.0),
-            Wgs84Coord::new(13.0820, 80.2700, 0.0),
-            Wgs84Coord::new(13.0825, 80.2740, 0.0), // In front of Central Station
-            Wgs84Coord::new(13.0830, 80.2800, 0.0),
+            Wgs84Coord::new(13.0805, 80.2600, 0.0),
+            Wgs84Coord::new(13.0805, 80.2700, 0.0),
+            Wgs84Coord::new(13.0805, 80.2740, 0.0), // In front of Central Station
+            Wgs84Coord::new(13.0805, 80.2800, 0.0),
         ],
         lanes: 6,
         speed_limit_kph: 50,
@@ -104,9 +104,9 @@ pub fn create_chennai_dataset() -> IngestedDataset {
         name: Some("Anna Salai (Mount Road)".to_string()),
         highway_type: HighwayType::Primary,
         geometry: vec![
-            Wgs84Coord::new(13.0825, 80.2740, 0.0), // Connects at Central junction
+            Wgs84Coord::new(13.0805, 80.2740, 0.0), // Connects at Central junction
             Wgs84Coord::new(13.0750, 80.2710, 0.0),
-            Wgs84Coord::new(13.0640, 80.2640, 0.0), // Past LIC Building
+            Wgs84Coord::new(13.0640, 80.2655, 0.0), // Past LIC Building corridor
             Wgs84Coord::new(13.0500, 80.2550, 0.0),
         ],
         lanes: 6,
@@ -159,9 +159,9 @@ pub fn create_chennai_dataset() -> IngestedDataset {
         name: Some("Rajaji Salai (Chennai Port Road)".to_string()),
         highway_type: HighwayType::Primary,
         geometry: vec![
-            Wgs84Coord::new(13.0830, 80.2800, 0.0),
-            Wgs84Coord::new(13.0780, 80.2860, 0.0),
-            Wgs84Coord::new(13.0720, 80.2860, 0.0), // Joins Napier Bridge
+            Wgs84Coord::new(13.0805, 80.2800, 0.0), // Connects at Poonamallee High Rd junction
+            Wgs84Coord::new(13.0780, 80.2848, 0.0), // Corridor west of Fort St. George
+            Wgs84Coord::new(13.0720, 80.2855, 0.0), // Joins Napier Bridge north abutment
         ],
         lanes: 4,
         speed_limit_kph: 50,

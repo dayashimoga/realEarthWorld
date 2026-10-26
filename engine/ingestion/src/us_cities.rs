@@ -117,9 +117,9 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
             levels: Some(8),
         });
 
-        // 3. Downtown Commercial Highrise
-        let com_lat = anchor_lat - d_lat * 0.4;
-        let com_lon = anchor_lon + d_lon * 0.5;
+        // 3. Downtown Commercial Highrise (Offset south of Main Ave and east of Grand Blvd)
+        let com_lat = anchor_lat - 0.0030;
+        let com_lon = anchor_lon + 0.0030;
         let highrise_height = (city.anchor_height_m * 0.65).max(75.0);
         dataset.buildings.push(OsmBuildingFeature {
             id: 200_000 + (city.utm_zone as u64 * 1000) + 3,
@@ -220,15 +220,16 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
             is_tunnel: false,
         });
 
-        // Secondary Cross Street (Civic Connection)
+        // Secondary Cross Street (Civic Connection - north of Civic Center footprint)
+        let civic_road_lat = civic_lat + 0.0012;
         dataset.roads.push(OsmRoadFeature {
             way_id: 300_000 + (city.utm_zone as u64 * 1000) + 5,
             name: Some(format!("{} Civic Center Way", city.name)),
             highway_type: HighwayType::Secondary,
             geometry: vec![
-                Wgs84Coord::new(civic_lat, fwy_lon, 0.0),
-                Wgs84Coord::new(civic_lat, anchor_lon, 0.0),
-                Wgs84Coord::new(civic_lat, b.max_lon - d_lon * 0.5, 0.0),
+                Wgs84Coord::new(civic_road_lat, fwy_lon, 0.0),
+                Wgs84Coord::new(civic_road_lat, anchor_lon, 0.0),
+                Wgs84Coord::new(civic_road_lat, b.max_lon - d_lon * 0.5, 0.0),
             ],
             lanes: 2,
             speed_limit_kph: 40,
@@ -309,7 +310,7 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
     // C. Transit / Railway Infrastructure (Ensured across all 38 cities)
     // ------------------------------------------------------------------------
     if dataset.railways.is_empty() {
-        let rail_lon = anchor_lon + d_lon * 0.8;
+        let rail_lon = b.min_lon + (b.max_lon - b.min_lon) * 0.70;
         dataset.railways.push(OsmRailwayFeature {
             way_id: 400_000 + (city.utm_zone as u64 * 1000) + 1,
             name: Some(format!("{} Regional Rail Mainline", city.name)),

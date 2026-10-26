@@ -541,6 +541,7 @@ fn test_d7_region_profile_runtime_loading() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_d7_on_demand_world_package_compilation_and_quota() {
     let tmp = tempdir().expect("Failed to create temporary directory");
     let target_dir = tmp.path().join("world_denver");
