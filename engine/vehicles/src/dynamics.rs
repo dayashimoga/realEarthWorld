@@ -167,7 +167,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
-            auto_creep_enabled: true,
+            auto_creep_enabled: false,
         }
     }
 
@@ -770,7 +770,7 @@ impl DynamicVehicle {
                     && inputs.gear_mode == TransmissionMode::Drive))
                 && inputs.throttle == 0.0
                 && inputs.steer.abs() < 0.05
-                && speed < 0.15
+                && speed < 0.20
                 && grounded_wheels >= 2
                 && slope_grade < 0.025;
 
@@ -785,6 +785,9 @@ impl DynamicVehicle {
             if is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
                 self.linear_velocity.x = 0.0;
                 self.linear_velocity.z = 0.0;
+                if self.linear_velocity.y.abs() < 0.02 {
+                    self.linear_velocity.y = 0.0;
+                }
                 self.angular_velocity = Vec3::ZERO;
             }
         }
@@ -818,7 +821,8 @@ impl DynamicVehicle {
 
         // Anti-tunneling / anti-sinking chassis safety clamp
         if let Some((hit_dist, _)) = ground.query_ground_contact(self.position, 10.0) {
-            let min_chassis_y = (self.position.y - hit_dist) + self.config.wheel_radius * 0.5;
+            let ground_y = self.position.y - hit_dist;
+            let min_chassis_y = ground_y + self.config.half_extents.y.max(self.config.wheel_radius);
             if self.position.y < min_chassis_y {
                 self.position.y = min_chassis_y;
                 if self.linear_velocity.y < 0.0 {

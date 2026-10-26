@@ -1983,6 +1983,27 @@
     - Executed full certification test suites across G0, G1, G2, G3, and G4; confirmed 0 regressions.
     - Verified clean workspace compilation across all 16 crates via `cargo check --tests`.
 
+## STAGE H1: Permanent Driving Physics, Steering and Road-Surface Repair (Completed & Certified)
+- [x] Phase 1 — Input and Physics Root Cause:
+  - Canonical frame mapping implemented in `engine/shared/src/coordinates.rs` (`camera_yaw_to_vehicle_yaw`, `vehicle_yaw_to_camera_yaw`).
+  - Vehicle and camera orientations synchronized at spawn, permanently fixing the 90° heading duality shift.
+  - Directional steering signs verified across all four cardinal headings (N, E, S, W) in forward and reverse.
+  - Multi-framerate determinism verified at 30, 60, and 120 FPS using fixed-step physics accumulator and render interpolation.
+- [x] Phase 2 — Stability and Braking:
+  - Spontaneous drivetrain creep permanently disabled by setting `auto_creep_enabled: false` by default in `engine/vehicles/src/dynamics.rs`.
+  - Stationary flat-idle holding in Drive and Neutral locks horizontal velocities to 0 on slopes < 2.5% grade at zero throttle.
+  - Added `stop_and_stabilize_all_vehicles()` in `apps/world-viewer/src/interactive.rs` to zero forces, velocities, and steering on spawn, recovery, and window focus loss.
+  - Anti-rollback verified on authentic San Francisco 18% inclines (0.000m rollback).
+- [x] Phase 3 — Road and Collision Geometry:
+  - Created `RoadCollisionSegment` 3D road ribbon index with 64m grid cell hashing in `apps/world-viewer/src/interactive.rs`.
+  - Extended `DemGroundQuery::new_with_roads` to query exact physical road surfaces (+0.20m asphalt, +0.15m sidewalk curbs, +layers * 6.0m elevated bridge decks).
+  - Strengthened anti-tunneling and anti-sinking safety clamps in `engine/vehicles/src/dynamics.rs`.
+- [x] Phase 4 — End-to-End Proof & Quality Gates:
+  - Authored `tests/tests/stage_h1_driving_physics_quality_gates.rs` covering all 7 Quality Gates; 7/7 passing cleanly.
+  - Full workspace test suite verified: `cargo test --workspace` (100% passing).
+  - Windows release executable build verified: `cargo build --release --bin realearth-viewer`.
+  - Comprehensive report authored: `docs/DrivingPhysicsRepairReport.md`.
+
 
 
 

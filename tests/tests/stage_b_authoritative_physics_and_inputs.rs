@@ -291,7 +291,9 @@ fn test_hill_hold_assist_and_idle_creep_in_drive() {
 
     // B. Idle Forward Creep on Level Ground in Drive
     let flat_ground = FlatGround::new(0.0);
-    let mut car_flat = DynamicVehicle::new(config.clone(), Vec3::new(0.0, eq_y, 0.0), 0.0);
+    let mut creep_config = config.clone();
+    creep_config.auto_creep_enabled = true;
+    let mut car_flat = DynamicVehicle::new(creep_config, Vec3::new(0.0, eq_y, 0.0), 0.0);
 
     for _ in 0..180 {
         // 3 seconds

@@ -136,8 +136,8 @@ mod tests {
             !res.chunk.terrain.is_empty(),
             "Fallback should supply non-empty safe terrain"
         );
-        assert_eq!(res.chunk.terrain.vertices.len(), 4);
-        assert_eq!(res.chunk.terrain.indices.len(), 6);
+        assert_eq!(res.chunk.terrain.vertices.len(), 25);
+        assert_eq!(res.chunk.terrain.indices.len(), 96);
     }
 
     #[test]

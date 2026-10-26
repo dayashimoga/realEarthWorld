@@ -510,8 +510,8 @@ pub fn generate_authoritative_city_osm_xml(city: &UsCityDefinition) -> String {
             15,
         ),
     };
-    let s_lat = a_lat - d_lat * 0.40;
-    let s_lon = a_lon + d_lon * 0.45;
+    let s_lat = a_lat + d_lat * 0.45;
+    let s_lon = a_lon + d_lon * 0.50;
     let s_nodes = [
         (base_node + 80, s_lat - b_lat_half, s_lon - b_lon_half),
         (base_node + 81, s_lat + b_lat_half, s_lon - b_lon_half),
@@ -551,10 +551,11 @@ pub fn generate_authoritative_city_osm_xml(city: &UsCityDefinition) -> String {
     let west_node = base_node + 13;
     let east_node = base_node + 14;
 
+    let road_lat = a_lat - 0.0012;
     xml.push_str(&format!(
         "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
         center_int_node,
-        a_lat,
+        road_lat,
         a_lon + d_lon * 0.15
     ));
     xml.push_str(&format!(
@@ -572,13 +573,13 @@ pub fn generate_authoritative_city_osm_xml(city: &UsCityDefinition) -> String {
     xml.push_str(&format!(
         "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
         west_node,
-        a_lat,
+        road_lat,
         a_lon - d_lon * 0.8
     ));
     xml.push_str(&format!(
         "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
         east_node,
-        a_lat,
+        road_lat,
         a_lon + d_lon * 0.9
     ));
 

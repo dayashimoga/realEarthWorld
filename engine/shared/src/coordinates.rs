@@ -107,4 +107,47 @@ mod tests {
         let rel = origin.to_relative_f32(EcefCoord::new(1010.0, 2020.0, 3005.0));
         assert_eq!(rel, Vec3::new(10.0, 20.0, 5.0));
     }
+
+    #[test]
+    fn test_camera_and_vehicle_yaw_conversions() {
+        use std::f32::consts::{FRAC_PI_2, PI};
+
+        // North: Camera looking North (+Z) has yaw = PI/2. Vehicle facing North (+Z) has yaw = 0.
+        let cam_north = FRAC_PI_2;
+        let veh_north = camera_yaw_to_vehicle_yaw(cam_north);
+        assert!((veh_north - 0.0).abs() < 1e-6);
+        assert!((vehicle_yaw_to_camera_yaw(veh_north) - cam_north).abs() < 1e-6);
+
+        // East: Camera looking East (+X) has yaw = 0. Vehicle facing East (+X) has yaw = PI/2.
+        let cam_east = 0.0;
+        let veh_east = camera_yaw_to_vehicle_yaw(cam_east);
+        assert!((veh_east - FRAC_PI_2).abs() < 1e-6);
+        assert!((vehicle_yaw_to_camera_yaw(veh_east) - cam_east).abs() < 1e-6);
+
+        // South: Camera looking South (-Z) has yaw = -PI/2. Vehicle facing South (-Z) has yaw = PI.
+        let cam_south = -FRAC_PI_2;
+        let veh_south = camera_yaw_to_vehicle_yaw(cam_south);
+        assert!((veh_south - PI).abs() < 1e-6);
+        assert!((vehicle_yaw_to_camera_yaw(veh_south) - cam_south).abs() < 1e-6);
+
+        // West: Camera looking West (-X) has yaw = PI. Vehicle facing West (-X) has yaw = -PI/2.
+        let cam_west = PI;
+        let veh_west = camera_yaw_to_vehicle_yaw(cam_west);
+        assert!((veh_west - (-FRAC_PI_2)).abs() < 1e-6);
+        assert!((vehicle_yaw_to_camera_yaw(veh_west) - cam_west).abs() < 1e-6);
+    }
+}
+
+/// Converts graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South)
+/// to vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West).
+#[inline]
+pub fn camera_yaw_to_vehicle_yaw(cam_yaw: f32) -> f32 {
+    std::f32::consts::FRAC_PI_2 - cam_yaw
+}
+
+/// Converts vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West)
+/// to graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South).
+#[inline]
+pub fn vehicle_yaw_to_camera_yaw(veh_yaw: f32) -> f32 {
+    std::f32::consts::FRAC_PI_2 - veh_yaw
 }

@@ -1588,6 +1588,27 @@
     - [x] Zero regressions across existing certification suites (G0, G1, G2, G3, G4).
     - [x] Workspace compilation verified clean across all 16 crates via `cargo check --tests`.
 
+- [x] Stage H1 — Permanent Driving Physics, Steering and Road-Surface Repair:
+  - [x] Phase 1: Input and Physics Root Cause:
+    - [x] Standardized local vehicle, global ENU, and camera polar frames in `engine/shared/src/coordinates.rs` (`camera_yaw_to_vehicle_yaw`, `vehicle_yaw_to_camera_yaw`).
+    - [x] Synchronized vehicle and camera spawn orientations at landmarks, eliminating 90° heading duality.
+    - [x] Multi-framerate camera tracking and fixed-timestep accumulator interpolation validated across sports car, motorcycle, bus, and truck.
+    - [x] Verified steering signs: Key A produces left steering (positive yaw increment) and Key D produces right steering across all four cardinal headings (N, E, S, W).
+  - [x] Phase 2: Stability and Braking:
+    - [x] Disabled automatic transmission torque-converter creep by default (`auto_creep_enabled: false`) in `engine/vehicles/src/dynamics.rs`.
+    - [x] Implemented stationary flat-idle holding in Drive and Neutral, eliminating spontaneous forward/backward drift on level ground.
+    - [x] Implemented `stop_and_stabilize_all_vehicles()` in `apps/world-viewer/src/interactive.rs` to zero forces, velocities, and steering on spawn, recovery, and window focus loss.
+    - [x] Verified steep grade hill-hold assist and anti-rollback on 18% San Francisco inclines.
+  - [x] Phase 3: Road and Collision Geometry:
+    - [x] Created `RoadCollisionSegment` 3D road ribbon index with 64m grid cell hashing in `apps/world-viewer/src/interactive.rs`.
+    - [x] Enhanced `DemGroundQuery::new_with_roads` to align physics ground contact with visual road asphalt (+0.20m), sidewalk curbs (+0.15m), and elevated bridge decks (+layers * 6.0m).
+    - [x] Strengthened anti-tunneling and anti-sinking safety clamps in `engine/vehicles/src/dynamics.rs`.
+  - [x] Phase 4: End-to-End Proof & Quality Gates:
+    - [x] Authored `tests/tests/stage_h1_driving_physics_quality_gates.rs` with 7 quality gates; verified 7/7 passing cleanly.
+    - [x] Verified full workspace test suite `cargo test --workspace` (100% passing).
+    - [x] Verified Windows release executable build `cargo build --release --bin realearth-viewer`.
+    - [x] Authored `docs/DrivingPhysicsRepairReport.md`.
+
 
 
 

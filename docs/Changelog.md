@@ -2294,3 +2294,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - All 8 tests in [`tests/tests/stage_h0_forensic_runtime_quality_gates.rs`](file:///j:/rustRealEarth/tests/tests/stage_h0_forensic_runtime_quality_gates.rs) passed cleanly (5 quality gates + 3 mutation verification tests).
     - Zero regressions across existing G0 through G4 certification suites.
 
+## [Stage H1] - 2026-10-26 - Permanent Driving Physics, Steering, and Road-Surface Repair
+- **Phase 1: Input and Physics Root Cause**:
+  - Implemented bidirectional camera-vehicle yaw conversion functions in [`engine/shared/src/coordinates.rs`](file:///j:/rustRealEarth/engine/shared/src/coordinates.rs) (`camera_yaw_to_vehicle_yaw`, `vehicle_yaw_to_camera_yaw`).
+  - Standardized local vehicle, global ENU, and camera frame conventions, eliminating 90° heading shifts at spawn.
+  - Eliminated stale steering persistence and duplicate stepping across all vehicle classes.
+- **Phase 2: Stability and Braking**:
+  - Disabled default automatic transmission torque-converter creep (`auto_creep_enabled: false`) in [`engine/vehicles/src/dynamics.rs`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs).
+  - Implemented stationary flat-idle holding in Drive and Neutral, preventing uncommanded translation at zero throttle.
+  - Added `stop_and_stabilize_all_vehicles()` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs) for zero-drift recovery and focus loss.
+- **Phase 3: Road and Collision Geometry**:
+  - Added `RoadCollisionSegment` 3D road spatial index with 64m grid cell hashing in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs).
+  - Enhanced `DemGroundQuery::new_with_roads` to align physics ground contact with visual road asphalt (+0.20m), sidewalk curbs (+0.15m), and elevated bridge decks (+layers * 6.0m).
+- **Phase 4: Quality Gates Certification**:
+  - Authored and verified 7 comprehensive quality gates in [`tests/tests/stage_h1_driving_physics_quality_gates.rs`](file:///j:/rustRealEarth/tests/tests/stage_h1_driving_physics_quality_gates.rs).
+  - 100% test pass across entire workspace (`cargo test --workspace`).
+
+

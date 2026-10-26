@@ -2471,28 +2471,26 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         }
     }
     // Streamlined White Fiberglass Roof Cap with Curved Cant-rails
-    add_cylinder_z(
+    add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 2.95, 0.0),
-        half_w * 0.95,
-        half_l,
-        16,
+        Vec3::new(half_w * 0.95, 0.12, half_l),
         [0.92, 0.94, 0.96, 0.99], // Crisp white roof
     );
     // Rooftop Dual HVAC Air Conditioning Units
     for hz in [-2.5f32, 2.0f32] {
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(0.0, 3.25, hz),
-            Vec3::new(0.85, 0.16, 1.10),
+            Vec3::new(0.0, 3.19, hz),
+            Vec3::new(0.85, 0.12, 1.10),
             [0.85, 0.88, 0.92, 0.98],
         );
     }
     // Rooftop Aerodynamic CNG Fuel Tank Enclosure Pod (curved aerodynamic cylinder)
     add_cylinder_z(
         &mut chassis_mesh,
-        Vec3::new(0.0, 3.32, -0.20),
-        0.28,
+        Vec3::new(0.0, 3.22, -0.20),
+        0.20,
         1.60,
         16,
         [0.92, 0.94, 0.96, 0.99],

@@ -9,6 +9,10 @@ pub mod metrics;
 pub mod region;
 pub mod us_catalog;
 
+pub use coordinates::{
+    camera_yaw_to_vehicle_yaw, vehicle_yaw_to_camera_yaw, EcefCoord, EnuCoord, FloatingOrigin,
+    Wgs84Coord,
+};
 pub use gameplay_recording::{
     GameplayInputFrame, GameplayRecordingSession, RecordedCameraState, RecordedCollisionState,
     RecordedGeographicContext, RecordedTransform, RecordedVehicleState, ReplayVerificationSummary,

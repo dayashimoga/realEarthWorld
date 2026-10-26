@@ -435,7 +435,7 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
 
     // Verify unbundled city honestly requires authentic GIS data
     assert!(
-        load_authentic_city("austin").is_err(),
+        verify_city_playable("austin").is_err(),
         "Unbundled city must require GIS package"
     );
 

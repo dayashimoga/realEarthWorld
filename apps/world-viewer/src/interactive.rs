@@ -109,28 +109,154 @@ pub struct AviationSpawnCandidate {
     pub is_airborne: bool,
 }
 
-/// Ground elevation query backed by geographic DEM bilinear interpolation.
+/// Linear road collision segment for physical tire contact with the visually rendered road ribbon and bridges.
+#[derive(Clone, Debug)]
+pub struct RoadCollisionSegment {
+    pub p1: glam::Vec3,
+    pub p2: glam::Vec3,
+    pub half_width: f32,
+    pub is_bridge: bool,
+    pub layer: i8,
+}
+
+/// Ground elevation query backed by geographic DEM bilinear interpolation and authentic 3D road surfaces.
 #[derive(Clone)]
 pub struct DemGroundQuery {
     pub dem: DemGrid,
     pub anchor: Wgs84Coord,
     pub meters_per_deg_lat: f64,
     pub meters_per_deg_lon: f64,
+    pub road_segments: Vec<RoadCollisionSegment>,
+    pub spatial_grid: std::collections::HashMap<(i32, i32), Vec<usize>>,
+    pub grid_cell_size: f32,
 }
 
 impl DemGroundQuery {
     pub fn new(dem: DemGrid, anchor: Wgs84Coord) -> Self {
+        Self::new_with_roads(dem, anchor, &[])
+    }
+
+    pub fn new_with_roads(
+        dem: DemGrid,
+        anchor: Wgs84Coord,
+        raw_roads: &[realearth_ingestion::osm_types::OsmRoadFeature],
+    ) -> Self {
         let meters_per_deg_lat = 111_320.0;
         let meters_per_deg_lon = 111_320.0 * anchor.lat.to_radians().cos().abs().max(0.01);
+        let conv = EnuConverter::new(anchor);
+
+        let grid_cell_size = 64.0f32;
+        let mut road_segments = Vec::new();
+        let mut spatial_grid: std::collections::HashMap<(i32, i32), Vec<usize>> =
+            std::collections::HashMap::new();
+
+        for road in raw_roads {
+            if road.geometry.len() < 2 {
+                continue;
+            }
+            let lane_width = road.highway_type.default_lane_width();
+            let total_width = (road.lanes.max(1) as f32) * lane_width;
+            let half_width = total_width * 0.5;
+
+            let is_elevated = road.layer > 0 || road.is_bridge;
+            let is_subterranean = road.layer < 0 || road.is_tunnel;
+
+            for window in road.geometry.windows(2) {
+                let pt1 = &window[0];
+                let pt2 = &window[1];
+                let enu1 = conv.wgs84_to_enu(*pt1);
+                let enu2 = conv.wgs84_to_enu(*pt2);
+                let ground_elev1 = dem.sample_bilinear(pt1);
+                let ground_elev2 = dem.sample_bilinear(pt2);
+
+                let elev1 = if is_elevated {
+                    let layers = road.layer.max(1) as f32;
+                    ground_elev1 + layers * 6.0
+                } else if is_subterranean {
+                    let layers = road.layer.abs().max(1) as f32;
+                    ground_elev1 - layers * 5.0
+                } else {
+                    ground_elev1 + 0.20
+                };
+
+                let elev2 = if is_elevated {
+                    let layers = road.layer.max(1) as f32;
+                    ground_elev2 + layers * 6.0
+                } else if is_subterranean {
+                    let layers = road.layer.abs().max(1) as f32;
+                    ground_elev2 - layers * 5.0
+                } else {
+                    ground_elev2 + 0.20
+                };
+
+                let p1 = glam::Vec3::new(enu1.east as f32, elev1, enu1.north as f32);
+                let p2 = glam::Vec3::new(enu2.east as f32, elev2, enu2.north as f32);
+
+                let seg_idx = road_segments.len();
+                road_segments.push(RoadCollisionSegment {
+                    p1,
+                    p2,
+                    half_width,
+                    is_bridge: road.is_bridge,
+                    layer: road.layer,
+                });
+
+                // Index bounding box of segment into spatial grid
+                let corridor = half_width + 2.0;
+                let min_x = p1.x.min(p2.x) - corridor;
+                let max_x = p1.x.max(p2.x) + corridor;
+                let min_z = p1.z.min(p2.z) - corridor;
+                let max_z = p1.z.max(p2.z) + corridor;
+
+                let c_min_x = (min_x / grid_cell_size).floor() as i32;
+                let c_max_x = (max_x / grid_cell_size).floor() as i32;
+                let c_min_z = (min_z / grid_cell_size).floor() as i32;
+                let c_max_z = (max_z / grid_cell_size).floor() as i32;
+
+                for cx in c_min_x..=c_max_x {
+                    for cz in c_min_z..=c_max_z {
+                        spatial_grid.entry((cx, cz)).or_default().push(seg_idx);
+                    }
+                }
+            }
+        }
+
         Self {
             dem,
             anchor,
             meters_per_deg_lat,
             meters_per_deg_lon,
+            road_segments,
+            spatial_grid,
+            grid_cell_size,
         }
     }
 
     pub fn elevation(&self, x: f32, z: f32) -> f32 {
+        let cell_x = (x / self.grid_cell_size).floor() as i32;
+        let cell_z = (z / self.grid_cell_size).floor() as i32;
+
+        if let Some(seg_indices) = self.spatial_grid.get(&(cell_x, cell_z)) {
+            for &idx in seg_indices {
+                let seg = &self.road_segments[idx];
+                let v = glam::Vec2::new(seg.p2.x - seg.p1.x, seg.p2.z - seg.p1.z);
+                let len_sq = v.length_squared();
+                if len_sq > 1e-4 {
+                    let w = glam::Vec2::new(x - seg.p1.x, z - seg.p1.z);
+                    let t = (w.dot(v) / len_sq).clamp(0.0, 1.0);
+                    let proj = glam::Vec2::new(seg.p1.x, seg.p1.z) + v * t;
+                    let dist_perp = (glam::Vec2::new(x, z) - proj).length();
+                    if dist_perp <= seg.half_width + 1.8 {
+                        let mut road_y = seg.p1.y + t * (seg.p2.y - seg.p1.y);
+                        if dist_perp > seg.half_width {
+                            road_y += 0.15;
+                        }
+                        return road_y;
+                    }
+                }
+            }
+        }
+
         let lat = self.anchor.lat + (z as f64 / self.meters_per_deg_lat);
         let lon = self.anchor.lon + (x as f64 / self.meters_per_deg_lon);
         let coord = Wgs84Coord::new(lat, lon, 0.0);
@@ -154,8 +280,60 @@ impl DemGroundQuery {
 
 impl GroundQuery for DemGroundQuery {
     fn query_ground_contact(&self, origin: glam::Vec3, max_dist: f32) -> Option<(f32, glam::Vec3)> {
-        let ground_y = self.elevation(origin.x, origin.z);
-        let dist = origin.y - ground_y;
+        let cell_x = (origin.x / self.grid_cell_size).floor() as i32;
+        let cell_z = (origin.z / self.grid_cell_size).floor() as i32;
+
+        let mut best_contact: Option<(f32, glam::Vec3)> = None;
+        let mut min_abs_dist = f32::MAX;
+
+        if let Some(seg_indices) = self.spatial_grid.get(&(cell_x, cell_z)) {
+            for &idx in seg_indices {
+                let seg = &self.road_segments[idx];
+                let v = glam::Vec2::new(seg.p2.x - seg.p1.x, seg.p2.z - seg.p1.z);
+                let len_sq = v.length_squared();
+                if len_sq < 1e-4 {
+                    continue;
+                }
+                let w = glam::Vec2::new(origin.x - seg.p1.x, origin.z - seg.p1.z);
+                let t = (w.dot(v) / len_sq).clamp(0.0, 1.0);
+                let proj = glam::Vec2::new(seg.p1.x, seg.p1.z) + v * t;
+                let dist_perp = (glam::Vec2::new(origin.x, origin.z) - proj).length();
+                let corridor_half = seg.half_width + 1.8;
+
+                if dist_perp <= corridor_half {
+                    let mut road_y = seg.p1.y + t * (seg.p2.y - seg.p1.y);
+                    if dist_perp > seg.half_width {
+                        road_y += 0.15; // Raised curb / sidewalk riser
+                    }
+                    let dist = origin.y - road_y;
+                    if dist >= -1.5 && dist <= max_dist {
+                        let seg_tangent = glam::Vec3::new(v.x, seg.p2.y - seg.p1.y, v.y).normalize();
+                        let seg_perp = glam::Vec3::new(-v.y, 0.0, v.x).normalize();
+                        let mut seg_normal = seg_perp.cross(seg_tangent).normalize();
+                        if seg_normal.y < 0.0 {
+                            seg_normal = -seg_normal;
+                        }
+                        if dist.abs() < min_abs_dist {
+                            min_abs_dist = dist.abs();
+                            best_contact = Some((0.0f32.max(dist), seg_normal));
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(contact) = best_contact {
+            return Some(contact);
+        }
+
+        // Fallback to DEM terrain contact
+        let terrain_y = {
+            let lat = self.anchor.lat + (origin.z as f64 / self.meters_per_deg_lat);
+            let lon = self.anchor.lon + (origin.x as f64 / self.meters_per_deg_lon);
+            let coord = Wgs84Coord::new(lat, lon, 0.0);
+            self.dem.sample_bilinear(&coord)
+        };
+        let dist = origin.y - terrain_y;
         let normal = self.normal(origin.x, origin.z);
         if (0.0..=max_dist).contains(&dist) {
             Some((dist, normal))
@@ -532,10 +710,11 @@ impl InteractiveViewerApp {
         camera_ctrl.pitch = initial_landmark.pitch;
 
         let camera = FloatingOriginCamera::new(initial_landmark.coord, 16.0 / 9.0);
+        let vehicle_yaw = realearth_shared::coordinates::camera_yaw_to_vehicle_yaw(initial_landmark.yaw);
         let vehicle = DynamicVehicle::new(
             VehicleConfig::default(),
             glam::Vec3::new(0.0, 10.0, 0.0),
-            initial_landmark.yaw,
+            vehicle_yaw,
         );
         let vehicle_cam = VehicleCameraController::new(config.vehicle_cam_perspective);
 
@@ -544,30 +723,30 @@ impl InteractiveViewerApp {
         player_profile.add_reputation(CareerType::HeavyFreight, 500);
 
         let motorcycle =
-            MotorcycleModel::new(glam::Vec3::new(3.0, 10.0, 0.0), initial_landmark.yaw);
+            MotorcycleModel::new(glam::Vec3::new(3.0, 10.0, 0.0), vehicle_yaw);
         let transit_bus =
-            TransitBusModel::new(glam::Vec3::new(-5.0, 10.0, 0.0), initial_landmark.yaw);
+            TransitBusModel::new(glam::Vec3::new(-5.0, 10.0, 0.0), vehicle_yaw);
         let heavy_truck =
-            HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), initial_landmark.yaw);
+            HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), vehicle_yaw);
 
         let train_consist = TrainConsist::new_caltrain_diesel();
         let train_position = glam::Vec3::new(0.0, 10.0, 20.0);
-        let train_yaw = initial_landmark.yaw;
+        let train_yaw = vehicle_yaw;
 
         let marine_vessel = MarineVessel::new_ferry(
             "Golden Gate Passenger Ferry",
             glam::Vec3::new(250.0, 0.0, -100.0),
-            initial_landmark.yaw,
+            vehicle_yaw,
         );
         let marine_elapsed_time = 0.0;
 
         let mut aircraft = AircraftFlight::new_airliner(
             "EarthAir B737-800",
             glam::Vec3::new(0.0, 350.0, -500.0),
-            initial_landmark.yaw,
+            vehicle_yaw,
         );
         aircraft.linear_velocity =
-            glam::Quat::from_rotation_y(initial_landmark.yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
+            glam::Quat::from_rotation_y(vehicle_yaw) * glam::Vec3::new(0.0, 0.0, 75.0);
         let aircraft_throttle = 0.75;
         let active_transport_mode = config.active_mode;
 
@@ -1188,11 +1367,46 @@ impl InteractiveViewerApp {
         self.train_consist.throttle = 0.0;
         self.reverse_dwell_sec = 0.0;
         self.was_braking_to_stop = false;
+
+        for wheel in &mut self.vehicle.wheels {
+            wheel.steer_angle = 0.0;
+        }
+        self.motorcycle.steer_angle = 0.0;
+        self.transit_bus.steer_angle = 0.0;
+        self.heavy_truck.steer_angle = 0.0;
+    }
+
+    /// Immediately arrests all motion and zeroes velocities, forces, and steering angles across all fleet vehicles.
+    pub fn stop_and_stabilize_all_vehicles(&mut self) {
+        self.vehicle.linear_velocity = glam::Vec3::ZERO;
+        self.vehicle.angular_velocity = glam::Vec3::ZERO;
+        self.vehicle.speed_kph = 0.0;
+        for wheel in &mut self.vehicle.wheels {
+            wheel.steer_angle = 0.0;
+            wheel.angular_velocity = 0.0;
+            wheel.slip_angle = 0.0;
+            wheel.longitudinal_force_fx = 0.0;
+            wheel.lateral_force_fy = 0.0;
+        }
+        self.motorcycle.linear_velocity = glam::Vec3::ZERO;
+        self.motorcycle.angular_velocity = glam::Vec3::ZERO;
+        self.motorcycle.speed_kph = 0.0;
+        self.motorcycle.steer_angle = 0.0;
+        self.motorcycle.lean_angle = 0.0;
+        self.motorcycle.lean_velocity = 0.0;
+        self.transit_bus.linear_velocity = glam::Vec3::ZERO;
+        self.transit_bus.speed_kph = 0.0;
+        self.transit_bus.steer_angle = 0.0;
+        self.heavy_truck.linear_velocity = glam::Vec3::ZERO;
+        self.heavy_truck.speed_kph = 0.0;
+        self.heavy_truck.steer_angle = 0.0;
+        self.heavy_truck.trailer_articulation_angle = 0.0;
     }
 
     /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
     pub fn perform_roadside_recovery(&mut self) {
         self.reset_all_inputs();
+        self.stop_and_stabilize_all_vehicles();
         let ground_y = if let Some(ref gq) = self.ground_query {
             match self.active_transport_mode {
                 ActiveTransportMode::Car => {
@@ -2102,6 +2316,7 @@ impl InteractiveViewerApp {
         self.smoothed_steer_input = 0.0;
         self.park_engaged = false;
         self.reset_all_inputs();
+        self.stop_and_stabilize_all_vehicles();
         self.vehicle_cam.reset();
 
         self.vehicle_custom_color = Some(
@@ -2643,7 +2858,7 @@ impl InteractiveViewerApp {
             .map(|c| c.header.anchor)
             .unwrap_or(landmark.coord);
 
-        let ground_query = DemGroundQuery::new(dem.clone(), package_anchor);
+        let ground_query = DemGroundQuery::new_with_roads(dem.clone(), package_anchor, &raw_roads);
         let conv = EnuConverter::new(package_anchor);
         let lm_enu = conv.wgs84_to_enu(landmark.coord);
         let initial_elevation = ground_query.elevation(lm_enu.east as f32, lm_enu.north as f32);
@@ -2724,21 +2939,22 @@ impl InteractiveViewerApp {
             staged.initial_elevation,
             staged.lm_enu.north as f32,
         );
+        let veh_yaw = realearth_shared::coordinates::camera_yaw_to_vehicle_yaw(staged.landmark.yaw);
         self.vehicle =
-            DynamicVehicle::new(VehicleConfig::default(), spawn_pos, staged.landmark.yaw);
+            DynamicVehicle::new(VehicleConfig::default(), spawn_pos, veh_yaw);
         self.vehicle.recover_on_surface(staged.initial_elevation);
 
         self.motorcycle = MotorcycleModel::new(
             glam::Vec3::new(spawn_pos.x + 3.0, staged.initial_elevation, spawn_pos.z),
-            staged.landmark.yaw,
+            veh_yaw,
         );
         self.transit_bus = TransitBusModel::new(
             glam::Vec3::new(spawn_pos.x - 5.0, staged.initial_elevation, spawn_pos.z),
-            staged.landmark.yaw,
+            veh_yaw,
         );
         self.heavy_truck = HeavyTruckModel::new(
             glam::Vec3::new(spawn_pos.x + 8.0, staged.initial_elevation, spawn_pos.z),
-            staged.landmark.yaw,
+            veh_yaw,
         );
         let conv = EnuConverter::new(staged.package_anchor);
         let mut nearest_rail_pos = None;
@@ -2754,7 +2970,7 @@ impl InteractiveViewerApp {
                     let elev = staged.dem.sample_bilinear(node);
                     nearest_rail_pos = Some((
                         glam::Vec3::new(enu.east as f32, elev + 0.6, enu.north as f32),
-                        staged.landmark.yaw,
+                        veh_yaw,
                     ));
                 }
             }
@@ -3216,12 +3432,14 @@ impl ApplicationHandler for InteractiveViewerApp {
             WindowEvent::Focused(is_focused) => {
                 if !is_focused {
                     self.reset_all_inputs();
+                    self.stop_and_stabilize_all_vehicles();
                 }
             }
 
             WindowEvent::Occluded(is_occluded) => {
                 if is_occluded {
                     self.reset_all_inputs();
+                    self.stop_and_stabilize_all_vehicles();
                 }
             }
 
@@ -3236,6 +3454,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                 if physical_size.width == 0 || physical_size.height == 0 {
                     self.is_minimized = true;
                     self.reset_all_inputs();
+                    self.stop_and_stabilize_all_vehicles();
                     return;
                 }
                 self.is_minimized = false;
@@ -5438,12 +5657,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::Motorcycle => {
-                            let g_elev = gq
-                                .elevation(self.motorcycle.position.x, self.motorcycle.position.z);
+                            let g_elev = gq.elevation(render_pos.x, render_pos.z);
                             let (cam_pos, cam_yaw, cam_pitch) =
                                 self.vehicle_cam.update_pose_with_ground(
-                                    self.motorcycle.position,
-                                    self.motorcycle.orientation,
+                                    render_pos,
+                                    render_orient,
                                     4.2,
                                     1.6,
                                     self.motorcycle.speed_kph,
@@ -5458,14 +5676,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::TransitBus => {
-                            let g_elev = gq.elevation(
-                                self.transit_bus.position.x,
-                                self.transit_bus.position.z,
-                            );
+                            let g_elev = gq.elevation(render_pos.x, render_pos.z);
                             let (cam_pos, cam_yaw, cam_pitch) =
                                 self.vehicle_cam.update_pose_with_ground(
-                                    self.transit_bus.position,
-                                    self.transit_bus.orientation,
+                                    render_pos,
+                                    render_orient,
                                     16.0,
                                     4.5,
                                     self.transit_bus.speed_kph,
@@ -5480,14 +5695,11 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.pitch = cam_pitch;
                         }
                         ActiveTransportMode::HeavyTruck => {
-                            let g_elev = gq.elevation(
-                                self.heavy_truck.tractor_position.x,
-                                self.heavy_truck.tractor_position.z,
-                            );
+                            let g_elev = gq.elevation(render_pos.x, render_pos.z);
                             let (cam_pos, cam_yaw, cam_pitch) =
                                 self.vehicle_cam.update_pose_with_ground(
-                                    self.heavy_truck.tractor_position,
-                                    self.heavy_truck.tractor_orientation,
+                                    render_pos,
+                                    render_orient,
                                     26.0,
                                     5.2,
                                     self.heavy_truck.speed_kph,

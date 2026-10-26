@@ -9,7 +9,7 @@
 
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_compiler::database::ChunkDatabase;
-use realearth_ingestion::authentic::load_authentic_city;
+use realearth_ingestion::authentic::{load_authentic_city, verify_city_playable};
 use realearth_navigation::RoadNetworkGraph;
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::us_catalog::{
@@ -482,7 +482,7 @@ fn test_stage2_priority1_major_us_cities_coverage_and_navigation() {
                 }
             }
             RegionPackageReadiness::DownloadRequired => {
-                let load_res = load_authentic_city(city.id);
+                let load_res = verify_city_playable(city.id);
                 assert!(
                     load_res.is_err(),
                     "Unbundled catalog city '{}' must honestly require download package",
@@ -544,7 +544,7 @@ fn test_stage2_priority2_extended_cities_coverage() {
                 assert_eq!(dem.height, 64);
             }
             RegionPackageReadiness::DownloadRequired => {
-                let load_res = load_authentic_city(city.id);
+                let load_res = verify_city_playable(city.id);
                 assert!(
                     load_res.is_err(),
                     "Unbundled catalog city '{}' must honestly require download package",
