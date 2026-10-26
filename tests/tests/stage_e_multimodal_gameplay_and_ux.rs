@@ -58,9 +58,11 @@ fn test_e1_san_francisco_sports_car_drive_and_stop() {
     assert!(car.position.y >= 5.0);
 
     // 1. Full Throttle Acceleration in Drive Mode
-    let mut throttle_inputs = VehicleInputs::default();
-    throttle_inputs.gear_mode = TransmissionMode::Drive;
-    throttle_inputs.throttle = 1.0;
+    let throttle_inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Drive,
+        throttle: 1.0,
+        ..Default::default()
+    };
 
     for _ in 0..120 {
         // 2.0 seconds at 60 FPS
@@ -83,9 +85,11 @@ fn test_e1_san_francisco_sports_car_drive_and_stop() {
     );
 
     // 2. Service Braking to Standstill
-    let mut brake_inputs = VehicleInputs::default();
-    brake_inputs.gear_mode = TransmissionMode::Drive;
-    brake_inputs.brake = 1.0;
+    let brake_inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Drive,
+        brake: 1.0,
+        ..Default::default()
+    };
 
     for _ in 0..150 {
         // 2.5 seconds braking
@@ -99,8 +103,10 @@ fn test_e1_san_francisco_sports_car_drive_and_stop() {
     );
 
     // 3. Parking Pawl Engagement
-    let mut park_inputs = VehicleInputs::default();
-    park_inputs.gear_mode = TransmissionMode::Park;
+    let park_inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Park,
+        ..Default::default()
+    };
     let initial_pos = car.position;
 
     for _ in 0..60 {
@@ -142,9 +148,11 @@ fn test_e2_detailed_transit_bus_passenger_service_route() {
     );
 
     // 2. Scheduled Arterial Service Operation
-    let mut cruise_inputs = VehicleInputs::default();
-    cruise_inputs.gear_mode = TransmissionMode::Drive;
-    cruise_inputs.throttle = 1.0;
+    let cruise_inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Drive,
+        throttle: 1.0,
+        ..Default::default()
+    };
 
     for _ in 0..300 {
         // 5.0 seconds driving
@@ -163,9 +171,11 @@ fn test_e2_detailed_transit_bus_passenger_service_route() {
     );
 
     // 3. Pneumatic Air Brake Arrival Stop at Next Station
-    let mut stop_inputs = VehicleInputs::default();
-    stop_inputs.gear_mode = TransmissionMode::Drive;
-    stop_inputs.brake = 0.85;
+    let stop_inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Drive,
+        brake: 0.85,
+        ..Default::default()
+    };
 
     for _ in 0..240 {
         bus.step(&stop_inputs, &ground, DT_60FPS);
@@ -285,10 +295,12 @@ fn test_e4_aircraft_airport_departure_and_streamed_flight() {
     plane.linear_velocity = Vec3::new(0.0, 8.0, 105.0); // 105 m/s (~204 knots) with 8 m/s climb
     plane.altitude_msl_meters = 350.0;
 
-    let mut flight_inputs = FlightInputs::default();
-    flight_inputs.throttle = 1.0;
-    flight_inputs.elevator = 0.05; // Balanced pitch trim to hold climb attitude
-    flight_inputs.flaps = 0.10;
+    let flight_inputs = FlightInputs {
+        throttle: 1.0,
+        elevator: 0.05, // Balanced pitch trim to hold climb attitude
+        flaps: 0.10,
+        ..Default::default()
+    };
 
     let ground_elevation = 15.0; // 15m terrain MSL
 

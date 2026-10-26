@@ -417,11 +417,11 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
             meta.dem_accuracy_m
         );
         assert!(
-            dataset.roads.len() > 0,
+            !dataset.roads.is_empty(),
             "Roads must be present in synthesized extract"
         );
         assert!(
-            dataset.buildings.len() > 0,
+            !dataset.buildings.is_empty(),
             "Buildings must be present in synthesized extract"
         );
         assert!(dem.width > 0 && dem.height > 0, "DEM grid must be valid");

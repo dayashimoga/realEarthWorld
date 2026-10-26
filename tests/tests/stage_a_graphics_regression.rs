@@ -32,7 +32,7 @@ fn test_fixed_geographic_cameras_at_san_francisco_landmarks() {
         TestLandmark {
             name: "Transamerica Pyramid",
             coord: Wgs84Coord::new(37.7952, -122.4028, 260.0),
-            yaw: -1.57,
+            yaw: -std::f32::consts::FRAC_PI_2,
             pitch: -0.25,
         },
         TestLandmark {
@@ -44,7 +44,7 @@ fn test_fixed_geographic_cameras_at_san_francisco_landmarks() {
         TestLandmark {
             name: "Ferry Building",
             coord: Wgs84Coord::new(37.7955, -122.3937, 30.0),
-            yaw: -3.14,
+            yaw: -std::f32::consts::PI,
             pitch: -0.1,
         },
         TestLandmark {
