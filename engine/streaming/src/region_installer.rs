@@ -168,6 +168,13 @@ impl RegionInstaller {
             sha256_checksum: None,
         });
 
+        if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
+            return Err(RealEarthError::Ingestion(format!(
+                "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
+                city.id, e
+            )));
+        }
+
         let (raw, dem) = match load_authentic_city(city.id) {
             Ok((raw, dem, _)) => (raw, dem),
             Err(e) => {

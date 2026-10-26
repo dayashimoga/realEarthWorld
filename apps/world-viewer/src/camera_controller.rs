@@ -439,8 +439,10 @@ impl CameraController {
             return;
         }
 
-        let right_x = (-self.yaw.sin()) as f64;
-        let right_z = (self.yaw.cos()) as f64;
+        // Right vector is perpendicular to forward: forward = (cos(yaw), 0, sin(yaw))
+        // right = forward x up = (sin(yaw), 0, -cos(yaw))
+        let right_x = (self.yaw.sin()) as f64;
+        let right_z = (-self.yaw.cos()) as f64;
 
         let m_per_deg_lat = 111_000.0;
         let m_per_deg_lon = 111_320.0 * (self.coord.lat.to_radians()).cos().abs().max(0.1);

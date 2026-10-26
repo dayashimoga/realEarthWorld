@@ -122,6 +122,10 @@ pub struct RecordedGeographicContext {
     pub package_anchor: [f64; 3],
     pub loaded_chunk_ids: Vec<String>,
     pub source_osm_sha256: Option<String>,
+    #[serde(default)]
+    pub source_feature_ids: Vec<String>,
+    #[serde(default)]
+    pub bounding_box_distance_m: f32,
 }
 
 impl Default for RecordedGeographicContext {
@@ -131,6 +135,104 @@ impl Default for RecordedGeographicContext {
             package_anchor: [37.7952, -122.4028, 0.0],
             loaded_chunk_ids: vec!["chunk_0_0".to_string(), "chunk_0_1".to_string()],
             source_osm_sha256: None,
+            source_feature_ids: Vec::new(),
+            bounding_box_distance_m: 0.0,
+        }
+    }
+}
+
+/// Vehicle physical forces synchronized with simulation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordedVehicleForces {
+    pub longitudinal_force_fx: f32,
+    pub lateral_force_fy: f32,
+    pub normal_force_fz: f32,
+    pub total_torque_nm: [f32; 3],
+}
+
+impl Default for RecordedVehicleForces {
+    fn default() -> Self {
+        Self {
+            longitudinal_force_fx: 0.0,
+            lateral_force_fy: 0.0,
+            normal_force_fz: 0.0,
+            total_torque_nm: [0.0, 0.0, 0.0],
+        }
+    }
+}
+
+/// Vehicle spatial velocity vectors.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordedVehicleVelocity {
+    pub linear_velocity_mps: [f32; 3],
+    pub angular_velocity_rad_per_s: [f32; 3],
+    pub forward_speed_mps: f32,
+}
+
+impl Default for RecordedVehicleVelocity {
+    fn default() -> Self {
+        Self {
+            linear_velocity_mps: [0.0, 0.0, 0.0],
+            angular_velocity_rad_per_s: [0.0, 0.0, 0.0],
+            forward_speed_mps: 0.0,
+        }
+    }
+}
+
+/// Rendered geometry and streaming mesh telemetry.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordedMeshMetrics {
+    pub loaded_mesh_count: usize,
+    pub drawn_mesh_count: usize,
+    pub culled_mesh_count: usize,
+    pub drawn_triangle_count: usize,
+}
+
+impl Default for RecordedMeshMetrics {
+    fn default() -> Self {
+        Self {
+            loaded_mesh_count: 0,
+            drawn_mesh_count: 0,
+            culled_mesh_count: 0,
+            drawn_triangle_count: 0,
+        }
+    }
+}
+
+/// Hardware execution and GPU frame timing metrics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordedGpuMetrics {
+    pub frame_time_ms: f32,
+    pub gpu_render_time_ms: f32,
+    pub cpu_frame_time_ms: f32,
+}
+
+impl Default for RecordedGpuMetrics {
+    fn default() -> Self {
+        Self {
+            frame_time_ms: 16.667,
+            gpu_render_time_ms: 4.0,
+            cpu_frame_time_ms: 2.5,
+        }
+    }
+}
+
+/// Diagnostic trace linking pipeline stages: source -> compiler -> chunk -> streamer -> collision -> renderer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordedDiagnosticTrace {
+    pub geographic_stage: String,
+    pub vehicle_render_status: String,
+    pub is_production_asset_active: bool,
+    pub notes: Option<String>,
+}
+
+impl Default for RecordedDiagnosticTrace {
+    fn default() -> Self {
+        Self {
+            geographic_stage: "Unspecified".to_string(),
+            vehicle_render_status: "Unspecified".to_string(),
+            is_production_asset_active: false,
+            notes: None,
         }
     }
 }
@@ -150,6 +252,40 @@ pub struct GameplayInputFrame {
     pub camera_state: RecordedCameraState,
     pub collision_state: RecordedCollisionState,
     pub geographic_context: RecordedGeographicContext,
+    #[serde(default)]
+    pub forces: RecordedVehicleForces,
+    #[serde(default)]
+    pub velocity: RecordedVehicleVelocity,
+    #[serde(default)]
+    pub mesh_metrics: RecordedMeshMetrics,
+    #[serde(default)]
+    pub gpu_metrics: RecordedGpuMetrics,
+    #[serde(default)]
+    pub diagnostic_trace: RecordedDiagnosticTrace,
+}
+
+impl Default for GameplayInputFrame {
+    fn default() -> Self {
+        Self {
+            frame_index: 0,
+            timestamp_ms: 0.0,
+            delta_time_sec: 1.0 / 60.0,
+            raw_keys: Vec::new(),
+            mouse_buttons: Vec::new(),
+            mouse_cursor: None,
+            active_mode: "Car".to_string(),
+            vehicle_state: RecordedVehicleState::default(),
+            render_transform: RecordedTransform::default(),
+            camera_state: RecordedCameraState::default(),
+            collision_state: RecordedCollisionState::default(),
+            geographic_context: RecordedGeographicContext::default(),
+            forces: RecordedVehicleForces::default(),
+            velocity: RecordedVehicleVelocity::default(),
+            mesh_metrics: RecordedMeshMetrics::default(),
+            gpu_metrics: RecordedGpuMetrics::default(),
+            diagnostic_trace: RecordedDiagnosticTrace::default(),
+        }
+    }
 }
 
 /// Verification results when playing back a recorded session against active simulation.

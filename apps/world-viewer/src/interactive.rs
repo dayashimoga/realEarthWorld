@@ -2740,12 +2740,36 @@ impl InteractiveViewerApp {
             glam::Vec3::new(spawn_pos.x + 8.0, staged.initial_elevation, spawn_pos.z),
             staged.landmark.yaw,
         );
-        self.train_position = glam::Vec3::new(
-            spawn_pos.x,
-            staged.initial_elevation + 0.6,
-            spawn_pos.z + 20.0,
-        );
-        self.train_yaw = staged.landmark.yaw;
+        let conv = EnuConverter::new(staged.package_anchor);
+        let mut nearest_rail_pos = None;
+        let mut min_rail_dist = f64::MAX;
+        for rail in &staged.raw_railways {
+            for node in &rail.geometry {
+                let d_lat = (node.lat - staged.landmark.coord.lat) * 111000.0;
+                let d_lon = (node.lon - staged.landmark.coord.lon) * 88000.0;
+                let dist = (d_lat * d_lat + d_lon * d_lon).sqrt();
+                if dist < min_rail_dist {
+                    min_rail_dist = dist;
+                    let enu = conv.wgs84_to_enu(*node);
+                    let elev = staged.dem.sample_bilinear(node);
+                    nearest_rail_pos = Some((
+                        glam::Vec3::new(enu.east as f32, elev + 0.6, enu.north as f32),
+                        staged.landmark.yaw,
+                    ));
+                }
+            }
+        }
+        if let Some((pos, yaw)) = nearest_rail_pos {
+            self.train_position = pos;
+            self.train_yaw = yaw;
+        } else {
+            self.train_position = glam::Vec3::new(
+                spawn_pos.x,
+                staged.initial_elevation + 0.6,
+                spawn_pos.z + 20.0,
+            );
+            self.train_yaw = staged.landmark.yaw;
+        }
 
         self.marine_vessel = MarineVessel::new_ferry(
             "Harbor Passenger Ferry",
@@ -5589,10 +5613,10 @@ impl ApplicationHandler for InteractiveViewerApp {
                             self.camera_ctrl.move_vertical(-effective_move);
                         }
                         if self.pressed_keys.contains(&KeyCode::ArrowLeft) {
-                            self.camera_ctrl.rotate(-rot_speed, 0.0);
+                            self.camera_ctrl.rotate(rot_speed, 0.0);
                         }
                         if self.pressed_keys.contains(&KeyCode::ArrowRight) {
-                            self.camera_ctrl.rotate(rot_speed, 0.0);
+                            self.camera_ctrl.rotate(-rot_speed, 0.0);
                         }
                         if self.pressed_keys.contains(&KeyCode::ArrowUp) {
                             self.camera_ctrl.rotate(0.0, rot_speed);

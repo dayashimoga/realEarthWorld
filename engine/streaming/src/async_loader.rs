@@ -61,43 +61,36 @@ pub fn generate_fallback_chunk(
     elevation: f32,
 ) -> WorldChunk {
     let mut terrain = ChunkMesh::default();
-
-    // 4-corner quad covering chunk bounds
-    let p0 = glam::Vec3::new(-250.0, elevation, -250.0);
-    let p1 = glam::Vec3::new(250.0, elevation, -250.0);
-    let p2 = glam::Vec3::new(250.0, elevation, 250.0);
-    let p3 = glam::Vec3::new(-250.0, elevation, 250.0);
-
     let norm = glam::Vec3::Y;
     let fallback_color = glam::Vec4::new(0.42, 0.45, 0.38, 1.0); // Safe muted ground tone
 
-    terrain.vertices.push(Vertex::new(
-        p0.to_array(),
-        norm.to_array(),
-        [0.0, 0.0],
-        fallback_color.to_array(),
-    ));
-    terrain.vertices.push(Vertex::new(
-        p1.to_array(),
-        norm.to_array(),
-        [1.0, 0.0],
-        fallback_color.to_array(),
-    ));
-    terrain.vertices.push(Vertex::new(
-        p2.to_array(),
-        norm.to_array(),
-        [1.0, 1.0],
-        fallback_color.to_array(),
-    ));
-    terrain.vertices.push(Vertex::new(
-        p3.to_array(),
-        norm.to_array(),
-        [0.0, 1.0],
-        fallback_color.to_array(),
-    ));
+    let steps = 4;
+    for j in 0..=steps {
+        let v = j as f32 / steps as f32;
+        let z = -250.0 + v * 500.0;
+        for i in 0..=steps {
+            let u = i as f32 / steps as f32;
+            let x = -250.0 + u * 500.0;
+            terrain.vertices.push(Vertex::new(
+                [x, elevation, z],
+                norm.to_array(),
+                [u, v],
+                fallback_color.to_array(),
+            ));
+        }
+    }
 
-    // Two CCW triangles
-    terrain.indices.extend_from_slice(&[0, 1, 2, 0, 2, 3]);
+    for j in 0..steps {
+        for i in 0..steps {
+            let row1 = (j * (steps + 1)) as u32;
+            let row2 = ((j + 1) * (steps + 1)) as u32;
+            let i0 = row1 + i as u32;
+            let i1 = row1 + i as u32 + 1;
+            let i2 = row2 + i as u32 + 1;
+            let i3 = row2 + i as u32;
+            terrain.indices.extend_from_slice(&[i0, i1, i2, i0, i2, i3]);
+        }
+    }
 
     let center = bounds.center();
     WorldChunk {

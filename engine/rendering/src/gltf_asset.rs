@@ -504,7 +504,18 @@ impl LoadedVehicleModel {
                 let world_v_norm = (world_rot_mat * articulated_norm).normalize_or_zero();
 
                 let final_color = if let Some(ov) = override_color {
-                    ov
+                    if submesh.submesh_type == VehicleSubmeshType::ChassisBody {
+                        let is_accent_or_light = (v.color[3] - 0.95).abs() < 0.01
+                            || (v.color[3] - 0.98).abs() < 0.005
+                            || (v.color[0] > 0.90 && v.color[1] > 0.90 && v.color[2] > 0.90);
+                        if is_accent_or_light {
+                            v.color
+                        } else {
+                            ov
+                        }
+                    } else {
+                        ov
+                    }
                 } else {
                     v.color
                 };

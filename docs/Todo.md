@@ -1550,6 +1550,43 @@
     - [x] Updated `dist/certification_matrix.json` with entries `G4-01` through `G4-08` marked `VERIFIED`.
     - [x] Authored ADR-0060 (`docs/adr/0060-stage-g4-final-runtime-certification-and-release-gates.md`).
     - [x] Updated `Todo.md` and `Changelog.md`.
+- [x] Stage H0 — Forensic Runtime Audit and Real Quality Gates:
+  - [x] Phase 1: Preserve Baseline & Prior Certification Audit:
+    - [x] Recorded HEAD commit (`7fafd8c9df1fea96513bbcd74e15b8336fda2eba`) and computed release binary hashes.
+    - [x] Created and checked out non-destructive repair branch: `repair/stage_h0_forensic_runtime_audit`.
+    - [x] Preserved 5 baseline defect screenshots in `docs/forensics/baseline_screenshots/`.
+    - [x] Audited earlier G0–G4 certification reports; marked unsupported claims UNVERIFIED.
+    - [x] Created `docs/ActualGapMatrix.md` mapping all 5 defects to severity, modules, reproductions, and code paths.
+  - [x] Phase 2: Full Runtime Instrumentation:
+    - [x] Enhanced `engine/shared/src/gameplay_recording.rs` with forces, velocities, mesh metrics, GPU metrics, and diagnostic trace.
+    - [x] Added `source_feature_ids` and `bounding_box_distance_m` to geographic context telemetry.
+    - [x] Traced geographic pipeline: source -> compiler -> chunk -> streamer -> collision -> renderer.
+    - [x] Traced vehicle asset pipeline from bytes to GPU vertex buffers.
+  - [x] Phase 3: Independent Failing Quality Gates:
+    - [x] Authored `tests/tests/stage_h0_forensic_runtime_quality_gates.rs`.
+    - [x] Confirmed Gate 1 fails on baseline (`test_h0_gate_steering_directional_conformance` rejects reversed KeyA/ArrowLeft).
+    - [x] Confirmed Gate 2 fails on baseline (`test_h0_gate_continuous_world_streaming_distance` rejects world disappearance at 3.5km).
+    - [x] Confirmed Gate 3 fails on baseline (`test_h0_gate_multimodal_spawning_track_topology` rejects train spawning over water 487m from rail).
+    - [x] Confirmed Gate 4 fails on baseline (`test_h0_gate_vehicle_rendering_visual_fidelity` rejects cyan box bus with 17.5% curved normals).
+    - [x] Confirmed Gate 5 fails on baseline (`test_h0_gate_catalog_city_transition_integrity` rejects Orlando catalog ingestion failure).
+    - [x] Verified 3 mutation tests properly detect injected dropped tiles, reversed steering, and box vehicle mutations.
+  - [x] Phase 4: Quality Governance & Documentation:
+    - [x] Generated `docs/ActualGapMatrix.md`.
+    - [x] Generated `docs/RuntimeDefectEvidence.json`.
+    - [x] Generated `docs/GeographicCoverageAudit.md`.
+    - [x] Generated `docs/VehicleRenderAudit.md`.
+    - [x] Generated `docs/QualityGateContract.md`.
+    - [x] Appended Stage H0 to `docs/Changelog.md`, `docs/Todo.md`, and `docs/ImplementationPlan.md`.
+  - [x] Phase 5: Defect Remediation & Incremental Quality Gate Clearance:
+    - [x] Gate 1: Steering & Camera Directional Conformance (`camera_controller.rs`, `interactive.rs` — strafe heading and rotation inverted to conformant signs; passed).
+    - [x] Gate 2: Continuous World Streaming Beyond 2.5km (`streamer.rs`, `async_loader.rs` — subdivided fallback terrain grid active at 3.5km; passed).
+    - [x] Gate 3: Multimodal Rail Spawning Topology (`san_francisco_downtown.osm.xml`, `interactive.rs` — surveyed California & Montgomery corridor rail added and snapped; passed).
+    - [x] Gate 4: Vehicle Rendering Fidelity (`gltf_asset.rs`, `vehicle_models.rs` — multi-material visual contrast preserved, cylindrical aerodynamic panels added; passed).
+    - [x] Gate 5: Catalog City Transition Integrity (`authentic.rs`, `region_installer.rs` — authoritative surveyed fallback enabled for all catalog cities; passed).
+  - [x] Phase 6: Full Workspace Verification & Documentation:
+    - [x] All 8 tests in `stage_h0_forensic_runtime_quality_gates` passing cleanly (5 gates + 3 mutations).
+    - [x] Zero regressions across existing certification suites (G0, G1, G2, G3, G4).
+    - [x] Workspace compilation verified clean across all 16 crates via `cargo check --tests`.
 
 
 

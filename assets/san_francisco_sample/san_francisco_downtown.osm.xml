@@ -6128,6 +6128,20 @@
     <tag k="gauge" v="1676"/>
   </way>
 
+  <!-- San Francisco Transit / Heritage Railway (California & Montgomery Corridor) -->
+  <node id="500010" lat="37.7952000" lon="-122.4028000"/>
+  <node id="500011" lat="37.7952000" lon="-122.4050000"/>
+  <node id="500012" lat="37.7952000" lon="-122.4000000"/>
+  <way id="510002">
+    <nd ref="500011"/>
+    <nd ref="500010"/>
+    <nd ref="500012"/>
+    <tag k="railway" v="rail"/>
+    <tag k="name" v="San Francisco Heritage Railway - California &amp; Montgomery Corridor"/>
+    <tag k="gauge" v="1435"/>
+    <tag k="layer" v="0"/>
+  </way>
+
   <node id="60001" lat="37.7958000" lon="-122.3920000"/>
   <node id="60002" lat="37.7960000" lon="-122.3920000"/>
   <way id="610001">

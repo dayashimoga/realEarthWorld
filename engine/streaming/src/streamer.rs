@@ -1,7 +1,9 @@
 //! World Streamer orchestrating SQLite spatial queries, predictive prefetching,
 //! Rayon parallel decoding, bounded backpressure, and collision-critical pinning.
 
-use crate::async_loader::{read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest};
+use crate::async_loader::{
+    generate_fallback_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest,
+};
 use crate::config::StreamingConfig;
 use crate::lod::select_lod_with_hysteresis;
 use crate::lru_cache::{ChunkKey, LruChunkCache};
@@ -9,6 +11,7 @@ use crate::prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkP
 use rayon::prelude::*;
 use realearth_compiler::chunk::WorldChunk;
 use realearth_compiler::database::ChunkDatabase;
+use realearth_shared::bounds::GeoBounds;
 use realearth_shared::coordinates::Wgs84Coord;
 use realearth_shared::errors::{RealEarthError, Result};
 use std::path::{Path, PathBuf};
@@ -207,7 +210,40 @@ impl WorldStreamer {
             }
         }
 
-        // 5. Memory budget eviction (CPU & GPU)
+        // 5. Continuous regional fallback: If observer position has no chunk covering it
+        // (e.g. driving beyond database extract bounds at 390 km/h), synthesize a continuous
+        // fallback terrain grid so the world never terminates into an empty void.
+        if !self.is_collision_ready(camera_pos) {
+            let chunk_deg = 0.005; // ~500m
+            let center_cx = (camera_pos.lon / chunk_deg).floor() as i32;
+            let center_cy = (camera_pos.lat / chunk_deg).floor() as i32;
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    let cx = center_cx + dx;
+                    let cy = center_cy + dy;
+                    let key = ChunkKey::new(cx, cy, 0);
+                    if self.cache.get(&key).is_none() {
+                        let min_lat = cy as f64 * chunk_deg;
+                        let max_lat = (cy + 1) as f64 * chunk_deg;
+                        let min_lon = cx as f64 * chunk_deg;
+                        let max_lon = (cx + 1) as f64 * chunk_deg;
+                        let bounds = GeoBounds::new(min_lat, max_lat, min_lon, max_lon);
+                        let fallback = generate_fallback_chunk(cx, cy, 0, &bounds, 0.0);
+                        self.cache.insert_with_options(
+                            key,
+                            fallback,
+                            self.current_frame,
+                            dx == 0 && dy == 0,
+                            true,
+                        );
+                        loaded_this_frame += 1;
+                        self.load_queue.total_fallbacks += 1;
+                    }
+                }
+            }
+        }
+
+        // 6. Memory budget eviction (CPU & GPU)
         let threshold_bytes = self.config.eviction_threshold_bytes();
         if self.cache.total_cpu_bytes() > threshold_bytes {
             let cam_x = (camera_pos.lon / 0.005).floor() as i32;

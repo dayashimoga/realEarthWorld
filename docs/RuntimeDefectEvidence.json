@@ -1,0 +1,145 @@
+{
+  "audit_metadata": {
+    "audit_stage": "STAGE_H0_FORENSIC_RUNTIME_AUDIT",
+    "timestamp": "2026-10-26T19:20:00+05:30",
+    "git_head_commit": "7fafd8c9df1fea96513bbcd74e15b8336fda2eba",
+    "repair_branch": "repair/stage_h0_forensic_runtime_audit",
+    "platform": {
+      "os": "Windows 11 x64",
+      "target_triple": "x86_64-pc-windows-msvc",
+      "graphics_backend": "wgpu / DirectX 12 / Vulkan",
+      "rustc_version": "rustc 1.85.0"
+    },
+    "binary_hashes": {
+      "target/release/realearth-viewer.exe": "B425534BCFFC36D8D147180436C66A234A9C726F1C3F1CBA6EEEBBACCBCCF932",
+      "target/release/realearth-cli.exe": "F90C2A342B56FC32B70E0697265A0B510FD778948D2220C9AC648DED8183F031",
+      "dist/windows/realearth-windows-x64.zip": "60C87E8972BC14E0AE1E6148C78F1A71A31138468AA9F2C2C627433561AF5FF6"
+    }
+  },
+  "baseline_screenshots": [
+    {
+      "id": "DEFECT-SS-01",
+      "filename": "screenshot1_car_world_disappearance.png",
+      "path": "docs/forensics/baseline_screenshots/screenshot1_car_world_disappearance.png",
+      "observed_symptom": "Sports coupe traveling at 390 km/h in San Francisco exits 2.5km sample bounds; all buildings, roads, and terrain meshes terminate; vehicle drives on empty horizon apron into void.",
+      "telemetry_in_image": {
+        "speed": "390 KM/H",
+        "gear": "D5",
+        "rpm": 6500,
+        "region_label": "San Francisco Bay Area | Transamerica Pyramid & Salesforce Tower",
+        "network": "OFFLINE"
+      },
+      "defect_category": "WORLD_STREAMING_DISAPPEARANCE"
+    },
+    {
+      "id": "DEFECT-SS-02",
+      "filename": "screenshot2_train_over_water.png",
+      "path": "docs/forensics/baseline_screenshots/screenshot2_train_over_water.png",
+      "observed_symptom": "Train consist spawned in San Francisco at automotive road landmark, 487m from any rail track; drives directly onto flat water surface without tracks or bridges.",
+      "telemetry_in_image": {
+        "speed": "5.8 KM/H FORWARD",
+        "notch": "43%",
+        "tractive_effort": "2684 kN",
+        "brake_pipe": "5.00 BAR",
+        "track_signal": "CLEAR"
+      },
+      "defect_category": "UNSUPPORTED_TRANSPORT_SPAWNING"
+    },
+    {
+      "id": "DEFECT-SS-03",
+      "filename": "screenshot3_orlando_city_transition_failed.png",
+      "path": "docs/forensics/baseline_screenshots/screenshot3_orlando_city_transition_failed.png",
+      "observed_symptom": "User selects Orlando (FL) from 38 Audited Metropolitan Regions catalog and clicks 'INSTALL & WARP'; transition crashes with red error banner: 'Region Transition to Orlando (FL) Failed: Ingestion error: Region Orlando (FL) requires authentic GIS data package'.",
+      "telemetry_in_image": {
+        "catalog_size": "38 AUDITED METROPOLITAN REGIONS",
+        "selected_city": "Orlando [FL] [DL REQ]",
+        "anchor_landmark": "SunTrust Center & Lake Eola",
+        "elevation": "35m",
+        "tier": "P2-Major"
+      },
+      "defect_category": "CITY_TRANSITION_INGESTION_FAILURE"
+    },
+    {
+      "id": "DEFECT-SS-04",
+      "filename": "screenshot4_transit_bus_geometric_cyan_box.png",
+      "path": "docs/forensics/baseline_screenshots/screenshot4_transit_bus_geometric_cyan_box.png",
+      "observed_symptom": "Transit bus vehicle model rendered as a flat monochromatic cyan rectangular slab; all body submeshes, glass, pillars, and details flattened by uniform paint override; primitive box geometry with only 17.5% curved normals.",
+      "telemetry_in_image": {
+        "vehicle_type": "TRANSIT BUS: 0.0 KM/H",
+        "riders": "35 / 65",
+        "gross_mass": "15125.0 T",
+        "passenger_comfort": "5.0 / 5.0 STARS",
+        "air_brake": "9.5 BAR | AIR SUSPENSION OK",
+        "region_label": "New York City / Newark | One World Trade Center"
+      },
+      "defect_category": "VEHICLE_GEOMETRIC_PRIMITIVE_RENDER"
+    },
+    {
+      "id": "DEFECT-SS-05",
+      "filename": "screenshot5_airplane_stall_empty_void.png",
+      "path": "docs/forensics/baseline_screenshots/screenshot5_airplane_stall_empty_void.png",
+      "observed_symptom": "Airliner spawned at Y=15m elevation facing blank terrain; cardboard cylinder fuselage and flat box wings; immediate red stall warning 'STALL! PITCH DOWN!' at 180 KTS; no runway infrastructure.",
+      "telemetry_in_image": {
+        "airspeed": "180 KTS",
+        "alt_msl": "15 METERS",
+        "stall_warning": "STALL! PITCH DOWN!",
+        "pitch": "-1.00",
+        "roll": "+0.00",
+        "flaps": "25%",
+        "gear": "DOWN [LOCK]"
+      },
+      "defect_category": "AIRCRAFT_TOPOLOGY_AND_AESTHETICS"
+    }
+  ],
+  "quality_gate_failures": [
+    {
+      "test_name": "test_h0_gate_steering_directional_conformance",
+      "status": "FAILED",
+      "panic_message": "GATE REJECTED: Steering/Camera controls are REVERSED! KeyA moved East (d_lon=0.00001136 >= 0) and ArrowLeft turned East (heading_x=0.0500 >= 0)!",
+      "source_file": "tests/tests/stage_h0_forensic_runtime_quality_gates.rs",
+      "suspected_code": "apps/world-viewer/src/camera_controller.rs:442-452"
+    },
+    {
+      "test_name": "test_h0_gate_continuous_world_streaming_distance",
+      "status": "FAILED",
+      "panic_message": "GATE REJECTED: World disappeared at 3.5km! Chunks covering vehicle = 0, collision_ready = false. World must stream continuously beyond postage-stamp sample!",
+      "source_file": "tests/tests/stage_h0_forensic_runtime_quality_gates.rs",
+      "suspected_code": "assets/san_francisco_sample/manifest.json:8-13"
+    },
+    {
+      "test_name": "test_h0_gate_multimodal_spawning_track_topology",
+      "status": "FAILED",
+      "panic_message": "GATE REJECTED: Train spawned without track infrastructure! Nearest rail distance is 487.0m (limit 5.0m). Train cannot spawn on automotive road or open water!",
+      "source_file": "tests/tests/stage_h0_forensic_runtime_quality_gates.rs",
+      "suspected_code": "apps/world-viewer/src/interactive.rs:2743-2748"
+    },
+    {
+      "test_name": "test_h0_gate_vehicle_rendering_visual_fidelity",
+      "status": "FAILED",
+      "panic_message": "GATE REJECTED: Vehicle rendered as primitive geometric box! Colors = 13 (expected >= 4), curved normals = 17.5% (expected > 25%). Production 3D asset failed to render!",
+      "source_file": "tests/tests/stage_h0_forensic_runtime_quality_gates.rs",
+      "suspected_code": "engine/rendering/src/gltf_asset.rs:480-486"
+    },
+    {
+      "test_name": "test_h0_gate_catalog_city_transition_integrity",
+      "status": "FAILED",
+      "panic_message": "GATE REJECTED: City transition to catalog region failed! Catalog promised 38 audited regions, but ingestion rejected Orlando. Unsupported claims must be marked UNVERIFIED!",
+      "source_file": "tests/tests/stage_h0_forensic_runtime_quality_gates.rs",
+      "suspected_code": "engine/ingestion/src/authentic.rs:260-272"
+    }
+  ],
+  "mutation_verification_tests": [
+    {
+      "test_name": "test_h0_mutation_verification_dropped_tile_detected",
+      "status": "PASSED"
+    },
+    {
+      "test_name": "test_h0_mutation_verification_reversed_steering_detected",
+      "status": "PASSED"
+    },
+    {
+      "test_name": "test_h0_mutation_verification_monochromatic_box_detected",
+      "status": "PASSED"
+    }
+  ]
+}

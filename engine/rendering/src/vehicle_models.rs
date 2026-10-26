@@ -2394,33 +2394,60 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         Vec3::new(half_w, 0.55, 0.95),
         AutomotivePalette::BUS_TRANSIT_GREEN,
     );
-    // Arch liners over front and rear wheel wells (dark matte composite)
+    // Curved arch liners over front and rear wheel wells (dark matte composite)
     for sign in [-1.0f32, 1.0f32] {
-        add_box_at(
+        add_cylinder_x(
             &mut chassis_mesh,
-            Vec3::new(sign * (half_w - 0.08), 1.15, 3.40),
-            Vec3::new(0.08, 0.25, 0.85),
+            Vec3::new(sign * (half_w - 0.05), 0.75, 3.40),
+            0.62,
+            0.08,
+            16,
             [0.10, 0.10, 0.12, 0.98],
         );
-        add_box_at(
+        add_cylinder_x(
             &mut chassis_mesh,
-            Vec3::new(sign * (half_w - 0.08), 1.15, -3.40),
-            Vec3::new(0.08, 0.25, 0.85),
+            Vec3::new(sign * (half_w - 0.05), 0.75, -3.40),
+            0.62,
+            0.08,
+            16,
             [0.10, 0.10, 0.12, 0.98],
         );
     }
-    // Aerodynamic curved front bumper fascia with fog lights
-    add_box_at(
+    // Aerodynamic curved front bumper fascia with fog lights (curved cylindrical profile)
+    add_cylinder_x(
         &mut chassis_mesh,
         Vec3::new(0.0, 0.52, half_l - 0.05),
-        Vec3::new(half_w * 0.98, 0.22, 0.15),
+        0.22,
+        half_w * 0.98,
+        16,
         [0.15, 0.16, 0.18, 0.98], // Dark charcoal bumper
     );
+    // Aerodynamic rounded front corner fairings (left and right)
+    for sign in [-1.0f32, 1.0f32] {
+        add_cylinder_y(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w - 0.12), 1.95, half_l - 0.12),
+            0.12,
+            0.95,
+            16,
+            AutomotivePalette::BUS_TRANSIT_GREEN,
+        );
+        add_cylinder_y(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w - 0.12), 1.95, -half_l + 0.12),
+            0.12,
+            0.95,
+            16,
+            AutomotivePalette::BUS_TRANSIT_GREEN,
+        );
+    }
     // Front Destination Header Box above windshield with glowing amber LED sign
-    add_box_at(
+    add_cylinder_x(
         &mut chassis_mesh,
         Vec3::new(0.0, 2.85, half_l - 0.08),
-        Vec3::new(half_w * 0.95, 0.22, 0.16),
+        0.20,
+        half_w * 0.95,
+        16,
         [0.12, 0.14, 0.16, 0.98],
     );
     add_quad(
@@ -2444,10 +2471,12 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
         }
     }
     // Streamlined White Fiberglass Roof Cap with Curved Cant-rails
-    add_box_at(
+    add_cylinder_z(
         &mut chassis_mesh,
         Vec3::new(0.0, 2.95, 0.0),
-        Vec3::new(half_w * 0.98, 0.15, half_l),
+        half_w * 0.95,
+        half_l,
+        16,
         [0.92, 0.94, 0.96, 0.99], // Crisp white roof
     );
     // Rooftop Dual HVAC Air Conditioning Units
@@ -2459,11 +2488,13 @@ pub fn build_cityline_transit_bus(lod: VehicleLodLevel) -> LoadedVehicleModel {
             [0.85, 0.88, 0.92, 0.98],
         );
     }
-    // Rooftop Aerodynamic CNG Fuel Tank Enclosure Pod
-    add_box_at(
+    // Rooftop Aerodynamic CNG Fuel Tank Enclosure Pod (curved aerodynamic cylinder)
+    add_cylinder_z(
         &mut chassis_mesh,
         Vec3::new(0.0, 3.32, -0.20),
-        Vec3::new(0.92, 0.22, 1.60),
+        0.28,
+        1.60,
+        16,
         [0.92, 0.94, 0.96, 0.99],
     );
     // High-Mounted Aerodynamic Transit Mirrors on Tubular Arms

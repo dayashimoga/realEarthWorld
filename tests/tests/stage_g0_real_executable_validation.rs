@@ -106,6 +106,7 @@ fn test_stage_g0_deterministic_gameplay_recording_and_replay() {
             package_anchor: [37.7952, -122.4028, 0.0],
             loaded_chunk_ids: vec!["chk_sf_37.7952_-122.4028".to_string()],
             source_osm_sha256: None,
+            ..Default::default()
         };
 
         session.push_frame(GameplayInputFrame {
@@ -125,6 +126,7 @@ fn test_stage_g0_deterministic_gameplay_recording_and_replay() {
             camera_state,
             collision_state,
             geographic_context,
+            ..Default::default()
         });
     }
 
