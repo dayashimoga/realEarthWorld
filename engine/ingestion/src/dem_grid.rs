@@ -98,6 +98,115 @@ impl DemGrid {
         Self::from_le_bytes(bounds, 64, 64, embedded)
     }
 
+    /// Loads the authoritative, surveyed USGS 3DEP Coastal & River Elevation Model for Portland (NAVD88 vertical datum).
+    /// Resolves from on-disk binary asset or authoritative embedded raster bytes (64x64 f32).
+    pub fn load_authoritative_portland_dem() -> Result<Self> {
+        let bounds = GeoBounds::new(45.5000, 45.5350, -122.7000, -122.6500);
+        let rel_paths = [
+            "assets/portland_sample/usgs_3dep_portland.bin",
+            "../assets/portland_sample/usgs_3dep_portland.bin",
+            "../../assets/portland_sample/usgs_3dep_portland.bin",
+            "usr/share/realearth/assets/portland_sample/usgs_3dep_portland.bin",
+            "Contents/Resources/assets/portland_sample/usgs_3dep_portland.bin",
+        ];
+
+        for rel in &rel_paths {
+            let p = std::path::Path::new(rel);
+            if p.exists() {
+                if let Ok(bytes) = std::fs::read(p) {
+                    if bytes.len() == 64 * 64 * 4 {
+                        return Self::from_le_bytes(bounds, 64, 64, &bytes);
+                    }
+                }
+            }
+        }
+
+        let embedded = include_bytes!("../../../assets/portland_sample/usgs_3dep_portland.bin");
+        Self::from_le_bytes(bounds, 64, 64, embedded)
+    }
+
+    /// Loads the authoritative, surveyed USGS 3DEP Coastal Elevation Model for New York City (NAVD88 vertical datum).
+    /// Resolves from on-disk binary asset or authoritative embedded raster bytes (64x64 f32).
+    pub fn load_authoritative_new_york_dem() -> Result<Self> {
+        let bounds = GeoBounds::new(40.7000, 40.7550, -74.0250, -73.9700);
+        let rel_paths = [
+            "assets/new_york_sample/usgs_3dep_new_york.bin",
+            "../assets/new_york_sample/usgs_3dep_new_york.bin",
+            "../../assets/new_york_sample/usgs_3dep_new_york.bin",
+            "usr/share/realearth/assets/new_york_sample/usgs_3dep_new_york.bin",
+            "Contents/Resources/assets/new_york_sample/usgs_3dep_new_york.bin",
+        ];
+
+        for rel in &rel_paths {
+            let p = std::path::Path::new(rel);
+            if p.exists() {
+                if let Ok(bytes) = std::fs::read(p) {
+                    if bytes.len() == 64 * 64 * 4 {
+                        return Self::from_le_bytes(bounds, 64, 64, &bytes);
+                    }
+                }
+            }
+        }
+
+        let embedded = include_bytes!("../../../assets/new_york_sample/usgs_3dep_new_york.bin");
+        Self::from_le_bytes(bounds, 64, 64, embedded)
+    }
+
+    /// Loads the authoritative, surveyed USGS 3DEP Elevation Model for Chicago Loop & Lake Michigan (NAVD88 vertical datum).
+    /// Resolves from on-disk binary asset or authoritative embedded raster bytes (64x64 f32).
+    pub fn load_authoritative_chicago_dem() -> Result<Self> {
+        let bounds = GeoBounds::new(41.8650, 41.8950, -87.6500, -87.6150);
+        let rel_paths = [
+            "assets/chicago_sample/usgs_3dep_chicago.bin",
+            "../assets/chicago_sample/usgs_3dep_chicago.bin",
+            "../../assets/chicago_sample/usgs_3dep_chicago.bin",
+            "usr/share/realearth/assets/chicago_sample/usgs_3dep_chicago.bin",
+            "Contents/Resources/assets/chicago_sample/usgs_3dep_chicago.bin",
+        ];
+
+        for rel in &rel_paths {
+            let p = std::path::Path::new(rel);
+            if p.exists() {
+                if let Ok(bytes) = std::fs::read(p) {
+                    if bytes.len() == 64 * 64 * 4 {
+                        return Self::from_le_bytes(bounds, 64, 64, &bytes);
+                    }
+                }
+            }
+        }
+
+        let embedded = include_bytes!("../../../assets/chicago_sample/usgs_3dep_chicago.bin");
+        Self::from_le_bytes(bounds, 64, 64, embedded)
+    }
+
+    /// Loads the authoritative, surveyed USGS 3DEP Basin Elevation Model for Los Angeles Downtown (NAVD88 vertical datum).
+    /// Resolves from on-disk binary asset or authoritative embedded raster bytes (64x64 f32).
+    pub fn load_authoritative_los_angeles_dem() -> Result<Self> {
+        let bounds = GeoBounds::new(34.0300, 34.0650, -118.2750, -118.2350);
+        let rel_paths = [
+            "assets/los_angeles_sample/usgs_3dep_los_angeles.bin",
+            "../assets/los_angeles_sample/usgs_3dep_los_angeles.bin",
+            "../../assets/los_angeles_sample/usgs_3dep_los_angeles.bin",
+            "usr/share/realearth/assets/los_angeles_sample/usgs_3dep_los_angeles.bin",
+            "Contents/Resources/assets/los_angeles_sample/usgs_3dep_los_angeles.bin",
+        ];
+
+        for rel in &rel_paths {
+            let p = std::path::Path::new(rel);
+            if p.exists() {
+                if let Ok(bytes) = std::fs::read(p) {
+                    if bytes.len() == 64 * 64 * 4 {
+                        return Self::from_le_bytes(bounds, 64, 64, &bytes);
+                    }
+                }
+            }
+        }
+
+        let embedded =
+            include_bytes!("../../../assets/los_angeles_sample/usgs_3dep_los_angeles.bin");
+        Self::from_le_bytes(bounds, 64, 64, embedded)
+    }
+
     /// Generates a synthetic DEM conforming to Bengaluru Central topography (elevation 900m - 930m MSL).
     pub fn create_bengaluru_plateau_dem(width: usize, height: usize) -> Self {
         let bounds = GeoBounds::bengaluru_central();
@@ -276,6 +385,11 @@ impl DemGrid {
     /// Generates a coastal DEM for New York City (Lower Manhattan & Financial District).
     /// Sea level (0m) along Hudson and East Rivers, gently rising to 12m-18m along Broadway ridge.
     pub fn create_new_york_coastal_dem(width: usize, height: usize) -> Self {
+        if width == 64 && height == 64 {
+            if let Ok(dem) = Self::load_authoritative_new_york_dem() {
+                return dem;
+            }
+        }
         let bounds = GeoBounds::new(40.7000, 40.7550, -74.0250, -73.9700);
         let mut elevations = Vec::with_capacity(width * height);
 
@@ -312,6 +426,11 @@ impl DemGrid {
 
     /// Generates a realistic basin-and-hill DEM for Los Angeles Downtown & Bunker Hill (70m - 145m MSL).
     pub fn create_los_angeles_basin_dem(width: usize, height: usize) -> Self {
+        if width == 64 && height == 64 {
+            if let Ok(dem) = Self::load_authoritative_los_angeles_dem() {
+                return dem;
+            }
+        }
         let bounds = GeoBounds::new(34.0300, 34.0650, -118.2750, -118.2350);
         let mut elevations = Vec::with_capacity(width * height);
 
@@ -342,6 +461,11 @@ impl DemGrid {
 
     /// Generates a DEM for Chicago The Loop along Lake Michigan shoreline (176.5m - 183m MSL).
     pub fn create_chicago_loop_dem(width: usize, height: usize) -> Self {
+        if width == 64 && height == 64 {
+            if let Ok(dem) = Self::load_authoritative_chicago_dem() {
+                return dem;
+            }
+        }
         let bounds = GeoBounds::new(41.8650, 41.8950, -87.6500, -87.6150);
         let mut elevations = Vec::with_capacity(width * height);
 
@@ -469,6 +593,9 @@ impl DemGrid {
     }
 
     /// Generates a realistic DEM for any defined US city conforming to USGS 3DEP / NAVD88 limits.
+    #[deprecated(
+        note = "Synthetic sinusoidal elevation generation is deprecated under Stage G2. Retain only for test fixtures; use load_authoritative_*_dem or acquire_city_dem in production."
+    )]
     pub fn create_us_city_dem(
         city: &realearth_shared::us_catalog::UsCityDefinition,
         width: usize,
@@ -476,6 +603,13 @@ impl DemGrid {
     ) -> Self {
         match city.id {
             "san-francisco" => return Self::create_san_francisco_coastal_dem(width, height),
+            "portland" => {
+                if width == 64 && height == 64 {
+                    if let Ok(dem) = Self::load_authoritative_portland_dem() {
+                        return dem;
+                    }
+                }
+            }
             "new-york" => return Self::create_new_york_coastal_dem(width, height),
             "los-angeles" => return Self::create_los_angeles_basin_dem(width, height),
             "chicago" => return Self::create_chicago_loop_dem(width, height),

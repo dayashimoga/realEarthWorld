@@ -117,17 +117,17 @@ fn test_d2_on_demand_geographic_installation() {
     let quota_bytes = 10 * 1024 * 1024 * 1024;
     let mut installer = RegionInstaller::new(&packages_path, quota_bytes);
 
-    assert!(!installer.is_installed("minneapolis"));
+    assert!(!installer.is_installed("portland"));
 
     // Track state progression during installation
     let mut recorded_states = Vec::new();
-    let install_res = installer.install_region("minneapolis", |p: InstallProgress| {
+    let install_res = installer.install_region("portland", |p: InstallProgress| {
         recorded_states.push(p.state);
     });
 
     assert!(
         install_res.is_ok(),
-        "Minneapolis installation failed: {:?}",
+        "Portland installation failed: {:?}",
         install_res
     );
     let installed_dir = install_res.unwrap();
@@ -142,15 +142,15 @@ fn test_d2_on_demand_geographic_installation() {
     assert!(recorded_states.contains(&InstallState::Installed));
 
     // Verify cryptographic SHA-256 integrity
-    assert!(installer.is_installed("minneapolis"));
-    let verify_res = installer.verify_installed_package("minneapolis");
+    assert!(installer.is_installed("portland"));
+    let verify_res = installer.verify_installed_package("portland");
     assert!(verify_res.is_ok());
     assert!(verify_res.unwrap(), "Package SHA-256 verification failed");
 
     // Verify manifest contents
     let manifest_bytes = std::fs::read_to_string(installed_dir.join("manifest.json")).unwrap();
     let manifest = PackageManifest::from_json(&manifest_bytes).expect("Parse manifest JSON");
-    assert_eq!(manifest.region_id, "minneapolis");
+    assert_eq!(manifest.region_id, "portland");
     assert!(!manifest.name.is_empty());
     assert!(!manifest.sha256_checksum.is_empty());
 

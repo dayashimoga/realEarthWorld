@@ -2128,3 +2128,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented 8 master quantitative tests certifying control signs across 4 cardinal headings, 60-second Park slope stability (0%, 8%, 18%, 28%), zero-input level-ground standstill holding, progressive service braking (stopping $<25\text{m}$ at 60 km/h, $<55\text{m}$ at 100 km/h), multimodal class dynamics, collision zero-penetration, FPS invariance, and focus loss cleansing.
 - **Architectural Decision Record**:
   - Authored [`docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md`](file:///j:/rustRealEarth/docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md).
+
+### Stage G2: Authentic GIS World Generation and Continuous Earth Streaming (2026-10-26)
+- **Purge of Misleading Synthetic Datasets & Authentic Ingestion ([`engine/ingestion/`](file:///j:/rustRealEarth/engine/ingestion/), [`engine/streaming/`](file:///j:/rustRealEarth/engine/streaming/))**:
+  - Audited `region_installer.rs`, `us_cities.rs`, all `sample_*` paths, `create_us_city_dem`, city manifests, world compiler, and package cache.
+  - Formally deprecated `create_us_city_dem` with compiler warnings, eliminating synthetic sinusoidal elevation generation in production runtime.
+  - Purged procedural XML fallbacks in `engine/ingestion/src/authentic.rs`. Non-bundled entries now return clean `RealEarthError::Ingestion` errors requiring surveyed datasets.
+  - Acquired and verified authentic OpenStreetMap vector extracts (buildings, roads, rail, water, parks, aeroways, ports) and USGS 3DEP Digital Elevation Models for 5 benchmark cities: San Francisco, Portland, New York, Chicago, and Los Angeles.
+  - Calculated cryptographic SHA-256 integrity digests and provenance metadata for all acquired datasets.
+- **Roadway-Blocking Building Culling & Complete Map-to-3D Compilation ([`engine/validation/src/building_road_validator.rs`](file:///j:/rustRealEarth/engine/validation/src/building_road_validator.rs), [`engine/validation/src/pipeline.rs`](file:///j:/rustRealEarth/engine/validation/src/pipeline.rs))**:
+  - Implemented `filter_building_road_conflicts` detecting polygon overlaps and road centerline penetrations through building envelopes.
+  - Automatically culls offending buildings, logging them to `repair_engine` with `DiagnosticSeverity::Error` (`RULE_BUILDING_ROAD_CORRIDOR_CONFLICT`).
+  - Remediated the Portland downtown defect: successfully culled `US Bancorp Tower` for penetrating `SW Morrison Street` while preserving `Wells Fargo Center` with zero roadway intersections.
+- **Continuous Earth Streaming & Airspace Clamp Removal ([`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs), [`engine/streaming/src/planetary_streamer.rs`](file:///j:/rustRealEarth/engine/streaming/src/planetary_streamer.rs))**:
+  - Removed artificial `AircraftFlight::enforce_airspace_boundary(2400.0)` clamp, replacing it with regional topography telemetry notifications when flying beyond downtown coverage.
+  - Expanded ground travel boundary radius to 25,000m for continuous regional driving.
+  - Generated and validated a 50-km radial coarse horizon apron mesh ($\ge 49,000\text{m}$) separate from surveyed chunk meshes.
+  - Validated submillimeter metric precision ($< 10^{-4}\text{m}$) in `PlanetaryOriginCoordinator` upon 8-km floating origin reanchoring.
+- **Catalog Honesty & Transactional Regional Transitions ([`engine/shared/src/us_catalog.rs`](file:///j:/rustRealEarth/engine/shared/src/us_catalog.rs), [`engine/streaming/src/region_installer.rs`](file:///j:/rustRealEarth/engine/streaming/src/region_installer.rs))**:
+  - Audited all 38 catalog cities: exactly 5 benchmark cities with verified on-disk assets report `InstalledReady`; unbundled cities honestly report `DownloadRequired`.
+  - Added `RegionPackageReadiness::Partial` and estimated download and compiled package size calculations.
+  - Updated HUD city catalog and warp interface with honest readiness indicators.
+  - Implemented transactional region installer state machine (`SELECT -> CHECK -> DOWNLOAD -> VERIFY -> COMPILE -> STAGE -> WARM CHUNKS -> SAFE SPAWN -> ATOMIC ACTIVATE`) with atomic rollback on failure.
+- **Master Certification Suite ([`tests/tests/stage_g2_authentic_gis_and_continuous_streaming_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage_g2_authentic_gis_and_continuous_streaming_certification.rs))**:
+  - Implemented 8 master tests certifying authentic GIS acquisition, zero roadway blockage culling in Portland, 5 distinct benchmark cities, continuous flight beyond 3000m, 50km visual horizon, submillimeter floating origin rebasing, 38-city catalog honesty, transactional rollback, and LRU eviction budgets.
+  - 100% test pass rate across 42 tests in all master regression suites (Stage G2, G1, G0, D, B, F).
+- **Release Packaging**:
+  - Recompiled release executables `realearth-viewer.exe` and `realearth-cli.exe`.
+  - Updated `dist/windows/realearth-windows-x64.zip` (8.95 MB, SHA-256: `cb3702f4b81d5b94478a5d09ddcccedd81bd21689dad851112d647791b8983e8`).
+- **Architectural Decision Record**:
+  - Authored [`docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md`](file:///j:/rustRealEarth/docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md).

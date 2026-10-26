@@ -396,20 +396,26 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
         "Catalog must contain all 38 mandatory US metropolitan cities"
     );
 
-    let sample_catalog_cities = ["austin", "denver", "dallas", "nashville"];
+    let sample_catalog_cities = [
+        "san-francisco",
+        "portland",
+        "new-york",
+        "chicago",
+        "los-angeles",
+    ];
 
     for city_id in &sample_catalog_cities {
         let load_res = load_authentic_city(city_id);
         assert!(
             load_res.is_ok(),
-            "load_authentic_city must successfully synthesize surveyed extract for '{}': {:?}",
+            "load_authentic_city must successfully load surveyed extract for '{}': {:?}",
             city_id,
             load_res.err()
         );
 
         let (dataset, dem, meta) = load_res.unwrap();
         println!(
-            "  • City '{}' ({}) Synthesized: Roads={}, Buildings={}, DEM accuracy=±{:.1}m",
+            "  • City '{}' ({}) Loaded: Roads={}, Buildings={}, DEM accuracy=±{:.1}m",
             meta.name,
             meta.state,
             dataset.roads.len(),
@@ -418,23 +424,28 @@ fn test_certify_p0_8_us_city_transitions_and_catalog_availability() {
         );
         assert!(
             !dataset.roads.is_empty(),
-            "Roads must be present in synthesized extract"
+            "Roads must be present in surveyed extract"
         );
         assert!(
             !dataset.buildings.is_empty(),
-            "Buildings must be present in synthesized extract"
+            "Buildings must be present in surveyed extract"
         );
         assert!(dem.width > 0 && dem.height > 0, "DEM grid must be valid");
     }
 
+    // Verify unbundled city honestly requires authentic GIS data
+    assert!(
+        load_authentic_city("austin").is_err(),
+        "Unbundled city must require GIS package"
+    );
+
     // Verify surveyed benchmark cities have verified status
     let surveyed_cities = [
         "san-francisco",
+        "portland",
         "new-york",
         "chicago",
         "los-angeles",
-        "seattle",
-        "miami",
     ];
     for city_id in &surveyed_cities {
         assert!(

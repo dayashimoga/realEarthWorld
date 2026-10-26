@@ -32,7 +32,6 @@ use realearth_ingestion::sample_corridors::create_intercity_corridors_dataset;
 use realearth_ingestion::sample_hyderabad::create_hyderabad_dataset;
 use realearth_ingestion::sample_los_angeles::create_los_angeles_dataset;
 use realearth_ingestion::sample_miami::create_miami_dataset;
-use realearth_ingestion::sample_minneapolis::create_minneapolis_dataset;
 use realearth_ingestion::sample_mysuru::create_mysuru_dataset;
 use realearth_ingestion::sample_new_york::create_new_york_dataset;
 use realearth_ingestion::sample_san_francisco::create_san_francisco_dataset;
@@ -2289,71 +2288,39 @@ impl InteractiveViewerApp {
             raw_water_bodies,
             raw_ports,
         ) = if let Some(city) = find_city_by_id(region_id) {
-            if city.id == "minneapolis" {
-                self.transition_phase = RegionTransitionPhase::Downloading;
-                let dir = resolve_world_package_dir("minneapolis");
-                let dem = DemGrid::create_us_city_dem(city, 64, 64);
-                let raw = create_minneapolis_dataset();
-                if !dir.join("chunks.db").exists() {
-                    self.transition_phase = RegionTransitionPhase::Validating;
-                    let (val, _) = validate_dataset(&raw);
-                    self.transition_phase = RegionTransitionPhase::Compiling;
-                    let options = CompilerOptions {
-                        chunk_size_meters: 500.0,
-                        terrain_grid_resolution: 16,
-                        package_name: "minneapolis_package".to_string(),
-                        ..Default::default()
-                    };
-                    compile_world_package(&val, &dem, &dir, &options)?;
-                }
-                (
-                    dir,
-                    city.name,
-                    Landmark::from_us_city(city),
-                    dem,
-                    raw.roads,
-                    raw.buildings,
-                    raw.railways,
-                    raw.aeroways,
-                    raw.water_bodies,
-                    raw.ports,
-                )
-            } else {
-                let (raw, dem, meta) = load_authentic_city(city.id)?;
-                let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
-                let landmark = Landmark::from_us_city(city);
-                let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
-                if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256))
-                {
-                    println!(
+            let (raw, dem, meta) = load_authentic_city(city.id)?;
+            let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
+            let landmark = Landmark::from_us_city(city);
+            let package_name = format!("{}_package", meta.region_id.replace('-', "_"));
+            if !is_world_package_cache_valid(&dir, &package_name, Some(&meta.source_osm_sha256)) {
+                println!(
                         "📦 Compiling authoritative {} ({}) package [DEM accuracy: ±{:.1}m, Source SHA256: {}]...",
                         meta.name, meta.state, meta.dem_accuracy_m, &meta.source_osm_sha256[..8]
                     );
-                    self.transition_phase = RegionTransitionPhase::Validating;
-                    let (val, _) = validate_dataset(&raw);
-                    self.transition_phase = RegionTransitionPhase::Compiling;
-                    let options = CompilerOptions {
-                        chunk_size_meters: 500.0,
-                        terrain_grid_resolution: 16,
-                        package_name: package_name.clone(),
-                        source_asset_sha256: Some(meta.source_osm_sha256.clone()),
-                        ..Default::default()
-                    };
-                    compile_world_package(&val, &dem, &dir, &options)?;
-                }
-                (
-                    dir,
-                    city.name,
-                    landmark,
-                    dem,
-                    raw.roads,
-                    raw.buildings,
-                    raw.railways,
-                    raw.aeroways,
-                    raw.water_bodies,
-                    raw.ports,
-                )
+                self.transition_phase = RegionTransitionPhase::Validating;
+                let (val, _) = validate_dataset(&raw);
+                self.transition_phase = RegionTransitionPhase::Compiling;
+                let options = CompilerOptions {
+                    chunk_size_meters: 500.0,
+                    terrain_grid_resolution: 16,
+                    package_name: package_name.clone(),
+                    source_asset_sha256: Some(meta.source_osm_sha256.clone()),
+                    ..Default::default()
+                };
+                compile_world_package(&val, &dem, &dir, &options)?;
             }
+            (
+                dir,
+                city.name,
+                landmark,
+                dem,
+                raw.roads,
+                raw.buildings,
+                raw.railways,
+                raw.aeroways,
+                raw.water_bodies,
+                raw.ports,
+            )
         } else if region_id.contains("mysuru") {
             let dir = resolve_world_package_dir("mysuru");
             let dem = DemGrid::create_mysuru_dem(64, 64);
@@ -4995,7 +4962,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                         let enforce_ground_boundary =
                             |pos: &mut glam::Vec3, vel: &mut glam::Vec3| -> bool {
                                 let horiz_dist = (pos.x * pos.x + pos.z * pos.z).sqrt();
-                                let max_radius_m = 2200.0f32;
+                                let max_radius_m = 25000.0f32; // Expanded to full regional topography
                                 if horiz_dist > max_radius_m {
                                     let norm_x = pos.x / horiz_dist;
                                     let norm_z = pos.z / horiz_dist;
@@ -5216,10 +5183,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 let ground_y = gq
                                     .elevation(self.aircraft.position.x, self.aircraft.position.z);
                                 self.aircraft.step(&flight_inputs, ground_y, PHYSICS_DT);
-                                if self.aircraft.enforce_airspace_boundary(2400.0)
-                                    && self.status_notification.is_none()
-                                {
-                                    let msg = "⚠️ AIRSPACE ADVISORY: Approaching regional boundary (2400m). Automated turnback vectoring active.".to_string();
+                                let horiz_dist = (self.aircraft.position.x
+                                    * self.aircraft.position.x
+                                    + self.aircraft.position.z * self.aircraft.position.z)
+                                    .sqrt();
+                                if horiz_dist > 2400.0 && self.status_notification.is_none() {
+                                    let msg = format!(
+                                        "✈️ REGIONAL TOPOGRAPHY: Continuous flight active beyond downtown core ({:.1} km from anchor) [Visual Horizon: 50 km]",
+                                        horiz_dist / 1000.0
+                                    );
                                     self.status_notification = Some((msg, Instant::now()));
                                 }
                             }

@@ -180,16 +180,17 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
             is_tunnel: false,
         });
 
-        // Downtown Primary Arterial (East-West through city center, crossing freeway)
+        // Downtown Primary Arterial (East-West corridor offset south of anchor building block)
+        let road_lat = anchor_lat - 0.0012;
         dataset.roads.push(OsmRoadFeature {
             way_id: 300_000 + (city.utm_zone as u64 * 1000) + 3,
             name: Some(format!("{} Main Avenue", city.name)),
             highway_type: HighwayType::Primary,
             geometry: vec![
-                Wgs84Coord::new(anchor_lat, b.min_lon, 0.0),
-                Wgs84Coord::new(anchor_lat, fwy_lon, 0.0),
-                Wgs84Coord::new(anchor_lat, anchor_lon, 0.0),
-                Wgs84Coord::new(anchor_lat, b.max_lon, 0.0),
+                Wgs84Coord::new(road_lat, b.min_lon, 0.0),
+                Wgs84Coord::new(road_lat, fwy_lon, 0.0),
+                Wgs84Coord::new(road_lat, anchor_lon, 0.0),
+                Wgs84Coord::new(road_lat, b.max_lon, 0.0),
             ],
             lanes: 4,
             speed_limit_kph: 50,
@@ -199,16 +200,17 @@ pub fn generate_us_city_dataset(city: &UsCityDefinition) -> IngestedDataset {
             is_tunnel: false,
         });
 
-        // North-South Boulevard passing by Anchor Landmark
+        // North-South Boulevard offset east of Anchor Landmark block
+        let road_lon = anchor_lon + 0.0012;
         dataset.roads.push(OsmRoadFeature {
             way_id: 300_000 + (city.utm_zone as u64 * 1000) + 4,
             name: Some(format!("{} Grand Boulevard", city.name)),
             highway_type: HighwayType::Primary,
             geometry: vec![
-                Wgs84Coord::new(b.min_lat, anchor_lon, 0.0),
-                Wgs84Coord::new(anchor_lat - d_lat, anchor_lon, 0.0),
-                Wgs84Coord::new(anchor_lat + d_lat, anchor_lon, 0.0),
-                Wgs84Coord::new(b.max_lat, anchor_lon, 0.0),
+                Wgs84Coord::new(b.min_lat, road_lon, 0.0),
+                Wgs84Coord::new(anchor_lat - d_lat, road_lon, 0.0),
+                Wgs84Coord::new(anchor_lat + d_lat, road_lon, 0.0),
+                Wgs84Coord::new(b.max_lat, road_lon, 0.0),
             ],
             lanes: 3,
             speed_limit_kph: 50,

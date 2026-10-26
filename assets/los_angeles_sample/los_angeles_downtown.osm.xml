@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth-GIS-LA-Authoritative-StageG2">
+  <!-- Wilshire Blvd, Grand Ave, Figueroa St, I-110 Harbor Freeway -->
+  <!-- Wilshire Grand Center (335.3m), US Bank Tower (310.3m), Aon Center (260.6m) -->
+  
+  <node id="90001" lat="41.8750" lon="-118.2580"/>
+  <node id="90002" lat="34.0480" lon="-118.2580"/>
+  <node id="90003" lat="34.0520" lon="-118.2580"/>
+  <node id="90004" lat="34.0560" lon="-118.2580"/>
+
+  <node id="90011" lat="34.0450" lon="-118.2540"/>
+  <node id="90012" lat="34.0490" lon="-118.2540"/>
+  <node id="90013" lat="34.0530" lon="-118.2540"/>
+  <node id="90014" lat="34.0570" lon="-118.2540"/>
+
+  <node id="90021" lat="34.0500" lon="-118.2640"/>
+  <node id="90022" lat="34.0500" lon="-118.2580"/>
+  <node id="90023" lat="34.0500" lon="-118.2540"/>
+  <node id="90024" lat="34.0500" lon="-118.2480"/>
+
+  <!-- Building 1: Wilshire Grand Center (335.3m, 73 floors) -->
+  <node id="91001" lat="34.0495" lon="-118.2605"/>
+  <node id="91002" lat="34.0505" lon="-118.2605"/>
+  <node id="91003" lat="34.0505" lon="-118.2595"/>
+  <node id="91004" lat="34.0495" lon="-118.2595"/>
+
+  <!-- Building 2: US Bank Tower (310.3m, 73 floors) -->
+  <node id="91011" lat="34.0506" lon="-118.2550"/>
+  <node id="91012" lat="34.0516" lon="-118.2550"/>
+  <node id="91013" lat="34.0516" lon="-118.2540"/>
+  <node id="91014" lat="34.0506" lon="-118.2540"/>
+
+  <!-- Building 3: Aon Center (260.6m, 62 floors) -->
+  <node id="91021" lat="34.0485" lon="-118.2575"/>
+  <node id="91022" lat="34.0493" lon="-118.2575"/>
+  <node id="91023" lat="34.0493" lon="-118.2565"/>
+  <node id="91024" lat="34.0485" lon="-118.2565"/>
+
+  <!-- Ways -->
+  <way id="95001">
+    <nd ref="90002"/><nd ref="90003"/><nd ref="90004"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Figueroa Street"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="95002">
+    <nd ref="90011"/><nd ref="90012"/><nd ref="90013"/><nd ref="90014"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Grand Avenue"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="95003">
+    <nd ref="90021"/><nd ref="90022"/><nd ref="90023"/><nd ref="90024"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Wilshire Boulevard"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="96001">
+    <nd ref="91001"/><nd ref="91002"/><nd ref="91003"/><nd ref="91004"/><nd ref="91001"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Wilshire Grand Center"/>
+    <tag k="height" v="335.3m"/>
+    <tag k="building:levels" v="73"/>
+  </way>
+
+  <way id="96002">
+    <nd ref="91011"/><nd ref="91012"/><nd ref="91013"/><nd ref="91014"/><nd ref="91011"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="US Bank Tower"/>
+    <tag k="height" v="310.3m"/>
+    <tag k="building:levels" v="73"/>
+  </way>
+
+  <way id="96003">
+    <nd ref="91021"/><nd ref="91022"/><nd ref="91023"/><nd ref="91024"/><nd ref="91021"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Aon Center"/>
+    <tag k="height" v="260.6m"/>
+    <tag k="building:levels" v="62"/>
+  </way>
+</osm>

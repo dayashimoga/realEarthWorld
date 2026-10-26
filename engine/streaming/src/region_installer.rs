@@ -5,15 +5,7 @@ use crate::package_delivery::{InstalledPackageRecord, StorageQuotaManager};
 use realearth_compiler::compiler_pipeline::{compile_world_package, CompilerOptions};
 use realearth_compiler::regional_catalog::PackageManifest;
 use realearth_ingestion::acquisition::compute_sha256;
-use realearth_ingestion::dem_grid::DemGrid;
 use realearth_ingestion::load_authentic_city;
-use realearth_ingestion::sample_chicago::create_chicago_dataset;
-use realearth_ingestion::sample_los_angeles::create_los_angeles_dataset;
-use realearth_ingestion::sample_miami::create_miami_dataset;
-use realearth_ingestion::sample_minneapolis::create_minneapolis_dataset;
-use realearth_ingestion::sample_new_york::create_new_york_dataset;
-use realearth_ingestion::sample_seattle::create_seattle_dataset;
-use realearth_ingestion::us_cities::generate_us_city_dataset;
 use realearth_shared::errors::{RealEarthError, Result};
 use realearth_shared::us_catalog::find_city_by_id;
 use realearth_validation::pipeline::validate_dataset;
@@ -176,45 +168,13 @@ impl RegionInstaller {
             sha256_checksum: None,
         });
 
-        let (raw, dem) = match city.id {
-            "san-francisco" => {
-                let (raw, dem, _) = load_authentic_city("san-francisco")?;
-                (raw, dem)
-            }
-            "minneapolis" => {
-                let raw = create_minneapolis_dataset();
-                let dem = DemGrid::create_us_city_dem(city, 64, 64);
-                (raw, dem)
-            }
-            "new-york" => {
-                let raw = create_new_york_dataset();
-                let dem = DemGrid::create_new_york_coastal_dem(64, 64);
-                (raw, dem)
-            }
-            "chicago" => {
-                let raw = create_chicago_dataset();
-                let dem = DemGrid::create_chicago_loop_dem(64, 64);
-                (raw, dem)
-            }
-            "los-angeles" => {
-                let raw = create_los_angeles_dataset();
-                let dem = DemGrid::create_los_angeles_basin_dem(64, 64);
-                (raw, dem)
-            }
-            "seattle" => {
-                let raw = create_seattle_dataset();
-                let dem = DemGrid::create_seattle_coastal_dem(64, 64);
-                (raw, dem)
-            }
-            "miami" => {
-                let raw = create_miami_dataset();
-                let dem = DemGrid::create_miami_coastal_dem(64, 64);
-                (raw, dem)
-            }
-            _ => {
-                let raw = generate_us_city_dataset(city);
-                let dem = DemGrid::create_us_city_dem(city, 64, 64);
-                (raw, dem)
+        let (raw, dem) = match load_authentic_city(city.id) {
+            Ok((raw, dem, _)) => (raw, dem),
+            Err(e) => {
+                return Err(RealEarthError::Ingestion(format!(
+                    "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
+                    city.id, e
+                )));
             }
         };
 

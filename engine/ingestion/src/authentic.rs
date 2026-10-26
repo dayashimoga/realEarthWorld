@@ -231,19 +231,46 @@ pub fn acquire_city_osm_xml(city: &UsCityDefinition) -> Result<(String, String)>
         }
     }
 
-    // Embedded fallback for San Francisco pilot core ensures 100% test reproducibility anywhere
-    if city.id == "san-francisco" {
-        let sf_embedded =
-            include_str!("../../../assets/san_francisco_sample/san_francisco_downtown.osm.xml");
-        let hash = compute_sha256(sf_embedded.as_bytes());
-        return Ok((sf_embedded.to_string(), hash));
+    // Embedded fallbacks for authentic surveyed benchmarks ensure 100% test reproducibility anywhere
+    match city.id {
+        "san-francisco" => {
+            let sf_embedded =
+                include_str!("../../../assets/san_francisco_sample/san_francisco_downtown.osm.xml");
+            let hash = compute_sha256(sf_embedded.as_bytes());
+            return Ok((sf_embedded.to_string(), hash));
+        }
+        "portland" => {
+            let ptl_embedded =
+                include_str!("../../../assets/portland_sample/portland_downtown.osm.xml");
+            let hash = compute_sha256(ptl_embedded.as_bytes());
+            return Ok((ptl_embedded.to_string(), hash));
+        }
+        "new-york" => {
+            let nyc_embedded =
+                include_str!("../../../assets/new_york_sample/new_york_downtown.osm.xml");
+            let hash = compute_sha256(nyc_embedded.as_bytes());
+            return Ok((nyc_embedded.to_string(), hash));
+        }
+        "chicago" => {
+            let chi_embedded =
+                include_str!("../../../assets/chicago_sample/chicago_downtown.osm.xml");
+            let hash = compute_sha256(chi_embedded.as_bytes());
+            return Ok((chi_embedded.to_string(), hash));
+        }
+        "los-angeles" => {
+            let la_embedded =
+                include_str!("../../../assets/los_angeles_sample/los_angeles_downtown.osm.xml");
+            let hash = compute_sha256(la_embedded.as_bytes());
+            return Ok((la_embedded.to_string(), hash));
+        }
+        _ => {}
     }
 
-    // Fallback: Generate bit-exact authoritative OSM XML bundle with verified real-world features
-    #[allow(deprecated)]
-    let content = generate_authoritative_city_osm_xml(city);
-    let hash = compute_sha256(content.as_bytes());
-    Ok((content, hash))
+    // If no surveyed disk or bundled asset exists, reject unauthenticated generation
+    Err(RealEarthError::Ingestion(format!(
+        "Region '{}' ({}) requires authentic GIS data package (Surveyed GIS source data not bundled or verified)",
+        city.name, city.state
+    )))
 }
 
 /// Verifies whether an authentic surveyed GIS dataset (bundled on disk or embedded) is available for interactive gameplay.
@@ -251,8 +278,10 @@ pub fn acquire_city_osm_xml(city: &UsCityDefinition) -> Result<(String, String)>
 pub fn verify_city_playable(city_id: &str) -> Result<&'static UsCityDefinition> {
     let normalized_id = match city_id {
         "sf" => "san-francisco",
+        "pdx" => "portland",
         "nyc" => "new-york",
         "la" => "los-angeles",
+        "chi" => "chicago",
         "dc" => "washington-dc",
         "phx" => "phoenix",
         "philly" => "philadelphia",
@@ -267,14 +296,12 @@ pub fn verify_city_playable(city_id: &str) -> Result<&'static UsCityDefinition> 
         ))
     })?;
 
-    // Benchmark surveyed cities with authentic sample datasets or bundled assets
+    // Benchmark surveyed cities with authentic surveyed datasets
     let has_bundled_or_sample = city.id == "san-francisco"
+        || city.id == "portland"
         || city.id == "new-york"
         || city.id == "chicago"
-        || city.id == "los-angeles"
-        || city.id == "seattle"
-        || city.id == "miami"
-        || city.id == "minneapolis";
+        || city.id == "los-angeles";
 
     if has_bundled_or_sample {
         return Ok(city);
@@ -296,14 +323,10 @@ pub fn verify_city_playable(city_id: &str) -> Result<&'static UsCityDefinition> 
         }
     }
 
-    if city.is_metropolitan_definition_only() {
-        return Err(RealEarthError::Ingestion(format!(
-            "Region '{}' ({}) requires GIS data package (Surveyed GIS not bundled on disk)",
-            city.name, city.state
-        )));
-    }
-
-    Ok(city)
+    Err(RealEarthError::Ingestion(format!(
+        "Region '{}' ({}) requires GIS data package (Surveyed GIS not bundled on disk)",
+        city.name, city.state
+    )))
 }
 
 /// Resolves authentic USGS 3DEP DEM raster for a city from disk file or authoritative embedded source.
@@ -312,13 +335,41 @@ pub fn acquire_city_dem(
     width: usize,
     height: usize,
 ) -> Result<(DemGrid, String)> {
-    if city.id == "san-francisco" {
-        let dem = DemGrid::load_authoritative_san_francisco_dem()?;
-        let dem_sha256 = compute_sha256(&dem.to_le_bytes());
-        return Ok((dem, dem_sha256));
+    match city.id {
+        "san-francisco" => {
+            let dem = DemGrid::load_authoritative_san_francisco_dem()?;
+            let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+            return Ok((dem, dem_sha256));
+        }
+        "portland" => {
+            let dem = DemGrid::load_authoritative_portland_dem()?;
+            let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+            return Ok((dem, dem_sha256));
+        }
+        "new-york" => {
+            let dem = DemGrid::load_authoritative_new_york_dem()?;
+            let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+            return Ok((dem, dem_sha256));
+        }
+        "chicago" => {
+            let dem = DemGrid::load_authoritative_chicago_dem()?;
+            let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+            return Ok((dem, dem_sha256));
+        }
+        "los-angeles" => {
+            let dem = DemGrid::load_authoritative_los_angeles_dem()?;
+            let dem_sha256 = compute_sha256(&dem.to_le_bytes());
+            return Ok((dem, dem_sha256));
+        }
+        _ => {}
     }
 
     let rel_paths = [
+        format!(
+            "assets/{}_sample/usgs_3dep_{}.bin",
+            city.id.replace('-', "_"),
+            city.id.replace('-', "_")
+        ),
         format!("assets/regions/{}/usgs_3dep.bin", city.id),
         format!("assets/regions/{}/dem.tif", city.id),
     ];
@@ -339,9 +390,11 @@ pub fn acquire_city_dem(
         }
     }
 
-    let dem = DemGrid::create_us_city_dem(city, width, height);
-    let hash = compute_sha256(&dem.to_le_bytes());
-    Ok((dem, hash))
+    // If no surveyed USGS 3DEP raster exists, reject unauthenticated generation
+    Err(RealEarthError::Ingestion(format!(
+        "Region '{}' ({}) requires authentic USGS 3DEP DEM raster (Elevation raster not bundled or verified)",
+        city.name, city.state
+    )))
 }
 
 /// Generates bit-exact, authoritative OpenStreetMap XML for any catalog city.

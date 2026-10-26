@@ -1,0 +1,70 @@
+{
+  "name": "Los Angeles Downtown & Financial District Benchmark Region",
+  "state": "CA",
+  "country": "US",
+  "version": "1.0.0",
+  "anchor": {
+    "name": "Wilshire Grand Center",
+    "lat": 34.0500,
+    "lon": -118.2600,
+    "elevation_m": 90.0
+  },
+  "bbox": {
+    "min_lat": 34.0350,
+    "max_lat": 34.0650,
+    "min_lon": -118.2800,
+    "max_lon": -118.2400
+  },
+  "datum": {
+    "horizontal": "WGS84 (EPSG:4326)",
+    "projected": "UTM Zone 11N (EPSG:32611)",
+    "vertical": "NAVD88 (GEOID18/EGM96)"
+  },
+  "landmarks": [
+    {
+      "name": "Wilshire Grand Center",
+      "type": "commercial",
+      "lat": 34.0500,
+      "lon": -118.2600,
+      "height_m": 335.3,
+      "levels": 73
+    },
+    {
+      "name": "US Bank Tower",
+      "type": "commercial",
+      "lat": 34.0510,
+      "lon": -118.2545,
+      "height_m": 310.3,
+      "levels": 73
+    },
+    {
+      "name": "Aon Center",
+      "type": "commercial",
+      "lat": 34.0490,
+      "lon": -118.2570,
+      "height_m": 260.6,
+      "levels": 62
+    }
+  ],
+  "grade_separations": [],
+  "hydrography": [],
+  "sources": [
+    {
+      "name": "OpenStreetMap Los Angeles Downtown Extract",
+      "provider": "OpenStreetMap Contributors",
+      "license": "ODbL 1.0",
+      "sha256": "214d6daaa03faa8e6bb89f73e77a882e6a58cf4891181958ee317bc93290adf3"
+    },
+    {
+      "name": "USGS 3DEP 1/3 Arc-Second Los Angeles Basin Elevation Model",
+      "provider": "USGS",
+      "license": "Public Domain / CC0 Compatible",
+      "filename": "usgs_3dep_los_angeles.bin",
+      "vertical_datum": "NAVD88",
+      "grid_dimensions": [64, 64],
+      "elevation_range_msl": [80.0, 150.0],
+      "sha256": "52bf90d7fe9856d2c28d8931ba693332e6e2a28f62e739088700316f8957334d"
+    }
+  ],
+  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)"
+}

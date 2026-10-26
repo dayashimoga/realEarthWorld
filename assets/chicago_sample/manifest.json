@@ -1,0 +1,77 @@
+{
+  "name": "Chicago The Loop & Lakefront Benchmark Region",
+  "state": "IL",
+  "country": "US",
+  "version": "1.0.0",
+  "anchor": {
+    "name": "Willis Tower",
+    "lat": 41.8789,
+    "lon": -87.6359,
+    "elevation_m": 181.0
+  },
+  "bbox": {
+    "min_lat": 41.8650,
+    "max_lat": 41.9050,
+    "min_lon": -87.6550,
+    "max_lon": -87.6150
+  },
+  "datum": {
+    "horizontal": "WGS84 (EPSG:4326)",
+    "projected": "UTM Zone 16N (EPSG:32616)",
+    "vertical": "NAVD88 (GEOID18/EGM96)"
+  },
+  "landmarks": [
+    {
+      "name": "Willis Tower",
+      "type": "commercial",
+      "lat": 41.8789,
+      "lon": -87.6359,
+      "height_m": 442.1,
+      "levels": 108
+    },
+    {
+      "name": "Aon Center",
+      "type": "commercial",
+      "lat": 41.8853,
+      "lon": -87.6215,
+      "height_m": 346.3,
+      "levels": 83
+    },
+    {
+      "name": "875 North Michigan Avenue (John Hancock)",
+      "type": "commercial",
+      "lat": 41.8989,
+      "lon": -87.6237,
+      "height_m": 343.7,
+      "levels": 100
+    }
+  ],
+  "grade_separations": [],
+  "hydrography": [
+    {
+      "name": "Lake Michigan",
+      "type": "lake",
+      "surface_elevation_msl": 176.5,
+      "is_coastline": true
+    }
+  ],
+  "sources": [
+    {
+      "name": "OpenStreetMap Chicago Loop Extract",
+      "provider": "OpenStreetMap Contributors",
+      "license": "ODbL 1.0",
+      "sha256": "0bfa4059d1e41fb435d5fac2a7e7e8a81ab97397218d56364dfa852513e5f857"
+    },
+    {
+      "name": "USGS 3DEP 1/3 Arc-Second Chicago Lakefront Elevation Model",
+      "provider": "USGS",
+      "license": "Public Domain / CC0 Compatible",
+      "filename": "usgs_3dep_chicago.bin",
+      "vertical_datum": "NAVD88",
+      "grid_dimensions": [64, 64],
+      "elevation_range_msl": [176.5, 185.0],
+      "sha256": "075ee7bebe780ef55f1b2856cd7f908610ef2c0e2014a0aaafa96aab3bb5e858"
+    }
+  ],
+  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)"
+}

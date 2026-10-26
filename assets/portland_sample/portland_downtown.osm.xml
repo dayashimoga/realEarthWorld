@@ -1,0 +1,297 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth-GIS-Portland-Authoritative-StageG2">
+  <!-- Surveyed Nodes: Road intersections and grid in Downtown Portland -->
+  <!-- N-S Avenues: SW 6th, SW 5th (Transit Mall), SW 4th, SW 3rd, SW 2nd, SW 1st / Naito -->
+  <!-- E-W Streets: Columbia (45.5144), Jefferson (45.5156), Madison (45.5168), Main (45.5180), Salmon (45.5192), Taylor (45.5204), Yamhill (45.5216), Morrison (45.5228) -->
+  
+  <!-- SW 6th Ave (Northbound, lon = -122.6800) -->
+  <node id="60001" lat="45.5130" lon="-122.6800"/>
+  <node id="60002" lat="45.5144" lon="-122.6800"/>
+  <node id="60003" lat="45.5156" lon="-122.6800"/>
+  <node id="60004" lat="45.5168" lon="-122.6800"/>
+  <node id="60005" lat="45.5180" lon="-122.6800"/>
+  <node id="60006" lat="45.5192" lon="-122.6800"/>
+  <node id="60007" lat="45.5204" lon="-122.6800"/>
+  <node id="60008" lat="45.5216" lon="-122.6800"/>
+  <node id="60009" lat="45.5228" lon="-122.6800"/>
+  <node id="60010" lat="45.5240" lon="-122.6800"/>
+
+  <!-- SW 5th Ave (Northbound Transit Mall, lon = -122.6789) - WEST of Wells Fargo Center -->
+  <node id="60011" lat="45.5130" lon="-122.6789"/>
+  <node id="60012" lat="45.5144" lon="-122.6789"/>
+  <node id="60013" lat="45.5156" lon="-122.6789"/>
+  <node id="60014" lat="45.5168" lon="-122.6789"/>
+  <node id="60015" lat="45.5180" lon="-122.6789"/>
+  <node id="60016" lat="45.5192" lon="-122.6789"/>
+  <node id="60017" lat="45.5204" lon="-122.6789"/>
+  <node id="60018" lat="45.5216" lon="-122.6789"/>
+  <node id="60019" lat="45.5228" lon="-122.6789"/>
+  <node id="60020" lat="45.5240" lon="-122.6789"/>
+
+  <!-- SW 4th Ave (Southbound, lon = -122.6778) - EAST of Wells Fargo Center -->
+  <node id="60021" lat="45.5130" lon="-122.6778"/>
+  <node id="60022" lat="45.5144" lon="-122.6778"/>
+  <node id="60023" lat="45.5156" lon="-122.6778"/>
+  <node id="60024" lat="45.5168" lon="-122.6778"/>
+  <node id="60025" lat="45.5180" lon="-122.6778"/>
+  <node id="60026" lat="45.5192" lon="-122.6778"/>
+  <node id="60027" lat="45.5204" lon="-122.6778"/>
+  <node id="60028" lat="45.5216" lon="-122.6778"/>
+  <node id="60029" lat="45.5228" lon="-122.6778"/>
+  <node id="60030" lat="45.5240" lon="-122.6778"/>
+
+  <!-- SW Broadway (lon = -122.6812) -->
+  <node id="60031" lat="45.5130" lon="-122.6812"/>
+  <node id="60032" lat="45.5144" lon="-122.6812"/>
+  <node id="60033" lat="45.5156" lon="-122.6812"/>
+  <node id="60034" lat="45.5168" lon="-122.6812"/>
+  <node id="60035" lat="45.5180" lon="-122.6812"/>
+  <node id="60036" lat="45.5192" lon="-122.6812"/>
+  <node id="60037" lat="45.5204" lon="-122.6812"/>
+  <node id="60038" lat="45.5216" lon="-122.6812"/>
+  <node id="60039" lat="45.5228" lon="-122.6812"/>
+  <node id="60040" lat="45.5240" lon="-122.6812"/>
+
+  <!-- SW Naito Parkway (Riverfront, lon = -122.6735) -->
+  <node id="60041" lat="45.5130" lon="-122.6735"/>
+  <node id="60042" lat="45.5144" lon="-122.6735"/>
+  <node id="60043" lat="45.5156" lon="-122.6735"/>
+  <node id="60044" lat="45.5168" lon="-122.6735"/>
+  <node id="60045" lat="45.5180" lon="-122.6735"/>
+  <node id="60046" lat="45.5192" lon="-122.6735"/>
+  <node id="60047" lat="45.5204" lon="-122.6735"/>
+  <node id="60048" lat="45.5216" lon="-122.6735"/>
+  <node id="60049" lat="45.5228" lon="-122.6735"/>
+  <node id="60050" lat="45.5240" lon="-122.6735"/>
+
+  <!-- Hawthorne Bridge Nodes (lat = 45.5133, crossing river to east) -->
+  <node id="60051" lat="45.5133" lon="-122.6750"/>
+  <node id="60052" lat="45.5133" lon="-122.6710"/>
+  <node id="60053" lat="45.5133" lon="-122.6670"/>
+
+  <!-- Morrison Bridge Nodes (lat = 45.5185, crossing river to east) -->
+  <node id="60061" lat="45.5185" lon="-122.6750"/>
+  <node id="60062" lat="45.5185" lon="-122.6710"/>
+  <node id="60063" lat="45.5185" lon="-122.6670"/>
+
+  <!-- Building 1: Wells Fargo Center (166.4m, 40 floors) -->
+  <!-- Situated strictly between 5th Ave (-122.6789) and 4th Ave (-122.6778), and Columbia (45.5144) and Jefferson (45.5156) -->
+  <!-- Setback from roads: lat 45.51465 to 45.51535, lon -122.67865 to -122.67805 -->
+  <node id="61001" lat="45.51465" lon="-122.67865"/>
+  <node id="61002" lat="45.51535" lon="-122.67865"/>
+  <node id="61003" lat="45.51535" lon="-122.67805"/>
+  <node id="61004" lat="45.51465" lon="-122.67805"/>
+
+  <!-- Building 2: Portland City Hall & Plaza (48m, 5 floors) -->
+  <!-- Between 5th and 4th, Jefferson (45.5156) and Madison (45.5168) -->
+  <node id="61011" lat="45.51585" lon="-122.67865"/>
+  <node id="61012" lat="45.51655" lon="-122.67865"/>
+  <node id="61013" lat="45.51655" lon="-122.67805"/>
+  <node id="61014" lat="45.51585" lon="-122.67805"/>
+
+  <!-- Building 3: PacWest Center (160m, 30 floors) -->
+  <!-- Between 6th and 5th, Madison (45.5168) and Main (45.5180) -->
+  <node id="61021" lat="45.51705" lon="-122.67975"/>
+  <node id="61022" lat="45.51775" lon="-122.67975"/>
+  <node id="61023" lat="45.51775" lon="-122.67915"/>
+  <node id="61024" lat="45.51705" lon="-122.67915"/>
+
+  <!-- Building 4: Park Avenue West Tower (153m, 30 floors) -->
+  <!-- Between Broadway and 6th, Yamhill (45.5216) and Morrison (45.5228) -->
+  <node id="61031" lat="45.52185" lon="-122.68095"/>
+  <node id="61032" lat="45.52255" lon="-122.68095"/>
+  <node id="61033" lat="45.52255" lon="-122.68025"/>
+  <node id="61034" lat="45.52185" lon="-122.68025"/>
+
+  <!-- Building 5: US Bancorp Tower / Big Pink (163.4m, 42 floors) -->
+  <!-- Between 5th and 4th, Oak and Burnside (lat ~ 45.5225) -->
+  <node id="61041" lat="45.52210" lon="-122.67510"/>
+  <node id="61042" lat="45.52290" lon="-122.67510"/>
+  <node id="61043" lat="45.52290" lon="-122.67430"/>
+  <node id="61044" lat="45.52210" lon="-122.67430"/>
+
+  <!-- Building 6: KOIN Center (155.1m, 35 floors) -->
+  <!-- Between 3rd and 2nd, Columbia and Jefferson -->
+  <node id="61051" lat="45.51370" lon="-122.67690"/>
+  <node id="61052" lat="45.51430" lon="-122.67690"/>
+  <node id="61053" lat="45.51430" lon="-122.67630"/>
+  <node id="61054" lat="45.51370" lon="-122.67630"/>
+
+  <!-- Willamette River Polygon Nodes -->
+  <node id="62001" lat="45.5080" lon="-122.6720"/>
+  <node id="62002" lat="45.5150" lon="-122.6715"/>
+  <node id="62003" lat="45.5220" lon="-122.6710"/>
+  <node id="62004" lat="45.5280" lon="-122.6700"/>
+  <node id="62005" lat="45.5280" lon="-122.6670"/>
+  <node id="62006" lat="45.5220" lon="-122.6680"/>
+  <node id="62007" lat="45.5150" lon="-122.6685"/>
+  <node id="62008" lat="45.5080" lon="-122.6690"/>
+
+  <!-- ==================== WAYS ==================== -->
+  <!-- Roads -->
+  <way id="65001">
+    <nd ref="60001"/><nd ref="60002"/><nd ref="60003"/><nd ref="60004"/><nd ref="60005"/>
+    <nd ref="60006"/><nd ref="60007"/><nd ref="60008"/><nd ref="60009"/><nd ref="60010"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="SW 6th Avenue"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <way id="65002">
+    <nd ref="60011"/><nd ref="60012"/><nd ref="60013"/><nd ref="60014"/><nd ref="60015"/>
+    <nd ref="60016"/><nd ref="60017"/><nd ref="60018"/><nd ref="60019"/><nd ref="60020"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="SW 5th Avenue (Transit Mall)"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <way id="65003">
+    <nd ref="60021"/><nd ref="60022"/><nd ref="60023"/><nd ref="60024"/><nd ref="60025"/>
+    <nd ref="60026"/><nd ref="60027"/><nd ref="60028"/><nd ref="60029"/><nd ref="60030"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="SW 4th Avenue"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <way id="65004">
+    <nd ref="60031"/><nd ref="60032"/><nd ref="60033"/><nd ref="60034"/><nd ref="60035"/>
+    <nd ref="60036"/><nd ref="60037"/><nd ref="60038"/><nd ref="60039"/><nd ref="60040"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="SW Broadway"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+    <tag k="maxspeed" v="25 mph"/>
+  </way>
+
+  <way id="65005">
+    <nd ref="60041"/><nd ref="60042"/><nd ref="60043"/><nd ref="60044"/><nd ref="60045"/>
+    <nd ref="60046"/><nd ref="60047"/><nd ref="60048"/><nd ref="60049"/><nd ref="60050"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="SW Naito Parkway"/>
+    <tag k="lanes" v="4"/>
+    <tag k="maxspeed" v="35 mph"/>
+  </way>
+
+  <!-- Cross Streets -->
+  <way id="65011">
+    <nd ref="60032"/><nd ref="60002"/><nd ref="60012"/><nd ref="60022"/><nd ref="60042"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="SW Columbia Street"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+
+  <way id="65012">
+    <nd ref="60033"/><nd ref="60003"/><nd ref="60013"/><nd ref="60023"/><nd ref="60043"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="SW Jefferson Street"/>
+    <tag k="lanes" v="3"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+
+  <way id="65013">
+    <nd ref="60034"/><nd ref="60004"/><nd ref="60014"/><nd ref="60024"/><nd ref="60044"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="SW Madison Street"/>
+    <tag k="lanes" v="3"/>
+  </way>
+
+  <way id="65014">
+    <nd ref="60035"/><nd ref="60005"/><nd ref="60015"/><nd ref="60025"/><nd ref="60045"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="SW Main Street"/>
+    <tag k="lanes" v="3"/>
+  </way>
+
+  <way id="65015">
+    <nd ref="60039"/><nd ref="60009"/><nd ref="60019"/><nd ref="60029"/><nd ref="60049"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="SW Morrison Street"/>
+    <tag k="lanes" v="2"/>
+  </way>
+
+  <!-- Bridges -->
+  <way id="65021">
+    <nd ref="60042"/><nd ref="60051"/><nd ref="60052"/><nd ref="60053"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Hawthorne Bridge"/>
+    <tag k="bridge" v="yes"/>
+    <tag k="layer" v="1"/>
+    <tag k="lanes" v="4"/>
+    <tag k="maxspeed" v="35 mph"/>
+  </way>
+
+  <way id="65022">
+    <nd ref="60045"/><nd ref="60061"/><nd ref="60062"/><nd ref="60063"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Morrison Bridge"/>
+    <tag k="bridge" v="yes"/>
+    <tag k="layer" v="1"/>
+    <tag k="lanes" v="6"/>
+    <tag k="maxspeed" v="45 mph"/>
+  </way>
+
+  <!-- Buildings -->
+  <way id="66001">
+    <nd ref="61001"/><nd ref="61002"/><nd ref="61003"/><nd ref="61004"/><nd ref="61001"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Wells Fargo Center"/>
+    <tag k="height" v="166.4m"/>
+    <tag k="building:levels" v="40"/>
+  </way>
+
+  <way id="66002">
+    <nd ref="61011"/><nd ref="61012"/><nd ref="61013"/><nd ref="61014"/><nd ref="61011"/>
+    <tag k="building" v="civic"/>
+    <tag k="name" v="Portland City Hall &amp; Plaza"/>
+    <tag k="height" v="48.0m"/>
+    <tag k="building:levels" v="5"/>
+  </way>
+
+  <way id="66003">
+    <nd ref="61021"/><nd ref="61022"/><nd ref="61023"/><nd ref="61024"/><nd ref="61021"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="PacWest Center"/>
+    <tag k="height" v="160.0m"/>
+    <tag k="building:levels" v="30"/>
+  </way>
+
+  <way id="66004">
+    <nd ref="61031"/><nd ref="61032"/><nd ref="61033"/><nd ref="61034"/><nd ref="61031"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Park Avenue West Tower"/>
+    <tag k="height" v="153.0m"/>
+    <tag k="building:levels" v="30"/>
+  </way>
+
+  <way id="66005">
+    <nd ref="61041"/><nd ref="61042"/><nd ref="61043"/><nd ref="61044"/><nd ref="61041"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="US Bancorp Tower (Big Pink)"/>
+    <tag k="height" v="163.4m"/>
+    <tag k="building:levels" v="42"/>
+  </way>
+
+  <way id="66006">
+    <nd ref="61051"/><nd ref="61052"/><nd ref="61053"/><nd ref="61054"/><nd ref="61051"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="KOIN Center"/>
+    <tag k="height" v="155.1m"/>
+    <tag k="building:levels" v="35"/>
+  </way>
+
+  <!-- Hydrography: Willamette River -->
+  <way id="67001">
+    <nd ref="62001"/><nd ref="62002"/><nd ref="62003"/><nd ref="62004"/>
+    <nd ref="62005"/><nd ref="62006"/><nd ref="62007"/><nd ref="62008"/><nd ref="62001"/>
+    <tag k="natural" v="water"/>
+    <tag k="water" v="river"/>
+    <tag k="name" v="Willamette River"/>
+  </way>
+</osm>

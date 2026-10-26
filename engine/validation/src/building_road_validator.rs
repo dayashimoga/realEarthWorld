@@ -289,3 +289,93 @@ pub fn validate_building_infrastructure_conflicts(
     validate_building_road_conflicts(buildings, roads, repair_engine);
     validate_building_railway_conflicts(buildings, railways, repair_engine);
 }
+
+/// Filters out buildings that physically penetrate road centerlines or enclose road nodes.
+///
+/// Quarantines the offending buildings with DiagnosticSeverity::Error and culls them from
+/// the returned list of ValidatedBuildings, ensuring zero roadway-blocking structures.
+pub fn filter_building_road_conflicts(
+    buildings: Vec<ValidatedBuilding>,
+    roads: &[OsmRoadFeature],
+    repair_engine: &mut RepairEngine,
+) -> Vec<ValidatedBuilding> {
+    let mut clean_buildings = Vec::with_capacity(buildings.len());
+
+    for bldg in buildings {
+        if bldg.outer_ring.len() < 3 {
+            clean_buildings.push(bldg);
+            continue;
+        }
+
+        let mut road_blocking = false;
+        let mut reason = "";
+        let mut conflict_coord = bldg.outer_ring.first().copied();
+
+        for road in roads {
+            if road.layer != 0 || road.is_bridge || road.is_tunnel {
+                continue;
+            }
+
+            // Check 1: Any road segment intersects any building polygon edge
+            for r_idx in 0..(road.geometry.len().saturating_sub(1)) {
+                let r1 = road.geometry[r_idx];
+                let r2 = road.geometry[r_idx + 1];
+
+                for b_idx in 0..(bldg.outer_ring.len().saturating_sub(1)) {
+                    let b1 = bldg.outer_ring[b_idx];
+                    let b2 = bldg.outer_ring[b_idx + 1];
+                    if segments_intersect(r1, r2, b1, b2) {
+                        road_blocking = true;
+                        reason = "road centerline penetrates building facade (roadway blockage)";
+                        conflict_coord = Some(Wgs84Coord::new(
+                            (r1.lat + r2.lat) * 0.5,
+                            (r1.lon + r2.lon) * 0.5,
+                            0.0,
+                        ));
+                        break;
+                    }
+                }
+                if road_blocking {
+                    break;
+                }
+            }
+
+            // Check 2: Any road node is inside building
+            if !road_blocking {
+                for r_pt in &road.geometry {
+                    if point_in_polygon(r_pt, &bldg.outer_ring) {
+                        road_blocking = true;
+                        reason = "road centerline node enclosed within building footprint (roadway blockage)";
+                        conflict_coord = Some(*r_pt);
+                        break;
+                    }
+                }
+            }
+
+            if road_blocking {
+                repair_engine.record_quarantine(
+                    bldg.id,
+                    "BuildingRoadCorridor",
+                    "RULE_BUILDING_ROAD_CORRIDOR_CONFLICT",
+                    &format!(
+                        "Building [{}] '{}' blocks Road [{}] '{}': {} (culled from production mesh)",
+                        bldg.id,
+                        bldg.name.as_deref().unwrap_or("Unnamed"),
+                        road.way_id,
+                        road.name.as_deref().unwrap_or("Unnamed"),
+                        reason
+                    ),
+                    DiagnosticSeverity::Error,
+                    conflict_coord,
+                );
+                break;
+            }
+        }
+
+        if !road_blocking {
+            clean_buildings.push(bldg);
+        }
+    }
+
+    clean_buildings
+}

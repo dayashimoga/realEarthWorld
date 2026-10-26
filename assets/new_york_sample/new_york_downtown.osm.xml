@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth-GIS-NYC-Authoritative-StageG2">
+  <!-- Broadway, 5th Ave, Wall St, FDR Drive, West St -->
+  <!-- One WTC, Empire State, Chrysler Building, Woolworth Building -->
+  
+  <node id="70001" lat="40.7040" lon="-74.0135"/>
+  <node id="70002" lat="40.7070" lon="-74.0120"/>
+  <node id="70003" lat="40.7100" lon="-74.0105"/>
+  <node id="70004" lat="40.7127" lon="-74.0090"/>
+  <node id="70005" lat="40.7160" lon="-74.0075"/>
+  <node id="70006" lat="40.7200" lon="-74.0050"/>
+
+  <node id="70011" lat="40.7040" lon="-74.0170"/>
+  <node id="70012" lat="40.7080" lon="-74.0165"/>
+  <node id="70013" lat="40.7127" lon="-74.0155"/>
+  <node id="70014" lat="40.7160" lon="-74.0145"/>
+
+  <node id="70021" lat="40.7068" lon="-74.0125"/>
+  <node id="70022" lat="40.7065" lon="-74.0090"/>
+  <node id="70023" lat="40.7060" lon="-74.0070"/>
+
+  <!-- Brooklyn Bridge Approach -->
+  <node id="70031" lat="40.7125" lon="-74.0050"/>
+  <node id="70032" lat="40.7080" lon="-73.9980"/>
+  <node id="70033" lat="40.7030" lon="-73.9900"/>
+
+  <!-- Building 1: One World Trade Center (541.3m, 104 floors) -->
+  <node id="71001" lat="40.7123" lon="-74.0138"/>
+  <node id="71002" lat="40.7131" lon="-74.0138"/>
+  <node id="71003" lat="40.7131" lon="-74.0130"/>
+  <node id="71004" lat="40.7123" lon="-74.0130"/>
+
+  <!-- Building 2: Woolworth Building (241.4m, 57 floors) -->
+  <node id="71011" lat="40.7120" lon="-74.0086"/>
+  <node id="71012" lat="40.7126" lon="-74.0086"/>
+  <node id="71013" lat="40.7126" lon="-74.0078"/>
+  <node id="71014" lat="40.7120" lon="-74.0078"/>
+
+  <!-- Building 3: 40 Wall Street (282.5m, 71 floors) -->
+  <node id="71021" lat="40.7067" lon="-74.0099"/>
+  <node id="71022" lat="40.7073" lon="-74.0099"/>
+  <node id="71023" lat="40.7073" lon="-74.0091"/>
+  <node id="71024" lat="40.7067" lon="-74.0091"/>
+
+  <!-- Building 4: Empire State Building (381.0m, 102 floors) -->
+  <node id="71031" lat="40.7481" lon="-73.9860"/>
+  <node id="71032" lat="40.7487" lon="-73.9860"/>
+  <node id="71033" lat="40.7487" lon="-73.9854"/>
+  <node id="71034" lat="40.7481" lon="-73.9854"/>
+
+  <!-- Ways -->
+  <way id="75001">
+    <nd ref="70001"/><nd ref="70002"/><nd ref="70003"/><nd ref="70004"/><nd ref="70005"/><nd ref="70006"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Broadway"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="75002">
+    <nd ref="70011"/><nd ref="70012"/><nd ref="70013"/><nd ref="70014"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="West Street"/>
+    <tag k="lanes" v="6"/>
+  </way>
+
+  <way id="75003">
+    <nd ref="70021"/><nd ref="70022"/><nd ref="70023"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Wall Street"/>
+    <tag k="lanes" v="2"/>
+  </way>
+
+  <way id="75004">
+    <nd ref="70031"/><nd ref="70032"/><nd ref="70033"/>
+    <tag k="highway" v="motorway"/>
+    <tag k="name" v="Brooklyn Bridge"/>
+    <tag k="bridge" v="yes"/>
+    <tag k="layer" v="1"/>
+    <tag k="lanes" v="6"/>
+  </way>
+
+  <way id="76001">
+    <nd ref="71001"/><nd ref="71002"/><nd ref="71003"/><nd ref="71004"/><nd ref="71001"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="One World Trade Center"/>
+    <tag k="height" v="541.3m"/>
+    <tag k="building:levels" v="104"/>
+  </way>
+
+  <way id="76002">
+    <nd ref="71011"/><nd ref="71012"/><nd ref="71013"/><nd ref="71014"/><nd ref="71011"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Woolworth Building"/>
+    <tag k="height" v="241.4m"/>
+    <tag k="building:levels" v="57"/>
+  </way>
+
+  <way id="76003">
+    <nd ref="71021"/><nd ref="71022"/><nd ref="71023"/><nd ref="71024"/><nd ref="71021"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="40 Wall Street"/>
+    <tag k="height" v="282.5m"/>
+    <tag k="building:levels" v="71"/>
+  </way>
+
+  <way id="76004">
+    <nd ref="71031"/><nd ref="71032"/><nd ref="71033"/><nd ref="71034"/><nd ref="71031"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Empire State Building"/>
+    <tag k="height" v="381.0m"/>
+    <tag k="building:levels" v="102"/>
+  </way>
+</osm>

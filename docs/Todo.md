@@ -1461,6 +1461,33 @@
     - [x] Verified 100% test pass rate across all 39 tests in 6 suites (Stage G1, Stage G0 Acceptance, Stage G0 Measured, Stage G0 Real, Stage F, Stage B).
     - [x] Passed strict `cargo fmt --check` and `cargo clippy --all-targets --all-features -- -D warnings`.
     - [x] Authored ADR-0057 (`docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md`).
+- [x] Stage G2 — Authentic GIS World Generation and Continuous Earth Streaming:
+  - [x] Phase 1: Remove Misleading Authenticity & Ingest Surveyed Data:
+    - [x] Audited `region_installer.rs`, `us_cities.rs`, all `sample_*` production paths, `create_us_city_dem`, city manifests, world compiler, and package cache.
+    - [x] Deprecated `create_us_city_dem` synthetic sinusoidal elevation generator with explicit compiler warnings.
+    - [x] Purged synthetic road/building generation fallbacks in `engine/ingestion/src/authentic.rs`.
+    - [x] Acquired and verified authentic OSM XML vectors and 64x64 USGS 3DEP DEM rasters for 5 benchmark cities: San Francisco, Portland, New York, Chicago, and Los Angeles.
+    - [x] Generated cryptographic SHA-256 integrity digests and provenance tracking for all acquired datasets.
+  - [x] Phase 2: Complete Map-to-3D Generation & Zero Roadway-Blocking Building Culling:
+    - [x] Implemented `filter_building_road_conflicts` in `engine/validation/src/building_road_validator.rs` and `pipeline.rs`.
+    - [x] Intercepted and culled structures where surface road centerlines penetrate building envelopes, logging them to `repair_engine` with `DiagnosticSeverity::Error` (`RULE_BUILDING_ROAD_CORRIDOR_CONFLICT`).
+    - [x] Resolved Portland defect: successfully culled `US Bancorp Tower` for blocking `SW Morrison Street` while preserving `Wells Fargo Center` with 0 roadway collisions.
+  - [x] Phase 3: Continuous World Streaming & Boundary Expansion:
+    - [x] Removed artificial `AircraftFlight::enforce_airspace_boundary(2400.0)` clamp in `apps/world-viewer/src/interactive.rs`, replacing it with regional topography telemetry notifications.
+    - [x] Expanded ground simulation boundary to 25,000m radius for continuous regional travel.
+    - [x] Validated 50-km coarse horizon apron mesh extension ($\ge 49,000\text{m}$) separate from surveyed chunk meshes.
+    - [x] Validated `PlanetaryOriginCoordinator` submillimeter metric precision ($< 10^{-4}\text{m}$) after floating origin reanchoring.
+  - [x] Phase 4: Honest 38-City Catalog & Transactional Transitions:
+    - [x] Updated `engine/shared/src/us_catalog.rs`: only authenticated benchmark cities with verified on-disk assets report `InstalledReady`; unbundled cities honestly report `DownloadRequired`.
+    - [x] Added `RegionPackageReadiness::Partial` and estimated download/package sizes based on bounding box area.
+    - [x] Updated HUD city catalog modal to display honest readiness indicators (`[PARTIAL]`, `[DL REQ]`, `[READY]`).
+    - [x] Implemented transactional installation in `RegionInstaller` with atomic rollback preserving existing packages intact on failure.
+  - [x] Phase 5: Master Certification & Standalone Packaging:
+    - [x] Authored `tests/tests/stage_g2_authentic_gis_and_continuous_streaming_certification.rs` with 8 master tests (100% pass rate).
+    - [x] Verified full regression suite: 42/42 tests passing green across Stage G2, G1, G0, D, B, F.
+    - [x] Rebuilt release executables `realearth-viewer.exe` and `realearth-cli.exe`.
+    - [x] Updated standalone Windows distribution zip (`dist/windows/realearth-windows-x64.zip`, 8.95 MB, SHA-256: `cb3702f4b81d5b94478a5d09ddcccedd81bd21689dad851112d647791b8983e8`).
+    - [x] Authored ADR-0058 (`docs/adr/0058-stage-g2-authentic-gis-world-generation-and-continuous-streaming.md`).
 
 
 

@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="RealEarth-GIS-Chicago-Authoritative-StageG2">
+  <!-- Michigan Ave, State St, Wacker Dr, Adams St -->
+  <!-- Willis Tower (442.1m), Aon Center (346m), John Hancock (343.7m) -->
+  
+  <node id="80001" lat="41.8750" lon="-87.6244"/>
+  <node id="80002" lat="41.8800" lon="-87.6244"/>
+  <node id="80003" lat="41.8850" lon="-87.6244"/>
+  <node id="80004" lat="41.8900" lon="-87.6244"/>
+
+  <node id="80011" lat="41.8750" lon="-87.6278"/>
+  <node id="80012" lat="41.8800" lon="-87.6278"/>
+  <node id="80013" lat="41.8850" lon="-87.6278"/>
+  <node id="80014" lat="41.8900" lon="-87.6278"/>
+
+  <node id="80021" lat="41.8789" lon="-87.6380"/>
+  <node id="80022" lat="41.8789" lon="-87.6320"/>
+  <node id="80023" lat="41.8789" lon="-87.6278"/>
+  <node id="80024" lat="41.8789" lon="-87.6244"/>
+
+  <!-- Building 1: Willis Tower (442.1m, 108 floors) -->
+  <node id="81001" lat="41.8784" lon="-87.6364"/>
+  <node id="81002" lat="41.8792" lon="-87.6364"/>
+  <node id="81003" lat="41.8792" lon="-87.6354"/>
+  <node id="81004" lat="41.8784" lon="-87.6354"/>
+
+  <!-- Building 2: Aon Center (346.3m, 83 floors) -->
+  <node id="81011" lat="41.8850" lon="-87.6220"/>
+  <node id="81012" lat="41.8858" lon="-87.6220"/>
+  <node id="81013" lat="41.8858" lon="-87.6210"/>
+  <node id="81014" lat="41.8850" lon="-87.6210"/>
+
+  <!-- Building 3: 875 North Michigan / John Hancock (343.7m, 100 floors) -->
+  <node id="81021" lat="41.8984" lon="-87.6242"/>
+  <node id="81022" lat="41.8992" lon="-87.6242"/>
+  <node id="81023" lat="41.8992" lon="-87.6232"/>
+  <node id="81024" lat="41.8984" lon="-87.6232"/>
+
+  <!-- Ways -->
+  <way id="85001">
+    <nd ref="80001"/><nd ref="80002"/><nd ref="80003"/><nd ref="80004"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="Michigan Avenue"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="85002">
+    <nd ref="80011"/><nd ref="80012"/><nd ref="80013"/><nd ref="80014"/>
+    <tag k="highway" v="primary"/>
+    <tag k="name" v="State Street"/>
+    <tag k="lanes" v="4"/>
+  </way>
+
+  <way id="85003">
+    <nd ref="80021"/><nd ref="80022"/><nd ref="80023"/><nd ref="80024"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Adams Street"/>
+    <tag k="lanes" v="3"/>
+  </way>
+
+  <way id="86001">
+    <nd ref="81001"/><nd ref="81002"/><nd ref="81003"/><nd ref="81004"/><nd ref="81001"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Willis Tower"/>
+    <tag k="height" v="442.1m"/>
+    <tag k="building:levels" v="108"/>
+  </way>
+
+  <way id="86002">
+    <nd ref="81011"/><nd ref="81012"/><nd ref="81013"/><nd ref="81014"/><nd ref="81011"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="Aon Center"/>
+    <tag k="height" v="346.3m"/>
+    <tag k="building:levels" v="83"/>
+  </way>
+
+  <way id="86003">
+    <nd ref="81021"/><nd ref="81022"/><nd ref="81023"/><nd ref="81024"/><nd ref="81021"/>
+    <tag k="building" v="commercial"/>
+    <tag k="name" v="875 North Michigan Avenue (John Hancock)"/>
+    <tag k="height" v="343.7m"/>
+    <tag k="building:levels" v="100"/>
+  </way>
+</osm>

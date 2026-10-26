@@ -1287,6 +1287,9 @@ impl HudMesh {
                 realearth_shared::us_catalog::RegionPackageReadiness::InstalledReady => {
                     ("[READY]", [0.25, 0.95, 0.55, 1.0])
                 }
+                realearth_shared::us_catalog::RegionPackageReadiness::Partial => {
+                    ("[PARTIAL]", [1.0, 0.85, 0.25, 1.0])
+                }
                 realearth_shared::us_catalog::RegionPackageReadiness::DownloadRequired => {
                     ("[DL REQ]", [1.0, 0.72, 0.18, 1.0])
                 }
@@ -1392,6 +1395,12 @@ impl HudMesh {
                 [0.3, 1.0, 0.6, 1.0],
                 [0.08, 0.28, 0.20, 0.85],
                 [0.2, 0.75, 0.45, 0.7],
+            ),
+            realearth_shared::us_catalog::RegionPackageReadiness::Partial => (
+                "⚡ WARP (PARTIAL)",
+                [1.0, 0.85, 0.25, 1.0],
+                [0.25, 0.22, 0.08, 0.85],
+                [0.85, 0.70, 0.20, 0.7],
             ),
             realearth_shared::us_catalog::RegionPackageReadiness::DownloadRequired => (
                 "⬇ INSTALL & WARP",

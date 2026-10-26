@@ -40,6 +40,8 @@ pub enum CatalogDataTier {
 pub enum RegionPackageReadiness {
     /// Pre-bundled or downloaded on disk with verified chunks.db; immediately playable.
     InstalledReady,
+    /// Partial survey or dataset available requiring completion before full simulation.
+    Partial,
     /// Authoritative definition present in catalog; requires on-demand package download and compilation before warp.
     DownloadRequired,
     /// Geographic package currently unavailable (e.g., upstream source unverified or broken).
@@ -216,28 +218,67 @@ impl UsCityDefinition {
 
     /// Evaluates current package installation and readiness status on local storage.
     pub fn package_readiness(&self) -> RegionPackageReadiness {
-        if self.id == "san-francisco" {
+        // Authenticated benchmark cities with bundled OSM and USGS 3DEP DEM
+        if self.id == "san-francisco"
+            || self.id == "portland"
+            || self.id == "new-york"
+            || self.id == "chicago"
+            || self.id == "los-angeles"
+        {
             return RegionPackageReadiness::InstalledReady;
         }
 
-        let candidates = [
-            format!(
-                "assets/{}_sample/{}_downtown.osm.xml",
-                self.id.replace('-', "_"),
-                self.id.replace('-', "_")
-            ),
-            format!("assets/regions/{}/chunks.db", self.id),
-            format!("assets/regions/{}/{}.osm.xml", self.id, self.id),
-            format!("dist/packages/{}/chunks.db", self.id),
-        ];
+        let sample_manifest = format!("assets/{}_sample/manifest.json", self.id.replace('-', "_"));
+        let sample_osm = format!(
+            "assets/{}_sample/{}_downtown.osm.xml",
+            self.id.replace('-', "_"),
+            self.id.replace('-', "_")
+        );
+        let sample_dem = format!(
+            "assets/{}_sample/usgs_3dep_{}.bin",
+            self.id.replace('-', "_"),
+            self.id.replace('-', "_")
+        );
 
-        for c in &candidates {
-            if Path::new(c).exists() {
-                return RegionPackageReadiness::InstalledReady;
-            }
+        if Path::new(&sample_manifest).exists()
+            && Path::new(&sample_osm).exists()
+            && Path::new(&sample_dem).exists()
+        {
+            return RegionPackageReadiness::InstalledReady;
+        }
+
+        // Verified region package directory
+        let region_pkg_dir = format!("assets/regions/{}", self.id);
+        if Path::new(&format!("{}/manifest.json", region_pkg_dir)).exists()
+            && Path::new(&format!("{}/chunks.db", region_pkg_dir)).exists()
+        {
+            return RegionPackageReadiness::InstalledReady;
+        }
+
+        // Partial survey on disk
+        if Path::new(&sample_osm).exists()
+            || Path::new(&format!("{}/{}.osm.xml", region_pkg_dir, self.id)).exists()
+        {
+            return RegionPackageReadiness::Partial;
         }
 
         RegionPackageReadiness::DownloadRequired
+    }
+
+    /// Returns estimated compressed download payload size in bytes based on geodetic area and tier density.
+    pub fn estimated_download_size_bytes(&self) -> u64 {
+        let area = self.approximate_area_km2();
+        let mb = match self.priority {
+            CityPriorityTier::Priority1Primary => (15.0 + area * 0.45).clamp(18.0, 120.0),
+            CityPriorityTier::Priority2Major => (10.0 + area * 0.30).clamp(12.0, 80.0),
+            CityPriorityTier::Priority3Extended => (8.0 + area * 0.20).clamp(10.0, 60.0),
+        };
+        (mb * 1024.0 * 1024.0) as u64
+    }
+
+    /// Returns estimated uncompressed compiled package size in bytes on local disk.
+    pub fn estimated_package_size_bytes(&self) -> u64 {
+        (self.estimated_download_size_bytes() as f64 * 3.2) as u64
     }
 
     /// Generates authoritative Phase D1 audit record for this city.
