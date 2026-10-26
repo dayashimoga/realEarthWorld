@@ -1,4 +1,4 @@
-﻿{
+{
     "ReleaseVersion":  "0.6.0",
     "GeneratedAt":  "2026-10-26T08:38:38Z",
     "PackageCount":  5,
@@ -17,8 +17,8 @@
                          "File":  "realearth-windows-x64.zip",
                          "Path":  "dist/windows/realearth-windows-x64.zip",
                          "Format":  "zip",
-                         "SizeMB":  8.71,
-                         "SHA256":  "948180155CE871B76FCA222939D19E47D6C4FB156E2185F45D8535EABA90D744",
+                         "SizeMB":  8.82,
+                         "SHA256":  "A26A7DE82C8F65FCF8BA05598A14AB02299ACB336EC078C03617B575C8C97E98",
                          "Signed":  false,
                          "SigningNote":  "Unsigned Windows PE32+ (Development release binary)",
                          "Status":  "CERTIFIED",

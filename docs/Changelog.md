@@ -2066,18 +2066,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - [`docs/BuildArtifactManifest.md`](file:///j:/rustRealEarth/docs/BuildArtifactManifest.md)
     - [`docs/FinalProductionReadiness.md`](file:///j:/rustRealEarth/docs/FinalProductionReadiness.md)
   - Authored [`docs/adr/0055-stage-f-production-performance-five-platform-certification.md`](file:///j:/rustRealEarth/docs/adr/0055-stage-f-production-performance-five-platform-certification.md).
-  - Authored Master Test Suite [`tests/tests/stage_f_production_performance_and_five_platform_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage_f_production_performance_and_five_platform_certification.rs) (7/7 tests passing).
+### Stage G0 — Independent Production Certification Repair (2026-10-26)
+- **Forensic Certification Audit (`docs/CertificationCorrections.md`, `tests/tests/stage_f_...`)**:
+  - Forensically audited baseline commit `3e4405b` vs `dist/` binary packages, exposing that Stage F claimed release readiness using synthetic benchmarks, fabricated metrics, and stub platform archives.
+  - Formally revoked Stage F `PRODUCTION_CERTIFIED` approval, transitioning status to `STAGE_G0_AUDIT_REVOKED_REMEDIAL_GATES_ACTIVE`.
+  - Reclassified all Stage F test suites under the mandatory 8-tier evidence hierarchy (`UNIT`, `CONTRACT`, `SIMULATION`, `INTEGRATION`, `GPU`, `END_TO_END`, `DEVICE`, `RELEASE`).
+  - Added permanent forensic audit notices to [`tests/tests/stage_f_production_performance_and_five_platform_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage_f_production_performance_and_five_platform_certification.rs).
+- **Failing Acceptance & Defect Reproduction Scenarios ([`tests/tests/stage_g0_acceptance_and_defect_reproduction.rs`](file:///j:/rustRealEarth/tests/tests/stage_g0_acceptance_and_defect_reproduction.rs))**:
+  - Reproduced Defect 1: Vehicle driving at 172 km/h escaping past chunk boundaries into unallocated gray void (`test_defect_1_reproduce_unbounded_world_void_escape`).
+  - Reproduced Defect 2: Aircraft airborne spawn with zero airspeed causing instant stall and plummeting to 16m MSL (`test_defect_2_reproduce_aviation_zero_speed_airborne_stall`).
+  - Reproduced Defect 3: Train consist spawned floating in water of San Francisco Bay due to zero railway tracks in downtown extract (`test_defect_3_reproduce_rail_spawn_in_water_without_tracks`).
+  - Reproduced Defect 4: HyperSport RR-1000 motorcycle chassis constructed from crude box primitives (`test_defect_4_reproduce_motorcycle_crude_box_primitives`).
+  - Reproduced Defect 5: TransContinental Semi 53ft trailer generated as a monolithic untextured flat box (`test_defect_5_reproduce_semi_trailer_untextured_box`).
+  - Reproduced Defect 6: Platform archives containing shell script stubs or missing compiled binaries (`test_defect_6_reproduce_missing_platform_executables`).
+- **Real Executable Validation & Deterministic Recording ([`engine/shared/src/gameplay_recording.rs`](file:///j:/rustRealEarth/engine/shared/src/gameplay_recording.rs), [`tests/tests/stage_g0_real_executable_validation.rs`](file:///j:/rustRealEarth/tests/tests/stage_g0_real_executable_validation.rs))**:
+  - Implemented `GameplayRecordingSession`, `GameplayInputFrame`, and replay determinism verification synchronizing raw keys, vehicle states, transforms, camera, collision, and geographic context.
+  - Verified clean working directory execution of extracted Windows distribution (`dist/windows/realearth-windows-x64.zip`) without source-tree fallback.
+  - Verified simulated real input response for left/right yaw steering and full brake stopping to $< 0.1\text{ km/h}$.
+  - Built real GPU scene regression gate rejecting HUD-only and blank scenes with near-zero depth variance.
+  - Implemented mutation testing release gates for reversed steering, stuck throttle, and missing city data.
+- **Measured Metrics & Strict Platform Evidence ([`tests/tests/stage_g0_measured_performance_and_platform_evidence.rs`](file:///j:/rustRealEarth/tests/tests/stage_g0_measured_performance_and_platform_evidence.rs))**:
+  - Replaced fabricated frame times with real wall-clock elapsed timestamps (`Instant::now()`).
+  - Replaced hardcoded memory constants with OS resident set size (`get_current_process_memory()`).
+  - Implemented strict 5-platform package audit: Windows PE32+ verified; Linux, macOS, iOS marked `BLOCKED_STUB_WRAPPER` or `BLOCKED_MISSING_BINARY`; Android marked `BLOCKED_PENDING_TOOLCHAIN`.
+- **Architectural Decision Records & Release Matrices (`docs/`)**:
+  - Authored [`docs/CertificationCorrections.md`](file:///j:/rustRealEarth/docs/CertificationCorrections.md).
+  - Authored [`docs/RequirementVerificationMatrix.md`](file:///j:/rustRealEarth/docs/RequirementVerificationMatrix.md).
+  - Authored [`docs/ProductionEvidence.json`](file:///j:/rustRealEarth/docs/ProductionEvidence.json).
+  - Authored [`docs/adr/0056-stage-g0-independent-production-certification-repair.md`](file:///j:/rustRealEarth/docs/adr/0056-stage-g0-independent-production-certification-repair.md).
+- **Production Defect Remediation & Verification (`apps/world-viewer/`, `engine/rendering/`, `engine/vehicles/`)**:
+  - Remediated Defect 1 (Void Escape): Implemented 2200m regional ground boundary geofence in `apps/world-viewer/src/interactive.rs:4870-4945` clamping Car, Motorcycle, TransitBus, and HeavyTruck to mapped area and deflecting velocity inward with status warning.
+  - Remediated Defect 2 (Midair Stall): Updated `engine/vehicles/src/multimodal/aviation.rs:100-185` (`new_airliner`, `new_general_aviation`) to initialize safe forward flying airspeed (75 m/s / 42 m/s) with `is_airborne: true` when spawned airborne ($y > 50\text{m}$), preventing midair stall.
+  - Remediated Defect 3 (Train in Water): Guarded train mode in `apps/world-viewer/src/interactive.rs:1770-1790`, `2148-2158`, `2914-2924` against spawning in regions with zero railway tracks; falls back to Car mode with user notification.
+  - Remediated Defect 4 (Motorcycle Model): Redesigned `build_hypersport_rr1000` in `engine/rendering/src/vehicle_models.rs:2708-2830` to 2,224 triangles at LOD0 featuring curved aerodynamic front fairings, biplane winglets, sculpted 17L fuel tank, perimeter trellis frame, 4-pipe exhaust headers, and Brembo radial calipers.
+  - Remediated Defect 5 (Semi Trailer Model): Redesigned `build_transcontinental_semi` trailer in `engine/rendering/src/vehicle_models.rs:2025-2180` to 1,792 triangles at LOD0 featuring 26 corrugated side ribs per side, dual rear swing doors with 4 locking rods/cams, ICC underride crash bar, landing gear, and mudflaps.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Stage G1: Complete Authoritative Vehicle Physics Repair (2026-10-26)
+- **Canonical Control Sign & Coordinate Standard ([`engine/vehicles/src/dynamics.rs`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs))**:
+  - Audited local forward/right/up and world ENU handedness across all vehicle classes.
+  - Verified and locked canonical control signs: [W] produces forward displacement with zero lateral drift, [S] produces backward displacement, [A] deflects left with negative signed yaw rate ($\omega_y < 0$), [D] deflects right with positive signed yaw rate ($\omega_y > 0$).
+  - Eliminated coordinate transform inversions directly at the physics level without key binding swapping hacks.
+- **Standstill Holding & Service Brake Deceleration ([`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs))**:
+  - Eliminated the root cause of "unreliable stopping" and "continuous backward rolling": holding [S] decelerates smoothly to complete stop and firmly locks the service brake (`brake = 1.0`, `gear_mode = TransmissionMode::Drive`), holding the vehicle stationary.
+  - Implemented standstill reverse dwell gate (`reverse_dwell_sec > 0.35s` or explicit release/re-press) to cleanly separate stopping intent from reversing intent.
+  - While reversing ($v < -0.15\text{ m/s}$), [W] serves as the authoritative service brake to stop rearward motion without drivetrain jerking.
+- **Creep Suppression & Hill-Hold Assist ([`engine/vehicles/src/dynamics.rs`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs))**:
+  - Added explicit `pub auto_creep_enabled: bool` to `VehicleConfig` (default: `false`). Gated torque converter automatic forward creep to opted-in models only.
+  - Reinforced Hill-Hold Assist (HHA) on grades from 2.5% to 35% when throttle is zero and wheels are grounded, locking horizontal velocity to zero and eliminating rollback.
+- **Authoritative Park Mode Locking Across All Classes ([`engine/vehicles/src/dynamics.rs`](file:///j:/rustRealEarth/engine/vehicles/src/dynamics.rs), [`engine/vehicles/src/multimodal/road_transport.rs`](file:///j:/rustRealEarth/engine/vehicles/src/multimodal/road_transport.rs))**:
+  - Unconditionally zeroed linear and angular velocities in `TransmissionMode::Park` for Car, Motorcycle, Transit Bus, and Heavy Truck models.
+  - Increased mechanical parking pawl force to 25,000 N.
+- **Building Collision 100% Perimeter Containment & Safe Spawning ([`engine/vehicles/src/building_collision.rs`](file:///j:/rustRealEarth/engine/vehicles/src/building_collision.rs), [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs))**:
+  - Removed arbitrary $0.85$ scale reduction in `resolve_collision`, restoring 100% boundary containment ($R = \sqrt{h_x^2 + h_z^2}$) so vehicle bumpers and corners cannot penetrate solid walls.
+  - Added `BuildingCollisionWorld::is_point_inside` and updated `query_clearance` to return 0.0 inside building footprint solids.
+  - Implemented `find_safe_fallback_spawn_position` ensuring fallback vehicle spawning always selects a surveyed road node or radial probe position with verified $\ge 8.0\text{m}$ clearance from all building perimeters.
+  - Fixed `FunctionalGroundQuery::query_ground_contact` to handle wheel ground penetrations down to $-10.0\text{m}$.
+- **Focus Cleansing & Multimodal Display Interpolation ([`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs))**:
+  - Unified modal and focus-loss transitions with `self.reset_all_inputs()`, clearing pressed key sets, centering steering smoothing, resetting throttle and reverse dwell timers, and preventing latched control drift.
+  - Added multimodal pose history tracking and slerp interpolation for Motorcycle, Transit Bus, and Heavy Truck, guaranteeing fluid rendering across 30, 60, 120+ FPS.
+- **Master Certification Suite ([`tests/tests/stage_g1_vehicle_physics_and_controls_certification.rs`](file:///j:/rustRealEarth/tests/tests/stage_g1_vehicle_physics_and_controls_certification.rs))**:
+  - Implemented 8 master quantitative tests certifying control signs across 4 cardinal headings, 60-second Park slope stability (0%, 8%, 18%, 28%), zero-input level-ground standstill holding, progressive service braking (stopping $<25\text{m}$ at 60 km/h, $<55\text{m}$ at 100 km/h), multimodal class dynamics, collision zero-penetration, FPS invariance, and focus loss cleansing.
+- **Architectural Decision Record**:
+  - Authored [`docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md`](file:///j:/rustRealEarth/docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md).

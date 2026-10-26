@@ -99,12 +99,34 @@ impl AircraftFlight {
         let mean_chord = 4.19;
         let aspect_ratio = (wingspan * wingspan) / wing_area;
 
+        let orientation = Quat::from_rotation_y(heading_radians);
+        let is_airborne_spawn = position.y > 50.0;
+        let (
+            linear_velocity,
+            true_airspeed_mps,
+            indicated_airspeed_knots,
+            is_airborne,
+            in_ground_effect,
+        ) = if is_airborne_spawn {
+            let cruise_mps = 75.0; // ~146 kts safe initial cruise speed
+            let forward = orientation * Vec3::Z;
+            (
+                forward * cruise_mps,
+                cruise_mps,
+                cruise_mps * 1.94384,
+                true,
+                false,
+            )
+        } else {
+            (Vec3::ZERO, 0.0, 0.0, false, true)
+        };
+
         Self {
             name: name.to_string(),
             category: AviationCategory::CommercialAirliner,
             position,
-            orientation: Quat::from_rotation_y(heading_radians),
-            linear_velocity: Vec3::ZERO,
+            orientation,
+            linear_velocity,
             angular_velocity: Vec3::ZERO,
             mass_kg: 68_000.0, // 68 metric tons
             wing_area_m2: wing_area,
@@ -117,15 +139,15 @@ impl AircraftFlight {
             cl_alpha: 5.5, // per radian (~0.096 per deg)
             cd_zero: 0.020,
             stall_angle_rad: 15.0_f32.to_radians(),
-            true_airspeed_mps: 0.0,
-            indicated_airspeed_knots: 0.0,
+            true_airspeed_mps,
+            indicated_airspeed_knots,
             altitude_msl_meters: position.y,
             climb_rate_mps: 0.0,
             angle_of_attack_rad: 0.0,
             sideslip_angle_rad: 0.0,
             is_stalled: false,
-            in_ground_effect: true,
-            is_airborne: false,
+            in_ground_effect,
+            is_airborne,
             gear_compression_meters: 0.0,
             audio_events: Vec::new(),
         }
@@ -138,12 +160,34 @@ impl AircraftFlight {
         let mean_chord = 1.47;
         let aspect_ratio = (wingspan * wingspan) / wing_area;
 
+        let orientation = Quat::from_rotation_y(heading_radians);
+        let is_airborne_spawn = position.y > 30.0;
+        let (
+            linear_velocity,
+            true_airspeed_mps,
+            indicated_airspeed_knots,
+            is_airborne,
+            in_ground_effect,
+        ) = if is_airborne_spawn {
+            let cruise_mps = 42.0; // ~82 kts safe initial cruise speed
+            let forward = orientation * Vec3::Z;
+            (
+                forward * cruise_mps,
+                cruise_mps,
+                cruise_mps * 1.94384,
+                true,
+                false,
+            )
+        } else {
+            (Vec3::ZERO, 0.0, 0.0, false, true)
+        };
+
         Self {
             name: name.to_string(),
             category: AviationCategory::GeneralAviation,
             position,
-            orientation: Quat::from_rotation_y(heading_radians),
-            linear_velocity: Vec3::ZERO,
+            orientation,
+            linear_velocity,
             angular_velocity: Vec3::ZERO,
             mass_kg: 1_150.0,
             wing_area_m2: wing_area,
@@ -156,15 +200,15 @@ impl AircraftFlight {
             cl_alpha: 4.8,
             cd_zero: 0.027,
             stall_angle_rad: 14.0_f32.to_radians(),
-            true_airspeed_mps: 0.0,
-            indicated_airspeed_knots: 0.0,
+            true_airspeed_mps,
+            indicated_airspeed_knots,
             altitude_msl_meters: position.y,
             climb_rate_mps: 0.0,
             angle_of_attack_rad: 0.0,
             sideslip_angle_rad: 0.0,
             is_stalled: false,
-            in_ground_effect: true,
-            is_airborne: false,
+            in_ground_effect,
+            is_airborne,
             gear_compression_meters: 0.0,
             audio_events: Vec::new(),
         }

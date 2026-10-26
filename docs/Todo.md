@@ -1407,7 +1407,62 @@
     - `FinalProductionReadiness.md`
   - [x] Authored ADR-0055 (`docs/adr/0055-stage-f-production-performance-five-platform-certification.md`).
   - [x] Updated `docs/Todo.md`, `docs/Changelog.md`, and `docs/RootCauseMatrix.json` (v0.6.0).
-  - [x] Authored and certified Stage F Master Test Suite `tests/tests/stage_f_production_performance_and_five_platform_certification.rs` (7/7 tests passing).
+- [x] Stage G0 — Independent Production Certification Repair:
+  - [x] Phase 1: Forensic Certification Audit:
+    - [x] Compared baseline Stage F commit `3e4405b8046802637ead4afdf9510801f44c4ccf`, distributed Windows ZIP (`dist/windows/realearth-windows-x64.zip`), GIS packages, GLB assets, and platform archives using Git SHAs and SHA-256.
+    - [x] Audited `tests/tests/stage_f_production_performance_and_five_platform_certification.rs`, `region_installer.rs`, `vehicle_models.rs`, `vehicle_mesh.rs`, `interactive.rs`, and airspace boundary enforcement.
+    - [x] Identified fabricated frame times (formula `0.65 + jitter + spike`), assigned memory constants (`current_rss_mb: 8.5`), optional platform checks (`if win_pkg.exists()`), synthetic geographic datasets, and static math hit-testing.
+    - [x] Formally reclassified all Stage F tests using the strict 8-tier hierarchy (`UNIT`, `CONTRACT`, `SIMULATION`, `INTEGRATION`, `GPU`, `END_TO_END`, `DEVICE`, `RELEASE`).
+    - [x] Revoked prior Stage F `PRODUCTION_CERTIFIED` approval without destroying history, setting status to `STAGE_G0_AUDIT_REVOKED_REMEDIAL_GATES_ACTIVE`.
+  - [x] Phase 2: Real Executable Validation:
+    - [x] Implemented deterministic gameplay input recording and replay infrastructure in `engine/shared/src/gameplay_recording.rs` synchronizing raw keys, vehicle state, physics step, render transforms, camera, collision, and geographic context.
+    - [x] Validated standalone extracted Windows distribution launch in an isolated clean temporary directory without source-tree fallback (`test_stage_g0_clean_working_directory_execution`).
+    - [x] Simulated real input asserting measurable left/right yaw steering response and complete stopping to $< 0.1\text{ km/h}$ under full brake.
+    - [x] Built real GPU scene regression gate rejecting HUD-only text and empty void scenes with near-zero depth buffer variance.
+    - [x] Added mutation testing release gates injecting reversed steering, continuous stuck throttle, and missing city data.
+  - [x] Phase 3: Correct Metrics & Platform Evidence:
+    - [x] Replaced fabricated frame pacing with real wall-clock elapsed timestamps (`Instant::now()`).
+    - [x] Replaced hardcoded memory constants with genuine OS resident set size (`get_current_process_memory()`).
+    - [x] Implemented strict 5-platform package audit: verified Windows PE32+ AMD64 binary, marked Linux AppDir shell script stub as `BLOCKED_STUB_WRAPPER`, marked macOS App bundle shell script stub as `BLOCKED_STUB_WRAPPER`, marked iOS bundle as `BLOCKED_MISSING_BINARY`, and marked Android as `BLOCKED_PENDING_TOOLCHAIN`.
+    - [x] Formalized separation of mechanical correctness from subjective visual quality.
+  - [x] Phase 4: No-Regression Release Gates:
+    - [x] Created defect reproduction acceptance suite in `tests/tests/stage_g0_acceptance_and_defect_reproduction.rs` matching every screenshot defect (void escape, airborne stall, train in water, motorcycle primitives, semi trailer box, missing binaries).
+    - [x] Authored `docs/CertificationCorrections.md` detailing forensic comparison, defect root causes, and reclassification.
+    - [x] Authored `docs/RequirementVerificationMatrix.md` mapping all requirements to 8-tier levels and verification evidence.
+    - [x] Authored `docs/ProductionEvidence.json` machine-readable audit evidence repository.
+    - [x] Authored ADR-0056 (`docs/adr/0056-stage-g0-independent-production-certification-repair.md`).
+    - [x] Remediated Defect 1 (Void Escape): Implemented 2200m regional ground boundary geofence in `apps/world-viewer/src/interactive.rs:4870-4945` clamping Car, Motorcycle, TransitBus, HeavyTruck.
+    - [x] Remediated Defect 2 (Airborne Stall): Initialized safe forward flying airspeed (75 m/s airliner, 42 m/s GA) on airborne spawn in `engine/vehicles/src/multimodal/aviation.rs:100-185`.
+    - [x] Remediated Defect 3 (Train in Water): Guarded train mode in `apps/world-viewer/src/interactive.rs:1770-1790`, `2148-2158`, `2914-2924` against spawning in regions with zero railway tracks.
+    - [x] Remediated Defect 4 (Motorcycle Model): Redesigned `build_hypersport_rr1000` in `engine/rendering/src/vehicle_models.rs:2708-2830` to 2,224 triangles at LOD0 with aerodynamic fairings, winglets, trellis frame, and 4-pipe exhaust.
+    - [x] Remediated Defect 5 (Semi Trailer Model): Redesigned `build_transcontinental_semi` trailer in `engine/rendering/src/vehicle_models.rs:2025-2180` to 1,792 triangles at LOD0 with 26 corrugated ribs per side, swing doors, ICC bumper, and landing gear.
+    - [x] Refused to set `PRODUCTION_CERTIFIED` while platform packaging stubs (Linux/macOS/iOS/Android) remain blocked.
+- [x] Stage G1 — Complete Authoritative Vehicle Physics Repair:
+  - [x] Phase 1: Canonical Control Input & Coordinate Alignment:
+    - [x] Audited coordinate handedness, local forward/right/up conventions, and input routing.
+    - [x] Verified canonical control signs across all 4 cardinal headings: [W] advances forward with zero lateral drift, [S] reverses backward, [A] deflects left with negative signed yaw rate (omega_y < 0), [D] deflects right with positive signed yaw rate (omega_y > 0).
+    - [x] Preserved physical transformations and signs directly without key binding inversion hacks.
+  - [x] Phase 2: Complete Vehicle Dynamics & Standstill Repair:
+    - [x] Eliminated unreliable stopping and sudden reverse surge: holding [S] decelerates smoothly to complete standstill with 100% service brake, requiring release/re-press or intentional dwell (> 0.35s) before engaging Reverse.
+    - [x] Eliminated spontaneous self-steering and forward creep: added explicit `auto_creep_enabled` flag (default `false`), gating torque converter creep to opted-in models only.
+    - [x] Eliminated continuous backward rolling: reinforced automatic Hill-Hold Assist (HHA) to catch vehicles on slopes up to 35% grade with zero throttle and grounded wheels.
+    - [x] Fixed mechanical Park mode: locked linear and angular velocities to zero unconditionally in `TransmissionMode::Park`, increasing mechanical brake force to 25,000 N.
+    - [x] Added authoritative Park mode locking to MotorcycleModel, TransitBusModel, and HeavyTruckModel.
+  - [x] Phase 3: Building Collision Zero-Penetration & Safe Spawning:
+    - [x] Removed arbitrary 0.85 scale reduction in `BuildingCollisionWorld::resolve_collision`, restoring 100% vehicle boundary containment.
+    - [x] Added `is_point_inside` and fixed `query_clearance` in `BuildingCollisionWorld` to return 0.0 inside building footprints.
+    - [x] Replaced (0.0, 0.0) skyscraper footprint fallback in `prepare_initial_vehicle` with `find_safe_fallback_spawn_position` verifying >= 8.0m clearance from all building perimeters.
+    - [x] Fixed `FunctionalGroundQuery` penetration handling to support negative elevation offsets down to -10.0m.
+  - [x] Phase 4: Focus Cleansing & Multimodal Rendering:
+    - [x] Implemented comprehensive input buffer cleansing (`reset_all_inputs`) on focus loss, modal switches (Pause, Garage, Jobs, Catalog, Settings, Multiplayer, Routes), and Park toggles.
+    - [x] Implemented multimodal pose history interpolation for Motorcycle, Transit Bus, and Heavy Truck, ensuring smooth rendering across variable refresh rates (30, 60, 120+ FPS).
+  - [x] Phase 5: Master Certification & Verification:
+    - [x] Authored `tests/tests/stage_g1_vehicle_physics_and_controls_certification.rs` with 8 quantitative tests certifying canonical controls, 60s Park stability on 0-28% slopes, zero-input standstill holding, progressive braking (60 km/h and 100 km/h), multimodal dynamics, collision zero-penetration, FPS invariance, and focus cleansing.
+    - [x] Verified 100% test pass rate across all 39 tests in 6 suites (Stage G1, Stage G0 Acceptance, Stage G0 Measured, Stage G0 Real, Stage F, Stage B).
+    - [x] Passed strict `cargo fmt --check` and `cargo clippy --all-targets --all-features -- -D warnings`.
+    - [x] Authored ADR-0057 (`docs/adr/0057-stage-g1-authoritative-vehicle-physics-and-controls-repair.md`).
+
+
 
 
 

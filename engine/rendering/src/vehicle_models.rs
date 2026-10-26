@@ -2026,14 +2026,197 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
     let tr_h = 1.45;
     let tr_pivot = Vec3::new(0.0, 0.98, -1.05);
     let rel_center = Vec3::new(0.0, (1.10 + tr_h) - tr_pivot.y, -tr_l);
-    // Main container body
+
+    // 3a. Main 53-ft Trailer Container Shell
     add_box_at(
         &mut trailer_mesh,
         rel_center,
         Vec3::new(tr_w, tr_h, tr_l),
         [0.90, 0.92, 0.95, 1.0], // Clean white aluminum freight trailer
     );
-    // Aerodynamic side skirts
+
+    // 3b. Vertical Corrugated Aluminum Side Siding Ribs (Left & Right)
+    let rib_count = match lod {
+        VehicleLodLevel::Lod0High => 26,
+        VehicleLodLevel::Lod1Medium => 14,
+        VehicleLodLevel::Lod2Low => 6,
+    };
+    let rib_spacing = (tr_l * 2.0 - 0.6) / rib_count as f32;
+    for i in 0..rib_count {
+        let rz = rel_center.z - tr_l + 0.30 + i as f32 * rib_spacing;
+        for sign in [-1.0f32, 1.0f32] {
+            add_box_at(
+                &mut trailer_mesh,
+                Vec3::new(sign * (tr_w + 0.012), rel_center.y, rz),
+                Vec3::new(0.012, tr_h * 0.92, 0.045),
+                [0.86, 0.88, 0.92, 1.0], // Embossed aluminum corrugation rib
+            );
+        }
+    }
+
+    // 3c. Upper Roof Perimeter Rail and Lower Structural Side Sills with DOT C2 Reflective Tape
+    for sign in [-1.0f32, 1.0f32] {
+        // Top roof crown extrusion
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(sign * tr_w, rel_center.y + tr_h, rel_center.z),
+            Vec3::new(0.03, 0.04, tr_l),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        // Bottom side sill rail
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(sign * tr_w, rel_center.y - tr_h, rel_center.z),
+            Vec3::new(0.03, 0.05, tr_l),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        // DOT C2 alternating conspicuity reflective tape segments (Red & White)
+        for s in 0..12 {
+            let tz = rel_center.z - tr_l + 0.5 + s as f32 * (tr_l * 2.0 - 1.0) / 12.0;
+            let tape_color = if s % 2 == 0 {
+                [0.95, 0.10, 0.10, 1.0] // Red
+            } else {
+                [0.98, 0.98, 0.98, 1.0] // White
+            };
+            add_box_at(
+                &mut trailer_mesh,
+                Vec3::new(sign * (tr_w + 0.018), rel_center.y - tr_h + 0.08, tz),
+                Vec3::new(0.005, 0.025, 0.22),
+                tape_color,
+            );
+        }
+    }
+
+    // 3d. Front Bulkhead Structural Stiffeners & Glad-Hand Air Hose Receptacles
+    for fy in [-0.5, 0.0, 0.5] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(0.0, rel_center.y + fy, rel_center.z + tr_l + 0.02),
+            Vec3::new(tr_w * 0.88, 0.035, 0.02),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    // Glad-hands (Red Emergency & Blue Service couplings)
+    add_cylinder_z(
+        &mut trailer_mesh,
+        Vec3::new(-0.25, rel_center.y - 0.75, rel_center.z + tr_l + 0.06),
+        0.04,
+        0.05,
+        8,
+        [0.85, 0.15, 0.15, 1.0], // Red emergency
+    );
+    add_cylinder_z(
+        &mut trailer_mesh,
+        Vec3::new(0.25, rel_center.y - 0.75, rel_center.z + tr_l + 0.06),
+        0.04,
+        0.05,
+        8,
+        [0.15, 0.35, 0.85, 1.0], // Blue service
+    );
+
+    // 3e. Dual Rear Swing Doors with Locking Rods, Cam Keepers & Hinges
+    // Rear door recessed frame
+    add_box_at(
+        &mut trailer_mesh,
+        Vec3::new(0.0, rel_center.y, rel_center.z - tr_l - 0.01),
+        Vec3::new(tr_w * 0.97, tr_h * 0.97, 0.02),
+        [0.18, 0.20, 0.22, 1.0], // Dark rubber weather gasket
+    );
+    // Left & right door leaves
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(sign * tr_w * 0.48, rel_center.y, rel_center.z - tr_l - 0.02),
+            Vec3::new(tr_w * 0.46, tr_h * 0.95, 0.015),
+            [0.88, 0.90, 0.94, 1.0],
+        );
+    }
+    // 4 Galvanized Vertical Locking Rods with Cam Latches
+    for rx in [-0.90, -0.35, 0.35, 0.90] {
+        add_cylinder_y(
+            &mut trailer_mesh,
+            Vec3::new(rx, rel_center.y, rel_center.z - tr_l - 0.04),
+            0.022,
+            tr_h * 0.92,
+            8,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        // Top and bottom cam keepers
+        for cy in [-tr_h * 0.92, tr_h * 0.92] {
+            add_box_at(
+                &mut trailer_mesh,
+                Vec3::new(rx, rel_center.y + cy, rel_center.z - tr_l - 0.04),
+                Vec3::new(0.035, 0.045, 0.035),
+                AutomotivePalette::ALLOY_SILVER,
+            );
+        }
+        // Handle latch
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(rx, rel_center.y - 0.15, rel_center.z - tr_l - 0.06),
+            Vec3::new(0.08, 0.025, 0.03),
+            AutomotivePalette::POLISHED_CHROME,
+        );
+    }
+
+    // 3f. Heavy-Duty DOT-Certified ICC Underride Crash Bar & Corner Dock Bumpers
+    add_box_at(
+        &mut trailer_mesh,
+        Vec3::new(0.0, 0.52 - tr_pivot.y, rel_center.z - tr_l - 0.02),
+        Vec3::new(tr_w * 0.92, 0.06, 0.05),
+        AutomotivePalette::ALLOY_SILVER,
+    );
+    for sign in [-0.55f32, 0.55f32] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(
+                sign,
+                (0.52 + (rel_center.y - tr_h)) * 0.5,
+                rel_center.z - tr_l + 0.08,
+            ),
+            Vec3::new(0.04, 0.28, 0.04),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(
+                sign * (tr_w - 0.08),
+                rel_center.y - tr_h + 0.12,
+                rel_center.z - tr_l - 0.05,
+            ),
+            Vec3::new(0.06, 0.10, 0.04),
+            [0.10, 0.10, 0.12, 1.0], // Molded rubber
+        );
+    }
+
+    // 3g. Retractable Dual-Speed Landing Gear Legs (Front)
+    let lg_z = rel_center.z + tr_l * 0.45;
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(sign * 0.85, (rel_center.y - tr_h) * 0.5, lg_z),
+            Vec3::new(0.06, 0.40, 0.06),
+            [0.22, 0.24, 0.26, 1.0], // Dark industrial steel legs
+        );
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(sign * 0.85, 0.15 - tr_pivot.y, lg_z),
+            Vec3::new(0.12, 0.03, 0.15),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    add_cylinder_x(
+        &mut trailer_mesh,
+        Vec3::new(0.0, (rel_center.y - tr_h) * 0.4, lg_z),
+        0.025,
+        0.85,
+        8,
+        [0.22, 0.24, 0.26, 1.0],
+    );
+
+    // 3h. Aerodynamic Side Skirts
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut trailer_mesh,
@@ -2042,18 +2225,12 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
                 rel_center.y - tr_h * 0.65,
                 rel_center.z,
             ),
-            Vec3::new(0.02, 0.35, tr_l * 0.65),
+            Vec3::new(0.02, 0.35, tr_l * 0.60),
             [0.15, 0.15, 0.18, 1.0],
         );
     }
-    // Rear ICC crash bar and mudflaps
-    add_box_at(
-        &mut trailer_mesh,
-        Vec3::new(0.0, 0.55 - tr_pivot.y, rel_center.z - tr_l + 0.05),
-        Vec3::new(tr_w * 0.95, 0.08, 0.05),
-        AutomotivePalette::POLISHED_CHROME,
-    );
-    // Trailer dual tandem wheels
+
+    // 3i. Trailer Dual Tandem Wheels with Anti-Sail Mudflaps
     let trailer_wheel_r = 0.50;
     for az in [-tr_l * 0.65, -tr_l * 0.85] {
         for sign in [-1.0f32, 1.0f32] {
@@ -2070,6 +2247,18 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
                 AutomotivePalette::TIRE_RUBBER,
             );
         }
+    }
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut trailer_mesh,
+            Vec3::new(
+                sign * (tr_w - 0.20),
+                0.35 - tr_pivot.y,
+                rel_center.z - tr_l * 0.85 - 0.58,
+            ),
+            Vec3::new(0.24, 0.28, 0.015),
+            [0.10, 0.10, 0.12, 1.0],
+        );
     }
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Articulated_Trailer".into(),
@@ -2526,96 +2715,470 @@ pub fn build_hypersport_rr1000(lod: VehicleLodLevel) -> LoadedVehicleModel {
 
     let mut chassis_mesh = ChunkMesh::default();
 
-    // 1. Aerodynamic MotoGP-style Front Fairing with Cat-Eye Lights & Winglets
+    // 1. Aerodynamic MotoGP-style Front Cowling & Ram-Air Intake
+    let nose_slices = match lod {
+        VehicleLodLevel::Lod0High => 6,
+        VehicleLodLevel::Lod1Medium => 4,
+        VehicleLodLevel::Lod2Low => 2,
+    };
+    for s in 0..nose_slices {
+        let t0 = s as f32 / nose_slices as f32;
+        let t1 = (s + 1) as f32 / nose_slices as f32;
+        let z0 = 0.35 * (1.0 - t0) + 0.68 * t0;
+        let z1 = 0.35 * (1.0 - t1) + 0.68 * t1;
+        let y0 = 0.88 * (1.0 - t0) + 0.68 * t0 + (t0 * (1.0 - t0) * 0.08);
+        let y1 = 0.88 * (1.0 - t1) + 0.68 * t1 + (t1 * (1.0 - t1) * 0.08);
+        let w0 = 0.24 * (1.0 - t0) + 0.14 * t0;
+        let w1 = 0.24 * (1.0 - t1) + 0.14 * t1;
+
+        // Nose top shell
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-w0, y0, z0),
+            Vec3::new(w0, y0, z0),
+            Vec3::new(w1, y1, z1),
+            Vec3::new(-w1, y1, z1),
+            Vec3::new(0.0, 0.6, 0.8).normalize(),
+            AutomotivePalette::BIKE_RACING_ORANGE,
+        );
+        // Left & right cheek panels
+        for sign in [-1.0f32, 1.0f32] {
+            add_quad(
+                &mut chassis_mesh,
+                Vec3::new(sign * w0, y0, z0),
+                Vec3::new(sign * (w0 + 0.04), y0 - 0.22, z0),
+                Vec3::new(sign * (w1 + 0.03), y1 - 0.20, z1),
+                Vec3::new(sign * w1, y1, z1),
+                Vec3::new(sign, 0.2, 0.4).normalize(),
+                AutomotivePalette::BIKE_RACING_ORANGE,
+            );
+        }
+    }
+
+    // Central Ram-Air Intake Duct (Carbon Fiber)
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.78, 0.50),
-        Vec3::new(0.20, 0.16, 0.28),
-        AutomotivePalette::BIKE_RACING_ORANGE,
+        Vec3::new(0.0, 0.67, 0.66),
+        Vec3::new(0.065, 0.035, 0.03),
+        AutomotivePalette::CARBON_FIBER,
     );
-    // Aerodynamic downforce winglets (Left & Right)
+
+    // Dual Cat-Eye Headlights (Left & Right)
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sign * 0.26, 0.74, 0.48),
-            Vec3::new(0.06, 0.015, 0.12),
+            Vec3::new(sign * 0.09, 0.70, 0.64),
+            Vec3::new(0.045, 0.02, 0.02),
+            AutomotivePalette::HEADLIGHT_XENON_ON,
+        );
+    }
+
+    // Dual-Tier Biplane Aerodynamic Winglets (Left & Right)
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.24, 0.73, 0.52),
+            Vec3::new(0.07, 0.012, 0.10),
+            AutomotivePalette::CARBON_FIBER,
+        );
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.22, 0.66, 0.50),
+            Vec3::new(0.055, 0.010, 0.08),
+            AutomotivePalette::CARBON_FIBER,
+        );
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.31, 0.70, 0.51),
+            Vec3::new(0.008, 0.055, 0.09),
             AutomotivePalette::CARBON_FIBER,
         );
     }
-    // 2. Sculpted 17L Fuel Tank with Ergonomic Knee Recesses
-    add_box_at(
+
+    // Front aerodynamic wheel hugger fender
+    let fender_slices = match lod {
+        VehicleLodLevel::Lod0High => 8,
+        VehicleLodLevel::Lod1Medium => 5,
+        VehicleLodLevel::Lod2Low => 3,
+    };
+    for f in 0..fender_slices {
+        let a0 = 0.2 + (f as f32 / fender_slices as f32) * 1.5;
+        let a1 = 0.2 + ((f + 1) as f32 / fender_slices as f32) * 1.5;
+        let p_z0 = 0.71 + 0.33 * a0.cos();
+        let p_y0 = 0.31 + 0.33 * a0.sin();
+        let p_z1 = 0.71 + 0.33 * a1.cos();
+        let p_y1 = 0.31 + 0.33 * a1.sin();
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-0.08, p_y0, p_z0),
+            Vec3::new(0.08, p_y0, p_z0),
+            Vec3::new(0.08, p_y1, p_z1),
+            Vec3::new(-0.08, p_y1, p_z1),
+            Vec3::new(0.0, a0.sin(), a0.cos()).normalize(),
+            AutomotivePalette::CARBON_FIBER,
+        );
+    }
+
+    // 2. Sculpted 17L Ergonomic Fuel Tank with Knee Recesses
+    let tank_slices = match lod {
+        VehicleLodLevel::Lod0High => 8,
+        VehicleLodLevel::Lod1Medium => 5,
+        VehicleLodLevel::Lod2Low => 3,
+    };
+    for s in 0..tank_slices {
+        let t0 = s as f32 / tank_slices as f32;
+        let t1 = (s + 1) as f32 / tank_slices as f32;
+        let z0 = 0.32 * (1.0 - t0) + (-0.15) * t0;
+        let z1 = 0.32 * (1.0 - t1) + (-0.15) * t1;
+
+        let hump0 = (t0 * (1.0 - t0) * 4.0).powf(0.7);
+        let hump1 = (t1 * (1.0 - t1) * 4.0).powf(0.7);
+        let y_top0 = 0.76 + hump0 * 0.16;
+        let y_top1 = 0.76 + hump1 * 0.16;
+        let w0 = 0.14 + hump0 * 0.07;
+        let w1 = 0.14 + hump1 * 0.07;
+
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-w0 * 0.5, y_top0, z0),
+            Vec3::new(w0 * 0.5, y_top0, z0),
+            Vec3::new(w1 * 0.5, y_top1, z1),
+            Vec3::new(-w1 * 0.5, y_top1, z1),
+            Vec3::Y,
+            AutomotivePalette::BIKE_RACING_ORANGE,
+        );
+        for sign in [-1.0f32, 1.0f32] {
+            add_quad(
+                &mut chassis_mesh,
+                Vec3::new(sign * w0 * 0.5, y_top0, z0),
+                Vec3::new(sign * w0, y_top0 - 0.12, z0),
+                Vec3::new(sign * w1, y_top1 - 0.12, z1),
+                Vec3::new(sign * w1 * 0.5, y_top1, z1),
+                Vec3::new(sign, 0.5, 0.0).normalize(),
+                AutomotivePalette::BIKE_RACING_ORANGE,
+            );
+            add_quad(
+                &mut chassis_mesh,
+                Vec3::new(sign * w0, y_top0 - 0.12, z0),
+                Vec3::new(sign * (w0 * 0.85), y_top0 - 0.26, z0),
+                Vec3::new(sign * (w1 * 0.85), y_top1 - 0.26, z1),
+                Vec3::new(sign * w1, y_top1 - 0.12, z1),
+                Vec3::new(sign, 0.1, 0.0).normalize(),
+                AutomotivePalette::CARBON_FIBER,
+            );
+        }
+    }
+    add_cylinder_y(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.82, 0.05),
-        Vec3::new(0.18, 0.18, 0.25),
-        AutomotivePalette::BIKE_RACING_ORANGE,
+        Vec3::new(0.0, 0.93, 0.14),
+        0.038,
+        0.008,
+        12,
+        AutomotivePalette::ALLOY_SILVER,
     );
-    // 3. Exposed Liquid-Cooled 998cc Inline-4 Engine & Aluminum Trellis Frame
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 0.42, 0.0),
-        Vec3::new(0.16, 0.16, 0.24),
-        [0.15, 0.16, 0.18, 1.0], // Black crankcases
-    );
-    // 4 Curved Stainless Exhaust Headers merging to collector
-    for sx in [-0.09, -0.03, 0.03, 0.09] {
+
+    // 3. Aluminum Twin-Spar Perimeter Trellis Frame Tubes
+    for sign in [-1.0f32, 1.0f32] {
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.15, 0.62, 0.12),
+            0.024,
+            0.26,
+            10,
+            AutomotivePalette::ALLOY_SILVER,
+        );
         add_cylinder_y(
             &mut chassis_mesh,
-            Vec3::new(sx, 0.32, 0.24),
-            0.02,
-            0.12,
-            8,
+            Vec3::new(sign * 0.14, 0.48, 0.06),
+            0.020,
+            0.14,
+            10,
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.12, 0.40, -0.10),
+            0.020,
+            0.15,
+            10,
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+
+    // 4. Exposed 998cc Liquid-Cooled Inline-4 Powertrain
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.42, 0.02),
+        Vec3::new(0.16, 0.14, 0.20),
+        [0.16, 0.17, 0.19, 1.0],
+    );
+    for sign in [-1.0f32, 1.0f32] {
+        add_cylinder_x(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.17, 0.40, -0.02),
+            0.09,
+            0.025,
+            12,
+            [0.22, 0.24, 0.27, 1.0],
+        );
+    }
+    // Cylinder head cooling fins
+    for fin in 0..6 {
+        let fy = 0.46 + fin as f32 * 0.022;
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(0.0, fy, 0.04),
+            Vec3::new(0.155, 0.004, 0.18),
+            [0.28, 0.30, 0.34, 1.0],
+        );
+    }
+    // Curved racing radiator with protective rock guard
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.50, 0.32),
+        Vec3::new(0.18, 0.16, 0.03),
+        [0.30, 0.32, 0.36, 1.0],
+    );
+    for louver in 0..8 {
+        let ly = 0.36 + louver as f32 * 0.035;
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(0.0, ly, 0.34),
+            Vec3::new(0.17, 0.005, 0.01),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+
+    // 4 Independent Stainless Exhaust Headers (3-segment bends)
+    for (i, sx) in [-0.09f32, -0.03f32, 0.03f32, 0.09f32].iter().enumerate() {
+        let segs = match lod {
+            VehicleLodLevel::Lod0High => 12,
+            VehicleLodLevel::Lod1Medium => 8,
+            VehicleLodLevel::Lod2Low => 6,
+        };
+        add_cylinder_y(
+            &mut chassis_mesh,
+            Vec3::new(*sx, 0.38, 0.25),
+            0.018,
+            0.08,
+            segs,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(*sx * 0.85, 0.28, 0.20),
+            0.018,
+            0.06,
+            segs,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(*sx * 0.60, 0.22, 0.08 - i as f32 * 0.02),
+            0.018,
+            0.08,
+            segs,
             AutomotivePalette::POLISHED_CHROME,
         );
     }
-    // High-Exit Titanium Exhaust Canister
+    // Exhaust silencer canister & carbon endcap
     add_cylinder_z(
         &mut chassis_mesh,
-        Vec3::new(0.18, 0.48, -0.45),
+        Vec3::new(0.18, 0.50, -0.42),
         0.055,
-        0.28,
-        12,
+        0.26,
+        16,
         AutomotivePalette::POLISHED_CHROME,
     );
-    // 4. Split-Level Rider Saddle & Upswept Aerodynamic Tail Cowl
-    add_box_at(
+    add_cylinder_z(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.70, -0.22),
-        Vec3::new(0.14, 0.04, 0.18),
-        AutomotivePalette::INTERIOR_CHARCOAL, // Rider seat
+        Vec3::new(0.18, 0.50, -0.69),
+        0.052,
+        0.025,
+        16,
+        AutomotivePalette::CARBON_FIBER,
     );
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 0.76, -0.52),
-        Vec3::new(0.11, 0.08, 0.22),
-        AutomotivePalette::BIKE_RACING_ORANGE, // Tail cowl
-    );
-    // 5. Inverted Telescopic Front Forks (Gold Anodized) & Triple Clamp
+
+    // 5. Inverted Telescopic Front Forks & Cockpit Controls
     for sign in [-1.0f32, 1.0f32] {
         add_cylinder_y(
             &mut chassis_mesh,
-            Vec3::new(sign * 0.10, 0.52, 0.62),
-            0.025,
-            0.28,
-            10,
-            [0.85, 0.70, 0.15, 1.0], // Gold anodized forks
+            Vec3::new(sign * 0.10, 0.52, 0.60),
+            0.024,
+            0.26,
+            14,
+            [0.88, 0.72, 0.16, 1.0], // Gold anodized
+        );
+        add_cylinder_y(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.10, 0.36, 0.63),
+            0.021,
+            0.12,
+            14,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.07, 0.33, 0.68),
+            Vec3::new(0.025, 0.045, 0.035),
+            AutomotivePalette::BREMBO_RED_CALIPER,
+        );
+        // Dual ventilated front brake discs
+        add_cylinder_x(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.045, 0.31, 0.71),
+            0.16,
+            0.005,
+            16,
+            AutomotivePalette::BRAKE_DISC_STEEL,
         );
     }
-    // Clip-on Handlebars with Bar-End Mirrors
+    // Triple clamps & handlebars
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.77, 0.58),
+        Vec3::new(0.13, 0.018, 0.04),
+        AutomotivePalette::ALLOY_SILVER,
+    );
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.64, 0.59),
+        Vec3::new(0.13, 0.022, 0.04),
+        AutomotivePalette::ALLOY_SILVER,
+    );
     add_cylinder_x(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.84, 0.42),
-        0.015,
-        0.28,
-        8,
+        Vec3::new(0.0, 0.82, 0.46),
+        0.014,
+        0.26,
+        10,
         AutomotivePalette::INTERIOR_CHARCOAL,
     );
-    // 6. Cast Aluminum Gull-Wing Rear Swingarm
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sign * 0.10, 0.35, -0.35),
-            Vec3::new(0.025, 0.05, 0.35),
+            Vec3::new(sign * 0.22, 0.81, 0.50),
+            Vec3::new(0.045, 0.008, 0.015),
             AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.85, 0.52),
+        Vec3::new(0.075, 0.045, 0.015),
+        [0.08, 0.12, 0.18, 1.0],
+    );
+
+    // 6. Split-Level Rider Saddle & Aerodynamic Upswept Tail Cowl
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.69, -0.22),
+        Vec3::new(0.14, 0.035, 0.18),
+        AutomotivePalette::INTERIOR_CHARCOAL,
+    );
+    let tail_slices = match lod {
+        VehicleLodLevel::Lod0High => 6,
+        VehicleLodLevel::Lod1Medium => 4,
+        VehicleLodLevel::Lod2Low => 2,
+    };
+    for s in 0..tail_slices {
+        let t0 = s as f32 / tail_slices as f32;
+        let t1 = (s + 1) as f32 / tail_slices as f32;
+        let z0 = -0.38 * (1.0 - t0) + (-0.68) * t0;
+        let z1 = -0.38 * (1.0 - t1) + (-0.68) * t1;
+        let y0 = 0.74 * (1.0 - t0) + 0.80 * t0;
+        let y1 = 0.74 * (1.0 - t1) + 0.80 * t1;
+        let w0 = 0.13 * (1.0 - t0) + 0.05 * t0;
+        let w1 = 0.13 * (1.0 - t1) + 0.05 * t1;
+
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-w0, y0, z0),
+            Vec3::new(w0, y0, z0),
+            Vec3::new(w1, y1, z1),
+            Vec3::new(-w1, y1, z1),
+            Vec3::Y,
+            AutomotivePalette::BIKE_RACING_ORANGE,
+        );
+        for sign in [-1.0f32, 1.0f32] {
+            add_quad(
+                &mut chassis_mesh,
+                Vec3::new(sign * w0, y0, z0),
+                Vec3::new(sign * (w0 * 0.7), y0 - 0.10, z0),
+                Vec3::new(sign * (w1 * 0.7), y1 - 0.08, z1),
+                Vec3::new(sign * w1, y1, z1),
+                Vec3::new(sign, 0.2, -0.2).normalize(),
+                AutomotivePalette::BIKE_RACING_ORANGE,
+            );
+        }
+    }
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.79, -0.69),
+        Vec3::new(0.045, 0.015, 0.012),
+        AutomotivePalette::BRAKELIGHT_ON,
+    );
+
+    // 7. Cast Aluminum Gull-Wing Rear Swingarm, Monoshock & Chain Drive
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.09, 0.34, -0.38),
+            Vec3::new(0.022, 0.045, 0.32),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    add_cylinder_y(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.48, -0.16),
+        0.032,
+        0.11,
+        12,
+        [0.95, 0.85, 0.10, 1.0], // Yellow monoshock spring
+    );
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(-0.08, 0.31, -0.40),
+        Vec3::new(0.008, 0.035, 0.30),
+        [0.70, 0.65, 0.20, 1.0],
+    );
+    // Rear brake disc rotor & caliper
+    add_cylinder_x(
+        &mut chassis_mesh,
+        Vec3::new(0.05, 0.31, -0.71),
+        0.11,
+        0.005,
+        14,
+        AutomotivePalette::BRAKE_DISC_STEEL,
+    );
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.05, 0.38, -0.68),
+        Vec3::new(0.02, 0.03, 0.025),
+        AutomotivePalette::BREMBO_RED_CALIPER,
+    );
+
+    // 8. Carbon Fiber Aerodynamic Lower Bellypan Fairing
+    let pan_slices = match lod {
+        VehicleLodLevel::Lod0High => 8,
+        VehicleLodLevel::Lod1Medium => 5,
+        VehicleLodLevel::Lod2Low => 3,
+    };
+    for p in 0..pan_slices {
+        let t0 = p as f32 / pan_slices as f32;
+        let t1 = (p + 1) as f32 / pan_slices as f32;
+        let z0 = 0.32 * (1.0 - t0) + (-0.25) * t0;
+        let z1 = 0.32 * (1.0 - t1) + (-0.25) * t1;
+        let y0 = 0.22 - t0 * 0.04;
+        let y1 = 0.22 - t1 * 0.04;
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-0.12, y0, z0),
+            Vec3::new(0.12, y0, z0),
+            Vec3::new(0.12, y1, z1),
+            Vec3::new(-0.12, y1, z1),
+            -Vec3::Y,
+            AutomotivePalette::CARBON_FIBER,
         );
     }
 

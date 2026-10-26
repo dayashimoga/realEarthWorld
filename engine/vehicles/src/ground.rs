@@ -93,7 +93,7 @@ where
         let ground_y = (self.elevation_fn)(origin.x, origin.z);
         let dist = origin.y - ground_y;
 
-        if dist >= 0.0 && dist <= max_dist {
+        if dist >= -10.0 && dist <= max_dist {
             let eps = 0.5;
             let h_x_plus = (self.elevation_fn)(origin.x + eps, origin.z);
             let h_x_minus = (self.elevation_fn)(origin.x - eps, origin.z);
@@ -104,7 +104,7 @@ where
             let dh_dz = (h_z_plus - h_z_minus) / (2.0 * eps);
 
             let normal = Vec3::new(-dh_dx, 1.0, -dh_dz).normalize();
-            Some((dist, normal))
+            Some((0.0f32.max(dist), normal))
         } else {
             None
         }

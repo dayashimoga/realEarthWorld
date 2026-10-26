@@ -1,12 +1,35 @@
 //! Master Certification Test Suite for Stage F:
 //! Production Performance, Five-Platform Delivery, and Independent Certification.
 //!
-//! Validates:
-//! - Phase F1: Frame pacing telemetry (p50/p90/p95/p99), memory budgets (RSS/VRAM), cache hit rates, mesh reuse
-//! - Phase F2: Five-platform application packages (Windows, Linux, macOS, Android, iOS) and mobile FFI/JNI parity
-//! - Phase F3: True automated release gates (physics replays, visual scene entropy, GIS coverage, modal exclusivity)
-//! - Phase F4: Release manifest verification, SHA-256 checksums, and package integrity
-//! - Phase F5: End-to-end multimodal transport gameplay journeys and persistence roundtrip
+//! ⚠️ FORENSIC AUDIT NOTICE (STAGE G0 INDEPENDENT PRODUCTION CERTIFICATION REPAIR):
+//! Prior Stage F "PRODUCTION_CERTIFIED" status has been formally REVOKED / SUPERSEDED.
+//! Forensic evaluation of commit `3e4405b` and packaged binaries exposed that Stage F claimed
+//! production release readiness using synthetic benchmarks, fabricated metrics, and stub packages.
+//!
+//! Formal Test Reclassification (8-Tier Taxonomy):
+//! - test_f1: RECLASSIFIED -> [SIMULATION]. Prior Claim: Production Performance Profile.
+//!   Audit Finding: 100% fabricated frame durations (synthetic formula `0.65 + jitter + spike`)
+//!   and hardcoded assigned memory constants (`current_rss_mb: 8.5`). No actual rendering or OS query.
+//!   Status: SUPERSEDED / UNVERIFIED. Superseded by stage_g0_measured_performance_and_platform_evidence.
+//! - test_f2: RECLASSIFIED -> [UNIT]. Prior Claim: GPU Mesh Cache Reuse & Instanced Geometry.
+//!   Audit Finding: Evaluated purely in-memory configuration math (`adapt_to_frame_time`). No GPU invocation.
+//!   Status: MISCLASSIFIED. Pure unit configuration math test.
+//! - test_f3: RECLASSIFIED -> [CONTRACT]. Prior Claim: Five-Platform Application Runtime.
+//!   Audit Finding: Optional existence checks (`if win_pkg.exists()`), 2-4 byte magic header checks,
+//!   completely omitted Android APK/AAB, accepted Linux/macOS shell script wrappers calling non-existent .bin files.
+//!   Status: BROKEN / INSUFFICIENT. Superseded by stage_g0_measured_performance_and_platform_evidence.
+//! - test_f4: RECLASSIFIED -> [INTEGRATION]. Prior Claim: Mobile C FFI & JNI Parity.
+//!   Audit Finding: Host-only C FFI executed on Windows x86_64; zero Android JNI or iOS device validation.
+//!   Status: SUPERSEDED (Host simulation only).
+//! - test_f5: RECLASSIFIED -> [SIMULATION]. Prior Claim: Automated Release Gates (Physics, GIS, Entropy).
+//!   Audit Finding: Gate 3 checked only in-memory catalog structs, not GIS rasters/vectors; entropy was never tested.
+//!   Status: INSUFFICIENT EVIDENCE.
+//! - test_f6: RECLASSIFIED -> [UNIT]. Prior Claim: Cross-Platform Input & UI DPI Invariance.
+//!   Audit Finding: Static button center coordinate math passed into pure function. No OS input simulation.
+//!   Status: SUPERSEDED.
+//! - test_f7: RECLASSIFIED -> [INTEGRATION]. Prior Claim: Multimodal End-to-End Gameplay Journey.
+//!   Audit Finding: Manually passed coordinates directly into `job.update()`. No vehicle physics or streaming.
+//!   Status: SUPERSEDED by deterministic gameplay recording and real replay validation.
 
 use glam::Vec3;
 use realearth_gameplay::{

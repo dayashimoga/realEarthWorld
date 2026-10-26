@@ -100,6 +100,9 @@ pub struct VehicleConfig {
     /// Speed-sensitive steering attenuation factor (1.0 = standard, 0.0 = fixed steering lock).
     #[serde(default = "default_one")]
     pub steering_sensitivity: f32,
+    /// Optional automatic torque converter creep when idling in Drive (default: false).
+    #[serde(default)]
+    pub auto_creep_enabled: bool,
 }
 
 fn default_true() -> bool {
@@ -134,6 +137,7 @@ impl Default for VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: false,
         }
     }
 }
@@ -163,6 +167,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: true,
         }
     }
 
@@ -195,6 +200,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: false,
         }
     }
 
@@ -222,6 +228,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: false,
         }
     }
 
@@ -249,6 +256,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: false,
         }
     }
 
@@ -276,6 +284,7 @@ impl VehicleConfig {
             tcs_enabled: true,
             esc_enabled: true,
             steering_sensitivity: 1.0,
+            auto_creep_enabled: false,
         }
     }
 
@@ -549,9 +558,13 @@ impl DynamicVehicle {
                             normal_force,
                             self.config.tire_friction_coeff,
                         );
-                        // Automatic torque converter forward creep when idling in Drive:
+                        // Automatic torque converter forward creep when idling in Drive (explicitly opt-in):
                         // Real torque converter creep produces ~5-8 km/h forward momentum or holds against mild rollback
-                        if inputs.throttle < 0.01 && v_forward < 2.5 && inputs.brake < 0.05 {
+                        if self.config.auto_creep_enabled
+                            && inputs.throttle < 0.01
+                            && v_forward < 2.5
+                            && inputs.brake < 0.05
+                        {
                             let creep_scale = (1.0 - (v_forward / 2.5).max(0.0)).clamp(0.0, 1.0);
                             drive_f +=
                                 self.config.peak_engine_force * 0.08 * drive_mult * creep_scale;
@@ -603,7 +616,7 @@ impl DynamicVehicle {
                     TransmissionMode::Park => {
                         f_long -= compute_brake(
                             1.0,
-                            15000.0,
+                            25000.0,
                             v_forward,
                             false,
                             normal_force,
@@ -742,32 +755,32 @@ impl DynamicVehicle {
 
         // Static friction holding logic: Park, handbrake, service brake, and level-ground idle
         if inputs.gear_mode == TransmissionMode::Park {
-            // Mechanical parking pawl locks drivetrain and holds vehicle motionless on all slopes
-            if speed < 3.0 || is_nearly_stationary {
-                self.linear_velocity = Vec3::ZERO;
-                self.angular_velocity = Vec3::ZERO;
-            }
-        } else if is_nearly_stationary {
+            // Mechanical parking pawl unconditionally locks drivetrain and holds vehicle motionless on all slopes
+            self.linear_velocity = Vec3::ZERO;
+            self.angular_velocity = Vec3::ZERO;
+        } else {
+            let forward_speed = self.linear_velocity.dot(forward);
             let is_handbrake = inputs.handbrake && inputs.throttle == 0.0;
-            let is_service_brake = inputs.brake > 0.3 && inputs.throttle == 0.0;
+            let is_service_brake = inputs.brake > 0.3 && inputs.throttle == 0.0 && speed < 0.35;
 
-            // In Neutral or with brake applied on flat ground with zero throttle, hold motionless
+            // In Neutral, or with brake applied on flat ground with zero throttle, or when stopped with auto_creep disabled, hold motionless
             let is_flat_idle = (inputs.gear_mode == TransmissionMode::Neutral
-                || inputs.brake > 0.05)
+                || inputs.brake > 0.05
+                || (!self.config.auto_creep_enabled
+                    && inputs.gear_mode == TransmissionMode::Drive))
                 && inputs.throttle == 0.0
                 && inputs.steer.abs() < 0.05
-                && speed < 0.12
+                && speed < 0.15
                 && grounded_wheels >= 2
                 && slope_grade < 0.025;
 
             // Automatic Hill-Hold Assist (HHA) & Anti-Rollback:
             // When in Drive on an uphill grade with zero throttle and grounded wheels, hold against backward rollback
-            let forward_speed = self.linear_velocity.dot(forward);
             let is_hill_hold_drive = inputs.gear_mode == TransmissionMode::Drive
                 && inputs.throttle == 0.0
                 && grounded_wheels >= 2
-                && forward_speed <= 0.001
-                && (0.025..=0.30).contains(&slope_grade);
+                && forward_speed <= 0.05
+                && (0.025..=0.35).contains(&slope_grade);
 
             if is_handbrake || is_service_brake || is_flat_idle || is_hill_hold_drive {
                 self.linear_velocity.x = 0.0;

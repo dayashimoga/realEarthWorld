@@ -1,11 +1,11 @@
-﻿{
+{
     "Platform":  "Windows",
     "Status":  "CERTIFIED",
     "Reason":  "Native Windows x86_64 PE32+ executables compiled and standalone package verified",
     "PackagePath":  "dist/windows/realearth-windows-x64.zip",
     "PackageValid":  true,
-    "PackageSizeMb":  8.71,
-    "Sha256":  "948180155CE871B76FCA222939D19E47D6C4FB156E2185F45D8535EABA90D744",
+    "PackageSizeMb":  8.82,
+    "Sha256":  "A26A7DE82C8F65FCF8BA05598A14AB02299ACB336EC078C03617B575C8C97E98",
     "ExecutablesVerified":  [
                                 "realearth-viewer.exe",
                                 "realearth-cli.exe"

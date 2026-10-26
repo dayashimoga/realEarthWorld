@@ -122,6 +122,26 @@ impl MotorcycleModel {
             return;
         }
 
+        if inputs.gear_mode == TransmissionMode::Park {
+            self.linear_velocity = Vec3::ZERO;
+            self.angular_velocity = Vec3::ZERO;
+            self.speed_kph = 0.0;
+            self.steer_angle = 0.0;
+            self.lean_angle = 0.0;
+            self.lean_velocity = 0.0;
+            let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
+            self.orientation = Quat::from_rotation_y(current_yaw);
+            let ray_origin = self.position + Vec3::new(0.0, 1.0, 0.0);
+            if let Some((hit_dist, _)) = ground.query_ground_contact(ray_origin, 3.0) {
+                let target_y = ray_origin.y - hit_dist + 0.35;
+                self.position.y += (target_y - self.position.y) * (18.0 * dt).min(1.0);
+                self.is_grounded = true;
+            } else {
+                self.is_grounded = false;
+            }
+            return;
+        }
+
         let current_yaw = self.orientation.to_euler(glam::EulerRot::YXZ).0;
         let rot_mat = Mat3::from_quat(Quat::from_rotation_y(current_yaw));
         let forward = rot_mat.col(2);
@@ -170,6 +190,7 @@ impl MotorcycleModel {
                 0.0
             });
         let yaw_delta = yaw_rate * dt;
+        self.angular_velocity = Vec3::new(0.0, yaw_rate, -self.lean_velocity);
 
         // Update orientation: composite of yaw heading and roll lean
         let new_yaw = current_yaw + yaw_delta;
@@ -343,6 +364,18 @@ impl TransitBusModel {
     /// Advances transit bus physics integration.
     pub fn step(&mut self, inputs: &VehicleInputs, ground: &dyn GroundQuery, dt: f32) {
         if dt <= 0.0 {
+            return;
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park {
+            self.linear_velocity = Vec3::ZERO;
+            self.speed_kph = 0.0;
+            self.steer_angle = 0.0;
+            let ray_origin = self.position + Vec3::new(0.0, 2.0, 0.0);
+            if let Some((hit_dist, _)) = ground.query_ground_contact(ray_origin, 4.0) {
+                let target_y = ray_origin.y - hit_dist + 0.95;
+                self.position.y += (target_y - self.position.y) * (14.0 * dt).min(1.0);
+            }
             return;
         }
 
@@ -535,6 +568,19 @@ impl HeavyTruckModel {
     /// Advances heavy truck and articulated trailer dynamics.
     pub fn step(&mut self, inputs: &VehicleInputs, ground: &dyn GroundQuery, dt: f32) {
         if dt <= 0.0 || self.is_rolled_over {
+            return;
+        }
+
+        if inputs.gear_mode == TransmissionMode::Park {
+            self.linear_velocity = Vec3::ZERO;
+            self.speed_kph = 0.0;
+            self.steer_angle = 0.0;
+            let ray_origin = self.tractor_position + Vec3::new(0.0, 2.5, 0.0);
+            if let Some((hit_dist, _)) = ground.query_ground_contact(ray_origin, 5.0) {
+                let target_y = ray_origin.y - hit_dist + 1.2;
+                self.tractor_position.y +=
+                    (target_y - self.tractor_position.y) * (14.0 * dt).min(1.0);
+            }
             return;
         }
 

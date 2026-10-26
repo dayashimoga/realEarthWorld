@@ -246,7 +246,7 @@ impl BuildingCollisionWorld {
         velocity: &mut Vec3,
         half_extents: Vec3,
     ) -> bool {
-        let radius = (half_extents.x.powi(2) + half_extents.z.powi(2)).sqrt() * 0.85;
+        let radius = (half_extents.x.powi(2) + half_extents.z.powi(2)).sqrt();
         let min_pos = *position - Vec3::new(radius, half_extents.y, radius);
         let max_pos = *position + Vec3::new(radius, half_extents.y, radius);
 
@@ -316,6 +316,10 @@ impl BuildingCollisionWorld {
                             continue;
                         }
 
+                        if point_in_polygon_2d(pt, &collider.polygon) {
+                            return 0.0;
+                        }
+
                         let n = collider.polygon.len();
                         for i in 0..n {
                             let next = (i + 1) % n;
@@ -332,5 +336,10 @@ impl BuildingCollisionWorld {
         }
 
         min_clearance
+    }
+
+    /// Returns true if `pos` is inside or within `margin` meters of any building footprint.
+    pub fn is_point_inside(&self, pos: Vec3, margin: f32) -> bool {
+        self.query_clearance(pos) < margin
     }
 }

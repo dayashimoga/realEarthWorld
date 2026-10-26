@@ -389,6 +389,8 @@ pub struct InteractiveViewerApp {
     pub park_engaged: bool,
     pub vehicle_sim_state: AuthoritativeVehicleState,
     pub wheel_spin_angle: f32,
+    pub reverse_dwell_sec: f32,
+    pub was_braking_to_stop: bool,
     traffic_sim: TrafficSimulation,
     vehicle_visual_type: VehicleVisualType,
     gameplay_bus: GameplayEventBus,
@@ -611,6 +613,8 @@ impl InteractiveViewerApp {
             park_engaged: false,
             vehicle_sim_state: AuthoritativeVehicleState::Idle,
             wheel_spin_angle: 0.0,
+            reverse_dwell_sec: 0.0,
+            was_braking_to_stop: false,
             traffic_sim: TrafficSimulation::new(),
             vehicle_visual_type: VehicleVisualType::SportsCoupe,
             gameplay_bus,
@@ -911,8 +915,7 @@ impl InteractiveViewerApp {
         action: UiDomainAction,
         event_loop: Option<&ActiveEventLoop>,
     ) {
-        self.pressed_keys.clear();
-        self.smoothed_steer_input = 0.0;
+        self.reset_all_inputs();
         match action {
             UiDomainAction::ContinueCareer => {
                 if self.has_saved_game() {
@@ -1184,6 +1187,8 @@ impl InteractiveViewerApp {
         self.smoothed_steer_input = 0.0;
         self.aircraft_throttle = 0.0;
         self.train_consist.throttle = 0.0;
+        self.reverse_dwell_sec = 0.0;
+        self.was_braking_to_stop = false;
     }
 
     /// Stabilizes and recovers vehicle onto the ground surface with upright orientation.
@@ -1656,6 +1661,74 @@ impl InteractiveViewerApp {
         }
     }
 
+    /// Finds a safe, non-colliding fallback spawn location when road candidate search is unavailable.
+    ///
+    /// Guarantees that the vehicle is never placed within a building solid or footprint perimeter.
+    pub fn find_safe_fallback_spawn_position(
+        &self,
+        landmark_coord: Wgs84Coord,
+        landmark_vehicle_yaw: f32,
+        ground_y: f32,
+    ) -> (f32, f32, f32, f32) {
+        if let Some(ref res) = self.region_resources {
+            let conv = EnuConverter::new(res.package_anchor);
+            for road in &res.raw_roads {
+                if road.layer != 0 || road.is_tunnel || road.geometry.len() < 2 {
+                    continue;
+                }
+                for window in road.geometry.windows(2) {
+                    let enu1 = conv.wgs84_to_enu(window[0]);
+                    let enu2 = conv.wgs84_to_enu(window[1]);
+                    let mid_x = ((enu1.east + enu2.east) * 0.5) as f32;
+                    let mid_z = ((enu1.north + enu2.north) * 0.5) as f32;
+                    let elev = if let Some(ref gq) = self.ground_query {
+                        gq.elevation(mid_x, mid_z)
+                    } else {
+                        ground_y
+                    };
+                    let test_pos = glam::Vec3::new(mid_x, elev, mid_z);
+                    if !res.building_collision.is_point_inside(test_pos, 8.0) {
+                        let dx = (enu2.east - enu1.east) as f32;
+                        let dz = (enu2.north - enu1.north) as f32;
+                        let road_yaw = dx.atan2(dz);
+                        return (mid_x, mid_z, road_yaw, elev);
+                    }
+                }
+            }
+
+            let lm_enu = conv.wgs84_to_enu(landmark_coord);
+            let cx = lm_enu.east as f32;
+            let cz = lm_enu.north as f32;
+            let probe_offsets = [
+                (25.0, 25.0),
+                (-25.0, 25.0),
+                (35.0, -35.0),
+                (-35.0, -35.0),
+                (50.0, 0.0),
+                (0.0, 50.0),
+                (-50.0, 0.0),
+                (0.0, -50.0),
+                (75.0, 75.0),
+                (-75.0, 75.0),
+            ];
+            for (ox, oz) in probe_offsets {
+                let px = cx + ox;
+                let pz = cz + oz;
+                let elev = if let Some(ref gq) = self.ground_query {
+                    gq.elevation(px, pz)
+                } else {
+                    ground_y
+                };
+                let test_pos = glam::Vec3::new(px, elev, pz);
+                if !res.building_collision.is_point_inside(test_pos, 8.0) {
+                    return (px, pz, landmark_vehicle_yaw, elev);
+                }
+            }
+        }
+
+        (35.0, 35.0, landmark_vehicle_yaw, ground_y)
+    }
+
     /// Prepares vehicle models at the authentic ground surface without activating drive mode or moving camera.
     pub fn prepare_initial_vehicle(&mut self, idx: usize) {
         let (landmark, package_anchor) = if let Some(ref r) = self.region_resources {
@@ -1683,7 +1756,11 @@ impl InteractiveViewerApp {
                     candidate.surface_elevation,
                 )
             } else {
-                (0.0, 0.0, landmark_vehicle_yaw, ground_y)
+                self.find_safe_fallback_spawn_position(
+                    landmark.coord,
+                    landmark_vehicle_yaw,
+                    ground_y,
+                )
             }
         } else if idx == 7 {
             let conv = EnuConverter::new(package_anchor);
@@ -1767,9 +1844,9 @@ impl InteractiveViewerApp {
                     MotorcycleModel::new(glam::Vec3::new(spawn_x, elev, spawn_z), spawn_yaw);
             }
             7 => {
-                self.active_transport_mode = ActiveTransportMode::Train;
-                self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
                 if let Ok(c) = self.find_rail_spawn_candidate() {
+                    self.active_transport_mode = ActiveTransportMode::Train;
+                    self.vehicle_visual_type = VehicleVisualType::TrainLocomotive;
                     if let Some(ref res) = self.region_resources {
                         if let Some(ref rail_graph) = res.rail_graph {
                             self.train_consist = TrainConsist::new_caltrain_diesel();
@@ -1782,6 +1859,13 @@ impl InteractiveViewerApp {
                     }
                     self.train_position = c.position;
                     self.train_yaw = c.yaw;
+                } else {
+                    self.status_notification = Some((
+                        "⚠️ RAIL SERVICE UNAVAILABLE: Selected region contains no surveyed railway infrastructure.".to_string(),
+                        Instant::now(),
+                    ));
+                    self.active_transport_mode = ActiveTransportMode::Car;
+                    self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
                 }
             }
             8 => {
@@ -2141,6 +2225,12 @@ impl InteractiveViewerApp {
 
     /// Selects and inspects a vehicle from the fleet garage.
     pub fn apply_garage_selection(&mut self, idx: usize) {
+        if idx == 7 && self.find_rail_spawn_candidate().is_err() {
+            let label = "⚠️ RAIL SERVICE UNAVAILABLE: Selected region contains no surveyed railway infrastructure.".to_string();
+            println!("{}", label);
+            self.status_notification = Some((label, Instant::now()));
+            return;
+        }
         self.garage_selected_idx = idx;
         self.prepare_initial_vehicle(idx);
         let names = [
@@ -2901,7 +2991,12 @@ impl InteractiveViewerApp {
 
         if self.config.is_drive {
             if let Err(e) = self.execute_spawn_vehicle(self.garage_selected_idx) {
-                eprintln!("⚠️ Failed to spawn vehicle on region load: {}", e);
+                eprintln!(
+                    "⚠️ Failed to spawn vehicle on region load: {}. Falling back to default vehicle.",
+                    e
+                );
+                self.garage_selected_idx = 0;
+                let _ = self.execute_spawn_vehicle(0);
             }
         } else {
             self.prepare_initial_vehicle(self.garage_selected_idx);
@@ -4211,16 +4306,14 @@ impl ApplicationHandler for InteractiveViewerApp {
 
                         AppUiState::InGame => match key {
                             KeyCode::Escape => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::PauseMenu;
                                 return;
                             }
 
                             KeyCode::KeyT => {
                                 if !self.rail_routes_cache.is_empty() {
-                                    self.pressed_keys.clear();
-                                    self.smoothed_steer_input = 0.0;
+                                    self.reset_all_inputs();
                                     self.ui_state = AppUiState::RailRouteModal;
                                 } else {
                                     let label = "RAIL DATA REQUIRED: No surveyed rail routes available in this region.".to_string();
@@ -4231,8 +4324,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
 
                             KeyCode::KeyN | KeyCode::F4 => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::MultiplayerModal;
                                 return;
                             }
@@ -4249,29 +4341,25 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
 
                             KeyCode::KeyJ | KeyCode::Tab => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::JobBrowser;
                                 return;
                             }
 
                             KeyCode::KeyG => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::GarageSelect;
                                 return;
                             }
 
                             KeyCode::KeyO => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::SettingsMenu;
                                 return;
                             }
 
                             KeyCode::KeyU | KeyCode::F2 => {
-                                self.pressed_keys.clear();
-                                self.smoothed_steer_input = 0.0;
+                                self.reset_all_inputs();
                                 self.ui_state = AppUiState::CatalogModal;
                                 return;
                             }
@@ -4420,6 +4508,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                             KeyCode::KeyP => {
                                 if self.config.is_drive {
                                     self.park_engaged = !self.park_engaged;
+                                    self.reset_all_inputs();
                                     let label = if self.park_engaged {
                                         "🅿️ Transmission: [P] PARK (Parking Brake Locked)"
                                     } else {
@@ -4723,8 +4812,20 @@ impl ApplicationHandler for InteractiveViewerApp {
                     let is_handbrake = is_gameplay && self.pressed_keys.contains(&KeyCode::Space);
 
                     while self.physics_accumulator >= PHYSICS_DT {
-                        self.previous_vehicle_pos = self.vehicle.position;
-                        self.previous_vehicle_orient = self.vehicle.orientation;
+                        self.previous_vehicle_pos = match self.active_transport_mode {
+                            ActiveTransportMode::Car => self.vehicle.position,
+                            ActiveTransportMode::Motorcycle => self.motorcycle.position,
+                            ActiveTransportMode::TransitBus => self.transit_bus.position,
+                            ActiveTransportMode::HeavyTruck => self.heavy_truck.tractor_position,
+                            _ => self.vehicle.position,
+                        };
+                        self.previous_vehicle_orient = match self.active_transport_mode {
+                            ActiveTransportMode::Car => self.vehicle.orientation,
+                            ActiveTransportMode::Motorcycle => self.motorcycle.orientation,
+                            ActiveTransportMode::TransitBus => self.transit_bus.orientation,
+                            ActiveTransportMode::HeavyTruck => self.heavy_truck.tractor_orientation,
+                            _ => self.vehicle.orientation,
+                        };
 
                         let speed_kph = match self.active_transport_mode {
                             ActiveTransportMode::Car => self.vehicle.speed_kph.abs(),
@@ -4761,6 +4862,9 @@ impl ApplicationHandler for InteractiveViewerApp {
                         } else {
                             self.smoothed_steer_input += steer_delta.signum() * max_step;
                         }
+                        if target_steer == 0.0 && self.smoothed_steer_input.abs() < 0.005 {
+                            self.smoothed_steer_input = 0.0;
+                        }
 
                         let mut road_inputs = VehicleInputs {
                             steer: self.smoothed_steer_input,
@@ -4794,25 +4898,61 @@ impl ApplicationHandler for InteractiveViewerApp {
                             road_inputs.handbrake = true;
                             road_inputs.throttle = 0.0;
                             road_inputs.steer = 0.0;
+                            self.was_braking_to_stop = false;
+                            self.reverse_dwell_sec = 0.0;
                         } else {
                             if is_forward_key {
-                                road_inputs.throttle = 1.0;
-                                road_inputs.brake = 0.0;
-                                road_inputs.gear_mode = TransmissionMode::Drive;
+                                if active_forward_speed < -0.35 {
+                                    road_inputs.brake = 0.95;
+                                    road_inputs.throttle = 0.0;
+                                    road_inputs.gear_mode = TransmissionMode::Reverse;
+                                    self.was_braking_to_stop = false;
+                                    self.reverse_dwell_sec = 0.0;
+                                } else {
+                                    road_inputs.throttle = 1.0;
+                                    road_inputs.brake = 0.0;
+                                    road_inputs.gear_mode = TransmissionMode::Drive;
+                                    self.was_braking_to_stop = false;
+                                    self.reverse_dwell_sec = 0.0;
+                                }
                             } else if is_reverse_or_brake_key {
                                 if active_forward_speed > 0.35 {
                                     road_inputs.brake = 0.95;
                                     road_inputs.throttle = 0.0;
                                     road_inputs.gear_mode = TransmissionMode::Drive;
-                                } else {
+                                    self.was_braking_to_stop = true;
+                                    self.reverse_dwell_sec = 0.0;
+                                } else if active_forward_speed < -0.15 {
                                     road_inputs.throttle = 0.85;
                                     road_inputs.brake = 0.0;
                                     road_inputs.gear_mode = TransmissionMode::Reverse;
+                                    self.was_braking_to_stop = false;
+                                    self.reverse_dwell_sec = 0.0;
+                                } else {
+                                    if self.was_braking_to_stop {
+                                        self.reverse_dwell_sec += PHYSICS_DT;
+                                        if self.reverse_dwell_sec > 0.35 {
+                                            self.was_braking_to_stop = false;
+                                            road_inputs.throttle = 0.85;
+                                            road_inputs.brake = 0.0;
+                                            road_inputs.gear_mode = TransmissionMode::Reverse;
+                                        } else {
+                                            road_inputs.brake = 1.0;
+                                            road_inputs.throttle = 0.0;
+                                            road_inputs.gear_mode = TransmissionMode::Drive;
+                                        }
+                                    } else {
+                                        road_inputs.throttle = 0.85;
+                                        road_inputs.brake = 0.0;
+                                        road_inputs.gear_mode = TransmissionMode::Reverse;
+                                    }
                                 }
                             } else {
                                 road_inputs.throttle = 0.0;
                                 road_inputs.brake = 0.0;
                                 road_inputs.gear_mode = TransmissionMode::Drive;
+                                self.was_braking_to_stop = false;
+                                self.reverse_dwell_sec = 0.0;
                             }
 
                             if is_handbrake {
@@ -4852,6 +4992,26 @@ impl ApplicationHandler for InteractiveViewerApp {
                             }
                         };
 
+                        let enforce_ground_boundary =
+                            |pos: &mut glam::Vec3, vel: &mut glam::Vec3| -> bool {
+                                let horiz_dist = (pos.x * pos.x + pos.z * pos.z).sqrt();
+                                let max_radius_m = 2200.0f32;
+                                if horiz_dist > max_radius_m {
+                                    let norm_x = pos.x / horiz_dist;
+                                    let norm_z = pos.z / horiz_dist;
+                                    pos.x = norm_x * max_radius_m;
+                                    pos.z = norm_z * max_radius_m;
+                                    let v_out = vel.x * norm_x + vel.z * norm_z;
+                                    if v_out > 0.0 {
+                                        vel.x -= v_out * 1.2 * norm_x;
+                                        vel.z -= v_out * 1.2 * norm_z;
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            };
+
                         // Step physics for active multimodal mode
                         match self.active_transport_mode {
                             ActiveTransportMode::Car => {
@@ -4880,6 +5040,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     &mut self.vehicle.linear_velocity,
                                     self.vehicle.config.half_extents,
                                 );
+                                if enforce_ground_boundary(
+                                    &mut self.vehicle.position,
+                                    &mut self.vehicle.linear_velocity,
+                                ) {
+                                    self.status_notification = Some((
+                                        "⚠️ REGIONAL BOUNDARY REACHED: Approaching edge of surveyed coverage area.".to_string(),
+                                        Instant::now(),
+                                    ));
+                                }
                             }
                             ActiveTransportMode::Motorcycle => {
                                 self.motorcycle.step(&road_inputs, gq, PHYSICS_DT);
@@ -4888,6 +5057,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     &mut self.motorcycle.linear_velocity,
                                     glam::Vec3::new(0.4, 0.6, 1.0),
                                 );
+                                if enforce_ground_boundary(
+                                    &mut self.motorcycle.position,
+                                    &mut self.motorcycle.linear_velocity,
+                                ) {
+                                    self.status_notification = Some((
+                                        "⚠️ REGIONAL BOUNDARY REACHED: Approaching edge of surveyed coverage area.".to_string(),
+                                        Instant::now(),
+                                    ));
+                                }
                                 let forward_speed = self.motorcycle.speed_kph / 3.6;
                                 let wheel_r = 0.31f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle
@@ -4901,6 +5079,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     &mut self.transit_bus.linear_velocity,
                                     glam::Vec3::new(1.3, 1.6, 6.0),
                                 );
+                                if enforce_ground_boundary(
+                                    &mut self.transit_bus.position,
+                                    &mut self.transit_bus.linear_velocity,
+                                ) {
+                                    self.status_notification = Some((
+                                        "⚠️ REGIONAL BOUNDARY REACHED: Approaching edge of surveyed coverage area.".to_string(),
+                                        Instant::now(),
+                                    ));
+                                }
                                 let forward_speed = self.transit_bus.speed_kph / 3.6;
                                 let wheel_r = 0.52f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle
@@ -4914,6 +5101,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                                     &mut self.heavy_truck.linear_velocity,
                                     glam::Vec3::new(1.3, 1.8, 4.0),
                                 );
+                                if enforce_ground_boundary(
+                                    &mut self.heavy_truck.tractor_position,
+                                    &mut self.heavy_truck.linear_velocity,
+                                ) {
+                                    self.status_notification = Some((
+                                        "⚠️ REGIONAL BOUNDARY REACHED: Approaching edge of surveyed coverage area.".to_string(),
+                                        Instant::now(),
+                                    ));
+                                }
                                 let forward_speed = self.heavy_truck.speed_kph / 3.6;
                                 let wheel_r = 0.52f32;
                                 self.wheel_spin_angle = (self.wheel_spin_angle
@@ -5036,10 +5232,24 @@ impl ApplicationHandler for InteractiveViewerApp {
                 }
 
                 let alpha = (self.physics_accumulator / PHYSICS_DT).clamp(0.0, 1.0);
-                let render_pos = self.previous_vehicle_pos.lerp(self.vehicle.position, alpha);
+                let current_active_pos = match self.active_transport_mode {
+                    ActiveTransportMode::Car => self.vehicle.position,
+                    ActiveTransportMode::Motorcycle => self.motorcycle.position,
+                    ActiveTransportMode::TransitBus => self.transit_bus.position,
+                    ActiveTransportMode::HeavyTruck => self.heavy_truck.tractor_position,
+                    _ => self.vehicle.position,
+                };
+                let current_active_orient = match self.active_transport_mode {
+                    ActiveTransportMode::Car => self.vehicle.orientation,
+                    ActiveTransportMode::Motorcycle => self.motorcycle.orientation,
+                    ActiveTransportMode::TransitBus => self.transit_bus.orientation,
+                    ActiveTransportMode::HeavyTruck => self.heavy_truck.tractor_orientation,
+                    _ => self.vehicle.orientation,
+                };
+                let render_pos = self.previous_vehicle_pos.lerp(current_active_pos, alpha);
                 let render_orient = self
                     .previous_vehicle_orient
-                    .slerp(self.vehicle.orientation, alpha);
+                    .slerp(current_active_orient, alpha);
 
                 let velocity = if self.config.is_drive {
                     // Authoritative Multiplayer client input dispatch & prediction sync
@@ -5069,21 +5279,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                             ActiveTransportMode::Car => {
                                 (render_pos, render_orient, self.vehicle.speed_kph)
                             }
-                            ActiveTransportMode::Motorcycle => (
-                                self.motorcycle.position,
-                                self.motorcycle.orientation,
-                                self.motorcycle.speed_kph,
-                            ),
-                            ActiveTransportMode::TransitBus => (
-                                self.transit_bus.position,
-                                self.transit_bus.orientation,
-                                self.transit_bus.speed_kph,
-                            ),
-                            ActiveTransportMode::HeavyTruck => (
-                                self.heavy_truck.tractor_position,
-                                self.heavy_truck.tractor_orientation,
-                                self.heavy_truck.speed_kph,
-                            ),
+                            ActiveTransportMode::Motorcycle => {
+                                (render_pos, render_orient, self.motorcycle.speed_kph)
+                            }
+                            ActiveTransportMode::TransitBus => {
+                                (render_pos, render_orient, self.transit_bus.speed_kph)
+                            }
+                            ActiveTransportMode::HeavyTruck => {
+                                (render_pos, render_orient, self.heavy_truck.speed_kph)
+                            }
                             ActiveTransportMode::Train => (
                                 self.train_position,
                                 glam::Quat::from_rotation_y(self.train_yaw),

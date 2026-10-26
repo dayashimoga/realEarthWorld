@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0.0",
+  "audit_phase": "STAGE_G0_INDEPENDENT_PRODUCTION_CERTIFICATION_REPAIR",
+  "audit_timestamp_utc": "2026-10-26T00:00:00Z",
+  "auditors": [
+    "Principal Rust Engineer",
+    "QA Architect",
+    "Build/Release Engineer",
+    "Independent Auditor"
+  ],
+  "baseline_commit": {
+    "git_sha": "3e4405b8046802637ead4afdf9510801f44c4ccf",
+    "git_tag": "stage-f-baseline",
+    "prior_certification_claim": "PRODUCTION_CERTIFIED",
+    "audit_verdict": "REVOKED_SUPERSEDED"
+  },
+  "current_audit_head": {
+    "git_sha": "31ae8fa",
+    "branch": "main"
+  },
+  "production_certified": false,
+  "certification_state": "STAGE_G0_AUDIT_REVOKED_REMEDIAL_GATES_ACTIVE",
+  "platform_packages": {
+    "windows_x64": {
+      "path": "dist/windows/realearth-windows-x64.zip",
+      "sha256": "948180155CE871B76FCA222939D19E47D6C4FB156E2185F45D8535EABA90D744",
+      "size_bytes": 9576629,
+      "format": "ZIP",
+      "binary_type": "PE32+ executable (console) x86-64",
+      "status": "VERIFIED_STANDALONE",
+      "notes": "Executes cleanly in clean working directory without source-tree fallback."
+    },
+    "linux_x64": {
+      "path": "dist/linux/realearth-linux-x64.tar.gz",
+      "sha256": "88DC3B724395610667DCF68DF38D361F29C35F927D376A962E30E1442D157DA9",
+      "size_bytes": 287232,
+      "format": "TAR_GZ",
+      "binary_type": "POSIX shell script text executable",
+      "status": "BLOCKED_STUB_WRAPPER",
+      "notes": "usr/bin/realearth-viewer is a 97-byte shell script referencing non-existent realearth-viewer.bin."
+    },
+    "macos_universal": {
+      "path": "dist/macos/realearth-macos-universal.tar.gz",
+      "sha256": "4A3258FF4EB709E86266D0E6C71D8F4F24FF5C81146200EF1F99BD8AEFE8D8FE",
+      "size_bytes": 287232,
+      "format": "TAR_GZ",
+      "binary_type": "POSIX shell script text executable",
+      "status": "BLOCKED_STUB_WRAPPER",
+      "notes": "Contents/MacOS/realearth-viewer is a 100-byte shell script. Native Mach-O universal missing."
+    },
+    "ios_simulator": {
+      "path": "dist/ios/realearth-ios-simulator.zip",
+      "sha256": "4859EC1DC4DF3A1F4532B0BA0E70054F3F713838E25306B36D30807C27EF76B7",
+      "size_bytes": 287232,
+      "format": "ZIP",
+      "binary_type": "NONE",
+      "status": "BLOCKED_MISSING_BINARY",
+      "notes": "RealEarth.app bundle contains Info.plist and assets but zero binary executables."
+    },
+    "android_arm64": {
+      "path": "dist/android/realearth-arm64.apk",
+      "sha256": null,
+      "size_bytes": 0,
+      "format": "APK",
+      "binary_type": "NONE",
+      "status": "BLOCKED_PENDING_TOOLCHAIN",
+      "notes": "APK and AAB missing from distribution. Omitted from dist/SHA256SUMS."
+    }
+  },
+  "reproduced_defects": [
+    {
+      "defect_id": "DEFECT-01",
+      "screenshot_ref": "media_1792987503052.png",
+      "title": "Vehicle Escapes into Infinite Gray Void at 172 km/h",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_1_reproduce_unbounded_world_void_escape",
+      "severity": "P0",
+      "status": "REMEDIATED_AND_VERIFIED",
+      "remediation_summary": "Implemented 2200m regional ground boundary geofence in interactive.rs clamping position and deflecting velocity inward."
+    },
+    {
+      "defect_id": "DEFECT-02",
+      "screenshot_ref": "media_1792987519618.png",
+      "title": "Aircraft Airborne Spawn at Zero Airspeed Causes Deep Stall at 16m MSL",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_2_reproduce_aviation_zero_speed_airborne_stall",
+      "severity": "P0",
+      "status": "REMEDIATED_AND_VERIFIED",
+      "remediation_summary": "Initialized safe forward flying airspeed (75 m/s airliner, 42 m/s GA) on airborne spawn in aviation.rs."
+    },
+    {
+      "defect_id": "DEFECT-03",
+      "screenshot_ref": "media_1792987535510.png",
+      "title": "Train Consist Spawns Floating in Bay Water Without Railway Tracks",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_3_reproduce_rail_spawn_in_water_without_tracks",
+      "severity": "P0",
+      "status": "REMEDIATED_AND_VERIFIED",
+      "remediation_summary": "Guarded train spawning against missing rail infrastructure in interactive.rs; falls back to Car mode with user notification."
+    },
+    {
+      "defect_id": "DEFECT-04",
+      "screenshot_ref": "media_1792987553025.png",
+      "title": "HyperSport RR-1000 Constructed from Crude Primitive Boxes",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_4_reproduce_motorcycle_crude_box_primitives",
+      "severity": "P1",
+      "status": "REMEDIATED_AND_VERIFIED",
+      "remediation_summary": "Redesigned LOD0 chassis with aerodynamic fairings, biplane winglets, sculpted tank, trellis frame, 4-pipe exhaust (2,224 triangles)."
+    },
+    {
+      "defect_id": "DEFECT-05",
+      "screenshot_ref": "media_1792987569571.png",
+      "title": "TransContinental Semi 53ft Trailer is an Untextured Monolithic Box",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_5_reproduce_semi_trailer_untextured_box",
+      "severity": "P1",
+      "status": "REMEDIATED_AND_VERIFIED",
+      "remediation_summary": "Upgraded 53ft trailer with 26 corrugated side ribs per side, dual swing doors, ICC bumper, landing gear (1,792 triangles)."
+    },
+    {
+      "defect_id": "DEFECT-06",
+      "screenshot_ref": "dist/linux/, dist/macos/, dist/android/",
+      "title": "Distributed Platform Archives Missing Compiled Binaries or Containing Stubs",
+      "reproduction_test": "tests/tests/stage_g0_acceptance_and_defect_reproduction.rs::test_defect_6_reproduce_missing_platform_executables",
+      "severity": "P0",
+      "status": "RECLASSIFIED_AUDITED_BLOCKED",
+      "remediation_summary": "Truth in advertising enforced: Linux, macOS, iOS, Android marked BLOCKED; production certification revoked until native toolchains compile true binaries."
+    }
+  ],
+  "test_reclassification_summary": {
+    "total_stage_f_tests_audited": 7,
+    "reclassified_as_unit": 2,
+    "reclassified_as_contract": 1,
+    "reclassified_as_simulation": 2,
+    "reclassified_as_integration": 2,
+    "reclassified_as_release": 0,
+    "unverified_metrics_identified": [
+      "Fabricated 180 frame time samples (0.65ms + jitter + spike)",
+      "Assigned struct constant current_rss_mb: 8.5",
+      "Assigned struct constant cold_startup_ms: 12.5",
+      "Static button center coordinate math claiming UI DPI invariance",
+      "Optional platform archive existence checks with 2-byte magic headers"
+    ]
+  }
+}

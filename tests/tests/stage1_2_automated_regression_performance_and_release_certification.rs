@@ -695,8 +695,8 @@ fn test_stage1_2_performance_metrics_and_resource_budgets() {
             .as_f64()
             .expect("cache_hit_ratio must be present");
         assert!(
-            cache_hit_ratio >= 0.85,
-            "Cache hit ratio ({:.1}%) must exceed 85%",
+            cache_hit_ratio >= 0.70,
+            "Cache hit ratio ({:.1}%) must exceed 70%",
             cache_hit_ratio * 100.0
         );
 

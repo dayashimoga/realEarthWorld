@@ -4,10 +4,15 @@
 pub mod bounds;
 pub mod coordinates;
 pub mod errors;
+pub mod gameplay_recording;
 pub mod metrics;
 pub mod region;
 pub mod us_catalog;
 
+pub use gameplay_recording::{
+    GameplayInputFrame, GameplayRecordingSession, RecordedCameraState, RecordedCollisionState,
+    RecordedGeographicContext, RecordedTransform, RecordedVehicleState, ReplayVerificationSummary,
+};
 pub use metrics::{
     compute_percentile, get_current_process_memory, FramePacingMetrics,
     GeometryAndStreamingMetrics, ManagedObjectCounts, MetricStatus, PerformanceCertificationReport,
