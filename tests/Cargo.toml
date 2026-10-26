@@ -225,3 +225,7 @@ path = "tests/stage_c_premium_models_and_animation.rs"
 name = "stage_g3_production_assets_and_visual_overhaul_certification"
 path = "tests/stage_g3_production_assets_and_visual_overhaul_certification.rs"
 
+[[test]]
+name = "stage_g4_final_runtime_and_release_gates_certification"
+path = "tests/stage_g4_final_runtime_and_release_gates_certification.rs"
+

@@ -76,6 +76,27 @@ jobs:
       - name: Recovery Stage F Production Performance & Five-Platform Certification
         run: cargo test --test stage_f_production_performance_and_five_platform_certification --verbose
 
+      - name: Stage G0 Acceptance & Defect Reproduction Suite
+        run: cargo test --test stage_g0_acceptance_and_defect_reproduction --verbose
+
+      - name: Stage G0 Measured Performance & Platform Evidence Suite
+        run: cargo test --test stage_g0_measured_performance_and_platform_evidence --verbose
+
+      - name: Stage G0 Real Executable Validation Suite
+        run: cargo test --test stage_g0_real_executable_validation --verbose
+
+      - name: Stage G1 Vehicle Physics & Controls Certification Suite
+        run: cargo test --test stage_g1_vehicle_physics_and_controls_certification --verbose
+
+      - name: Stage G2 Authentic GIS & Continuous Streaming Certification Suite
+        run: cargo test --test stage_g2_authentic_gis_and_continuous_streaming_certification --verbose
+
+      - name: Stage G3 Production 3D Assets & Visual Overhaul Certification Suite
+        run: cargo test --test stage_g3_production_assets_and_visual_overhaul_certification --verbose
+
+      - name: Stage G4 Final Runtime & Release Gates Certification Suite
+        run: cargo test --test stage_g4_final_runtime_and_release_gates_certification --verbose
+
       - name: Criterion Performance Benchmark Baselines
         run: cargo bench -p realearth-benchmarks -- --test
 
