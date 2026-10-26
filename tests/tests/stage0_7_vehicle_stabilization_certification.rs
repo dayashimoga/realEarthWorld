@@ -27,7 +27,12 @@ fn test_certification_60s_flat_ground_zero_input() {
     let start_yaw = 0.0;
     let mut car = DynamicVehicle::new(config, start_pos, start_yaw);
 
-    let inputs = VehicleInputs::default(); // Zero throttle, steer, brake (Drive idle)
+    // Stationary vehicle in Park (spawn state) on level ground must remain effectively motionless without cumulative drift
+    let inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Park,
+        handbrake: true,
+        ..Default::default()
+    };
 
     let mut max_speed = 0.0f32;
     let mut max_drift = 0.0f32;
@@ -602,7 +607,12 @@ fn test_certification_real_road_san_francisco_settling() {
     let spawn_yaw = 0.0f32;
 
     let mut car = DynamicVehicle::new(VehicleConfig::sports_coupe(), spawn_pos, spawn_yaw);
-    let inputs = VehicleInputs::default();
+    // Spawn state vehicle in Park settling into authentic roadway elevation
+    let inputs = VehicleInputs {
+        gear_mode: TransmissionMode::Park,
+        handbrake: true,
+        ..Default::default()
+    };
 
     for _ in 0..600 {
         // 10 seconds at 60 Hz
