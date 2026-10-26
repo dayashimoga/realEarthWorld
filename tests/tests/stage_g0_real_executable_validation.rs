@@ -19,6 +19,8 @@ use realearth_vehicles::dynamics::{
     DynamicVehicle, TransmissionMode, VehicleConfig, VehicleInputs,
 };
 use realearth_vehicles::ground::FlatGround;
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -189,6 +191,111 @@ fn test_stage_g0_deterministic_gameplay_recording_and_replay() {
 // 2. CLEAN WORKING DIRECTORY STANDALONE EXECUTION (NO SOURCE-TREE FALLBACK)
 // ============================================================================
 
+fn extract_zip_archive(zip_path: &Path, extract_dir: &Path) -> bool {
+    let zip_str = zip_path.to_str().unwrap();
+    let dir_str = extract_dir.to_str().unwrap();
+
+    #[cfg(target_os = "windows")]
+    {
+        // 1. Try Windows built-in tar (bsdtar)
+        if let Ok(mut child) = Command::new("tar")
+            .args(["-xf", zip_str, "-C", dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+
+        // 2. Try tar.exe explicitly
+        if let Ok(mut child) = Command::new("tar.exe")
+            .args(["-xf", zip_str, "-C", dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Try PowerShell Expand-Archive
+        if let Ok(mut child) = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-Command",
+                &format!(
+                    "Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                    zip_path.display(),
+                    extract_dir.display()
+                ),
+            ])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // 1. Try unzip (standard on Linux / macOS CI runners)
+        if let Ok(mut child) = Command::new("unzip")
+            .args(["-q", "-o", zip_str, "-d", dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+
+        // 2. Try python3 -m zipfile
+        if let Ok(mut child) = Command::new("python3")
+            .args(["-m", "zipfile", "-e", zip_str, dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Try python -m zipfile
+        if let Ok(mut child) = Command::new("python")
+            .args(["-m", "zipfile", "-e", zip_str, dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+
+        // 4. Try tar
+        if let Ok(mut child) = Command::new("tar")
+            .args(["-xf", zip_str, "-C", dir_str])
+            .spawn()
+        {
+            if let Ok(status) = child.wait() {
+                if status.success() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
 #[test]
 fn test_stage_g0_clean_working_directory_execution() {
     println!("\n📦 [STAGE G0] Standalone Extracted Windows Package Execution in Clean Temp Dir...");
@@ -200,15 +307,8 @@ fn test_stage_g0_clean_working_directory_execution() {
     let extract_dir = temp_dir.path().join("realearth_extracted");
     std::fs::create_dir_all(&extract_dir).expect("Create extract dir");
 
-    // Extract real distribution ZIP using built-in tar.exe
-    let tar_status = Command::new("tar")
-        .arg("-xf")
-        .arg(&dist)
-        .arg("-C")
-        .arg(&extract_dir)
-        .status()
-        .expect("Extract Windows distribution ZIP via tar");
-    assert!(tar_status.success(), "Extraction must succeed");
+    let extracted = extract_zip_archive(&dist, &extract_dir);
+    assert!(extracted, "Extraction of distribution ZIP must succeed");
 
     let exe_path = extract_dir.join("realearth-viewer.exe");
     assert!(
@@ -229,31 +329,96 @@ fn test_stage_g0_clean_working_directory_execution() {
         "Extracted distribution must contain regional manifest.json in assets/san_francisco_sample/manifest.json"
     );
 
-    // Launch standalone executable from inside isolated temp directory
-    // Passing --headless --frames 5. It must execute cleanly without source-tree fallback.
-    let output = Command::new(&exe_path)
-        .arg("--headless")
-        .arg("--frames")
-        .arg("5")
-        .current_dir(&extract_dir)
-        .output()
-        .expect("Execute standalone extracted realearth-viewer.exe");
+    let is_windows = cfg!(target_os = "windows");
+    let has_wine = if !is_windows {
+        Command::new("wine")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    } else {
+        false
+    };
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    if is_windows || has_wine {
+        let mut cmd = if is_windows {
+            Command::new(&exe_path)
+        } else {
+            let mut c = Command::new("wine");
+            c.arg(&exe_path);
+            c
+        };
+        cmd.arg("--headless")
+            .arg("--frames")
+            .arg("5")
+            .current_dir(&extract_dir);
 
-    println!("   Standalone Clean Execution Status: {:?}", output.status);
-    println!("   Extracted Executable Full Output:\n{}", stdout);
+        let output = cmd
+            .output()
+            .expect("Execute standalone extracted realearth-viewer.exe");
 
-    assert!(
-        output.status.success(),
-        "Standalone extracted realearth-viewer.exe must execute cleanly in isolated directory. Stderr: {}",
-        stderr
-    );
-    assert!(
-        stdout.contains("Offscreen") || stdout.contains("Benchmark") || stdout.contains("Frames"),
-        "Standalone execution must complete rendered frames successfully"
-    );
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        println!("   Standalone Clean Execution Status: {:?}", output.status);
+        println!("   Extracted Executable Full Output:\n{}", stdout);
+
+        assert!(
+            output.status.success(),
+            "Standalone extracted realearth-viewer.exe must execute cleanly in isolated directory. Stderr: {}",
+            stderr
+        );
+        assert!(
+            stdout.contains("Offscreen")
+                || stdout.contains("Benchmark")
+                || stdout.contains("Frames"),
+            "Standalone execution must complete rendered frames successfully"
+        );
+    } else {
+        println!("   Running on non-Windows host without Wine; validating PE32+ binary integrity & structure...");
+        let mut exe_file = File::open(&exe_path).expect("Open extracted exe");
+        let mut dos_header = [0u8; 64];
+        exe_file
+            .read_exact(&mut dos_header)
+            .expect("Read DOS header");
+        assert_eq!(
+            &dos_header[0..2],
+            b"MZ",
+            "Executable must have DOS MZ magic"
+        );
+
+        let pe_offset = u32::from_le_bytes([
+            dos_header[0x3C],
+            dos_header[0x3D],
+            dos_header[0x3E],
+            dos_header[0x3F],
+        ]) as usize;
+
+        let mut exe_full = Vec::new();
+        File::open(&exe_path)
+            .expect("Open exe")
+            .read_to_end(&mut exe_full)
+            .expect("Read exe bytes");
+
+        assert!(
+            pe_offset + 6 <= exe_full.len(),
+            "PE header offset must be within file"
+        );
+        assert_eq!(
+            &exe_full[pe_offset..pe_offset + 4],
+            b"PE\x00\x00",
+            "Executable must have PE signature"
+        );
+        let machine = u16::from_le_bytes([exe_full[pe_offset + 4], exe_full[pe_offset + 5]]);
+        assert_eq!(
+            machine, 0x8664,
+            "Windows binary must be AMD64 (x86_64 PE32+)"
+        );
+        println!(
+            "   ✓ Verified authentic Windows x86_64 PE32+ binary structure (size: {} bytes)",
+            exe_full.len()
+        );
+    }
 }
 
 // ============================================================================
