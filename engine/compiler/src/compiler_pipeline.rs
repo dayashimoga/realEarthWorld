@@ -1,7 +1,9 @@
 //! High-performance offline world compilation pipeline.
 
 use crate::building_mesher::mesh_building;
-use crate::chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION};
+use crate::chunk::{
+    ChunkBuildingMeta, ChunkHeader, ChunkRoadMeta, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION,
+};
 use crate::database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 use crate::mesh::ChunkMesh;
 use crate::packager::write_chunk_file;
@@ -298,6 +300,7 @@ pub fn compile_world_package(
 
             // 3. Roads Mesh (Partitioned seamlessly by segment ownership with dropped curb cuts)
             let mut road_mesh = ChunkMesh::default();
+            let mut road_meta = Vec::new();
             for r in &dataset.roads {
                 if r.geometry.len() < 2 {
                     continue;
@@ -321,6 +324,18 @@ pub fn compile_world_package(
                 }
                 if let Some(run) = current_run.take() {
                     runs.push(run);
+                }
+
+                if !runs.is_empty() {
+                    road_meta.push(ChunkRoadMeta {
+                        way_id: r.way_id,
+                        name: r.name.clone(),
+                        highway_type: format!("{:?}", r.highway_type),
+                        lanes: r.lanes,
+                        is_bridge: r.is_bridge,
+                        is_tunnel: r.is_tunnel,
+                        layer: r.layer,
+                    });
                 }
 
                 for (s_start, s_end) in runs {
@@ -445,7 +460,7 @@ pub fn compile_world_package(
                 }
             }
 
-            let feature_count = building_meta.len();
+            let feature_count = building_meta.len() + road_meta.len();
 
             let (min_elev, max_elev) = if terrain_mesh.vertices.is_empty() {
                 (0.0, 100.0)
@@ -483,6 +498,7 @@ pub fn compile_world_package(
                 water: water_mesh,
                 vegetation: vegetation_mesh,
                 building_metadata: building_meta,
+                road_metadata: road_meta,
             };
 
             let total_verts = chunk.total_vertices();

@@ -1,0 +1,22 @@
+{
+  "region_id": "san-francisco",
+  "name": "San Francisco",
+  "version": "1.0.0",
+  "bounds": {
+    "min_lat": 37.78,
+    "max_lat": 37.805,
+    "min_lon": -122.415,
+    "max_lon": -122.388
+  },
+  "anchor": {
+    "lat": 37.7952,
+    "lon": -122.4028,
+    "alt": 10.0
+  },
+  "utm_zone": 10,
+  "total_chunks": 30,
+  "uncompressed_bytes": 4907376,
+  "compressed_bytes": 40960,
+  "sha256_checksum": "7f50e4e071fe55e1a0896f6b3adc92d81e904c89c348b8d43f54279c9ac1eca7",
+  "created_at_utc": "2026-10-26T22:34:00Z"
+}

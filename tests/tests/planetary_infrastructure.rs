@@ -388,6 +388,7 @@ fn make_benchmark_chunk(cx: i32, cy: i32, vertex_count: usize) -> WorldChunk {
         water: ChunkMesh::default(),
         vegetation: ChunkMesh::default(),
         building_metadata: Vec::new(),
+        road_metadata: Vec::new(),
     }
 }
 

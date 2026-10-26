@@ -90,6 +90,7 @@ fn bench_compiler_operations(c: &mut Criterion) {
         water: ChunkMesh::default(),
         vegetation: ChunkMesh::default(),
         building_metadata: Vec::new(),
+        road_metadata: Vec::new(),
     };
     let packed = pack_chunk_to_bytes(&chunk).expect("pack failed");
 

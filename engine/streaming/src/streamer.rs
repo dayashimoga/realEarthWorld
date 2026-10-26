@@ -2,7 +2,8 @@
 //! Rayon parallel decoding, bounded backpressure, and collision-critical pinning.
 
 use crate::async_loader::{
-    generate_fallback_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest,
+    generate_demand_terrain_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue,
+    ChunkLoadRequest,
 };
 use crate::config::StreamingConfig;
 use crate::lod::select_lod_with_hysteresis;
@@ -29,6 +30,10 @@ pub struct StreamingTelemetry {
     pub pending_queue: usize,
     pub cancellations: u64,
     pub fallbacks: u64,
+    pub starvations: u64,
+    pub missing_sources: u64,
+    pub corrupted_chunks: u64,
+    pub certified_bounds: Option<GeoBounds>,
 }
 
 /// Production spatial world streamer maintaining active chunks around the observer.
@@ -41,6 +46,10 @@ pub struct WorldStreamer {
     current_frame: u64,
     last_camera_pos: Option<Wgs84Coord>,
     last_velocity: glam::Vec3,
+    pub total_starvations: u64,
+    pub total_missing_sources: u64,
+    pub total_corrupted_chunks: u64,
+    pub certified_bounds: Option<GeoBounds>,
 }
 
 impl WorldStreamer {
@@ -58,6 +67,11 @@ impl WorldStreamer {
         let cache = LruChunkCache::new();
         let load_queue = ChunkLoadQueue::new(&config);
 
+        let certified_bounds = match db.get_first_package_manifest() {
+            Ok(Some(manifest)) => Some(manifest.bounds),
+            _ => None,
+        };
+
         Ok(Self {
             config,
             world_dir: world_dir.to_path_buf(),
@@ -67,6 +81,10 @@ impl WorldStreamer {
             current_frame: 0,
             last_camera_pos: None,
             last_velocity: glam::Vec3::ZERO,
+            total_starvations: 0,
+            total_missing_sources: 0,
+            total_corrupted_chunks: 0,
+            certified_bounds,
         })
     }
 
@@ -206,14 +224,62 @@ impl WorldStreamer {
                 self.load_queue.total_loaded += 1;
                 if res.is_fallback {
                     self.load_queue.total_fallbacks += 1;
+                    self.total_corrupted_chunks += 1;
                 }
             }
         }
 
-        // 5. Continuous regional fallback: If observer position has no chunk covering it
-        // (e.g. driving beyond database extract bounds at 390 km/h), synthesize a continuous
-        // fallback terrain grid so the world never terminates into an empty void.
+        // 5. Authentic Emergency Pinning & Demand-Driven Terrain Generation
+        // If observer position has no chunk covering it (e.g. fast traversal or edge of loaded area),
+        // first check SQLite spatial index synchronously for authentic surveyed chunk.
         if !self.is_collision_ready(camera_pos) {
+            let margin = 0.002; // ~220m immediate proximity margin
+            let near_box = GeoBounds::new(
+                camera_pos.lat - margin,
+                camera_pos.lat + margin,
+                camera_pos.lon - margin,
+                camera_pos.lon + margin,
+            );
+            if let Ok(cands) = self.db.query_bbox(&near_box) {
+                for cand in cands {
+                    let key = ChunkKey::new(cand.chunk_x, cand.chunk_y, 0);
+                    if self.cache.get(&key).is_none() {
+                        let path = self.world_dir.join(&cand.storage_path);
+                        if let Ok(res) = read_chunk_with_corruption_recovery(
+                            &path,
+                            cand.chunk_x,
+                            cand.chunk_y,
+                            0,
+                            &cand.bounds,
+                        ) {
+                            if res.is_fallback {
+                                self.total_corrupted_chunks += 1;
+                                self.load_queue.total_fallbacks += 1;
+                            }
+                            self.cache.insert_with_options(
+                                key,
+                                res.chunk,
+                                self.current_frame,
+                                true,
+                                res.is_fallback,
+                            );
+                            loaded_this_frame += 1;
+                            self.load_queue.total_loaded += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // If observer position still has no collision chunk after synchronous database query:
+        if !self.is_collision_ready(camera_pos) {
+            // Check if observer is inside certified bounds (starvation) or outside (missing source)
+            if self.is_within_certified_bounds(camera_pos) {
+                self.total_starvations += 1;
+            } else {
+                self.total_missing_sources += 1;
+            }
+
             let chunk_deg = 0.005; // ~500m
             let center_cx = (camera_pos.lon / chunk_deg).floor() as i32;
             let center_cy = (camera_pos.lat / chunk_deg).floor() as i32;
@@ -228,10 +294,11 @@ impl WorldStreamer {
                         let min_lon = cx as f64 * chunk_deg;
                         let max_lon = (cx + 1) as f64 * chunk_deg;
                         let bounds = GeoBounds::new(min_lat, max_lat, min_lon, max_lon);
-                        let fallback = generate_fallback_chunk(cx, cy, 0, &bounds, 0.0);
+                        // Demand-driven terrain generation with relief and slope normals rather than flat 0.0m planes
+                        let demand_chunk = generate_demand_terrain_chunk(cx, cy, 0, &bounds, None);
                         self.cache.insert_with_options(
                             key,
-                            fallback,
+                            demand_chunk,
                             self.current_frame,
                             dx == 0 && dy == 0,
                             true,
@@ -281,6 +348,20 @@ impl WorldStreamer {
         self.cache.iter_chunks().map(|(_, c)| c).collect()
     }
 
+    /// Checks whether a coordinate lies within the certified bounds of the loaded package.
+    pub fn is_within_certified_bounds(&self, coord: Wgs84Coord) -> bool {
+        if let Some(bounds) = &self.certified_bounds {
+            bounds.contains(&coord)
+        } else {
+            false
+        }
+    }
+
+    /// Returns certified bounds of the loaded package, if available in the manifest.
+    pub fn get_certified_bounds(&self) -> Option<GeoBounds> {
+        self.certified_bounds
+    }
+
     /// Returns comprehensive cache telemetry snapshot.
     pub fn telemetry_details(&self) -> StreamingTelemetry {
         StreamingTelemetry {
@@ -294,6 +375,10 @@ impl WorldStreamer {
             pending_queue: self.load_queue.pending_count(),
             cancellations: self.load_queue.total_cancellations,
             fallbacks: self.load_queue.total_fallbacks,
+            starvations: self.total_starvations,
+            missing_sources: self.total_missing_sources,
+            corrupted_chunks: self.total_corrupted_chunks,
+            certified_bounds: self.certified_bounds,
         }
     }
 

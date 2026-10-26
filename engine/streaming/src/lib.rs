@@ -14,10 +14,12 @@ pub mod region_installer;
 pub mod streamer;
 
 pub use async_loader::{
-    generate_fallback_chunk, read_chunk_with_corruption_recovery, ChunkLoadQueue, ChunkLoadRequest,
-    LoadedChunkResult,
+    generate_demand_terrain_chunk, generate_fallback_chunk, read_chunk_with_corruption_recovery,
+    ChunkLoadQueue, ChunkLoadRequest, LoadedChunkResult,
 };
-pub use certification::{CertificationResult, WorldPackageCertifier};
+pub use certification::{
+    san_francisco_pilot_coverage, CertificationResult, PilotCoveragePolygon, WorldPackageCertifier,
+};
 pub use config::StreamingConfig;
 pub use diagnostics::{
     FallbackBasemapProvider, MissingDataCategory, MissingDataDiagnostics, MissingDataRecord,
@@ -70,6 +72,7 @@ mod tests {
             water: ChunkMesh::default(),
             vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
+            road_metadata: Vec::new(),
         }
     }
 

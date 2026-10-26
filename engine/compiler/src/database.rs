@@ -329,6 +329,52 @@ impl ChunkDatabase {
         }
     }
 
+    /// Retrieves the first package manifest in the database if any exists.
+    pub fn get_first_package_manifest(&self) -> Result<Option<ManifestMetadataRecord>> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT package_name, crs_epsg, min_lat, max_lat, min_lon, max_lon, version, schema_version, created_at, source_asset_sha256
+                 FROM package_manifest LIMIT 1",
+            )
+            .map_err(|e| RealEarthError::Compilation(format!("SQLite prepare manifest query error: {}", e)))?;
+
+        let mut rows = stmt
+            .query_map([], |row| {
+                let name: String = row.get(0)?;
+                let crs: i32 = row.get(1)?;
+                let min_lat: f64 = row.get(2)?;
+                let max_lat: f64 = row.get(3)?;
+                let min_lon: f64 = row.get(4)?;
+                let max_lon: f64 = row.get(5)?;
+                let ver: u32 = row.get(6)?;
+                let s_ver: u32 = row.get(7)?;
+                let created: String = row.get(8)?;
+                let source_hash: Option<String> = row.get(9).ok();
+
+                Ok(ManifestMetadataRecord {
+                    package_name: name,
+                    crs_epsg: crs,
+                    bounds: GeoBounds::new(min_lat, max_lat, min_lon, max_lon),
+                    version: ver,
+                    schema_version: s_ver,
+                    created_at: created,
+                    source_asset_sha256: source_hash,
+                })
+            })
+            .map_err(|e| {
+                RealEarthError::Compilation(format!("SQLite query manifest error: {}", e))
+            })?;
+
+        if let Some(r) = rows.next() {
+            let manifest =
+                r.map_err(|e| RealEarthError::Compilation(format!("SQLite row error: {}", e)))?;
+            Ok(Some(manifest))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Returns true if the package manifest exists and its recorded source_asset_sha256 matches expected_hash
     /// and its recorded schema_version matches the current CHUNK_VERSION.
     pub fn is_package_source_hash_matching(&self, package_name: &str, expected_hash: &str) -> bool {

@@ -1609,6 +1609,29 @@
     - [x] Verified Windows release executable build `cargo build --release --bin realearth-viewer`.
     - [x] Authored `docs/DrivingPhysicsRepairReport.md`.
 
+- [x] Stage H2 — Authentic Map-to-3D Compiler and Continuous Geographic Streaming:
+  - [x] Phase 1: Real Geographic Acquisition:
+    - [x] Upgraded `engine/streaming/src/region_installer.rs` to fail closed on missing/corrupt manifests, empty databases, checksum mismatches, or schema version differences.
+    - [x] Removed fixed illustrative download byte counts; implemented dynamic tracking of genuine vector XML and DEM raster bytes.
+    - [x] Integrated `StorageQuotaManager` with `RegionInstaller` for storage quota enforcement and LRU package eviction while protecting pinned packages (`san-francisco`).
+  - [x] Phase 2: Complete 3D World Compilation:
+    - [x] Extended chunk schema with `ChunkRoadMeta` (`way_id`, `name`, `highway_type`, `lanes`, `is_bridge`, `is_tunnel`, `layer`) and `road_metadata` on `WorldChunk`.
+    - [x] Added `surveyed_building_count()`, `inferred_building_count()`, and `road_count()` helpers on `WorldChunk`.
+    - [x] Meshed roads with preserved source feature identifiers and updated feature counts in `engine/compiler/src/compiler_pipeline.rs`.
+    - [x] Distinguished surveyed CTBUH skyscraper heights (`HeightProvenance::Surveyed`, confidence 1.0) from inferred secondary building levels (`HeightProvenance::InferredLevels`, confidence 0.85) in `tools/world-cli/src/bin/generate_sf_gis.rs`.
+    - [x] Recompiled authoritative San Francisco pilot package (`data/world_san_francisco`) with 30 chunks, 87,939 vertices, 54,569 triangles, 146 roads, and 279 buildings.
+  - [x] Phase 3: Real Continuous Streaming:
+    - [x] Implemented `generate_demand_terrain_chunk` in `engine/streaming/src/async_loader.rs` with bilinear USGS DEM sampling, partial-derivative normals, and elevation/slope vertex coloring, eliminating flat 0.0m blank green planes.
+    - [x] Implemented emergency synchronous spatial database pinning in `engine/streaming/src/streamer.rs` to eliminate ground drop-out during rapid vehicle traversal.
+    - [x] Added independent fault detection and telemetry counters: `total_starvations`, `total_missing_sources`, `total_corrupted_chunks`, and `certified_bounds`.
+  - [x] Phase 4: Real San Francisco Certification:
+    - [x] Published `PilotCoveragePolygon` in `engine/streaming/src/certification.rs` for San Francisco downtown and waterfront (`[37.7800, 37.8050, -122.4150, -122.3880]`, 6.60 km², 0-115m MSL relief).
+    - [x] Authored `tests/tests/stage_h2_authentic_compiler_and_streaming_quality_gates.rs` covering all 5 quality gates (fail-closed integrity, world compilation reconciliation, continuous 4.8 km driving traversal, high-speed flight prefetching, and telemetry).
+    - [x] Verified 100% test pass on Stage H2 quality gates (5/5 passing).
+    - [x] Verified clean release binary build (`cargo build --release --bin realearth-viewer`).
+    - [x] Authored `docs/MapTo3DCompilerAndStreamingReport.md`.
+
+
 
 
 

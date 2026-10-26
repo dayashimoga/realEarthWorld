@@ -164,6 +164,7 @@ impl FallbackBasemapProvider {
             water: ChunkMesh::default(),
             vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
+            road_metadata: Vec::new(),
         }
     }
 }

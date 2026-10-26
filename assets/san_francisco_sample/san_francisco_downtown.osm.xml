@@ -1632,7 +1632,6 @@
     <nd ref="10320"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="425 Market Street"/>
-    <tag k="height" v="160.0m"/>
     <tag k="building:levels" v="38"/>
   </way>
 
@@ -1649,7 +1648,6 @@
     <nd ref="10324"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="333 Market Street"/>
-    <tag k="height" v="144.0m"/>
     <tag k="building:levels" v="33"/>
   </way>
 
@@ -1666,7 +1664,6 @@
     <nd ref="10328"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="388 Market Street (Flatiron)"/>
-    <tag k="height" v="79.0m"/>
     <tag k="building:levels" v="16"/>
   </way>
 
@@ -1683,7 +1680,6 @@
     <nd ref="10332"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="505 Montgomery Street"/>
-    <tag k="height" v="86.0m"/>
     <tag k="building:levels" v="24"/>
   </way>
 
@@ -1700,7 +1696,6 @@
     <nd ref="10336"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="400 Montgomery Street"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -1717,7 +1712,6 @@
     <nd ref="10340"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="456 Montgomery Street"/>
-    <tag k="height" v="92.0m"/>
     <tag k="building:levels" v="26"/>
   </way>
 
@@ -1734,7 +1728,6 @@
     <nd ref="10344"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="600 Montgomery Street"/>
-    <tag k="height" v="55.0m"/>
     <tag k="building:levels" v="14"/>
   </way>
 
@@ -1751,7 +1744,6 @@
     <nd ref="10348"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="650 California Street"/>
-    <tag k="height" v="101.0m"/>
     <tag k="building:levels" v="33"/>
   </way>
 
@@ -1768,7 +1760,6 @@
     <nd ref="10352"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="580 California Street"/>
-    <tag k="height" v="88.0m"/>
     <tag k="building:levels" v="23"/>
   </way>
 
@@ -1785,7 +1776,6 @@
     <nd ref="10356"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="465 California Street (Merchants Exchange)"/>
-    <tag k="height" v="58.0m"/>
     <tag k="building:levels" v="14"/>
   </way>
 
@@ -1802,7 +1792,6 @@
     <nd ref="10360"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="400 California Street (Union Bank)"/>
-    <tag k="height" v="50.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -1819,7 +1808,6 @@
     <nd ref="10364"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="345 California Center"/>
-    <tag k="height" v="212.0m"/>
     <tag k="building:levels" v="48"/>
   </way>
 
@@ -1836,7 +1824,6 @@
     <nd ref="10368"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="333 Bush Street"/>
-    <tag k="height" v="151.0m"/>
     <tag k="building:levels" v="43"/>
   </way>
 
@@ -1853,7 +1840,6 @@
     <nd ref="10372"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="101 California Street"/>
-    <tag k="height" v="183.0m"/>
     <tag k="building:levels" v="48"/>
   </way>
 
@@ -1870,7 +1856,6 @@
     <nd ref="10376"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="50 Fremont Street (Salesforce West)"/>
-    <tag k="height" v="183.0m"/>
     <tag k="building:levels" v="43"/>
   </way>
 
@@ -1887,7 +1872,6 @@
     <nd ref="10380"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="199 Fremont Street"/>
-    <tag k="height" v="100.0m"/>
     <tag k="building:levels" v="27"/>
   </way>
 
@@ -1904,7 +1888,6 @@
     <nd ref="10384"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="201 Mission Street"/>
-    <tag k="height" v="128.0m"/>
     <tag k="building:levels" v="30"/>
   </way>
 
@@ -1921,7 +1904,6 @@
     <nd ref="10388"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="301 Howard Street (Orrick Building)"/>
-    <tag k="height" v="95.0m"/>
     <tag k="building:levels" v="23"/>
   </way>
 
@@ -1938,7 +1920,6 @@
     <nd ref="10392"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="303 Second Street"/>
-    <tag k="height" v="50.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -1955,7 +1936,6 @@
     <nd ref="10396"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="222 Second Street (LinkedIn SF HQ)"/>
-    <tag k="height" v="98.0m"/>
     <tag k="building:levels" v="26"/>
   </way>
 
@@ -1972,7 +1952,6 @@
     <nd ref="10400"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="55 2nd Street"/>
-    <tag k="height" v="42.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -1989,7 +1968,6 @@
     <nd ref="10404"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="100 First Street"/>
-    <tag k="height" v="136.0m"/>
     <tag k="building:levels" v="27"/>
   </way>
 
@@ -2006,7 +1984,6 @@
     <nd ref="10408"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="555 Mission Street"/>
-    <tag k="height" v="148.0m"/>
     <tag k="building:levels" v="33"/>
   </way>
 
@@ -2023,7 +2000,6 @@
     <nd ref="10412"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="535 Mission Street"/>
-    <tag k="height" v="115.0m"/>
     <tag k="building:levels" v="27"/>
   </way>
 
@@ -2040,7 +2016,6 @@
     <nd ref="10416"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="560 Mission Street (JP Morgan Chase)"/>
-    <tag k="height" v="128.0m"/>
     <tag k="building:levels" v="31"/>
   </way>
 
@@ -2057,7 +2032,6 @@
     <nd ref="10420"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="50 Beale Street (Blue Shield Building)"/>
-    <tag k="height" v="92.0m"/>
     <tag k="building:levels" v="23"/>
   </way>
 
@@ -2074,7 +2048,6 @@
     <nd ref="10424"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="77 Beale Street (PG&E HQ)"/>
-    <tag k="height" v="150.0m"/>
     <tag k="building:levels" v="34"/>
   </way>
 
@@ -2091,7 +2064,6 @@
     <nd ref="10428"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="215 Fremont Street"/>
-    <tag k="height" v="60.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -2108,7 +2080,6 @@
     <nd ref="10432"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="221 Main Street"/>
-    <tag k="height" v="65.0m"/>
     <tag k="building:levels" v="16"/>
   </way>
 
@@ -2125,7 +2096,6 @@
     <nd ref="10436"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="120 Howard Street"/>
-    <tag k="height" v="60.0m"/>
     <tag k="building:levels" v="11"/>
   </way>
 
@@ -2142,7 +2112,6 @@
     <nd ref="10440"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Jackson Square Historic Office 1"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -2159,7 +2128,6 @@
     <nd ref="10444"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Jackson Square Historic Office 2"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -2176,7 +2144,6 @@
     <nd ref="10448"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Jackson Square Brick Flats 3"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -2193,7 +2160,6 @@
     <nd ref="10452"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Jackson Square Brick Flats 4"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -2210,7 +2176,6 @@
     <nd ref="10456"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pacific Heritage Building"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2227,7 +2192,6 @@
     <nd ref="10460"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Hotaling Building Jackson Square"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -2244,7 +2208,6 @@
     <nd ref="10464"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Bank of America Jackson Branch"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -2261,7 +2224,6 @@
     <nd ref="10468"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Jackson Square Design Center"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2278,7 +2240,6 @@
     <nd ref="10472"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Sansome Historic Mercantile"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -2295,7 +2256,6 @@
     <nd ref="10476"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Battery Historic Warehouse"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -2312,7 +2272,6 @@
     <nd ref="10480"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="301 Mission Podium Building"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -2329,7 +2288,6 @@
     <nd ref="10484"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="399 Fremont Street Tower"/>
-    <tag k="height" v="122.0m"/>
     <tag k="building:levels" v="42"/>
   </way>
 
@@ -2346,7 +2304,6 @@
     <nd ref="10488"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="340 Fremont Street"/>
-    <tag k="height" v="120.0m"/>
     <tag k="building:levels" v="40"/>
   </way>
 
@@ -2363,7 +2320,6 @@
     <nd ref="10492"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="333 Fremont Street"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -2380,7 +2336,6 @@
     <nd ref="10496"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="375 Beale Street (Bay Area Metro)"/>
-    <tag k="height" v="42.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -2397,7 +2352,6 @@
     <nd ref="10500"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Lumina South Tower"/>
-    <tag k="height" v="122.0m"/>
     <tag k="building:levels" v="42"/>
   </way>
 
@@ -2414,7 +2368,6 @@
     <nd ref="10504"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Lumina North Tower"/>
-    <tag k="height" v="107.0m"/>
     <tag k="building:levels" v="37"/>
   </way>
 
@@ -2431,7 +2384,6 @@
     <nd ref="10508"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Infinity Tower A"/>
-    <tag k="height" v="113.0m"/>
     <tag k="building:levels" v="37"/>
   </way>
 
@@ -2448,7 +2400,6 @@
     <nd ref="10512"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Infinity Tower B"/>
-    <tag k="height" v="125.0m"/>
     <tag k="building:levels" v="41"/>
   </way>
 
@@ -2465,7 +2416,6 @@
     <nd ref="10516"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Mira Tower (201 Folsom)"/>
-    <tag k="height" v="122.0m"/>
     <tag k="building:levels" v="40"/>
   </way>
 
@@ -2482,7 +2432,6 @@
     <nd ref="10520"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="500 Folsom Street"/>
-    <tag k="height" v="134.0m"/>
     <tag k="building:levels" v="42"/>
   </way>
 
@@ -2499,7 +2448,6 @@
     <nd ref="10524"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="The Jasper (45 Lansing)"/>
-    <tag k="height" v="122.0m"/>
     <tag k="building:levels" v="39"/>
   </way>
 
@@ -2516,7 +2464,6 @@
     <nd ref="10528"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="The Watermark (399 Embarcadero)"/>
-    <tag k="height" v="68.0m"/>
     <tag k="building:levels" v="22"/>
   </way>
 
@@ -2533,7 +2480,6 @@
     <nd ref="10532"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Hills Plaza Tower"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -2550,7 +2496,6 @@
     <nd ref="10536"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Google SF Spear Campus"/>
-    <tag k="height" v="40.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -2567,7 +2512,6 @@
     <nd ref="10540"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Metropolitan Tower 1"/>
-    <tag k="height" v="98.0m"/>
     <tag k="building:levels" v="27"/>
   </way>
 
@@ -2584,7 +2528,6 @@
     <nd ref="10544"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Metropolitan Tower 2"/>
-    <tag k="height" v="85.0m"/>
     <tag k="building:levels" v="22"/>
   </way>
 
@@ -2601,7 +2544,6 @@
     <nd ref="10548"/>
     <tag k="building" v="apartments"/>
     <tag k="name" v="301 First Street Apartments"/>
-    <tag k="height" v="48.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -2618,7 +2560,6 @@
     <nd ref="10552"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="400 Second Street Offices"/>
-    <tag k="height" v="40.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -2635,7 +2576,6 @@
     <nd ref="10556"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="500 Second Street Tech Lofts"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -2652,7 +2592,6 @@
     <nd ref="10560"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="580 Second Historic Lofts"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2669,7 +2608,6 @@
     <nd ref="10564"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="650 Townsend Second Lofts"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2686,7 +2624,6 @@
     <nd ref="10568"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="680 Folsom Street Tech Center"/>
-    <tag k="height" v="62.0m"/>
     <tag k="building:levels" v="14"/>
   </way>
 
@@ -2703,7 +2640,6 @@
     <nd ref="10572"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="700 Folsom Innovation Hub"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -2720,7 +2656,6 @@
     <nd ref="10576"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="W Hotel San Francisco"/>
-    <tag k="height" v="102.0m"/>
     <tag k="building:levels" v="31"/>
   </way>
 
@@ -2737,7 +2672,6 @@
     <nd ref="10580"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="SFMOMA Mario Botta Wing"/>
-    <tag k="height" v="38.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2754,7 +2688,6 @@
     <nd ref="10584"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="SFMOMA Snohetta Expansion"/>
-    <tag k="height" v="60.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -2771,7 +2704,6 @@
     <nd ref="10588"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Moscone Center West"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -2788,7 +2720,6 @@
     <nd ref="10592"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Metreon Shopping & IMAX"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -2805,7 +2736,6 @@
     <nd ref="10596"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="St. Regis Museum Tower"/>
-    <tag k="height" v="148.0m"/>
     <tag k="building:levels" v="40"/>
   </way>
 
@@ -2822,7 +2752,6 @@
     <nd ref="10600"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="The Paramount Residences"/>
-    <tag k="height" v="122.0m"/>
     <tag k="building:levels" v="39"/>
   </way>
 
@@ -2839,7 +2768,6 @@
     <nd ref="10604"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="SFMOMA Park Tower"/>
-    <tag k="height" v="80.0m"/>
     <tag k="building:levels" v="20"/>
   </way>
 
@@ -2856,7 +2784,6 @@
     <nd ref="10608"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="555 Fourth Street Residences"/>
-    <tag k="height" v="40.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -2873,7 +2800,6 @@
     <nd ref="10612"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Courtyard by Marriott Downtown"/>
-    <tag k="height" v="62.0m"/>
     <tag k="building:levels" v="18"/>
   </way>
 
@@ -2890,7 +2816,6 @@
     <nd ref="10616"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Yerba Buena Theater"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -2907,7 +2832,6 @@
     <nd ref="10620"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="700 4th Street Lofts"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -2924,7 +2848,6 @@
     <nd ref="10624"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="301 Brannan Historic Warehouse"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -2941,7 +2864,6 @@
     <nd ref="10628"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="401 Brannan Brick Building"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -2958,7 +2880,6 @@
     <nd ref="10632"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pinterest HQ (501 Brannan)"/>
-    <tag k="height" v="32.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -2975,7 +2896,6 @@
     <nd ref="10636"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="401 Bryant Creative Hub"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -2992,7 +2912,6 @@
     <nd ref="10640"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="501 Bryant Tech Campus"/>
-    <tag k="height" v="26.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -3009,7 +2928,6 @@
     <nd ref="10644"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="601 Bryant Tech Lofts"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3026,7 +2944,6 @@
     <nd ref="10648"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Baycrest Lofts (301 Harrison)"/>
-    <tag k="height" v="42.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -3043,7 +2960,6 @@
     <nd ref="10652"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="401 Harrison Apartments"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -3060,7 +2976,6 @@
     <nd ref="10656"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Bridgeview Tower (501 Harrison)"/>
-    <tag k="height" v="80.0m"/>
     <tag k="building:levels" v="26"/>
   </way>
 
@@ -3077,7 +2992,6 @@
     <nd ref="10660"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Sing Chong Building"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3094,7 +3008,6 @@
     <nd ref="10664"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Sing Fat Building"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3111,7 +3024,6 @@
     <nd ref="10668"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Bank of Canton Historic"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3128,7 +3040,6 @@
     <nd ref="10672"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Tin How Temple"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3145,7 +3056,6 @@
     <nd ref="10676"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Chinese Historical Society"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3162,7 +3072,6 @@
     <nd ref="10680"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Chinese Central High School"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3179,7 +3088,6 @@
     <nd ref="10684"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Great Star Theater"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -3196,7 +3104,6 @@
     <nd ref="10688"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Chinatown YMCA"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -3213,7 +3120,6 @@
     <nd ref="10692"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Nam Kue School"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3230,7 +3136,6 @@
     <nd ref="10696"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="700 Grant Ave Historic Retail"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3247,7 +3152,6 @@
     <nd ref="10700"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Empress of China Building"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -3264,7 +3168,6 @@
     <nd ref="10704"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="800 Grant Chinatown Bazaar"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3281,7 +3184,6 @@
     <nd ref="10708"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="850 Grant Residential Flats"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3298,7 +3200,6 @@
     <nd ref="10712"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="900 Grant Commercial Bank"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3315,7 +3216,6 @@
     <nd ref="10716"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="950 Grant Residential Hotel"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3332,7 +3232,6 @@
     <nd ref="10720"/>
     <tag k="building" v="apartments"/>
     <tag k="name" v="600 Stockton Apartments"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -3349,7 +3248,6 @@
     <nd ref="10724"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Kong Chow Temple Building"/>
-    <tag k="height" v="26.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -3366,7 +3264,6 @@
     <nd ref="10728"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Chinatown Branch Library"/>
-    <tag k="height" v="15.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -3383,7 +3280,6 @@
     <nd ref="10732"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Gordon J Lau Elementary"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3400,7 +3296,6 @@
     <nd ref="10736"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="900 Stockton Residential Flats"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3417,7 +3312,6 @@
     <nd ref="10740"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="City Lights Bookstore"/>
-    <tag k="height" v="15.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3434,7 +3328,6 @@
     <nd ref="10744"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Vesuvio Cafe Building"/>
-    <tag k="height" v="15.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3451,7 +3344,6 @@
     <nd ref="10748"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Sentinel Building / Columbus Tower"/>
-    <tag k="height" v="38.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -3468,7 +3360,6 @@
     <nd ref="10752"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Tosca Cafe Building"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3485,7 +3376,6 @@
     <nd ref="10756"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="400 Columbus North Beach Flats"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3502,7 +3392,6 @@
     <nd ref="10760"/>
     <tag k="building" v="apartments"/>
     <tag k="name" v="450 Columbus Apartments"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3519,7 +3408,6 @@
     <nd ref="10764"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="500 Columbus Italian Flats"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3536,7 +3424,6 @@
     <nd ref="10768"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Caffe Trieste Building"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3553,7 +3440,6 @@
     <nd ref="10772"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Saints Peter and Paul Church"/>
-    <tag k="height" v="58.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3570,7 +3456,6 @@
     <nd ref="10776"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="San Francisco Art Institute"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3587,7 +3472,6 @@
     <nd ref="10780"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Coit Tower (Telegraph Hill)"/>
-    <tag k="height" v="64.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3604,7 +3488,6 @@
     <nd ref="10784"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="1000 Montgomery Historic Flats"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3621,7 +3504,6 @@
     <nd ref="10788"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="1100 Montgomery Victorian Flats"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3638,7 +3520,6 @@
     <nd ref="10792"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Julius Castle Historic"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3655,7 +3536,6 @@
     <nd ref="10796"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="1300 Montgomery Apartments"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3672,7 +3552,6 @@
     <nd ref="10800"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="1400 Montgomery Flats"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3689,7 +3568,6 @@
     <nd ref="10804"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="200 Broadway Entertainment"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3706,7 +3584,6 @@
     <nd ref="10808"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="300 Broadway Commercial Block"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3723,7 +3600,6 @@
     <nd ref="10812"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="400 Broadway North Beach"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3740,7 +3616,6 @@
     <nd ref="10816"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="500 Broadway Chinatown Transition"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -3757,7 +3632,6 @@
     <nd ref="10820"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Fairmont Hotel Tower"/>
-    <tag k="height" v="92.0m"/>
     <tag k="building:levels" v="24"/>
   </way>
 
@@ -3774,7 +3648,6 @@
     <nd ref="10824"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Mark Hopkins Hotel"/>
-    <tag k="height" v="96.0m"/>
     <tag k="building:levels" v="19"/>
   </way>
 
@@ -3791,7 +3664,6 @@
     <nd ref="10828"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Pacific-Union Club (Flood Mansion)"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3808,7 +3680,6 @@
     <nd ref="10832"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Grace Cathedral"/>
-    <tag k="height" v="52.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -3825,7 +3696,6 @@
     <nd ref="10836"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="The Huntington Hotel"/>
-    <tag k="height" v="55.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -3842,7 +3712,6 @@
     <nd ref="10840"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="The Brocklebank Apartments"/>
-    <tag k="height" v="42.0m"/>
     <tag k="building:levels" v="10"/>
   </way>
 
@@ -3859,7 +3728,6 @@
     <nd ref="10844"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Cathedral Apartments (1201 California)"/>
-    <tag k="height" v="50.0m"/>
     <tag k="building:levels" v="14"/>
   </way>
 
@@ -3876,7 +3744,6 @@
     <nd ref="10848"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="1001 California Luxury Apartments"/>
-    <tag k="height" v="48.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -3893,7 +3760,6 @@
     <nd ref="10852"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Stanford Court Hotel"/>
-    <tag k="height" v="38.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -3910,7 +3776,6 @@
     <nd ref="10856"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="University Club San Francisco"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -3927,7 +3792,6 @@
     <nd ref="10860"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="800 Powell Luxury Apartments"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -3944,7 +3808,6 @@
     <nd ref="10864"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="The Beacon Grand (Sir Francis Drake)"/>
-    <tag k="height" v="85.0m"/>
     <tag k="building:levels" v="21"/>
   </way>
 
@@ -3961,7 +3824,6 @@
     <nd ref="10868"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="600 Powell Historic Hotel"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -3978,7 +3840,6 @@
     <nd ref="10872"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="500 Powell Commercial"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -3995,7 +3856,6 @@
     <nd ref="10876"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Chancellor Hotel"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -4012,7 +3872,6 @@
     <nd ref="10880"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Westin St Francis Main Building"/>
-    <tag k="height" v="55.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -4029,7 +3888,6 @@
     <nd ref="10884"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Westin St Francis Tower"/>
-    <tag k="height" v="119.0m"/>
     <tag k="building:levels" v="32"/>
   </way>
 
@@ -4046,7 +3904,6 @@
     <nd ref="10888"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Grand Hyatt San Francisco"/>
-    <tag k="height" v="108.0m"/>
     <tag k="building:levels" v="36"/>
   </way>
 
@@ -4063,7 +3920,6 @@
     <nd ref="10892"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Macy's Union Square"/>
-    <tag k="height" v="38.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -4080,7 +3936,6 @@
     <nd ref="10896"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Saks Fifth Avenue Union Square"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4097,7 +3952,6 @@
     <nd ref="10900"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Tiffany & Co Building"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -4114,7 +3968,6 @@
     <nd ref="10904"/>
     <tag k="building" v="retail"/>
     <tag k="name" v="Neiman Marcus Rotunda"/>
-    <tag k="height" v="32.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4131,7 +3984,6 @@
     <nd ref="10908"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="250 Stockton Commercial"/>
-    <tag k="height" v="36.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -4148,7 +4000,6 @@
     <nd ref="10912"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="450 Sutter Medical Building"/>
-    <tag k="height" v="105.0m"/>
     <tag k="building:levels" v="26"/>
   </way>
 
@@ -4165,7 +4016,6 @@
     <nd ref="10916"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="490 Post Medical Dental Building"/>
-    <tag k="height" v="72.0m"/>
     <tag k="building:levels" v="18"/>
   </way>
 
@@ -4182,7 +4032,6 @@
     <nd ref="10920"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Marines Memorial Club & Hotel"/>
-    <tag k="height" v="50.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -4199,7 +4048,6 @@
     <nd ref="10924"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Olympic Club City Clubhouse"/>
-    <tag k="height" v="40.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -4216,7 +4064,6 @@
     <nd ref="10928"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Bohemian Club Clubhouse"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4233,7 +4080,6 @@
     <nd ref="10932"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="600 Sutter Academy of Art"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -4250,7 +4096,6 @@
     <nd ref="10936"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="700 Sutter Residential Apartments"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4267,7 +4112,6 @@
     <nd ref="10940"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="800 Sutter Edwardian Flats"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -4284,7 +4128,6 @@
     <nd ref="10944"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="500 Bush Historic Commercial"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4301,7 +4144,6 @@
     <nd ref="10948"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="600 Bush Apartments"/>
-    <tag k="height" v="26.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4318,7 +4160,6 @@
     <nd ref="10952"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="700 Bush Edwardian Apartments"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4335,7 +4176,6 @@
     <nd ref="10956"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="800 Bush Nob Hill Apartments"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4352,7 +4192,6 @@
     <nd ref="10960"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="500 Pine Commercial Block"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4369,7 +4208,6 @@
     <nd ref="10964"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="600 Pine Apartments"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4386,7 +4224,6 @@
     <nd ref="10968"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="700 Pine Nob Hill Flats"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4403,7 +4240,6 @@
     <nd ref="10972"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="800 Pine Nob Hill Apartments"/>
-    <tag k="height" v="32.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -4420,7 +4256,6 @@
     <nd ref="10976"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="900 Pine Upper Nob Hill Flats"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4437,7 +4272,6 @@
     <nd ref="10980"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Ferry Building Clock Annex"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -4454,7 +4288,6 @@
     <nd ref="10984"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 5 Historic Maritime Offices"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4471,7 +4304,6 @@
     <nd ref="10988"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Pier 7 Waterfront Public Pavilion"/>
-    <tag k="height" v="12.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4488,7 +4320,6 @@
     <nd ref="10992"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 9 Maritime Facility"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4505,7 +4336,6 @@
     <nd ref="10996"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Pier 15 Exploratorium Main"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4522,7 +4352,6 @@
     <nd ref="11000"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 17 Creative Arts Facility"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4539,7 +4368,6 @@
     <nd ref="11004"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 19 Waterfront Maritime Pier"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4556,7 +4384,6 @@
     <nd ref="11008"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 23 Historic Restaurant & Docks"/>
-    <tag k="height" v="12.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4573,7 +4400,6 @@
     <nd ref="11012"/>
     <tag k="building" v="civic"/>
     <tag k="name" v="Pier 24 Photography Gallery"/>
-    <tag k="height" v="15.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4590,7 +4416,6 @@
     <nd ref="11016"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 26 Maritime Services Shed"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4607,7 +4432,6 @@
     <nd ref="11020"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 28 Historic Cargo Shed"/>
-    <tag k="height" v="18.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4624,7 +4448,6 @@
     <nd ref="11024"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 30 Maritime Pier Facility"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4641,7 +4464,6 @@
     <nd ref="11028"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Pier 32 Waterfront Logistics"/>
-    <tag k="height" v="16.0m"/>
     <tag k="building:levels" v="2"/>
   </way>
 
@@ -4658,7 +4480,6 @@
     <nd ref="11032"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="101 The Embarcadero (Audubon)"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4675,7 +4496,6 @@
     <nd ref="11036"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="201 The Embarcadero Offices"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4692,7 +4512,6 @@
     <nd ref="11040"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="1 Market Plaza Steuart Tower"/>
-    <tag k="height" v="110.0m"/>
     <tag k="building:levels" v="27"/>
   </way>
 
@@ -4709,7 +4528,6 @@
     <nd ref="11044"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="1 Market Plaza Spear Tower"/>
-    <tag k="height" v="172.0m"/>
     <tag k="building:levels" v="43"/>
   </way>
 
@@ -4726,7 +4544,6 @@
     <nd ref="11048"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Embarcadero Center 1"/>
-    <tag k="height" v="140.0m"/>
     <tag k="building:levels" v="45"/>
   </way>
 
@@ -4743,7 +4560,6 @@
     <nd ref="11052"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Embarcadero Center 2"/>
-    <tag k="height" v="140.0m"/>
     <tag k="building:levels" v="45"/>
   </way>
 
@@ -4760,7 +4576,6 @@
     <nd ref="11056"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Embarcadero Center 3"/>
-    <tag k="height" v="140.0m"/>
     <tag k="building:levels" v="45"/>
   </way>
 
@@ -4777,7 +4592,6 @@
     <nd ref="11060"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Embarcadero Center 4"/>
-    <tag k="height" v="140.0m"/>
     <tag k="building:levels" v="45"/>
   </way>
 
@@ -4794,7 +4608,6 @@
     <nd ref="11064"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="100 The Embarcadero"/>
-    <tag k="height" v="25.0m"/>
     <tag k="building:levels" v="5"/>
   </way>
 
@@ -4811,7 +4624,6 @@
     <nd ref="11068"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="200 The Embarcadero Brick"/>
-    <tag k="height" v="24.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -4828,7 +4640,6 @@
     <nd ref="11072"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="300 The Embarcadero Offices"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4845,7 +4656,6 @@
     <nd ref="11076"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="400 The Embarcadero Offices"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4862,7 +4672,6 @@
     <nd ref="11080"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="500 The Embarcadero Lofts"/>
-    <tag k="height" v="28.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -4879,7 +4688,6 @@
     <nd ref="11084"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="600 The Embarcadero Maritime"/>
-    <tag k="height" v="22.0m"/>
     <tag k="building:levels" v="4"/>
   </way>
 
@@ -4896,7 +4704,6 @@
     <nd ref="11088"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="700 The Embarcadero Commercial"/>
-    <tag k="height" v="20.0m"/>
     <tag k="building:levels" v="3"/>
   </way>
 
@@ -4913,7 +4720,6 @@
     <nd ref="11092"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="San Francisco Marriott Marquis"/>
-    <tag k="height" v="133.0m"/>
     <tag k="building:levels" v="39"/>
   </way>
 
@@ -4930,7 +4736,6 @@
     <nd ref="11096"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="The Westin SF Market Street"/>
-    <tag k="height" v="110.0m"/>
     <tag k="building:levels" v="36"/>
   </way>
 
@@ -4947,7 +4752,6 @@
     <nd ref="11100"/>
     <tag k="building" v="hotel"/>
     <tag k="name" v="Palace Hotel San Francisco"/>
-    <tag k="height" v="42.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -4964,7 +4768,6 @@
     <nd ref="11104"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Flood Building (888 Market)"/>
-    <tag k="height" v="45.0m"/>
     <tag k="building:levels" v="12"/>
   </way>
 
@@ -4981,7 +4784,6 @@
     <nd ref="11108"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="833 Market Street Commercial"/>
-    <tag k="height" v="38.0m"/>
     <tag k="building:levels" v="9"/>
   </way>
 
@@ -4998,7 +4800,6 @@
     <nd ref="11112"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Phelan Building (760 Market)"/>
-    <tag k="height" v="48.0m"/>
     <tag k="building:levels" v="11"/>
   </way>
 
@@ -5015,7 +4816,6 @@
     <nd ref="11116"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="742 Market Street Commercial"/>
-    <tag k="height" v="35.0m"/>
     <tag k="building:levels" v="8"/>
   </way>
 
@@ -5032,7 +4832,6 @@
     <nd ref="11120"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="Central Tower (703 Market)"/>
-    <tag k="height" v="91.0m"/>
     <tag k="building:levels" v="21"/>
   </way>
 
@@ -5049,7 +4848,6 @@
     <nd ref="11124"/>
     <tag k="building" v="residential"/>
     <tag k="name" v="Ritz-Carlton Club (690 Market)"/>
-    <tag k="height" v="80.0m"/>
     <tag k="building:levels" v="24"/>
   </way>
 
@@ -5066,7 +4864,6 @@
     <nd ref="11128"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="657 Market Street Commercial"/>
-    <tag k="height" v="32.0m"/>
     <tag k="building:levels" v="7"/>
   </way>
 
@@ -5083,7 +4880,6 @@
     <nd ref="11132"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="633 Market Street Commercial"/>
-    <tag k="height" v="30.0m"/>
     <tag k="building:levels" v="6"/>
   </way>
 
@@ -5100,7 +4896,6 @@
     <nd ref="11136"/>
     <tag k="building" v="commercial"/>
     <tag k="name" v="595 Market Street"/>
-    <tag k="height" v="118.0m"/>
     <tag k="building:levels" v="30"/>
   </way>
 
@@ -6126,20 +5921,6 @@
     <tag k="tunnel" v="yes"/>
     <tag k="electrified" v="contact_line"/>
     <tag k="gauge" v="1676"/>
-  </way>
-
-  <!-- San Francisco Transit / Heritage Railway (California & Montgomery Corridor) -->
-  <node id="500010" lat="37.7952000" lon="-122.4028000"/>
-  <node id="500011" lat="37.7952000" lon="-122.4050000"/>
-  <node id="500012" lat="37.7952000" lon="-122.4000000"/>
-  <way id="510002">
-    <nd ref="500011"/>
-    <nd ref="500010"/>
-    <nd ref="500012"/>
-    <tag k="railway" v="rail"/>
-    <tag k="name" v="San Francisco Heritage Railway - California &amp; Montgomery Corridor"/>
-    <tag k="gauge" v="1435"/>
-    <tag k="layer" v="0"/>
   </way>
 
   <node id="60001" lat="37.7958000" lon="-122.3920000"/>

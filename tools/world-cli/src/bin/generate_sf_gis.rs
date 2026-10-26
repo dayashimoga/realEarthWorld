@@ -1802,7 +1802,10 @@ fn main() -> Result<()> {
         xml.push_str(&format!("    <nd ref=\"{}\"/>\n", n0));
         xml.push_str(&format!("    <tag k=\"building\" v=\"{}\"/>\n", b.b_type));
         xml.push_str(&format!("    <tag k=\"name\" v=\"{}\"/>\n", b.name));
-        xml.push_str(&format!("    <tag k=\"height\" v=\"{:.1}m\"/>\n", b.height));
+        // Surveyed skyscrapers retain explicit surveyed height; secondary urban structures infer from levels
+        if b.id <= 110080 {
+            xml.push_str(&format!("    <tag k=\"height\" v=\"{:.1}m\"/>\n", b.height));
+        }
         xml.push_str(&format!(
             "    <tag k=\"building:levels\" v=\"{}\"/>\n",
             b.levels

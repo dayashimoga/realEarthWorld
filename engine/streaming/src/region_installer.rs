@@ -81,6 +81,7 @@ impl RegionInstaller {
     }
 
     /// Verifies the cryptographic SHA-256 integrity of an installed package.
+    /// Fails closed if chunks.db, manifest.json, checksums, or schema version cannot be verified.
     pub fn verify_installed_package(&self, region_id: &str) -> Result<bool> {
         let dir = self.region_package_dir(region_id);
         let db_path = dir.join("chunks.db");
@@ -88,24 +89,61 @@ impl RegionInstaller {
             return Ok(false);
         }
 
-        let db_bytes = fs::read(&db_path)?;
-        if db_bytes.is_empty() {
+        let db_bytes = match fs::read(&db_path) {
+            Ok(b) if !b.is_empty() => b,
+            _ => return Ok(false),
+        };
+
+        let manifest_path = dir.join("manifest.json");
+        if !manifest_path.exists() {
             return Ok(false);
         }
 
-        let manifest_path = dir.join("manifest.json");
-        if manifest_path.exists() {
-            if let Ok(content) = fs::read_to_string(&manifest_path) {
-                if let Ok(manifest) = PackageManifest::from_json(&content) {
-                    if !manifest.sha256_checksum.is_empty() {
-                        let computed = compute_sha256(&db_bytes);
-                        return Ok(computed == manifest.sha256_checksum);
-                    }
+        let content = match fs::read_to_string(&manifest_path) {
+            Ok(c) => c,
+            Err(_) => return Ok(false),
+        };
+
+        let manifest = match PackageManifest::from_json(&content) {
+            Ok(m) => m,
+            Err(_) => return Ok(false),
+        };
+
+        if manifest.sha256_checksum.is_empty() {
+            return Ok(false);
+        }
+
+        let computed = compute_sha256(&db_bytes);
+        if computed != manifest.sha256_checksum {
+            return Ok(false);
+        }
+
+        // Validate SQLite database schema and manifest
+        if let Ok(db) = realearth_compiler::ChunkDatabase::open(&db_path) {
+            let package_name = format!("{}_package", region_id.replace('-', "_"));
+            if let Ok(Some(meta)) = db.get_package_manifest(&package_name) {
+                if meta.schema_version != realearth_compiler::chunk::CHUNK_VERSION
+                    || meta.version == 0
+                {
+                    return Ok(false);
                 }
+                if meta.bounds.min_lat >= meta.bounds.max_lat
+                    || meta.bounds.min_lon >= meta.bounds.max_lon
+                {
+                    return Ok(false);
+                }
+                if let Ok(count) = db.count_chunks() {
+                    if count == 0 {
+                        return Ok(false);
+                    }
+                } else {
+                    return Ok(false);
+                }
+                return Ok(true);
             }
         }
 
-        Ok(true)
+        Ok(false)
     }
 
     /// Acquires, parses, validates, and compiles an authentic geographic package on demand.
@@ -152,6 +190,28 @@ impl RegionInstaller {
             ));
         }
 
+        if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
+            return Err(RealEarthError::Ingestion(format!(
+                "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
+                city.id, e
+            )));
+        }
+
+        let (raw, dem, meta) = match load_authentic_city(city.id) {
+            Ok((raw, dem, meta)) => (raw, dem, meta),
+            Err(e) => {
+                return Err(RealEarthError::Ingestion(format!(
+                    "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
+                    city.id, e
+                )));
+            }
+        };
+
+        // Compute actual raw source payload bytes (serialized OSM vector + DEM raster grid bytes)
+        let dem_bytes = dem.to_le_bytes();
+        let osm_source_bytes = bincode::serialized_size(&raw).unwrap_or(150_000) as usize;
+        let total_source_bytes = osm_source_bytes + dem_bytes.len();
+
         // --------------------------------------------------------------------
         // 1. ACQUIRING
         // --------------------------------------------------------------------
@@ -164,26 +224,9 @@ impl RegionInstaller {
                 city.name, city.state, city.anchor_landmark_name
             ),
             bytes_downloaded: 0,
-            total_bytes: 500_000,
-            sha256_checksum: None,
+            total_bytes: total_source_bytes,
+            sha256_checksum: Some(meta.source_osm_sha256.clone()),
         });
-
-        if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
-            return Err(RealEarthError::Ingestion(format!(
-                "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
-                city.id, e
-            )));
-        }
-
-        let (raw, dem) = match load_authentic_city(city.id) {
-            Ok((raw, dem, _)) => (raw, dem),
-            Err(e) => {
-                return Err(RealEarthError::Ingestion(format!(
-                    "Region '{}' requires an authentic GIS data package (Surveyed GIS source data not bundled or verified: {})",
-                    city.id, e
-                )));
-            }
-        };
 
         if self.is_cancelled {
             return Err(RealEarthError::Ingestion(
@@ -204,9 +247,9 @@ impl RegionInstaller {
                 raw.buildings.len(),
                 raw.water_bodies.len()
             ),
-            bytes_downloaded: 250_000,
-            total_bytes: 500_000,
-            sha256_checksum: None,
+            bytes_downloaded: total_source_bytes / 2,
+            total_bytes: total_source_bytes,
+            sha256_checksum: Some(meta.source_osm_sha256.clone()),
         });
 
         if raw.roads.is_empty() && raw.buildings.is_empty() {
@@ -231,9 +274,9 @@ impl RegionInstaller {
             progress_pct: 55.0,
             step_description: "Running topological GIS validation and bounding integrity tests..."
                 .to_string(),
-            bytes_downloaded: 380_000,
-            total_bytes: 500_000,
-            sha256_checksum: None,
+            bytes_downloaded: total_source_bytes,
+            total_bytes: total_source_bytes,
+            sha256_checksum: Some(meta.source_osm_sha256.clone()),
         });
 
         let (val, report) = validate_dataset(&raw);
@@ -259,16 +302,16 @@ impl RegionInstaller {
             state: InstallState::Compiling,
             progress_pct: 75.0,
             step_description: format!("Compiling spatial world chunks into '{}'...", package_name),
-            bytes_downloaded: 450_000,
-            total_bytes: 500_000,
-            sha256_checksum: None,
+            bytes_downloaded: total_source_bytes,
+            total_bytes: total_source_bytes,
+            sha256_checksum: Some(meta.source_osm_sha256.clone()),
         });
 
         let options = CompilerOptions {
             chunk_size_meters: 500.0,
             terrain_grid_resolution: 16,
             package_name: package_name.clone(),
-            source_asset_sha256: None,
+            source_asset_sha256: Some(meta.source_osm_sha256.clone()),
             ..Default::default()
         };
 
@@ -286,6 +329,22 @@ impl RegionInstaller {
         let db_path = target_dir.join("chunks.db");
         let db_bytes = fs::read(&db_path)?;
         let sha256_digest = compute_sha256(&db_bytes);
+
+        // Enforce storage quota limits: evict inactive/unpinned packages if headroom is exceeded
+        if self.quota_manager.quota_bytes > 0 {
+            if self.quota_manager.available_headroom_bytes() < db_bytes.len() {
+                self.quota_manager.evict_lru_to_quota();
+            }
+            if self.quota_manager.available_headroom_bytes() < db_bytes.len() {
+                return Err(RealEarthError::Validation(format!(
+                    "Storage quota exceeded: required {} bytes for package '{}', available headroom {} bytes (quota: {} bytes)",
+                    db_bytes.len(),
+                    city.id,
+                    self.quota_manager.available_headroom_bytes(),
+                    self.quota_manager.quota_bytes
+                )));
+            }
+        }
 
         progress_cb(InstallProgress {
             region_id: city.id.to_string(),

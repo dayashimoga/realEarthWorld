@@ -35,6 +35,18 @@ pub struct ChunkBuildingMeta {
     pub confidence: f32,
 }
 
+/// Metadata for an individual road feature residing within a chunk.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChunkRoadMeta {
+    pub way_id: u64,
+    pub name: Option<String>,
+    pub highway_type: String,
+    pub lanes: u32,
+    pub is_bridge: bool,
+    pub is_tunnel: bool,
+    pub layer: i8,
+}
+
 /// A complete, self-contained compiled 3D world chunk.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorldChunk {
@@ -45,6 +57,8 @@ pub struct WorldChunk {
     pub water: ChunkMesh,
     pub vegetation: ChunkMesh,
     pub building_metadata: Vec<ChunkBuildingMeta>,
+    #[serde(default)]
+    pub road_metadata: Vec<ChunkRoadMeta>,
 }
 
 impl WorldChunk {
@@ -70,10 +84,34 @@ impl WorldChunk {
             .building_metadata
             .len()
             .max(if !self.buildings.is_empty() { 1 } else { 0 });
-        let r = if !self.roads.is_empty() { 1 } else { 0 };
+        let r = self
+            .road_metadata
+            .len()
+            .max(if !self.roads.is_empty() { 1 } else { 0 });
         let t = if !self.terrain.is_empty() { 1 } else { 0 };
         let w = if !self.water.is_empty() { 1 } else { 0 };
         let v = if !self.vegetation.is_empty() { 1 } else { 0 };
         b + r + t + w + v
+    }
+
+    /// Number of surveyed buildings with authoritative geometry (Lidar/Planning Dept).
+    pub fn surveyed_building_count(&self) -> usize {
+        self.building_metadata
+            .iter()
+            .filter(|b| b.provenance == HeightProvenance::Surveyed)
+            .count()
+    }
+
+    /// Number of buildings with inferred visual appearance (e.g. from floor count or footprint).
+    pub fn inferred_building_count(&self) -> usize {
+        self.building_metadata
+            .iter()
+            .filter(|b| b.provenance != HeightProvenance::Surveyed)
+            .count()
+    }
+
+    /// Number of distinct mapped road features in this chunk.
+    pub fn road_count(&self) -> usize {
+        self.road_metadata.len()
     }
 }

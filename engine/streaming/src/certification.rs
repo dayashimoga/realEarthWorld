@@ -94,6 +94,74 @@ impl WorldPackageCertifier {
     }
 }
 
+/// Published specification for an authoritative, verified pilot coverage polygon.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PilotCoveragePolygon {
+    pub region_id: String,
+    pub name: String,
+    pub boundary_polygon: Vec<realearth_shared::coordinates::Wgs84Coord>,
+    pub bounding_box: realearth_shared::bounds::GeoBounds,
+    pub surveyed_area_km2: f64,
+    pub min_elevation_m: f32,
+    pub max_elevation_m: f32,
+    pub primary_arterials: Vec<String>,
+    pub key_landmarks: Vec<String>,
+    pub grade_separations: Vec<String>,
+    pub maritime_coastline: bool,
+}
+
+impl PilotCoveragePolygon {
+    pub fn contains(&self, coord: &realearth_shared::coordinates::Wgs84Coord) -> bool {
+        self.bounding_box.contains(coord)
+    }
+}
+
+/// Publishes the authoritative, surveyed San Francisco downtown & surrounding area coverage polygon.
+pub fn san_francisco_pilot_coverage() -> PilotCoveragePolygon {
+    let bbox = realearth_shared::bounds::GeoBounds::new(37.7800, 37.8050, -122.4150, -122.3880);
+    PilotCoveragePolygon {
+        region_id: "san-francisco".to_string(),
+        name: "San Francisco Downtown & Waterfront Pilot Region".to_string(),
+        boundary_polygon: vec![
+            realearth_shared::coordinates::Wgs84Coord::new(37.8050, -122.4150, 0.0), // North-West: Russian Hill / Fisherman's Wharf approach
+            realearth_shared::coordinates::Wgs84Coord::new(37.8050, -122.3880, 0.0), // North-East: Embarcadero / Telegraph Hill Waterfront
+            realearth_shared::coordinates::Wgs84Coord::new(37.7800, -122.3880, 0.0), // South-East: Bay Bridge approach & Rincon Hill
+            realearth_shared::coordinates::Wgs84Coord::new(37.7800, -122.4150, 0.0), // South-West: SOMA & Market Street Corridor
+            realearth_shared::coordinates::Wgs84Coord::new(37.8050, -122.4150, 0.0), // Closure
+        ],
+        bounding_box: bbox,
+        surveyed_area_km2: 6.60,
+        min_elevation_m: 0.0,
+        max_elevation_m: 115.0,
+        primary_arterials: vec![
+            "Market Street".to_string(),
+            "The Embarcadero".to_string(),
+            "Montgomery Street".to_string(),
+            "California Street".to_string(),
+            "Mission Street".to_string(),
+            "Howard Street".to_string(),
+            "Folsom Street".to_string(),
+            "Broadway".to_string(),
+            "Columbus Avenue".to_string(),
+            "Interstate 80 Bay Bridge Approach".to_string(),
+        ],
+        key_landmarks: vec![
+            "Salesforce Tower (326m)".to_string(),
+            "Transamerica Pyramid (260m)".to_string(),
+            "555 California Street (237m)".to_string(),
+            "181 Fremont (245m)".to_string(),
+            "San Francisco Ferry Building (75m)".to_string(),
+            "Coit Tower (64m)".to_string(),
+        ],
+        grade_separations: vec![
+            "Interstate 80 Bay Bridge Approach (Layer +1)".to_string(),
+            "Broadway Tunnel (Russian Hill) (Layer -1)".to_string(),
+            "BART / Muni Metro Market Street Subway (Layer -2)".to_string(),
+        ],
+        maritime_coastline: true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

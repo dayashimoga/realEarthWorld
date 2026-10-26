@@ -210,6 +210,7 @@ fn test_e1_decompression_bomb_dos_mitigation() {
         water: ChunkMesh::default(),
         vegetation: ChunkMesh::default(),
         building_metadata: Vec::new(),
+        road_metadata: Vec::new(),
     };
 
     let packed = pack_chunk_to_bytes(&valid_chunk).expect("Packing valid chunk failed");

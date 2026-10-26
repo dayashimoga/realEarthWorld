@@ -176,6 +176,7 @@ mod tests {
             water: ChunkMesh::default(),
             vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
+            road_metadata: Vec::new(),
         };
 
         // Render with persistent GPU buffer cache

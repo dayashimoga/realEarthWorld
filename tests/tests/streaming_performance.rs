@@ -223,6 +223,7 @@ fn make_mock_chunk(cx: i32, cy: i32, feature_count: usize) -> WorldChunk {
         water: ChunkMesh::default(),
         vegetation: ChunkMesh::default(),
         building_metadata: Vec::new(),
+        road_metadata: Vec::new(),
     }
 }
 

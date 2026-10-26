@@ -14,7 +14,9 @@ pub mod vegetation_mesher;
 pub mod water_mesher;
 
 pub use building_mesher::mesh_building;
-pub use chunk::{ChunkBuildingMeta, ChunkHeader, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION};
+pub use chunk::{
+    ChunkBuildingMeta, ChunkHeader, ChunkRoadMeta, WorldChunk, CHUNK_MAGIC, CHUNK_VERSION,
+};
 pub use compiler_pipeline::{compile_world_package, CompilationStats, CompilerOptions};
 pub use database::{ChunkDatabase, ChunkIndexRecord, ChunkMetaRecord, ManifestMetadataRecord};
 pub use mesh::{ChunkMesh, Vertex};
@@ -84,6 +86,7 @@ mod tests {
             water: ChunkMesh::default(),
             vegetation: ChunkMesh::default(),
             building_metadata: Vec::new(),
+            road_metadata: Vec::new(),
         };
 
         let packed_bytes = pack_chunk_to_bytes(&chunk).expect("Packing failed");
