@@ -62,7 +62,9 @@ fn main() -> Result<()> {
 
     let mut xml = String::with_capacity(256 * 1024);
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    xml.push_str("<osm version=\"0.6\" generator=\"RealEarth-GIS-Portland-Authoritative-StageH3\">\n");
+    xml.push_str(
+        "<osm version=\"0.6\" generator=\"RealEarth-GIS-Portland-Authoritative-StageH3\">\n",
+    );
 
     // =========================================================================
     // 1. SURVEYED BUILDINGS (20 REAL BUILDINGS ACROSS DOWNTOWN PORTLAND)
@@ -312,7 +314,6 @@ fn main() -> Result<()> {
         (60010, 45.5240, -122.6800),
         (60011, 45.5255, -122.6800),
         (60012, 45.5270, -122.6800),
-
         // SW 5th Ave (Southbound Transit Mall: lon = -122.6789)
         (60021, 45.5130, -122.6789),
         (60022, 45.5144, -122.6789),
@@ -326,7 +327,6 @@ fn main() -> Result<()> {
         (60030, 45.5240, -122.6789),
         (60031, 45.5255, -122.6789),
         (60032, 45.5270, -122.6789),
-
         // SW 4th Ave (lon = -122.6778)
         (60041, 45.5130, -122.6778),
         (60042, 45.5144, -122.6778),
@@ -338,7 +338,6 @@ fn main() -> Result<()> {
         (60048, 45.5216, -122.6778),
         (60049, 45.5228, -122.6778),
         (60050, 45.5240, -122.6778),
-
         // SW Broadway (lon = -122.6812)
         (60061, 45.5130, -122.6812),
         (60062, 45.5144, -122.6812),
@@ -350,7 +349,6 @@ fn main() -> Result<()> {
         (60068, 45.5216, -122.6812),
         (60069, 45.5228, -122.6812),
         (60070, 45.5240, -122.6812),
-
         // SW Naito Parkway (Riverfront: lon = -122.6735)
         (60081, 45.5130, -122.6735),
         (60082, 45.5144, -122.6735),
@@ -364,31 +362,26 @@ fn main() -> Result<()> {
         (60090, 45.5240, -122.6735),
         (60091, 45.5255, -122.6735),
         (60092, 45.5270, -122.6735),
-
         // Hawthorne Bridge (lat = 45.5133 crossing Willamette River)
         (60101, 45.5133, -122.6778), // 4th Ave ramp
         (60102, 45.5133, -122.6735), // Naito ramp
         (60103, 45.5133, -122.6700), // Mid-river span
         (60104, 45.5133, -122.6660), // Eastbank Esplanade landing
-
         // Morrison Bridge (lat = 45.5185 crossing Willamette River)
         (60111, 45.5185, -122.6789), // 5th Ave ramp
         (60112, 45.5185, -122.6735), // Naito ramp
         (60113, 45.5185, -122.6700), // Mid-river span
         (60114, 45.5185, -122.6660), // Eastside I-5 connector
-
         // Burnside Bridge (lat = 45.5230 crossing Willamette River)
         (60121, 45.5230, -122.6800), // 6th Ave
         (60122, 45.5230, -122.6735), // Naito
         (60123, 45.5230, -122.6700), // Mid-river span
         (60124, 45.5230, -122.6660), // East Burnside landing
-
         // Steel Bridge (lat = 45.5270 crossing Willamette River)
         (60131, 45.5270, -122.6789), // 5th/6th rail junction
         (60132, 45.5270, -122.6735), // Naito
         (60133, 45.5270, -122.6700), // Double-deck span
         (60134, 45.5270, -122.6660), // Rose Quarter landing
-
         // E-W Cross Streets: Columbia (45.5144)
         (60141, 45.5144, -122.6845),
         (60142, 45.5144, -122.6812),
@@ -396,7 +389,6 @@ fn main() -> Result<()> {
         (60144, 45.5144, -122.6789),
         (60145, 45.5144, -122.6778),
         (60146, 45.5144, -122.6735),
-
         // E-W Cross Streets: Yamhill (45.5216 - MAX Light Rail)
         (60151, 45.5216, -122.6845),
         (60152, 45.5216, -122.6812),
@@ -404,7 +396,6 @@ fn main() -> Result<()> {
         (60154, 45.5216, -122.6789),
         (60155, 45.5216, -122.6778),
         (60156, 45.5216, -122.6735),
-
         // E-W Cross Streets: Morrison (45.5228 - MAX Light Rail)
         (60161, 45.5228, -122.6845),
         (60162, 45.5228, -122.6812),
@@ -425,7 +416,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![60001, 60002, 60003, 60004, 60005, 60006, 60007, 60008, 60009, 60010, 60011, 60012],
+            node_refs: vec![
+                60001, 60002, 60003, 60004, 60005, 60006, 60007, 60008, 60009, 60010, 60011, 60012,
+            ],
         },
         RoadSpec {
             id: 65002,
@@ -437,7 +430,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![60021, 60022, 60023, 60024, 60025, 60026, 60027, 60028, 60029, 60030, 60031, 60032],
+            node_refs: vec![
+                60021, 60022, 60023, 60024, 60025, 60026, 60027, 60028, 60029, 60030, 60031, 60032,
+            ],
         },
         RoadSpec {
             id: 65003,
@@ -449,7 +444,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![60041, 60042, 60043, 60044, 60045, 60046, 60047, 60048, 60049, 60050],
+            node_refs: vec![
+                60041, 60042, 60043, 60044, 60045, 60046, 60047, 60048, 60049, 60050,
+            ],
         },
         RoadSpec {
             id: 65004,
@@ -461,7 +458,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![60061, 60062, 60063, 60064, 60065, 60066, 60067, 60068, 60069, 60070],
+            node_refs: vec![
+                60061, 60062, 60063, 60064, 60065, 60066, 60067, 60068, 60069, 60070,
+            ],
         },
         RoadSpec {
             id: 65005,
@@ -473,7 +472,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![60081, 60082, 60083, 60084, 60085, 60086, 60087, 60088, 60089, 60090, 60091, 60092],
+            node_refs: vec![
+                60081, 60082, 60083, 60084, 60085, 60086, 60087, 60088, 60089, 60090, 60091, 60092,
+            ],
         },
         RoadSpec {
             id: 65006,
@@ -578,19 +579,27 @@ fn main() -> Result<()> {
     for b in &buildings {
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 1, b.lat_min, b.lon_min
+            b.id * 10 + 1,
+            b.lat_min,
+            b.lon_min
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 2, b.lat_max, b.lon_min
+            b.id * 10 + 2,
+            b.lat_max,
+            b.lon_min
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 3, b.lat_max, b.lon_max
+            b.id * 10 + 3,
+            b.lat_max,
+            b.lon_max
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 4, b.lat_min, b.lon_max
+            b.id * 10 + 4,
+            b.lat_min,
+            b.lon_max
         ));
     }
 
@@ -627,10 +636,16 @@ fn main() -> Result<()> {
         for nr in &road.node_refs {
             xml.push_str(&format!("    <nd ref=\"{}\"/>\n", nr));
         }
-        xml.push_str(&format!("    <tag k=\"highway\" v=\"{}\"/>\n", road.hw_type));
+        xml.push_str(&format!(
+            "    <tag k=\"highway\" v=\"{}\"/>\n",
+            road.hw_type
+        ));
         xml.push_str(&format!("    <tag k=\"name\" v=\"{}\"/>\n", road.name));
         xml.push_str(&format!("    <tag k=\"lanes\" v=\"{}\"/>\n", road.lanes));
-        xml.push_str(&format!("    <tag k=\"maxspeed\" v=\"{}\"/>\n", road.maxspeed));
+        xml.push_str(&format!(
+            "    <tag k=\"maxspeed\" v=\"{}\"/>\n",
+            road.maxspeed
+        ));
         if road.oneway {
             xml.push_str("    <tag k=\"oneway\" v=\"yes\"/>\n");
         }
@@ -755,7 +770,10 @@ fn main() -> Result<()> {
         source_asset_sha256: Some(sha256_hex),
         ..Default::default()
     };
-    println!("📦 Compiling authoritative Portland package into {:?}...", pkg_dir);
+    println!(
+        "📦 Compiling authoritative Portland package into {:?}...",
+        pkg_dir
+    );
     let stats = compile_world_package(&validated, &dem, &pkg_dir, &options)?;
     println!(
         "🎉 Successfully compiled package: {} chunks, {} vertices, {} triangles, {:.2} MB uncompressed",
@@ -913,7 +931,11 @@ fn create_secondary_portland_buildings() -> Vec<BuildingSpec> {
             specs.push(BuildingSpec {
                 id,
                 name,
-                b_type: if (r + c) % 2 == 0 { "commercial" } else { "residential" },
+                b_type: if (r + c) % 2 == 0 {
+                    "commercial"
+                } else {
+                    "residential"
+                },
                 height,
                 levels,
                 lat_min: lat - 0.0003,

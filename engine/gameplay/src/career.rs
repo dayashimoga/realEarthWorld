@@ -79,6 +79,39 @@ impl CareerType {
             Self::AviationPilot => 2.5,
         }
     }
+
+    /// Checks whether a vehicle category is physically and commercially compatible with this career.
+    pub fn is_vehicle_compatible(&self, category: crate::garage::VehicleCategory) -> bool {
+        match self {
+            Self::FreeRoam => true,
+            Self::TaxiPassenger => matches!(
+                category,
+                crate::garage::VehicleCategory::EconomySedan
+                    | crate::garage::VehicleCategory::LuxuryCab
+                    | crate::garage::VehicleCategory::Suv
+            ),
+            Self::TransitBus => matches!(category, crate::garage::VehicleCategory::TransitBus),
+            Self::PackageDelivery => matches!(
+                category,
+                crate::garage::VehicleCategory::CargoVan
+                    | crate::garage::VehicleCategory::Motorcycle
+                    | crate::garage::VehicleCategory::EconomySedan
+                    | crate::garage::VehicleCategory::SportsCoupe
+            ),
+            Self::HeavyFreight => matches!(category, crate::garage::VehicleCategory::HeavyTruck),
+            Self::RailEngineer => matches!(
+                category,
+                crate::garage::VehicleCategory::Locomotive
+                    | crate::garage::VehicleCategory::PassengerCoach
+            ),
+            Self::FerryCaptain => matches!(category, crate::garage::VehicleCategory::FerryVessel),
+            Self::AviationPilot => matches!(
+                category,
+                crate::garage::VehicleCategory::Airliner
+                    | crate::garage::VehicleCategory::LightAircraft
+            ),
+        }
+    }
 }
 
 /// Career progression and reputation tier ranking.

@@ -8,17 +8,13 @@
 //! - Gate 5: Cross-Platform Performance, Packaging & Regression Safety (roundtrip parsing, GPU budgets, physics regression invariance).
 
 use glam::{Quat, Vec2, Vec3};
-use realearth_shared::coordinates::Wgs84Coord;
-use realearth_navigation::rail_graph::{
-    RailNetworkGraph,
-};
+use realearth_navigation::rail_graph::RailNetworkGraph;
 use realearth_rendering::gltf_asset::{GltfParser, VehicleLodLevel, VehicleSubmeshType};
-use realearth_rendering::vehicle_mesh::{
-    VehicleVisualType,
-};
+use realearth_rendering::vehicle_mesh::VehicleVisualType;
 use realearth_rendering::vehicle_models::{
     export_all_certified_models_to_glb_directory, get_certified_vehicle_model,
 };
+use realearth_shared::coordinates::Wgs84Coord;
 use realearth_vehicles::building_collision::{BuildingCollisionWorld, BuildingFootprintCollider};
 use realearth_vehicles::dynamics::VehicleInputs;
 use realearth_vehicles::ground::FlatGround;
@@ -137,7 +133,12 @@ fn test_gate1_asset_pipeline_and_gltf_ingestion_audit() {
 
         assert_eq!(magic, 0x46546C67, "{}: GLB magic must be 'glTF'", glb_file);
         assert_eq!(version, 2, "{}: glTF version must be 2", glb_file);
-        assert_eq!(length as usize, data.len(), "{}: GLB length mismatch", glb_file);
+        assert_eq!(
+            length as usize,
+            data.len(),
+            "{}: GLB length mismatch",
+            glb_file
+        );
 
         // Parse roundtrip using GltfParser
         let asset_id = glb_file.trim_end_matches(".glb");
@@ -199,11 +200,13 @@ fn test_gate2_full_transport_detail_verification() {
     println!("🔍 [STAGE H4 - GATE 2] Verifying Authentic Transport Detail Across All 12 Models...");
 
     // 1. Apex GT Sports Coupe & Executive Sedan
-    let _coupe = get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
+    let _coupe =
+        get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
     let sedan = get_certified_vehicle_model(VehicleVisualType::Sedan, VehicleLodLevel::Lod0High);
 
     // Front Grille & Aerodynamic Side Mirrors
-    let sedan_submeshes: Vec<VehicleSubmeshType> = sedan.submeshes.iter().map(|s| s.submesh_type).collect();
+    let sedan_submeshes: Vec<VehicleSubmeshType> =
+        sedan.submeshes.iter().map(|s| s.submesh_type).collect();
     assert!(sedan_submeshes.contains(&VehicleSubmeshType::ChassisBody));
     assert!(sedan_submeshes.contains(&VehicleSubmeshType::GlassGreenhouse));
     assert!(sedan_submeshes.contains(&VehicleSubmeshType::InteriorCockpit));
@@ -213,12 +216,20 @@ fn test_gate2_full_transport_detail_verification() {
     assert!(sedan_submeshes.contains(&VehicleSubmeshType::TurnSignals));
 
     // Coupe also features dedicated Exhaust submesh
-    let coupe_submeshes: Vec<VehicleSubmeshType> = _coupe.submeshes.iter().map(|s| s.submesh_type).collect();
+    let coupe_submeshes: Vec<VehicleSubmeshType> =
+        _coupe.submeshes.iter().map(|s| s.submesh_type).collect();
     assert!(coupe_submeshes.contains(&VehicleSubmeshType::Exhaust));
 
     // Verify non-clipping wheel arches (liners) on sedan:
-    let sedan_chassis = sedan.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
-    let front_arch_crest = sedan_chassis.mesh.vertices.iter()
+    let sedan_chassis = sedan
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
+    let front_arch_crest = sedan_chassis
+        .mesh
+        .vertices
+        .iter()
         .filter(|v| v.position[2] >= 1.10 && v.position[2] <= 1.50)
         .map(|v| v.position[1])
         .fold(0.0f32, f32::max);
@@ -229,15 +240,33 @@ fn test_gate2_full_transport_detail_verification() {
     );
 
     // Verify mirrors exist on sedan chassis
-    let has_left_mirror = sedan_chassis.mesh.vertices.iter().any(|v| v.position[0] < -0.95 && v.position[1] > 0.85);
-    let has_right_mirror = sedan_chassis.mesh.vertices.iter().any(|v| v.position[0] > 0.95 && v.position[1] > 0.85);
-    assert!(has_left_mirror && has_right_mirror, "Sedan must have sculpted aerodynamic side mirrors");
+    let has_left_mirror = sedan_chassis
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[0] < -0.95 && v.position[1] > 0.85);
+    let has_right_mirror = sedan_chassis
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[0] > 0.95 && v.position[1] > 0.85);
+    assert!(
+        has_left_mirror && has_right_mirror,
+        "Sedan must have sculpted aerodynamic side mirrors"
+    );
 
     // 2. Overland Explorer SUV
     let suv = get_certified_vehicle_model(VehicleVisualType::Suv, VehicleLodLevel::Lod0High);
-    let suv_chassis = suv.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let suv_chassis = suv
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // High-clearance arch crest >= 0.80m for 0.38m wheel
-    let suv_arch_crest = suv_chassis.mesh.vertices.iter()
+    let suv_arch_crest = suv_chassis
+        .mesh
+        .vertices
+        .iter()
         .filter(|v| v.position[2] >= 1.20 && v.position[2] <= 1.65)
         .map(|v| v.position[1])
         .fold(0.0f32, f32::max);
@@ -247,44 +276,116 @@ fn test_gate2_full_transport_detail_verification() {
         suv_arch_crest
     );
     // Tubular roof rack crossbars >= 1.70m
-    let has_roof_rack = suv_chassis.mesh.vertices.iter().any(|v| v.position[1] >= 1.75);
+    let has_roof_rack = suv_chassis
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[1] >= 1.75);
     assert!(has_roof_rack, "SUV must have elevated tubular roof rack");
 
     // 3. Metro Yellow Cab
     let taxi = get_certified_vehicle_model(VehicleVisualType::Taxi, VehicleLodLevel::Lod0High);
-    let taxi_chassis = taxi.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let taxi_chassis = taxi
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // Rooftop taxi lantern above 1.48m
-    let has_taxi_lantern = taxi_chassis.mesh.vertices.iter().any(|v| v.position[1] >= 1.50);
-    assert!(has_taxi_lantern, "Taxi must have illuminated rooftop lantern");
+    let has_taxi_lantern = taxi_chassis
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[1] >= 1.50);
+    assert!(
+        has_taxi_lantern,
+        "Taxi must have illuminated rooftop lantern"
+    );
 
     // 4. Motorcycle with Fully Modeled Rider in Tuck
-    let bike = get_certified_vehicle_model(VehicleVisualType::Motorcycle, VehicleLodLevel::Lod0High);
-    let bike_body = bike.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::MotorcycleLeanBody).unwrap();
+    let bike =
+        get_certified_vehicle_model(VehicleVisualType::Motorcycle, VehicleLodLevel::Lod0High);
+    let bike_body = bike
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::MotorcycleLeanBody)
+        .unwrap();
     // Full-face helmet above 1.10m
-    let has_helmet = bike_body.mesh.vertices.iter().any(|v| v.position[1] >= 1.15);
-    assert!(has_helmet, "Motorcycle must feature modeled rider in racing tuck with helmet >= 1.15m");
+    let has_helmet = bike_body
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[1] >= 1.15);
+    assert!(
+        has_helmet,
+        "Motorcycle must feature modeled rider in racing tuck with helmet >= 1.15m"
+    );
     // Speed hump on rider's back
-    let has_speed_hump = bike_body.mesh.vertices.iter().any(|v| v.position[1] >= 1.00 && v.position[2] >= -0.15 && v.position[2] <= 0.10);
-    assert!(has_speed_hump, "Rider must have aerodynamic speed hump on back");
+    let has_speed_hump = bike_body
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[1] >= 1.00 && v.position[2] >= -0.15 && v.position[2] <= 0.10);
+    assert!(
+        has_speed_hump,
+        "Rider must have aerodynamic speed hump on back"
+    );
 
     // 5. Transcontinental Semi & Corrugated Trailer
-    let semi = get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
-    let semi_chassis = semi.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let semi =
+        get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
+    let semi_chassis = semi
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // West-coast chrome side mirrors extending beyond +-1.35m width
-    let has_west_coast_mirrors = semi_chassis.mesh.vertices.iter().any(|v| v.position[0].abs() >= 1.35);
-    assert!(has_west_coast_mirrors, "Semi truck cab must have west-coast chrome side mirrors");
+    let has_west_coast_mirrors = semi_chassis
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[0].abs() >= 1.35);
+    assert!(
+        has_west_coast_mirrors,
+        "Semi truck cab must have west-coast chrome side mirrors"
+    );
     // Articulated 53ft trailer
-    let has_trailer = semi.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::TruckArticulatedTrailer);
-    assert!(has_trailer, "Semi must feature 53ft articulated trailer submesh");
+    let has_trailer = semi
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::TruckArticulatedTrailer);
+    assert!(
+        has_trailer,
+        "Semi must feature 53ft articulated trailer submesh"
+    );
 
     // 6. Cityline Transit Bus
     let bus = get_certified_vehicle_model(VehicleVisualType::TransitBus, VehicleLodLevel::Lod0High);
-    assert!(bus.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::BusDoorFront));
-    assert!(bus.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::InteriorPassengerSeats));
-    let bus_chassis = bus.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    assert!(bus
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::BusDoorFront));
+    assert!(bus
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::InteriorPassengerSeats));
+    let bus_chassis = bus
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // 40ft bus length check: length >= 11.5m
-    let min_z = bus_chassis.mesh.vertices.iter().map(|v| v.position[2]).fold(0.0f32, f32::min);
-    let max_z = bus_chassis.mesh.vertices.iter().map(|v| v.position[2]).fold(0.0f32, f32::max);
+    let min_z = bus_chassis
+        .mesh
+        .vertices
+        .iter()
+        .map(|v| v.position[2])
+        .fold(0.0f32, f32::min);
+    let max_z = bus_chassis
+        .mesh
+        .vertices
+        .iter()
+        .map(|v| v.position[2])
+        .fold(0.0f32, f32::max);
     assert!(
         (max_z - min_z) >= 11.5,
         "Transit bus must be full 40ft length (>= 11.5m, found {:.2}m)",
@@ -292,50 +393,122 @@ fn test_gate2_full_transport_detail_verification() {
     );
 
     // 7. Pacific Locomotive & Passenger Coach
-    let loco = get_certified_vehicle_model(VehicleVisualType::TrainLocomotive, VehicleLodLevel::Lod0High);
-    assert!(loco.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::TrainBogieFront));
-    assert!(loco.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::TrainCoupler));
-    let coach = get_certified_vehicle_model(VehicleVisualType::TrainWagon, VehicleLodLevel::Lod0High);
-    assert!(coach.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::TrainBogieFront));
+    let loco = get_certified_vehicle_model(
+        VehicleVisualType::TrainLocomotive,
+        VehicleLodLevel::Lod0High,
+    );
+    assert!(loco
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::TrainBogieFront));
+    assert!(loco
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::TrainCoupler));
+    let coach =
+        get_certified_vehicle_model(VehicleVisualType::TrainWagon, VehicleLodLevel::Lod0High);
+    assert!(coach
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::TrainBogieFront));
 
     // 8. Golden Gate Ferry (Wave-Piercing Catamaran)
-    let ferry = get_certified_vehicle_model(VehicleVisualType::MarineVessel, VehicleLodLevel::Lod0High);
-    assert!(ferry.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::MarineWaterjets));
-    assert!(ferry.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::MarineRadarMast));
-    let ferry_hull = ferry.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let ferry =
+        get_certified_vehicle_model(VehicleVisualType::MarineVessel, VehicleLodLevel::Lod0High);
+    assert!(ferry
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::MarineWaterjets));
+    assert!(ferry
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::MarineRadarMast));
+    let ferry_hull = ferry
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // Twin sponsons: verify vertices exist at port (x < -3.5) and starboard (x > 3.5) with center wet-deck arch
-    let has_port_sponson = ferry_hull.mesh.vertices.iter().any(|v| v.position[0] <= -3.8);
-    let has_stbd_sponson = ferry_hull.mesh.vertices.iter().any(|v| v.position[0] >= 3.8);
-    assert!(has_port_sponson && has_stbd_sponson, "Ferry must feature twin catamaran sponsons separated by wet-deck");
+    let has_port_sponson = ferry_hull
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[0] <= -3.8);
+    let has_stbd_sponson = ferry_hull
+        .mesh
+        .vertices
+        .iter()
+        .any(|v| v.position[0] >= 3.8);
+    assert!(
+        has_port_sponson && has_stbd_sponson,
+        "Ferry must feature twin catamaran sponsons separated by wet-deck"
+    );
 
     // 9. Skycourier B737 Airliner (Supercritical Swept Wing with Winglets)
-    let b737 = get_certified_vehicle_model(VehicleVisualType::CommercialAirliner, VehicleLodLevel::Lod0High);
-    assert!(b737.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::AircraftTurbofanFan));
-    let b737_body = b737.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let b737 = get_certified_vehicle_model(
+        VehicleVisualType::CommercialAirliner,
+        VehicleLodLevel::Lod0High,
+    );
+    assert!(b737
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::AircraftTurbofanFan));
+    let b737_body = b737
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // Wingspan >= 33m (half-span x >= 16.5m)
-    let max_wing_span = b737_body.mesh.vertices.iter().map(|v| v.position[0].abs()).fold(0.0f32, f32::max);
+    let max_wing_span = b737_body
+        .mesh
+        .vertices
+        .iter()
+        .map(|v| v.position[0].abs())
+        .fold(0.0f32, f32::max);
     assert!(
         max_wing_span >= 16.5,
         "Airliner wingspan must be >= 33m (half-span found {:.2}m)",
         max_wing_span
     );
     // Vertical winglets rising at wingtips
-    let winglet_rise = b737_body.mesh.vertices.iter()
+    let winglet_rise = b737_body
+        .mesh
+        .vertices
+        .iter()
         .filter(|v| v.position[0].abs() >= 16.5)
         .map(|v| v.position[1])
         .fold(0.0f32, f32::max);
-    assert!(winglet_rise >= 2.0, "Airliner wingtips must feature vertical blended winglets");
+    assert!(
+        winglet_rise >= 2.0,
+        "Airliner wingtips must feature vertical blended winglets"
+    );
 
     // 10. Skyhawk C172 General Aviation
-    let c172 = get_certified_vehicle_model(VehicleVisualType::GeneralAviation, VehicleLodLevel::Lod0High);
-    assert!(c172.submeshes.iter().any(|s| s.submesh_type == VehicleSubmeshType::AircraftPropeller));
-    let c172_body = c172.submeshes.iter().find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody).unwrap();
+    let c172 = get_certified_vehicle_model(
+        VehicleVisualType::GeneralAviation,
+        VehicleLodLevel::Lod0High,
+    );
+    assert!(c172
+        .submeshes
+        .iter()
+        .any(|s| s.submesh_type == VehicleSubmeshType::AircraftPropeller));
+    let c172_body = c172
+        .submeshes
+        .iter()
+        .find(|s| s.submesh_type == VehicleSubmeshType::ChassisBody)
+        .unwrap();
     // High wing elevation >= 1.60m
-    let high_wing_y = c172_body.mesh.vertices.iter()
+    let high_wing_y = c172_body
+        .mesh
+        .vertices
+        .iter()
         .filter(|v| v.position[0].abs() >= 2.0)
         .map(|v| v.position[1])
         .fold(0.0f32, f32::max);
-    assert!(high_wing_y >= 1.60, "C172 must feature authentic high-wing geometry (y >= 1.60m)");
+    assert!(
+        high_wing_y >= 1.60,
+        "C172 must feature authentic high-wing geometry (y >= 1.60m)"
+    );
 
     println!("✅ Gate 2: Full multimodal transport detail, authentic curvatures, and submeshes certified!");
 }
@@ -350,7 +523,10 @@ fn test_gate3_authentic_transport_spawning_and_infrastructure_validation() {
 
     // 1. Rail Spawning & Motion Constraints
     let caltrain_corridor = RailNetworkGraph::create_san_francisco_caltrain_corridor();
-    assert!(!caltrain_corridor.is_empty(), "Caltrain corridor must contain surveyed rail segments");
+    assert!(
+        !caltrain_corridor.is_empty(),
+        "Caltrain corridor must contain surveyed rail segments"
+    );
 
     let available_routes = caltrain_corridor.build_available_routes();
     assert!(
@@ -374,8 +550,16 @@ fn test_gate3_authentic_transport_spawning_and_infrastructure_validation() {
 
     // Verify train consist motion is constrained to track centerline:
     let mut train = TrainConsist::new_caltrain_diesel();
-    train.bind_route(&caltrain_corridor, mainline_route.segment_ids.clone(), anchor);
-    assert_eq!(train.cars.len(), 5, "Caltrain consist must feature 1 locomotive + 4 bi-level coaches");
+    train.bind_route(
+        &caltrain_corridor,
+        mainline_route.segment_ids.clone(),
+        anchor,
+    );
+    assert_eq!(
+        train.cars.len(),
+        5,
+        "Caltrain consist must feature 1 locomotive + 4 bi-level coaches"
+    );
 
     // Advance train along track with throttle
     train.throttle = 1.0;
@@ -396,7 +580,9 @@ fn test_gate3_authentic_transport_spawning_and_infrastructure_validation() {
         Ok(())
     };
     assert!(rail_rejection.is_err());
-    assert!(rail_rejection.unwrap_err().contains("RAIL DATA REQUIRED / NO VALID SPAWN"));
+    assert!(rail_rejection
+        .unwrap_err()
+        .contains("RAIL DATA REQUIRED / NO VALID SPAWN"));
 
     // 2. Marine Spawning & Water Validation
     // Valid navigable water body check:
@@ -412,7 +598,9 @@ fn test_gate3_authentic_transport_spawning_and_infrastructure_validation() {
         Ok(())
     };
     assert!(marine_rejection.is_err());
-    assert!(marine_rejection.unwrap_err().contains("NAVIGABLE WATER REQUIRED / NO VALID SPAWN"));
+    assert!(marine_rejection
+        .unwrap_err()
+        .contains("NAVIGABLE WATER REQUIRED / NO VALID SPAWN"));
 
     // 3. Aviation Spawning (Runway vs Open-Sky Airborne Corridor)
     let ground_y = 12.0;
@@ -432,15 +620,23 @@ fn test_gate3_authentic_transport_spawning_and_infrastructure_validation() {
     // Point inside building footprint should collide and get displaced outward
     let mut test_pos = Vec3::new(10.0, 5.0, 10.0);
     let mut test_vel = Vec3::new(0.0, 0.0, 1.0);
-    let is_colliding = collision_world.resolve_collision(&mut test_pos, &mut test_vel, Vec3::new(1.0, 1.0, 2.0));
-    assert!(is_colliding, "Point inside building footprint must be detected as collision and displaced outward");
+    let is_colliding =
+        collision_world.resolve_collision(&mut test_pos, &mut test_vel, Vec3::new(1.0, 1.0, 2.0));
+    assert!(
+        is_colliding,
+        "Point inside building footprint must be detected as collision and displaced outward"
+    );
     assert_ne!(test_pos, Vec3::new(10.0, 5.0, 10.0));
 
     // Safe road point outside footprint should not collide
     let mut safe_pos = Vec3::new(50.0, 5.0, 50.0);
     let mut safe_vel = Vec3::new(0.0, 0.0, 1.0);
-    let safe_colliding = collision_world.resolve_collision(&mut safe_pos, &mut safe_vel, Vec3::new(1.0, 1.0, 2.0));
-    assert!(!safe_colliding, "Safe road point outside building footprint must not collide");
+    let safe_colliding =
+        collision_world.resolve_collision(&mut safe_pos, &mut safe_vel, Vec3::new(1.0, 1.0, 2.0));
+    assert!(
+        !safe_colliding,
+        "Safe road point outside building footprint must not collide"
+    );
 
     println!("✅ Gate 3: Authentic transport spawning, track constraints, and invalid infrastructure rejection certified!");
 }
@@ -457,74 +653,301 @@ fn test_gate4_dynamic_simulation_animation_pipeline() {
     let orient = Quat::IDENTITY;
 
     // 1. Wheel Steer & Roll
-    let coupe = get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
+    let coupe =
+        get_certified_vehicle_model(VehicleVisualType::SportsCoupe, VehicleLodLevel::Lod0High);
     let car_neutral = coupe.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let car_steered = coupe.compose_multimodal_world_mesh(
-        pos, orient, None, 0.45, 1.57, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.45,
+        1.57,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
-    assert_ne!(car_neutral.vertices, car_steered.vertices, "Car wheels must animate steer and roll");
+    assert_ne!(
+        car_neutral.vertices, car_steered.vertices,
+        "Car wheels must animate steer and roll"
+    );
 
     // 2. Motorcycle Dynamic Cornering Lean Banking
-    let bike = get_certified_vehicle_model(VehicleVisualType::Motorcycle, VehicleLodLevel::Lod0High);
+    let bike =
+        get_certified_vehicle_model(VehicleVisualType::Motorcycle, VehicleLodLevel::Lod0High);
     let bike_upright = bike.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let bike_leaning = bike.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.52, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.52,
+        0.0,
     );
-    assert_ne!(bike_upright.vertices, bike_leaning.vertices, "Motorcycle body and rider must bank into corners");
+    assert_ne!(
+        bike_upright.vertices, bike_leaning.vertices,
+        "Motorcycle body and rider must bank into corners"
+    );
 
     // 3. Transit Bus Bi-Fold Passenger Doors
     let bus = get_certified_vehicle_model(VehicleVisualType::TransitBus, VehicleLodLevel::Lod0High);
     let bus_doors_closed = bus.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let bus_doors_open = bus.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 1.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        1.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
-    assert_ne!(bus_doors_closed.vertices, bus_doors_open.vertices, "Bus bi-fold doors must articulate with door_open_ratio");
+    assert_ne!(
+        bus_doors_closed.vertices, bus_doors_open.vertices,
+        "Bus bi-fold doors must articulate with door_open_ratio"
+    );
 
     // 4. Semi-Truck Fifth-Wheel Trailer Yaw Articulation
-    let truck = get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
+    let truck =
+        get_certified_vehicle_model(VehicleVisualType::HeavyTruck, VehicleLodLevel::Lod0High);
     let truck_straight = truck.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let truck_articulated = truck.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.40,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.40,
     );
-    assert_ne!(truck_straight.vertices, truck_articulated.vertices, "Truck trailer must yaw articulate around kingpin");
+    assert_ne!(
+        truck_straight.vertices, truck_articulated.vertices,
+        "Truck trailer must yaw articulate around kingpin"
+    );
 
     // 5. Train Bogie Track Yaw Articulation
-    let train = get_certified_vehicle_model(VehicleVisualType::TrainLocomotive, VehicleLodLevel::Lod0High);
+    let train = get_certified_vehicle_model(
+        VehicleVisualType::TrainLocomotive,
+        VehicleLodLevel::Lod0High,
+    );
     let train_straight = train.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let train_yawed_bogies = train.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.08, -0.08], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.08, -0.08],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
-    assert_ne!(train_straight.vertices, train_yawed_bogies.vertices, "Train bogies must articulate with track curvature");
+    assert_ne!(
+        train_straight.vertices, train_yawed_bogies.vertices,
+        "Train bogies must articulate with track curvature"
+    );
 
     // 6. Marine Rotating Radar Mast
-    let ferry = get_certified_vehicle_model(VehicleVisualType::MarineVessel, VehicleLodLevel::Lod0High);
+    let ferry =
+        get_certified_vehicle_model(VehicleVisualType::MarineVessel, VehicleLodLevel::Lod0High);
     let ferry_static = ferry.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let ferry_radar_rotated = ferry.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 1.57, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        1.57,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
-    assert_ne!(ferry_static.vertices, ferry_radar_rotated.vertices, "Ferry radar mast must rotate continuously");
+    assert_ne!(
+        ferry_static.vertices, ferry_radar_rotated.vertices,
+        "Ferry radar mast must rotate continuously"
+    );
 
     // 7. Aircraft CFM Turbofan & Propeller Rotation
-    let b737 = get_certified_vehicle_model(VehicleVisualType::CommercialAirliner, VehicleLodLevel::Lod0High);
+    let b737 = get_certified_vehicle_model(
+        VehicleVisualType::CommercialAirliner,
+        VehicleLodLevel::Lod0High,
+    );
     let b737_static = b737.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 0.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        0.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
     let b737_spinning = b737.compose_multimodal_world_mesh(
-        pos, orient, None, 0.0, 0.0, [0.0; 4], false, false, false, 0.0, [0.0, 0.0], 2.0, [0.0; 3], 0.0, 0.0,
+        pos,
+        orient,
+        None,
+        0.0,
+        0.0,
+        [0.0; 4],
+        false,
+        false,
+        false,
+        0.0,
+        [0.0, 0.0],
+        2.0,
+        [0.0; 3],
+        0.0,
+        0.0,
     );
-    assert_ne!(b737_static.vertices, b737_spinning.vertices, "Airliner CFM turbofans must spin");
+    assert_ne!(
+        b737_static.vertices, b737_spinning.vertices,
+        "Airliner CFM turbofans must spin"
+    );
 
     // 8. Multi-LOD Monotonic Decimation
     for vt in [VehicleVisualType::SportsCoupe, VehicleVisualType::Sedan] {
@@ -548,7 +971,9 @@ fn test_gate4_dynamic_simulation_animation_pipeline() {
         );
     }
 
-    println!("✅ Gate 4: Dynamic animation pipeline and multi-LOD decimation monotonicity certified!");
+    println!(
+        "✅ Gate 4: Dynamic animation pipeline and multi-LOD decimation monotonicity certified!"
+    );
 }
 
 // ============================================================================
@@ -571,7 +996,8 @@ fn test_gate5_cross_platform_performance_packaging_and_regression_safety() {
         v60.step(&inputs, &ground, 1.0 / 60.0);
     }
 
-    let mut v120 = DynamicVehicle::new(VehicleConfig::sports_coupe(), Vec3::new(0.0, 1.0, 0.0), 0.0);
+    let mut v120 =
+        DynamicVehicle::new(VehicleConfig::sports_coupe(), Vec3::new(0.0, 1.0, 0.0), 0.0);
     for _ in 0..240 {
         v120.step(&inputs, &ground, 1.0 / 120.0);
     }
@@ -584,7 +1010,8 @@ fn test_gate5_cross_platform_performance_packaging_and_regression_safety() {
     );
 
     // 2. Braking Distance Certification (100 -> 0 kph within 45m)
-    let mut v_brake = DynamicVehicle::new(VehicleConfig::sports_coupe(), Vec3::new(0.0, 0.5, 0.0), 0.0);
+    let mut v_brake =
+        DynamicVehicle::new(VehicleConfig::sports_coupe(), Vec3::new(0.0, 0.5, 0.0), 0.0);
     v_brake.linear_velocity = Vec3::new(0.0, 0.0, 27.78); // 100 kph
     let brake_inputs = VehicleInputs {
         brake: 1.0,
@@ -608,25 +1035,38 @@ fn test_gate5_cross_platform_performance_packaging_and_regression_safety() {
     let mut bike = MotorcycleModel::new(Vec3::ZERO, 0.0);
     let mut bus = TransitBusModel::new(Vec3::new(20.0, 0.0, 0.0), 0.0);
     let mut truck = HeavyTruckModel::new(Vec3::new(-20.0, 0.0, 0.0), 0.0);
-    let mut ferry = MarineVessel::new_ferry("Golden Gate Express", Vec3::new(100.0, 0.0, 100.0), 0.0);
+    let mut ferry =
+        MarineVessel::new_ferry("Golden Gate Express", Vec3::new(100.0, 0.0, 100.0), 0.0);
     let mut plane = AircraftFlight::new_airliner("SkyCourier 737", Vec3::new(0.0, 350.0, 0.0), 0.0);
 
     for _ in 0..60 {
         bike.step(&inputs, &ground, 1.0 / 60.0);
         bus.step(&inputs, &ground, 1.0 / 60.0);
         truck.step(&inputs, &ground, 1.0 / 60.0);
-        ferry.step(&MarineInputs { throttle: 0.8, rudder: 0.1, bow_thruster: 0.0 }, 0.0, 1.0 / 60.0);
-        plane.step(&FlightInputs {
-            throttle: 0.85,
-            elevator: 0.0,
-            aileron: 0.0,
-            rudder: 0.0,
-            flaps: 0.0,
-            gear_down: false,
-            spoilers: 0.0,
-            reverse_thrust: false,
-            wheel_brakes: 0.0,
-        }, 0.0, 1.0 / 60.0);
+        ferry.step(
+            &MarineInputs {
+                throttle: 0.8,
+                rudder: 0.1,
+                bow_thruster: 0.0,
+            },
+            0.0,
+            1.0 / 60.0,
+        );
+        plane.step(
+            &FlightInputs {
+                throttle: 0.85,
+                elevator: 0.0,
+                aileron: 0.0,
+                rudder: 0.0,
+                flaps: 0.0,
+                gear_down: false,
+                spoilers: 0.0,
+                reverse_thrust: false,
+                wheel_brakes: 0.0,
+            },
+            0.0,
+            1.0 / 60.0,
+        );
     }
 
     assert!(bike.position.is_finite());

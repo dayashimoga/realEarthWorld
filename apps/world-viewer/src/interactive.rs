@@ -307,7 +307,8 @@ impl GroundQuery for DemGroundQuery {
                     }
                     let dist = origin.y - road_y;
                     if dist >= -1.5 && dist <= max_dist {
-                        let seg_tangent = glam::Vec3::new(v.x, seg.p2.y - seg.p1.y, v.y).normalize();
+                        let seg_tangent =
+                            glam::Vec3::new(v.x, seg.p2.y - seg.p1.y, v.y).normalize();
                         let seg_perp = glam::Vec3::new(-v.y, 0.0, v.x).normalize();
                         let mut seg_normal = seg_perp.cross(seg_tangent).normalize();
                         if seg_normal.y < 0.0 {
@@ -710,7 +711,8 @@ impl InteractiveViewerApp {
         camera_ctrl.pitch = initial_landmark.pitch;
 
         let camera = FloatingOriginCamera::new(initial_landmark.coord, 16.0 / 9.0);
-        let vehicle_yaw = realearth_shared::coordinates::camera_yaw_to_vehicle_yaw(initial_landmark.yaw);
+        let vehicle_yaw =
+            realearth_shared::coordinates::camera_yaw_to_vehicle_yaw(initial_landmark.yaw);
         let vehicle = DynamicVehicle::new(
             VehicleConfig::default(),
             glam::Vec3::new(0.0, 10.0, 0.0),
@@ -722,12 +724,9 @@ impl InteractiveViewerApp {
         let mut player_profile = PlayerProfile::new("driver-01", "Planetary Transporter");
         player_profile.add_reputation(CareerType::HeavyFreight, 500);
 
-        let motorcycle =
-            MotorcycleModel::new(glam::Vec3::new(3.0, 10.0, 0.0), vehicle_yaw);
-        let transit_bus =
-            TransitBusModel::new(glam::Vec3::new(-5.0, 10.0, 0.0), vehicle_yaw);
-        let heavy_truck =
-            HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), vehicle_yaw);
+        let motorcycle = MotorcycleModel::new(glam::Vec3::new(3.0, 10.0, 0.0), vehicle_yaw);
+        let transit_bus = TransitBusModel::new(glam::Vec3::new(-5.0, 10.0, 0.0), vehicle_yaw);
+        let heavy_truck = HeavyTruckModel::new(glam::Vec3::new(8.0, 10.0, 0.0), vehicle_yaw);
 
         let train_consist = TrainConsist::new_caltrain_diesel();
         let train_position = glam::Vec3::new(0.0, 10.0, 20.0);
@@ -2976,8 +2975,7 @@ impl InteractiveViewerApp {
             staged.lm_enu.north as f32,
         );
         let veh_yaw = realearth_shared::coordinates::camera_yaw_to_vehicle_yaw(staged.landmark.yaw);
-        self.vehicle =
-            DynamicVehicle::new(VehicleConfig::default(), spawn_pos, veh_yaw);
+        self.vehicle = DynamicVehicle::new(VehicleConfig::default(), spawn_pos, veh_yaw);
         self.vehicle.recover_on_surface(staged.initial_elevation);
 
         self.motorcycle = MotorcycleModel::new(
@@ -6024,7 +6022,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 .train_consist
                                 .track_pose
                                 .as_ref()
-                                .map(|p| (p.curvature_rad_per_m * 5.60) as f32)
+                                .map(|p| p.curvature_rad_per_m * 5.60)
                                 .unwrap_or(0.0);
                             let bogie_angles = [bogie_angle, -bogie_angle];
                             let train_wheel_spin =

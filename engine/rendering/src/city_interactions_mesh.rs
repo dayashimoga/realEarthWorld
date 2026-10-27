@@ -1139,6 +1139,409 @@ fn add_tri_mesh(mesh: &mut ChunkMesh, p0: Vec3, p1: Vec3, p2: Vec3, norm: Vec3, 
     mesh.indices.extend_from_slice(&[base, base + 1, base + 2]);
 }
 
+/// Generates a 3D ChunkMesh for reflective white thermoplastic pedestrian crosswalk zebra markings.
+pub fn generate_crosswalk_mesh(position: Vec3, yaw: f32, width_m: f32, length_m: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let rot = Quat::from_rotation_y(yaw);
+    let stripe_color = [0.96, 0.96, 0.98, 1.0]; // High-reflectivity thermoplastic white
+
+    let stripe_w = 0.50f32;
+    let stripe_gap = 0.50f32;
+    let period = stripe_w + stripe_gap;
+    let num_stripes = ((width_m / period).floor() as i32).max(1);
+    let half_len = (length_m * 0.5).max(1.5);
+    let lift_y = 0.02f32; // Offset above asphalt to prevent z-fighting
+
+    for i in 0..num_stripes {
+        let x_off = (i as f32 - (num_stripes as f32 - 1.0) * 0.5) * period;
+        let p0 = position + rot.mul_vec3(Vec3::new(x_off - stripe_w * 0.5, lift_y, -half_len));
+        let p1 = position + rot.mul_vec3(Vec3::new(x_off + stripe_w * 0.5, lift_y, -half_len));
+        let p2 = position + rot.mul_vec3(Vec3::new(x_off + stripe_w * 0.5, lift_y, half_len));
+        let p3 = position + rot.mul_vec3(Vec3::new(x_off - stripe_w * 0.5, lift_y, half_len));
+
+        let norm = rot.mul_vec3(Vec3::Y);
+        add_quad_mesh(&mut mesh, p0, p1, p2, p3, norm, stripe_color);
+    }
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for an extruded concrete barrier curb and gutter apron.
+pub fn generate_curb_mesh(start: Vec3, end: Vec3, height_m: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let delta = end - start;
+    let len = delta.length();
+    if len < 0.1 {
+        return mesh;
+    }
+
+    let dir = delta / len;
+    let up = Vec3::Y;
+    let right = dir.cross(up).normalize();
+
+    let curb_h = height_m.clamp(0.10, 0.35);
+    let curb_w = 0.20f32;
+    let gutter_w = 0.35f32;
+    let gutter_depth = 0.03f32;
+
+    let curb_color = [0.72, 0.72, 0.74, 1.0];
+    let gutter_color = [0.60, 0.61, 0.62, 1.0];
+
+    // Curb Top Face
+    let ct0 = start + right * (curb_w * 0.5) + up * curb_h;
+    let ct1 = start - right * (curb_w * 0.5) + up * curb_h;
+    let ct2 = end - right * (curb_w * 0.5) + up * curb_h;
+    let ct3 = end + right * (curb_w * 0.5) + up * curb_h;
+    add_quad_mesh(&mut mesh, ct0, ct1, ct2, ct3, up, curb_color);
+
+    // Curb Front Face (street facing)
+    let cf_bot0 = start + right * (curb_w * 0.5) + up * gutter_depth;
+    let cf_bot1 = end + right * (curb_w * 0.5) + up * gutter_depth;
+    add_quad_mesh(&mut mesh, cf_bot0, ct0, ct3, cf_bot1, right, curb_color);
+
+    // Gutter Apron Slab (sloping into gutter)
+    let g_outer0 = start + right * (curb_w * 0.5 + gutter_w);
+    let g_outer1 = end + right * (curb_w * 0.5 + gutter_w);
+    let g_norm = (up + right * 0.08).normalize();
+    add_quad_mesh(
+        &mut mesh,
+        g_outer0,
+        cf_bot0,
+        cf_bot1,
+        g_outer1,
+        g_norm,
+        gutter_color,
+    );
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for a galvanized steel W-beam highway guardrail.
+pub fn generate_guardrail_mesh(start: Vec3, end: Vec3) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let delta = end - start;
+    let len = delta.length();
+    if len < 0.5 {
+        return mesh;
+    }
+
+    let dir = delta / len;
+    let up = Vec3::Y;
+    let right = dir.cross(up).normalize();
+    let rail_color = [0.78, 0.80, 0.82, 1.0]; // Galvanized zinc steel
+    let post_color = [0.35, 0.36, 0.38, 1.0];
+
+    let rail_center_h = 0.72f32;
+    let rail_half_h = 0.16f32;
+
+    // Longitudinal W-Beam Face
+    let r0 = start + right * 0.08 + up * (rail_center_h - rail_half_h);
+    let r1 = start + right * 0.08 + up * (rail_center_h + rail_half_h);
+    let r2 = end + right * 0.08 + up * (rail_center_h + rail_half_h);
+    let r3 = end + right * 0.08 + up * (rail_center_h - rail_half_h);
+    add_quad_mesh(&mut mesh, r0, r1, r2, r3, right, rail_color);
+
+    // Support I-Beam Posts spaced every 2.0 meters
+    let post_spacing = 2.0f32;
+    let num_posts = ((len / post_spacing).floor() as usize).max(2);
+    for i in 0..num_posts {
+        let frac = (i as f32) / (num_posts - 1) as f32;
+        let post_pos = start + delta * frac;
+        add_box(
+            &mut mesh,
+            post_pos + up * (rail_center_h * 0.5),
+            Quat::IDENTITY,
+            Vec3::new(0.06, rail_center_h * 0.5, 0.06),
+            post_color,
+        );
+    }
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for an authentic municipal park/street bench.
+pub fn generate_urban_bench_mesh(position: Vec3, yaw: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let rot = Quat::from_rotation_y(yaw);
+    let frame_color = [0.18, 0.20, 0.22, 1.0]; // Cast iron anthracite
+    let wood_color = [0.55, 0.36, 0.22, 1.0]; // Teak/cedar timber slats
+
+    let bench_len = 1.8f32;
+    let seat_h = 0.45f32;
+
+    // Cast Iron Legs & Armrests
+    for &side_x in &[-bench_len * 0.5, bench_len * 0.5] {
+        // Leg base
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(side_x, seat_h * 0.5, 0.0)),
+            rot,
+            Vec3::new(0.04, seat_h * 0.5, 0.25),
+            frame_color,
+        );
+        // Backrest upright
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(side_x, seat_h + 0.22, -0.22)),
+            rot,
+            Vec3::new(0.03, 0.22, 0.03),
+            frame_color,
+        );
+        // Armrest loop
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(side_x, seat_h + 0.18, 0.0)),
+            rot,
+            Vec3::new(0.03, 0.02, 0.22),
+            frame_color,
+        );
+    }
+
+    // 4 Longitudinal Seat Slats
+    for s in 0..4 {
+        let z_off = (s as f32 - 1.5) * 0.12;
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(0.0, seat_h, z_off)),
+            rot,
+            Vec3::new(bench_len * 0.48, 0.02, 0.045),
+            wood_color,
+        );
+    }
+
+    // 3 Backrest Slats
+    for b in 0..3 {
+        let y_off = seat_h + 0.14 + (b as f32) * 0.10;
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(0.0, y_off, -0.22)),
+            rot,
+            Vec3::new(bench_len * 0.48, 0.04, 0.02),
+            wood_color,
+        );
+    }
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for an authentic municipal fire hydrant.
+pub fn generate_fire_hydrant_mesh(position: Vec3, yaw: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let rot = Quat::from_rotation_y(yaw);
+    let body_color = [0.88, 0.12, 0.12, 1.0]; // Municipal safety red
+    let brass_color = [0.82, 0.72, 0.20, 1.0]; // Cast brass operating nut & nozzle caps
+
+    // Lower Barrel
+    add_box(
+        &mut mesh,
+        position + Vec3::new(0.0, 0.25, 0.0),
+        rot,
+        Vec3::new(0.14, 0.25, 0.14),
+        body_color,
+    );
+
+    // Upper Bonnet
+    add_box(
+        &mut mesh,
+        position + Vec3::new(0.0, 0.60, 0.0),
+        rot,
+        Vec3::new(0.12, 0.10, 0.12),
+        body_color,
+    );
+
+    // Top Operating Pentagonal Nut
+    add_box(
+        &mut mesh,
+        position + Vec3::new(0.0, 0.74, 0.0),
+        rot,
+        Vec3::new(0.05, 0.04, 0.05),
+        brass_color,
+    );
+
+    // Side 2.5" Hose Outlet Nozzles
+    for &dx in &[-0.18, 0.18] {
+        add_box(
+            &mut mesh,
+            position + rot.mul_vec3(Vec3::new(dx, 0.45, 0.0)),
+            rot,
+            Vec3::new(0.06, 0.05, 0.05),
+            brass_color,
+        );
+    }
+
+    // Front 4.5" Steamer Pumper Port (+Z)
+    add_box(
+        &mut mesh,
+        position + rot.mul_vec3(Vec3::new(0.0, 0.48, 0.18)),
+        rot,
+        Vec3::new(0.07, 0.07, 0.06),
+        brass_color,
+    );
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for a street bollard (traffic calming / security).
+pub fn generate_bollard_mesh(position: Vec3, is_decorative: bool) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let body_color = [0.20, 0.21, 0.24, 1.0]; // Cast iron anthracite
+    let accent_color = if is_decorative {
+        [0.82, 0.74, 0.25, 1.0] // Polished bronze finial
+    } else {
+        [0.96, 0.82, 0.08, 1.0] // Retroreflective hazard yellow
+    };
+
+    // Main Cylindrical Body
+    add_tapered_cylinder(
+        &mut mesh,
+        position,
+        position + Vec3::new(0.0, 0.85, 0.0),
+        0.11,
+        0.09,
+        8,
+        body_color,
+    );
+
+    // Reflector / Cap Finial
+    if is_decorative {
+        add_foliage_dome(
+            &mut mesh,
+            position + Vec3::new(0.0, 0.88, 0.0),
+            0.12,
+            0.10,
+            8,
+            accent_color,
+        );
+    } else {
+        // High-visibility hazard warning band
+        add_tapered_cylinder(
+            &mut mesh,
+            position + Vec3::new(0.0, 0.65, 0.0),
+            position + Vec3::new(0.0, 0.75, 0.0),
+            0.10,
+            0.095,
+            8,
+            accent_color,
+        );
+    }
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for an urban litter / recycling receptacle.
+pub fn generate_trash_bin_mesh(position: Vec3, yaw: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let rot = Quat::from_rotation_y(yaw);
+    let body_color = [0.22, 0.24, 0.26, 1.0]; // Powder-coated steel anthracite
+    let lid_color = [0.15, 0.16, 0.18, 1.0];
+
+    // Slatted/perforated cylindrical body
+    add_tapered_cylinder(
+        &mut mesh,
+        position,
+        position + Vec3::new(0.0, 0.85, 0.0),
+        0.24,
+        0.26,
+        10,
+        body_color,
+    );
+
+    // Domed protective rain hood lid with disposal opening
+    add_box(
+        &mut mesh,
+        position + rot.mul_vec3(Vec3::new(0.0, 0.92, 0.0)),
+        rot,
+        Vec3::new(0.28, 0.07, 0.28),
+        lid_color,
+    );
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for realistic organic land-cover shrubs and coastal scrub.
+pub fn generate_shrub_mesh(position: Vec3, scale: f32, is_coastal: bool) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let s = scale.clamp(0.4, 2.5);
+    let foliage_color = if is_coastal {
+        [0.34, 0.48, 0.30, 1.0] // Coastal sage scrub
+    } else {
+        [0.24, 0.58, 0.26, 1.0] // Vibrant temperate garden shrub
+    };
+    let stem_color = [0.38, 0.28, 0.18, 1.0];
+
+    // Central woody root stem
+    add_tapered_cylinder(
+        &mut mesh,
+        position,
+        position + Vec3::new(0.0, 0.4 * s, 0.0),
+        0.08 * s,
+        0.05 * s,
+        6,
+        stem_color,
+    );
+
+    // Multi-lobed overlapping foliage domes
+    let lobes = [
+        Vec3::new(0.0, 0.7 * s, 0.0),
+        Vec3::new(0.35 * s, 0.55 * s, 0.25 * s),
+        Vec3::new(-0.35 * s, 0.50 * s, -0.20 * s),
+        Vec3::new(-0.25 * s, 0.60 * s, 0.35 * s),
+        Vec3::new(0.20 * s, 0.50 * s, -0.35 * s),
+    ];
+
+    for (idx, &lobe_center) in lobes.iter().enumerate() {
+        let lobe_r = if idx == 0 { 0.65 * s } else { 0.45 * s };
+        let lobe_h = if idx == 0 { 0.70 * s } else { 0.50 * s };
+        add_foliage_dome(
+            &mut mesh,
+            position + lobe_center,
+            lobe_r,
+            lobe_h,
+            8,
+            foliage_color,
+        );
+    }
+
+    mesh
+}
+
+/// Generates a 3D ChunkMesh for rocky slopes, riverbank boulders, and riprap stone outcrops.
+pub fn generate_rock_formation_mesh(position: Vec3, scale: f32) -> ChunkMesh {
+    let mut mesh = ChunkMesh::default();
+    let s = scale.clamp(0.5, 5.0);
+    let granite_color = [0.52, 0.50, 0.48, 1.0];
+    let moss_color = [0.38, 0.44, 0.32, 1.0];
+
+    // Primary granite mass
+    add_box(
+        &mut mesh,
+        position + Vec3::new(0.0, 0.6 * s, 0.0),
+        Quat::from_rotation_y(0.4),
+        Vec3::new(0.9 * s, 0.6 * s, 0.7 * s),
+        granite_color,
+    );
+
+    // Angled sub-boulder 1
+    add_box(
+        &mut mesh,
+        position + Vec3::new(0.7 * s, 0.4 * s, 0.3 * s),
+        Quat::from_rotation_z(0.3) * Quat::from_rotation_y(0.8),
+        Vec3::new(0.6 * s, 0.4 * s, 0.5 * s),
+        granite_color,
+    );
+
+    // Weathered moss-covered shelf top
+    add_box(
+        &mut mesh,
+        position + Vec3::new(-0.4 * s, 0.5 * s, -0.3 * s),
+        Quat::from_rotation_x(0.2),
+        Vec3::new(0.5 * s, 0.35 * s, 0.6 * s),
+        moss_color,
+    );
+
+    mesh
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1186,5 +1589,44 @@ mod tests {
         let z_neutral = mesh_neutral.vertices[0].position[2];
         let z_stepped = mesh_stepped.vertices[0].position[2];
         let _ = (z_neutral, z_stepped);
+    }
+
+    #[test]
+    fn test_urban_furniture_and_environmental_meshes() {
+        let crosswalk = generate_crosswalk_mesh(Vec3::ZERO, 0.0, 8.0, 4.0);
+        assert!(!crosswalk.vertices.is_empty());
+        assert_eq!(crosswalk.indices.len() % 3, 0);
+
+        let curb = generate_curb_mesh(Vec3::ZERO, Vec3::new(10.0, 0.0, 0.0), 0.18);
+        assert!(!curb.vertices.is_empty());
+        assert_eq!(curb.indices.len() % 3, 0);
+
+        let guardrail = generate_guardrail_mesh(Vec3::ZERO, Vec3::new(12.0, 0.0, 0.0));
+        assert!(!guardrail.vertices.is_empty());
+        assert_eq!(guardrail.indices.len() % 3, 0);
+
+        let bench = generate_urban_bench_mesh(Vec3::ZERO, 0.0);
+        assert!(!bench.vertices.is_empty());
+        assert_eq!(bench.indices.len() % 3, 0);
+
+        let hydrant = generate_fire_hydrant_mesh(Vec3::ZERO, 0.0);
+        assert!(!hydrant.vertices.is_empty());
+        assert_eq!(hydrant.indices.len() % 3, 0);
+
+        let bollard = generate_bollard_mesh(Vec3::ZERO, true);
+        assert!(!bollard.vertices.is_empty());
+        assert_eq!(bollard.indices.len() % 3, 0);
+
+        let bin = generate_trash_bin_mesh(Vec3::ZERO, 0.0);
+        assert!(!bin.vertices.is_empty());
+        assert_eq!(bin.indices.len() % 3, 0);
+
+        let shrub = generate_shrub_mesh(Vec3::ZERO, 1.0, true);
+        assert!(!shrub.vertices.is_empty());
+        assert_eq!(shrub.indices.len() % 3, 0);
+
+        let rock = generate_rock_formation_mesh(Vec3::ZERO, 1.5);
+        assert!(!rock.vertices.is_empty());
+        assert_eq!(rock.indices.len() % 3, 0);
     }
 }

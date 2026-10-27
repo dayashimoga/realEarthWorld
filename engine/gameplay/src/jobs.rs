@@ -233,6 +233,39 @@ impl Job {
         self.state == JobState::Available && profile.career_tier(self.career) >= self.required_tier
     }
 
+    /// Evaluates whether the player profile and vehicle category meet rank and transport contract requirements.
+    pub fn can_accept_with_vehicle(
+        &self,
+        profile: &PlayerProfile,
+        vehicle_cat: crate::garage::VehicleCategory,
+    ) -> bool {
+        self.can_accept(profile) && self.career.is_vehicle_compatible(vehicle_cat)
+    }
+
+    /// Validates that this job contract has reachable, non-identical surveyed destinations and realistic parameters.
+    pub fn is_reachable(&self) -> bool {
+        let dist = self.pickup.distance_to(self.dropoff.coord);
+        // Minimum non-zero distance (>= 20 meters)
+        if dist < 20.0 {
+            return false;
+        }
+        // Valid finite coordinates
+        if !self.pickup.coord.lat.is_finite()
+            || !self.pickup.coord.lon.is_finite()
+            || !self.dropoff.coord.lat.is_finite()
+            || !self.dropoff.coord.lon.is_finite()
+        {
+            return false;
+        }
+        // If deadline is enforced, ensure requirement does not demand supersonic speeds (> 400 m/s)
+        if let Some(limit) = self.time_limit_secs {
+            if limit <= 0.0 || (dist / limit) > 400.0 {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Accepts this job offer and transitions into the EnRouteToPickup state.
     pub fn accept(
         &mut self,
@@ -241,6 +274,9 @@ impl Job {
     ) -> Result<(), &'static str> {
         if !self.can_accept(profile) {
             return Err("Cannot accept job: rank requirements not met or job unavailable");
+        }
+        if !self.is_reachable() {
+            return Err("Cannot accept job: mission destination is unreachable or invalid");
         }
         self.state = JobState::Accepted;
         event_bus.emit(GameplayEvent::JobAccepted {
@@ -254,6 +290,21 @@ impl Job {
             job_id: self.id.clone(),
         });
         Ok(())
+    }
+
+    /// Accepts this job offer with vehicle category validation.
+    pub fn accept_with_vehicle(
+        &mut self,
+        profile: &PlayerProfile,
+        vehicle_cat: crate::garage::VehicleCategory,
+        event_bus: &GameplayEventBus,
+    ) -> Result<(), &'static str> {
+        if !self.career.is_vehicle_compatible(vehicle_cat) {
+            return Err(
+                "Cannot accept job: vehicle category is incompatible with transport contract",
+            );
+        }
+        self.accept(profile, event_bus)
     }
 
     /// Advances the job state machine by one simulation step.

@@ -421,7 +421,6 @@ fn main() -> Result<()> {
         (70010, 40.7175, -74.0055),
         (70011, 40.7190, -74.0045),
         (70012, 40.7205, -74.0035),
-
         // West Street / Route 9A (70020 - 70030)
         (70020, 40.7035, -74.0175),
         (70021, 40.7055, -74.0170),
@@ -433,7 +432,6 @@ fn main() -> Result<()> {
         (70027, 40.7175, -74.0140),
         (70028, 40.7195, -74.0135),
         (70029, 40.7215, -74.0130),
-
         // FDR Drive / South Street (70040 - 70050)
         (70040, 40.7015, -74.0130),
         (70041, 40.7030, -74.0095),
@@ -445,7 +443,6 @@ fn main() -> Result<()> {
         (70047, 40.7150, -73.9940),
         (70048, 40.7170, -73.9915),
         (70049, 40.7190, -73.9890),
-
         // Water Street (70060 - 70068)
         (70060, 40.7030, -74.0115),
         (70061, 40.7045, -74.0095),
@@ -454,46 +451,39 @@ fn main() -> Result<()> {
         (70064, 40.7090, -74.0035),
         (70065, 40.7105, -74.0015),
         (70066, 40.7120, -73.9995),
-
         // Wall Street Intersections (70070 - 70073)
         (70070, 40.7070, -74.0122), // Trinity Pl / Broadway
         (70071, 40.7068, -74.0098), // Broad St / 40 Wall
         (70072, 40.7065, -74.0075), // Water St
         (70073, 40.7062, -74.0055), // South St
-
         // Fulton Street Intersections (70080 - 70084)
         (70080, 40.7115, -74.0155), // West St
         (70081, 40.7110, -74.0125), // Church St (WTC)
         (70082, 40.7105, -74.0095), // Broadway
         (70083, 40.7100, -74.0055), // Water St
         (70084, 40.7095, -74.0015), // South St / Seaport
-
         // Chambers Street Intersections (70090 - 70094)
         (70090, 40.7155, -74.0145), // West St
         (70091, 40.7150, -74.0115), // Greenwich St
         (70092, 40.7145, -74.0075), // Broadway
         (70093, 40.7140, -74.0040), // Centre St / Municipal Bldg
         (70094, 40.7135, -73.9995), // Pearl St
-
         // Canal Street Intersections (70100 - 70104)
         (70100, 40.7205, -74.0130), // West St
         (70101, 40.7200, -74.0080), // Church St
         (70102, 40.7195, -74.0045), // Broadway
         (70103, 40.7185, -73.9980), // Bowery
         (70104, 40.7175, -73.9930), // Manhattan Bridge Plaza
-
         // Brooklyn Bridge (70110 - 70114)
         (70110, 40.7125, -74.0050), // Manhattan landing (Chambers/Centre)
         (70111, 40.7105, -74.0010), // Manhattan anchorage
         (70112, 40.7080, -73.9970), // Mid-span East River tower
         (70113, 40.7055, -73.9930), // Brooklyn East River tower
         (70114, 40.7030, -73.9890), // Brooklyn anchorage / landing
-
         // Manhattan Bridge (70120 - 70124)
         (70120, 40.7160, -73.9940), // Manhattan plaza
         (70121, 40.7140, -73.9900), // Mid-river span
         (70122, 40.7120, -73.9860), // Brooklyn landing
-
         // Church Street / Trinity Place (70130 - 70136)
         (70130, 40.7040, -74.0135),
         (70131, 40.7065, -74.0125),
@@ -515,7 +505,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010, 70011, 70012],
+            node_refs: vec![
+                70001, 70002, 70003, 70004, 70005, 70006, 70007, 70008, 70009, 70010, 70011, 70012,
+            ],
         },
         RoadSpec {
             id: 75002,
@@ -527,7 +519,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![70020, 70021, 70022, 70023, 70024, 70025, 70026, 70027, 70028, 70029],
+            node_refs: vec![
+                70020, 70021, 70022, 70023, 70024, 70025, 70026, 70027, 70028, 70029,
+            ],
         },
         RoadSpec {
             id: 75003,
@@ -539,7 +533,9 @@ fn main() -> Result<()> {
             layer: 0,
             bridge: false,
             tunnel: false,
-            node_refs: vec![70040, 70041, 70042, 70043, 70044, 70045, 70046, 70047, 70048, 70049],
+            node_refs: vec![
+                70040, 70041, 70042, 70043, 70044, 70045, 70046, 70047, 70048, 70049,
+            ],
         },
         RoadSpec {
             id: 75004,
@@ -656,19 +652,27 @@ fn main() -> Result<()> {
     for b in &buildings {
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 1, b.lat_min, b.lon_min
+            b.id * 10 + 1,
+            b.lat_min,
+            b.lon_min
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 2, b.lat_max, b.lon_min
+            b.id * 10 + 2,
+            b.lat_max,
+            b.lon_min
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 3, b.lat_max, b.lon_max
+            b.id * 10 + 3,
+            b.lat_max,
+            b.lon_max
         ));
         xml.push_str(&format!(
             "  <node id=\"{}\" lat=\"{:.7}\" lon=\"{:.7}\"/>\n",
-            b.id * 10 + 4, b.lat_min, b.lon_max
+            b.id * 10 + 4,
+            b.lat_min,
+            b.lon_max
         ));
     }
 
@@ -710,10 +714,16 @@ fn main() -> Result<()> {
         for nr in &road.node_refs {
             xml.push_str(&format!("    <nd ref=\"{}\"/>\n", nr));
         }
-        xml.push_str(&format!("    <tag k=\"highway\" v=\"{}\"/>\n", road.hw_type));
+        xml.push_str(&format!(
+            "    <tag k=\"highway\" v=\"{}\"/>\n",
+            road.hw_type
+        ));
         xml.push_str(&format!("    <tag k=\"name\" v=\"{}\"/>\n", road.name));
         xml.push_str(&format!("    <tag k=\"lanes\" v=\"{}\"/>\n", road.lanes));
-        xml.push_str(&format!("    <tag k=\"maxspeed\" v=\"{}\"/>\n", road.maxspeed));
+        xml.push_str(&format!(
+            "    <tag k=\"maxspeed\" v=\"{}\"/>\n",
+            road.maxspeed
+        ));
         if road.oneway {
             xml.push_str("    <tag k=\"oneway\" v=\"yes\"/>\n");
         }
@@ -846,7 +856,10 @@ fn main() -> Result<()> {
         source_asset_sha256: Some(sha256_hex),
         ..Default::default()
     };
-    println!("📦 Compiling authoritative New York package into {:?}...", pkg_dir);
+    println!(
+        "📦 Compiling authoritative New York package into {:?}...",
+        pkg_dir
+    );
     let stats = compile_world_package(&validated, &dem, &pkg_dir, &options)?;
     println!(
         "🎉 Successfully compiled package: {} chunks, {} vertices, {} triangles, {:.2} MB uncompressed",
@@ -1005,7 +1018,11 @@ fn create_secondary_nyc_buildings() -> Vec<BuildingSpec> {
             specs.push(BuildingSpec {
                 id,
                 name,
-                b_type: if (r + c) % 2 == 0 { "commercial" } else { "residential" },
+                b_type: if (r + c) % 2 == 0 {
+                    "commercial"
+                } else {
+                    "residential"
+                },
                 height,
                 levels,
                 lat_min: lat - 0.00025,

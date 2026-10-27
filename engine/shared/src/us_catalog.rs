@@ -238,7 +238,11 @@ impl UsCityDefinition {
             }
 
             // 3. Complete authentic source raw data on disk (manifest, OSM XML vector, and USGS 3DEP DEM raster)
-            let sample_manifest = format!("{}/assets/{}_sample/manifest.json", root, self.id.replace('-', "_"));
+            let sample_manifest = format!(
+                "{}/assets/{}_sample/manifest.json",
+                root,
+                self.id.replace('-', "_")
+            );
             let sample_osm = format!(
                 "{}/assets/{}_sample/{}_downtown.osm.xml",
                 root,

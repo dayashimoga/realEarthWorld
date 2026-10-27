@@ -199,8 +199,16 @@ fn test_gate2_three_reference_cities_differentiation() {
 
     // 5. Authentic Topography / DEM Relief Differentiation
     // San Francisco: Steep coastal hills (elevation span > 80m in downtown sample)
-    let sf_min_h = sf_dem.elevations.iter().cloned().fold(f32::INFINITY, f32::min);
-    let sf_max_h = sf_dem.elevations.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let sf_min_h = sf_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::INFINITY, f32::min);
+    let sf_max_h = sf_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::NEG_INFINITY, f32::max);
     assert!(
         sf_max_h - sf_min_h >= 60.0,
         "SF topography must exhibit genuine hill relief (span: {:.1}m)",
@@ -208,8 +216,16 @@ fn test_gate2_three_reference_cities_differentiation() {
     );
 
     // New York: Low coastal bedrock (0m to ~35m)
-    let nyc_min_h = nyc_dem.elevations.iter().cloned().fold(f32::INFINITY, f32::min);
-    let nyc_max_h = nyc_dem.elevations.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let nyc_min_h = nyc_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::INFINITY, f32::min);
+    let nyc_max_h = nyc_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::NEG_INFINITY, f32::max);
     assert!(
         nyc_max_h <= 45.0 && nyc_min_h >= 0.0,
         "NYC topography must reflect coastal plains [0, 45m] (got [{:.1}, {:.1}])",
@@ -218,8 +234,16 @@ fn test_gate2_three_reference_cities_differentiation() {
     );
 
     // Portland: River valley with West Hills rising (3.5m to ~95m)
-    let pdx_min_h = pdx_dem.elevations.iter().cloned().fold(f32::INFINITY, f32::min);
-    let pdx_max_h = pdx_dem.elevations.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let pdx_min_h = pdx_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::INFINITY, f32::min);
+    let pdx_max_h = pdx_dem
+        .elevations
+        .iter()
+        .cloned()
+        .fold(f32::NEG_INFINITY, f32::max);
     assert!(
         pdx_min_h >= 2.0 && pdx_max_h >= 30.0,
         "Portland topography must reflect Willamette River valley (got [{:.1}, {:.1}])",
@@ -228,14 +252,34 @@ fn test_gate2_three_reference_cities_differentiation() {
     );
 
     // 6. Verified Landmark Skyscraper Identity
-    assert!(sf_data.buildings.iter().any(|b| b.name.as_deref() == Some("Salesforce Tower")));
-    assert!(sf_data.buildings.iter().any(|b| b.name.as_deref() == Some("Transamerica Pyramid")));
-    assert!(nyc_data.buildings.iter().any(|b| b.name.as_deref() == Some("One World Trade Center")));
-    assert!(nyc_data.buildings.iter().any(|b| b.name.as_deref() == Some("Woolworth Building")));
-    assert!(pdx_data.buildings.iter().any(|b| b.name.as_deref() == Some("Wells Fargo Center")));
-    assert!(pdx_data.buildings.iter().any(|b| b.name.as_deref() == Some("US Bancorp Tower (Big Pink)")));
+    assert!(sf_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("Salesforce Tower")));
+    assert!(sf_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("Transamerica Pyramid")));
+    assert!(nyc_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("One World Trade Center")));
+    assert!(nyc_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("Woolworth Building")));
+    assert!(pdx_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("Wells Fargo Center")));
+    assert!(pdx_data
+        .buildings
+        .iter()
+        .any(|b| b.name.as_deref() == Some("US Bancorp Tower (Big Pink)")));
 
-    println!("✅ Gate 2 Passed: San Francisco, New York, and Portland are 100% geographically distinct");
+    println!(
+        "✅ Gate 2 Passed: San Francisco, New York, and Portland are 100% geographically distinct"
+    );
 }
 
 // ============================================================================
@@ -248,7 +292,9 @@ fn test_gate3_transactional_warp_pipeline_and_atomic_rollback() {
     assert_eq!(warper.active_region_id(), None);
 
     // 1. Warp to San Francisco (Phase 1-9: SELECT -> ATOMIC ACTIVATE)
-    let sf_report = warper.execute_warp("san-francisco").expect("SF warp should succeed");
+    let sf_report = warper
+        .execute_warp("san-francisco")
+        .expect("SF warp should succeed");
     assert!(sf_report.is_successful);
     assert_eq!(sf_report.final_stage, WarpStage::Complete);
     assert_eq!(warper.active_region_id(), Some("san-francisco"));
@@ -261,25 +307,40 @@ fn test_gate3_transactional_warp_pipeline_and_atomic_rollback() {
             && sf_report.stage_history.contains(&WarpStage::Validate)
             && sf_report.stage_history.contains(&WarpStage::Compile)
             && sf_report.stage_history.contains(&WarpStage::Stage)
-            && sf_report.stage_history.contains(&WarpStage::LoadEssentialChunks)
+            && sf_report
+                .stage_history
+                .contains(&WarpStage::LoadEssentialChunks)
             && sf_report.stage_history.contains(&WarpStage::SafeSpawn)
             && sf_report.stage_history.contains(&WarpStage::AtomicActivate)
     );
 
     // 2. Warp to New York City
-    let nyc_report = warper.execute_warp("new-york").expect("NYC warp should succeed");
+    let nyc_report = warper
+        .execute_warp("new-york")
+        .expect("NYC warp should succeed");
     assert!(nyc_report.is_successful);
     assert_eq!(warper.active_region_id(), Some("new-york"));
-    assert_eq!(nyc_report.source_region_id.as_deref(), Some("san-francisco"));
+    assert_eq!(
+        nyc_report.source_region_id.as_deref(),
+        Some("san-francisco")
+    );
     assert!(nyc_report.chunks_resident_count > 0);
-    assert!(nyc_report.arrival_notification.unwrap().contains("New York"));
+    assert!(nyc_report
+        .arrival_notification
+        .unwrap()
+        .contains("New York"));
 
     // 3. Warp to Portland
-    let pdx_report = warper.execute_warp("portland").expect("Portland warp should succeed");
+    let pdx_report = warper
+        .execute_warp("portland")
+        .expect("Portland warp should succeed");
     assert!(pdx_report.is_successful);
     assert_eq!(warper.active_region_id(), Some("portland"));
     assert_eq!(pdx_report.source_region_id.as_deref(), Some("new-york"));
-    assert!(pdx_report.arrival_notification.unwrap().contains("Portland"));
+    assert!(pdx_report
+        .arrival_notification
+        .unwrap()
+        .contains("Portland"));
 
     // 4. Attempt warp to unbundled catalog-only city ("phoenix") -> MUST FAIL closed & ROLL BACK
     let fail_result = warper.execute_warp("phoenix");
@@ -311,7 +372,9 @@ fn test_gate3_transactional_warp_pipeline_and_atomic_rollback() {
     assert_eq!(warper.active_region_id(), Some("portland"));
 
     // 6. Successful warp back to San Francisco
-    let return_sf = warper.execute_warp("san-francisco").expect("Return to SF should succeed");
+    let return_sf = warper
+        .execute_warp("san-francisco")
+        .expect("Return to SF should succeed");
     assert!(return_sf.is_successful);
     assert_eq!(warper.active_region_id(), Some("san-francisco"));
 
@@ -353,7 +416,7 @@ fn test_gate4_road_building_clearance_and_collision_integrity() {
         // Using road clearance solver projection:
         let lat_scale = 111_139.0;
         let mid_lat = raw.roads[0].geometry[0].lat;
-        let lon_scale = 111_139.0 * (mid_lat as f64).to_radians().cos();
+        let lon_scale = 111_139.0 * mid_lat.to_radians().cos();
 
         for road in &raw.roads {
             if road.layer != 0 || road.is_bridge || road.is_tunnel {
@@ -376,9 +439,17 @@ fn test_gate4_road_building_clearance_and_collision_integrity() {
 
                 // Check a sample of buildings near this segment
                 for bld in &raw.buildings {
-                    let bld_center_x = bld.outer_ring.iter().map(|n| n.lon * lon_scale).sum::<f64>()
+                    let bld_center_x = bld
+                        .outer_ring
+                        .iter()
+                        .map(|n| n.lon * lon_scale)
+                        .sum::<f64>()
                         / bld.outer_ring.len() as f64;
-                    let bld_center_y = bld.outer_ring.iter().map(|n| n.lat * lat_scale).sum::<f64>()
+                    let bld_center_y = bld
+                        .outer_ring
+                        .iter()
+                        .map(|n| n.lat * lat_scale)
+                        .sum::<f64>()
                         / bld.outer_ring.len() as f64;
 
                     let vx = bld_center_x - p1_x;
@@ -424,7 +495,11 @@ fn test_gate5_continuous_multi_city_exploration() {
 
     assert!(sf_db.exists(), "SF chunks.db must exist at {:?}", sf_db);
     assert!(nyc_db.exists(), "NYC chunks.db must exist at {:?}", nyc_db);
-    assert!(pdx_db.exists(), "Portland chunks.db must exist at {:?}", pdx_db);
+    assert!(
+        pdx_db.exists(),
+        "Portland chunks.db must exist at {:?}",
+        pdx_db
+    );
 
     let db_sf = ChunkDatabase::open(&sf_db).expect("SF db must open");
     let db_nyc = ChunkDatabase::open(&nyc_db).expect("NYC db must open");
@@ -434,9 +509,21 @@ fn test_gate5_continuous_multi_city_exploration() {
     let count_nyc = db_nyc.count_chunks().expect("NYC chunk count");
     let count_pdx = db_pdx.count_chunks().expect("Portland chunk count");
 
-    assert!(count_sf >= 25, "SF must have >= 25 chunks (got {})", count_sf);
-    assert!(count_nyc >= 50, "NYC must have >= 50 chunks (got {})", count_nyc);
-    assert!(count_pdx >= 30, "Portland must have >= 30 chunks (got {})", count_pdx);
+    assert!(
+        count_sf >= 25,
+        "SF must have >= 25 chunks (got {})",
+        count_sf
+    );
+    assert!(
+        count_nyc >= 50,
+        "NYC must have >= 50 chunks (got {})",
+        count_nyc
+    );
+    assert!(
+        count_pdx >= 30,
+        "Portland must have >= 30 chunks (got {})",
+        count_pdx
+    );
 
     // Repeated cycling through cities using TransactionalCityWarper
     let mut warper = TransactionalCityWarper::new();
@@ -452,7 +539,10 @@ fn test_gate5_continuous_multi_city_exploration() {
 
     for &city_id in &transition_sequence {
         let report = warper.execute_warp(city_id).unwrap_or_else(|e| {
-            panic!("Transition to {} in continuous sequence failed: {}", city_id, e)
+            panic!(
+                "Transition to {} in continuous sequence failed: {}",
+                city_id, e
+            )
         });
 
         assert_eq!(report.target_region_id, city_id);

@@ -2843,7 +2843,8 @@ pub fn build_metro_yellow_cab(lod: VehicleLodLevel) -> LoadedVehicleModel {
     for submesh in &mut model.submeshes {
         if submesh.submesh_type == VehicleSubmeshType::ChassisBody {
             for v in &mut submesh.mesh.vertices {
-                let is_body_paint = (v.color[0] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[0]).abs() < 0.05
+                let is_body_paint = (v.color[0] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[0]).abs()
+                    < 0.05
                     && (v.color[1] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[1]).abs() < 0.05
                     && (v.color[2] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[2]).abs() < 0.05;
                 if is_body_paint {

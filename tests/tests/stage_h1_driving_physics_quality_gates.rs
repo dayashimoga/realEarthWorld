@@ -175,10 +175,30 @@ fn test_gate1_60s_level_ground_park_and_idle_hold() {
 fn test_gate2_directional_steering_across_four_cardinal_headings() {
     let ground = FlatGround::new(0.0);
     let headings = [
-        ("North", 0.0f32, Vec3::new(0.0, 0.0, 1.0), Vec3::new(1.0, 0.0, 0.0)),
-        ("East", FRAC_PI_2, Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -1.0)),
-        ("South", PI, Vec3::new(0.0, 0.0, -1.0), Vec3::new(-1.0, 0.0, 0.0)),
-        ("West", -FRAC_PI_2, Vec3::new(-1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
+        (
+            "North",
+            0.0f32,
+            Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(1.0, 0.0, 0.0),
+        ),
+        (
+            "East",
+            FRAC_PI_2,
+            Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, -1.0),
+        ),
+        (
+            "South",
+            PI,
+            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(-1.0, 0.0, 0.0),
+        ),
+        (
+            "West",
+            -FRAC_PI_2,
+            Vec3::new(-1.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0),
+        ),
     ];
 
     for (name, heading_yaw, expected_forward, expected_right) in headings {

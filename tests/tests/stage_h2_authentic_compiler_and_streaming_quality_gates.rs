@@ -74,7 +74,8 @@ fn test_h2_gate1_fail_closed_acquisition_and_cryptographic_manifest_integrity() 
         total_chunks: 1,
         uncompressed_bytes: 1000,
         compressed_bytes: 100,
-        sha256_checksum: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+        sha256_checksum: "0000000000000000000000000000000000000000000000000000000000000000"
+            .to_string(),
         created_at_utc: "2026-10-26T00:00:00Z".to_string(),
     };
     fs::write(dummy_dir.join("manifest.json"), manifest.to_json().unwrap()).unwrap();
@@ -229,12 +230,10 @@ fn test_h2_gate2_san_francisco_complete_world_compilation_and_feature_reconcilia
         dataset.buildings.len() >= 250,
         "Must contain >= 250 surveyed buildings"
     );
-    assert!(
-        dataset.roads.len() >= 45,
-        "Must contain >= 45 mapped roads"
-    );
+    assert!(dataset.roads.len() >= 45, "Must contain >= 45 mapped roads");
     assert_eq!(
-        report.quarantined.len(), 0,
+        report.quarantined.len(),
+        0,
         "No features should be quarantined"
     );
     assert_eq!(
@@ -370,8 +369,8 @@ fn test_h2_gate3_continuous_multi_kilometer_driving_traversal_across_chunk_bound
     // Route: Ferry Building -> Market St -> SOMA -> Nob Hill -> Broadway Tunnel
     // Waypoints spanning ~4.8 km across multiple chunk boundaries
     let waypoints = vec![
-        Wgs84Coord::new(37.7955, -122.3937, 2.0),  // 1. Ferry Building (Bay waterfront, 2m)
-        Wgs84Coord::new(37.7925, -122.3970, 8.0),  // 2. Market St & Beale St (8m)
+        Wgs84Coord::new(37.7955, -122.3937, 2.0), // 1. Ferry Building (Bay waterfront, 2m)
+        Wgs84Coord::new(37.7925, -122.3970, 8.0), // 2. Market St & Beale St (8m)
         Wgs84Coord::new(37.7885, -122.4015, 12.0), // 3. Market St & 3rd St (12m)
         Wgs84Coord::new(37.7845, -122.4065, 15.0), // 4. Market St & 5th St (15m)
         Wgs84Coord::new(37.7815, -122.4105, 18.0), // 5. Market St & 8th St (18m)
@@ -380,7 +379,7 @@ fn test_h2_gate3_continuous_multi_kilometer_driving_traversal_across_chunk_bound
         Wgs84Coord::new(37.7925, -122.4105, 95.0), // 8. Nob Hill summit (Mason & California, 95m)
         Wgs84Coord::new(37.7965, -122.4100, 75.0), // 9. Russian Hill / Broadway Tunnel West (75m)
         Wgs84Coord::new(37.7980, -122.4045, 45.0), // 10. Broadway Tunnel East portal (45m)
-        Wgs84Coord::new(37.7970, -122.3975, 5.0),  // 11. Embarcadero north waterfront (5m)
+        Wgs84Coord::new(37.7970, -122.3975, 5.0), // 11. Embarcadero north waterfront (5m)
     ];
 
     let mut total_distance_m = 0.0;

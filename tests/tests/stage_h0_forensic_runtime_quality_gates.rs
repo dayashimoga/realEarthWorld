@@ -114,7 +114,9 @@ fn test_h0_gate_steering_directional_conformance() {
 /// - Earlier certifications passed because they only simulated 20 to 60 frames (1 second).
 #[test]
 fn test_h0_gate_continuous_world_streaming_distance() {
-    println!("\n🚫 [STAGE H0 GATE 2] Auditing Continuous World Streaming Beyond 2.5km (Screenshot 1)...");
+    println!(
+        "\n🚫 [STAGE H0 GATE 2] Auditing Continuous World Streaming Beyond 2.5km (Screenshot 1)..."
+    );
 
     let world_dir = workspace_root().join("data/world_san_francisco");
     if !world_dir.join("chunks.db").exists() {
@@ -150,7 +152,9 @@ fn test_h0_gate_continuous_world_streaming_distance() {
         10.0,
     );
 
-    let _ = streamer.update(traveled_coord).expect("Stream after travel");
+    let _ = streamer
+        .update(traveled_coord)
+        .expect("Stream after travel");
     let active_traveled = streamer.get_active_chunks();
 
     // Check how many chunks actually cover the traveled position or are within 1,500m view distance
@@ -283,9 +287,12 @@ fn test_h0_gate_multimodal_spawning_track_topology() {
 ///   without checking material distinctiveness or curvature normal variance.
 #[test]
 fn test_h0_gate_vehicle_rendering_visual_fidelity() {
-    println!("\n🚫 [STAGE H0 GATE 4] Auditing Vehicle Rendering Fidelity (Screenshot 4 Cyan Bus)...");
+    println!(
+        "\n🚫 [STAGE H0 GATE 4] Auditing Vehicle Rendering Fidelity (Screenshot 4 Cyan Bus)..."
+    );
 
-    let bus_model = get_certified_vehicle_model(VehicleVisualType::TransitBus, VehicleLodLevel::Lod0High);
+    let bus_model =
+        get_certified_vehicle_model(VehicleVisualType::TransitBus, VehicleLodLevel::Lod0High);
 
     // Compose the bus mesh with the active transit green/cyan paint color as in `interactive.rs:5716`
     let transit_color = [0.10, 0.65, 0.40, 1.0];
@@ -347,7 +354,8 @@ fn test_h0_gate_vehicle_rendering_visual_fidelity() {
             non_axis_aligned_normals += 1;
         }
     }
-    let non_axis_ratio = non_axis_aligned_normals as f32 / composed_mesh.vertices.len().max(1) as f32;
+    let non_axis_ratio =
+        non_axis_aligned_normals as f32 / composed_mesh.vertices.len().max(1) as f32;
     println!(
         "   Curved / non-axis-aligned normals: {}/{} ({:.1}%)",
         non_axis_aligned_normals,
@@ -394,7 +402,9 @@ fn test_h0_gate_vehicle_rendering_visual_fidelity() {
 /// - Clicking "INSTALL & WARP" on Orlando produces the error in Screenshot 3!
 #[test]
 fn test_h0_gate_catalog_city_transition_integrity() {
-    println!("\n🚫 [STAGE H0 GATE 5] Auditing Catalog City Transition to Orlando (Screenshot 3)...");
+    println!(
+        "\n🚫 [STAGE H0 GATE 5] Auditing Catalog City Transition to Orlando (Screenshot 3)..."
+    );
 
     // Orlando is listed in US Catalog as a Priority 2 Major metropolitan area
     let city = find_city_by_id("orlando").expect("Orlando must exist in US Geographic Catalog");
@@ -447,7 +457,9 @@ fn test_h0_mutation_verification_dropped_tile_detected() {
 
 #[test]
 fn test_h0_mutation_verification_reversed_steering_detected() {
-    println!("\n🧪 [STAGE H0 MUTATION 2] Verifying Gate Detects Injected Reversed Steering Mutation...");
+    println!(
+        "\n🧪 [STAGE H0 MUTATION 2] Verifying Gate Detects Injected Reversed Steering Mutation..."
+    );
 
     // Inject reversed steering: KeyA produces positive lateral displacement (+0.25m)
     let lateral_dx = 0.25f32;
@@ -462,7 +474,9 @@ fn test_h0_mutation_verification_reversed_steering_detected() {
 
 #[test]
 fn test_h0_mutation_verification_monochromatic_box_detected() {
-    println!("\n🧪 [STAGE H0 MUTATION 3] Verifying Gate Detects Injected Monochromatic Box Mutation...");
+    println!(
+        "\n🧪 [STAGE H0 MUTATION 3] Verifying Gate Detects Injected Monochromatic Box Mutation..."
+    );
 
     // Inject monochromatic box: only 1 color, 0% curved normals
     let unique_colors = 1;

@@ -80,6 +80,20 @@ impl FloatingOrigin {
     }
 }
 
+/// Converts graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South)
+/// to vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West).
+#[inline]
+pub fn camera_yaw_to_vehicle_yaw(cam_yaw: f32) -> f32 {
+    std::f32::consts::FRAC_PI_2 - cam_yaw
+}
+
+/// Converts vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West)
+/// to graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South).
+#[inline]
+pub fn vehicle_yaw_to_camera_yaw(veh_yaw: f32) -> f32 {
+    std::f32::consts::FRAC_PI_2 - veh_yaw
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,18 +150,4 @@ mod tests {
         assert!((veh_west - (-FRAC_PI_2)).abs() < 1e-6);
         assert!((vehicle_yaw_to_camera_yaw(veh_west) - cam_west).abs() < 1e-6);
     }
-}
-
-/// Converts graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South)
-/// to vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West).
-#[inline]
-pub fn camera_yaw_to_vehicle_yaw(cam_yaw: f32) -> f32 {
-    std::f32::consts::FRAC_PI_2 - cam_yaw
-}
-
-/// Converts vehicle simulation yaw (where 0 = North, +PI/2 = East, PI = South, -PI/2 = West)
-/// to graphics camera polar yaw (where 0 = East, +PI/2 = North, PI = West, -PI/2 = South).
-#[inline]
-pub fn vehicle_yaw_to_camera_yaw(veh_yaw: f32) -> f32 {
-    std::f32::consts::FRAC_PI_2 - veh_yaw
 }

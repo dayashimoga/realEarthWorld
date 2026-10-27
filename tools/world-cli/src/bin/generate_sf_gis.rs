@@ -1989,10 +1989,22 @@ fn main() -> Result<()> {
     let rail_n1 = 50002;
     let rail_n2 = 50003;
     let rail_n3 = 50004;
-    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4080000\"/>\n", rail_n0));
-    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4050000\"/>\n", rail_n1));
-    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4028000\"/>\n", rail_n2));
-    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.3980000\"/>\n", rail_n3));
+    xml.push_str(&format!(
+        "  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4080000\"/>\n",
+        rail_n0
+    ));
+    xml.push_str(&format!(
+        "  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4050000\"/>\n",
+        rail_n1
+    ));
+    xml.push_str(&format!(
+        "  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4028000\"/>\n",
+        rail_n2
+    ));
+    xml.push_str(&format!(
+        "  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.3980000\"/>\n",
+        rail_n3
+    ));
     xml.push_str("  <way id=\"510002\">\n");
     xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n0));
     xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n1));

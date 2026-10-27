@@ -153,7 +153,10 @@ impl TransactionalCityWarper {
                 return self.fail_and_rollback(
                     previous_region_id,
                     target_region_id,
-                    &format!("Target city '{}' not found in US Geographic Catalog", target_region_id),
+                    &format!(
+                        "Target city '{}' not found in US Geographic Catalog",
+                        target_region_id
+                    ),
                     WarpStage::Select,
                     stages,
                 );
@@ -217,7 +220,10 @@ impl TransactionalCityWarper {
                 return self.fail_and_rollback(
                     previous_region_id,
                     city.id,
-                    &format!("Failed to acquire authentic GIS dataset for '{}': {}", city.id, e),
+                    &format!(
+                        "Failed to acquire authentic GIS dataset for '{}': {}",
+                        city.id, e
+                    ),
                     WarpStage::Acquire,
                     stages,
                 );
@@ -228,7 +234,10 @@ impl TransactionalCityWarper {
             return self.fail_and_rollback(
                 previous_region_id,
                 city.id,
-                &format!("Acquired dataset for '{}' contained no mapped roads or buildings", city.id),
+                &format!(
+                    "Acquired dataset for '{}' contained no mapped roads or buildings",
+                    city.id
+                ),
                 WarpStage::Acquire,
                 stages,
             );
@@ -262,7 +271,10 @@ impl TransactionalCityWarper {
             return self.fail_and_rollback(
                 previous_region_id,
                 city.id,
-                &format!("Topological validation rejected all buildings: {:?}", report),
+                &format!(
+                    "Topological validation rejected all buildings: {:?}",
+                    report
+                ),
                 WarpStage::Validate,
                 stages,
             );
@@ -280,7 +292,10 @@ impl TransactionalCityWarper {
             return self.fail_and_rollback(
                 previous_region_id,
                 city.id,
-                &format!("DEM elevation values exceed NAVD88 limits [{}m, {}m]", city.elevation_min_m, city.elevation_max_m),
+                &format!(
+                    "DEM elevation values exceed NAVD88 limits [{}m, {}m]",
+                    city.elevation_min_m, city.elevation_max_m
+                ),
                 WarpStage::Validate,
                 stages,
             );

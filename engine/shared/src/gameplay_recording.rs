@@ -180,23 +180,12 @@ impl Default for RecordedVehicleVelocity {
 }
 
 /// Rendered geometry and streaming mesh telemetry.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct RecordedMeshMetrics {
     pub loaded_mesh_count: usize,
     pub drawn_mesh_count: usize,
     pub culled_mesh_count: usize,
     pub drawn_triangle_count: usize,
-}
-
-impl Default for RecordedMeshMetrics {
-    fn default() -> Self {
-        Self {
-            loaded_mesh_count: 0,
-            drawn_mesh_count: 0,
-            culled_mesh_count: 0,
-            drawn_triangle_count: 0,
-        }
-    }
 }
 
 /// Hardware execution and GPU frame timing metrics.
