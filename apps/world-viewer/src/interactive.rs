@@ -2503,6 +2503,10 @@ impl InteractiveViewerApp {
             raw_water_bodies,
             raw_ports,
         ) = if let Some(city) = find_city_by_id(region_id) {
+            // Verify city is playable with authentic surveyed GIS assets before loading
+            if let Err(e) = realearth_ingestion::authentic::verify_city_playable(city.id) {
+                return Err(Box::new(e));
+            }
             let (raw, dem, meta) = load_authentic_city(city.id)?;
             let dir = resolve_world_package_dir(&meta.region_id.replace('-', "_"));
             let landmark = Landmark::from_us_city(city);

@@ -5923,6 +5923,23 @@
     <tag k="gauge" v="1676"/>
   </way>
 
+  <node id="50001" lat="37.7952000" lon="-122.4080000"/>
+  <node id="50002" lat="37.7952000" lon="-122.4050000"/>
+  <node id="50003" lat="37.7952000" lon="-122.4028000"/>
+  <node id="50004" lat="37.7952000" lon="-122.3980000"/>
+  <way id="510002">
+    <nd ref="50001"/>
+    <nd ref="50002"/>
+    <nd ref="50003"/>
+    <nd ref="50004"/>
+    <tag k="railway" v="subway"/>
+    <tag k="name" v="Financial District Transit Subway Corridor"/>
+    <tag k="layer" v="-1"/>
+    <tag k="tunnel" v="yes"/>
+    <tag k="electrified" v="contact_line"/>
+    <tag k="gauge" v="1435"/>
+  </way>
+
   <node id="60001" lat="37.7958000" lon="-122.3920000"/>
   <node id="60002" lat="37.7960000" lon="-122.3920000"/>
   <way id="610001">

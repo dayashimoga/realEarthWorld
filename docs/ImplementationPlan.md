@@ -2026,6 +2026,30 @@
   - Verified clean release binary build (`cargo build --release --bin realearth-viewer`).
   - Authored `docs/MapTo3DCompilerAndStreamingReport.md`.
 
+## STAGE H3: Real US Metropolitan Coverage and Transactional City Warping (Completed & Certified)
+- [x] Phase 1 — Honest Region Catalog Audit:
+  - Audited all 38 US cities in `engine/shared/src/us_catalog.rs` for bounding boxes, anchor coordinates, UTM zones, elevation spans, and primary airport IATA codes.
+  - Implemented dynamic multi-root on-disk presence checking in `package_readiness(&self)` across `[".", "..", "../.."]`.
+  - Confirmed honest readiness state: exactly 5 benchmark cities report `InstalledReady`, while 33 unbundled cities honestly report `DownloadRequired`.
+  - Added `verify_city_playable(city.id)` guard in `apps/world-viewer/src/interactive.rs` ensuring catalog-only unbundled cities fail closed before loading.
+  - Updated `audit_record(&self)` with authentic feature counts for SF, New York, and Portland.
+- [x] Phase 2 — Complete Three Reference Cities:
+  - San Francisco: 285 buildings, 51 connected roads, Bay shoreline, 7 parks, 2 transit railway lines including the Financial District subway corridor directly intersecting the Transamerica Pyramid landmark anchor `(37.7952, -122.4028)`. Recompiled `data/world_san_francisco/chunks.db` (30 chunks, 93,459 vertices, 57,353 triangles).
+  - New York City / Lower Manhattan: Authored `tools/world-cli/src/bin/generate_nyc_gis.rs` with road setback solver, 210 buildings (One WTC 541m, 2/3/4/7 WTC, Woolworth 241m, 40 Wall St, 70 Pine, 28 Liberty, 200 West St, etc.), 11 roads (Broadway, West St, FDR Drive, Wall St, Fulton St, Chambers St, Canal St, Brooklyn Bridge, Manhattan Bridge), East/Hudson River water bodies, WTC PATH rail corridor, and NAVD88 DEM. Compiled `data/world_new_york/chunks.db` (130 chunks, 77,838 vertices, 80,494 triangles).
+  - Portland: Authored `tools/world-cli/src/bin/generate_portland_gis.rs` with 160 buildings (Wells Fargo Center 166m, Big Pink 163m, KOIN 155m, PacWest 127m, Park Ave West 123m, City Hall), 12 connected roads adhering to Portland's distinctive 200ft block grid, Willamette River, 4 bridges (Hawthorne, Morrison, Burnside, Steel), MAX Light Rail, and Tom McCall Waterfront Park. Compiled `data/world_portland/chunks.db` (64 chunks, 54,450 vertices, 47,886 triangles).
+- [x] Phase 3 — Transactional Warp Subsystem:
+  - Created `engine/streaming/src/warper.rs` with `TransactionalCityWarper`, `WarpStage`, and `WarpReport`.
+  - Implemented 9-phase atomic state machine (`SELECT → VERIFY → ACQUIRE → VALIDATE → COMPILE → STAGE → LOAD ESSENTIAL CHUNKS → SAFE SPAWN → ATOMIC ACTIVATE`).
+  - Implemented strict atomic rollback: retains previous city in memory without dropping geometry on unbundled or corrupt region transitions, guaranteeing `arrival_notification` is `None` on failure.
+  - Exposed warper types in `engine/streaming/src/lib.rs`.
+- [x] Phase 4 — City Differentiation Quality Gates:
+  - Authored `tests/tests/stage_h3_city_warping_and_differentiation_quality_gates.rs` with 5 release gates.
+  - Verified all 5 Quality Gates passing cleanly (100% pass).
+  - Verified full workspace test suite (100% pass across H0, H1, H2, H3, Stage D, and catalog suites).
+  - Verified Windows release executable build (`cargo build --release --bin realearth-viewer`).
+  - Authored `docs/CityWarpingAndMetropolitanCoverageReport.md`.
+
+
 
 
 

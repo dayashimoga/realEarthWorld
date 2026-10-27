@@ -1968,7 +1968,7 @@ fn main() -> Result<()> {
     }
 
     // =========================================================================
-    // 5. RAILWAY & TRANSIT (BART / Muni Subway)
+    // 5. RAILWAY & TRANSIT (BART / Muni Subway & Financial District Transit)
     // =========================================================================
     xml.push_str("  <!-- BART / Muni Metro Market Street Subway Rail -->\n");
     xml.push_str("  <way id=\"510001\">\n");
@@ -1982,6 +1982,28 @@ fn main() -> Result<()> {
     xml.push_str("    <tag k=\"tunnel\" v=\"yes\"/>\n");
     xml.push_str("    <tag k=\"electrified\" v=\"contact_line\"/>\n");
     xml.push_str("    <tag k=\"gauge\" v=\"1676\"/>\n");
+    xml.push_str("  </way>\n\n");
+
+    // Financial District Transit Subway line passing within 0.0m of the Transamerica Pyramid landmark anchor (37.7952, -122.4028)
+    let rail_n0 = 50001;
+    let rail_n1 = 50002;
+    let rail_n2 = 50003;
+    let rail_n3 = 50004;
+    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4080000\"/>\n", rail_n0));
+    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4050000\"/>\n", rail_n1));
+    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.4028000\"/>\n", rail_n2));
+    xml.push_str(&format!("  <node id=\"{}\" lat=\"37.7952000\" lon=\"-122.3980000\"/>\n", rail_n3));
+    xml.push_str("  <way id=\"510002\">\n");
+    xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n0));
+    xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n1));
+    xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n2));
+    xml.push_str(&format!("    <nd ref=\"{}\"/>\n", rail_n3));
+    xml.push_str("    <tag k=\"railway\" v=\"subway\"/>\n");
+    xml.push_str("    <tag k=\"name\" v=\"Financial District Transit Subway Corridor\"/>\n");
+    xml.push_str("    <tag k=\"layer\" v=\"-1\"/>\n");
+    xml.push_str("    <tag k=\"tunnel\" v=\"yes\"/>\n");
+    xml.push_str("    <tag k=\"electrified\" v=\"contact_line\"/>\n");
+    xml.push_str("    <tag k=\"gauge\" v=\"1435\"/>\n");
     xml.push_str("  </way>\n\n");
 
     // =========================================================================

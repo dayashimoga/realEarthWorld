@@ -12,6 +12,7 @@ pub mod planetary_streamer;
 pub mod prefetch;
 pub mod region_installer;
 pub mod streamer;
+pub mod warper;
 
 pub use async_loader::{
     generate_demand_terrain_chunk, generate_fallback_chunk, read_chunk_with_corruption_recovery,
@@ -39,6 +40,7 @@ pub use prefetch::{calculate_prefetch_bounds, evaluate_chunk_priority, ChunkPrio
 pub use realearth_compiler::regional_catalog::PackageManifest;
 pub use region_installer::{InstallProgress, InstallState, RegionInstaller};
 pub use streamer::{StreamingTelemetry, WorldStreamer};
+pub use warper::{TransactionalCityWarper, WarpReport, WarpStage};
 
 #[cfg(test)]
 mod tests {

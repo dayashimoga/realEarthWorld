@@ -1,116 +1,122 @@
 {
-  "name": "Portland Downtown & Willamette River Waterfront Benchmark Region",
-  "state": "OR",
-  "country": "US",
-  "version": "1.0.0",
   "anchor": {
-    "name": "Wells Fargo Center",
+    "elevation_m": 22.0,
     "lat": 45.5152,
     "lon": -122.6784,
-    "elevation_m": 22.0
+    "name": "Wells Fargo Center"
   },
   "bbox": {
-    "min_lat": 45.5080,
-    "max_lat": 45.5280,
-    "min_lon": -122.6880,
-    "max_lon": -122.6680
+    "max_lat": 45.528,
+    "max_lon": -122.668,
+    "min_lat": 45.508,
+    "min_lon": -122.688
   },
+  "country": "US",
   "datum": {
     "horizontal": "WGS84 (EPSG:4326)",
     "projected": "UTM Zone 10N (EPSG:32610)",
     "vertical": "NAVD88 (GEOID18/EGM96)"
   },
-  "landmarks": [
-    {
-      "name": "Wells Fargo Center",
-      "type": "commercial",
-      "lat": 45.5152,
-      "lon": -122.6784,
-      "height_m": 166.4,
-      "levels": 40
-    },
-    {
-      "name": "US Bancorp Tower (Big Pink)",
-      "type": "commercial",
-      "lat": 45.5225,
-      "lon": -122.6747,
-      "height_m": 163.4,
-      "levels": 42
-    },
-    {
-      "name": "KOIN Center",
-      "type": "commercial",
-      "lat": 45.5140,
-      "lon": -122.6766,
-      "height_m": 155.1,
-      "levels": 35
-    },
-    {
-      "name": "Park Avenue West Tower",
-      "type": "commercial",
-      "lat": 45.5186,
-      "lon": -122.6797,
-      "height_m": 153.0,
-      "levels": 30
-    },
-    {
-      "name": "PacWest Center",
-      "type": "commercial",
-      "lat": 45.5165,
-      "lon": -122.6788,
-      "height_m": 160.0,
-      "levels": 30
-    },
-    {
-      "name": "Portland City Hall & Plaza",
-      "type": "civic",
-      "lat": 45.5150,
-      "lon": -122.6775,
-      "height_m": 48.0,
-      "levels": 5
-    }
-  ],
   "grade_separations": [
     {
-      "name": "Hawthorne Bridge (Willamette River Crossing)",
       "is_bridge": true,
-      "layer": 1,
       "lanes": 4,
+      "layer": 1,
+      "name": "Hawthorne Bridge (Willamette River Crossing)",
       "speed_limit_mph": 35
     },
     {
-      "name": "Morrison Bridge (Interstate 5 Connector)",
       "is_bridge": true,
-      "layer": 1,
       "lanes": 6,
+      "layer": 1,
+      "name": "Morrison Bridge (Interstate 5 Connector)",
       "speed_limit_mph": 45
     }
   ],
   "hydrography": [
     {
+      "is_coastline": false,
       "name": "Willamette River",
-      "type": "river",
       "surface_elevation_msl": 3.5,
-      "is_coastline": false
+      "type": "river"
     }
   ],
-  "sources": [
+  "landmarks": [
     {
-      "name": "OpenStreetMap Portland Downtown Extract",
-      "provider": "OpenStreetMap Contributors",
-      "license": "ODbL 1.0",
-      "sha256": "391ef04f381c7b862b93a335f1664bbeef0c63e207ffb289ad08ac13a54454c8"
+      "height_m": 166.4,
+      "lat": 45.5152,
+      "levels": 40,
+      "lon": -122.6784,
+      "name": "Wells Fargo Center",
+      "type": "commercial"
     },
     {
-      "name": "USGS 3DEP 1/3 Arc-Second Willamette Valley Elevation Model",
-      "provider": "USGS",
-      "license": "Public Domain / CC0 Compatible",
-      "filename": "usgs_3dep_portland.bin",
-      "vertical_datum": "NAVD88",
-      "grid_dimensions": [64, 64],
-      "elevation_range_msl": [3.5, 95.0],
-      "sha256": "eb4c9981c5d9e35c6bda8cb2f4d37b25ea5e72028938dd751e85f6957472e149"
+      "height_m": 163.4,
+      "lat": 45.5225,
+      "levels": 42,
+      "lon": -122.6747,
+      "name": "US Bancorp Tower (Big Pink)",
+      "type": "commercial"
+    },
+    {
+      "height_m": 155.1,
+      "lat": 45.514,
+      "levels": 35,
+      "lon": -122.6766,
+      "name": "KOIN Center",
+      "type": "commercial"
+    },
+    {
+      "height_m": 153.0,
+      "lat": 45.5186,
+      "levels": 30,
+      "lon": -122.6797,
+      "name": "Park Avenue West Tower",
+      "type": "commercial"
+    },
+    {
+      "height_m": 160.0,
+      "lat": 45.5165,
+      "levels": 30,
+      "lon": -122.6788,
+      "name": "PacWest Center",
+      "type": "commercial"
+    },
+    {
+      "height_m": 48.0,
+      "lat": 45.515,
+      "levels": 5,
+      "lon": -122.6775,
+      "name": "Portland City Hall & Plaza",
+      "type": "civic"
     }
   ],
-  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)"
+  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)",
+  "name": "Portland Downtown & Willamette River Waterfront Benchmark Region",
+  "sources": [
+    {
+      "license": "ODbL 1.0",
+      "name": "OpenStreetMap Portland Downtown Extract",
+      "provider": "OpenStreetMap Contributors",
+      "sha256": "e111d32ccea67b991989c88d2163cea2492d9fcac01743f9d4dffeb225a0038c"
+    },
+    {
+      "elevation_range_msl": [
+        3.5,
+        95.0
+      ],
+      "filename": "usgs_3dep_portland.bin",
+      "grid_dimensions": [
+        64,
+        64
+      ],
+      "license": "Public Domain / CC0 Compatible",
+      "name": "USGS 3DEP 1/3 Arc-Second Willamette Valley Elevation Model",
+      "provider": "USGS",
+      "sha256": "eb4c9981c5d9e35c6bda8cb2f4d37b25ea5e72028938dd751e85f6957472e149",
+      "vertical_datum": "NAVD88"
+    }
+  ],
+  "state": "OR",
+  "version": "1.0.0"
 }

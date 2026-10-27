@@ -2335,4 +2335,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - **Gate 5**: Bounded memory telemetry, honest out-of-bounds missing source detection, and non-flat demand terrain.
   - All 5 quality gates **PASSED (100% SUCCESS)**. Full production release binary [`realearth-viewer`](file:///j:/rustRealEarth/target/release/realearth-viewer.exe) builds cleanly.
 
+## [Stage H3] - 2026-10-27 - Real US Metropolitan Coverage and Transactional City Warping
+- **Phase 1: Honest Region Catalog Audit**:
+  - Audited all 38 US cities in [`engine/shared/src/us_catalog.rs`](file:///j:/rustRealEarth/engine/shared/src/us_catalog.rs).
+  - Implemented dynamic multi-root on-disk presence detection in `package_readiness(&self)`, evaluating `data/world_<id>/chunks.db`, `manifest.json`, and extracts.
+  - Verified honest readiness state: exactly 5 benchmark cities report `InstalledReady`, while 33 unbundled cities honestly report `DownloadRequired`.
+  - Added fail-closed guard `verify_city_playable(city.id)` in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs) ensuring unbundled catalog cities cannot be launched into empty voids.
+  - Updated `audit_record(&self)` with authentic feature counts for SF, New York, and Portland.
+- **Phase 2: Complete Three Reference Cities**:
+  - **San Francisco**: 285 buildings, 51 connected roads, Bay shoreline, 7 parks, 2 transit railway lines including the Financial District subway corridor directly intersecting the Transamerica Pyramid landmark anchor `(37.7952, -122.4028)`. Recompiled database (`data/world_san_francisco/chunks.db`) with 30 chunks, 93,459 vertices, 57,353 triangles.
+  - **New York City / Lower Manhattan**: Created [`tools/world-cli/src/bin/generate_nyc_gis.rs`](file:///j:/rustRealEarth/tools/world-cli/src/bin/generate_nyc_gis.rs) with road setback solver, 210 buildings (One WTC 541m, 2/3/4/7 WTC, Woolworth 241m, 40 Wall St, 70 Pine, 28 Liberty, 200 West St, etc.), 11 roads (Broadway, West St, FDR Drive, Wall St, Fulton St, Chambers St, Canal St, Brooklyn Bridge, Manhattan Bridge), East/Hudson River water bodies, WTC PATH rail corridor, and NAVD88 DEM. Compiled database (`data/world_new_york/chunks.db`) with 130 chunks, 77,838 vertices, 80,494 triangles.
+  - **Portland**: Created [`tools/world-cli/src/bin/generate_portland_gis.rs`](file:///j:/rustRealEarth/tools/world-cli/src/bin/generate_portland_gis.rs) with 160 buildings (Wells Fargo Center 166m, Big Pink 163m, KOIN 155m, PacWest 127m, Park Ave West 123m, City Hall), 12 connected roads adhering to Portland's distinctive 200ft block grid, Willamette River, 4 bridges (Hawthorne, Morrison, Burnside, Steel), MAX Light Rail, and Tom McCall Waterfront Park. Compiled database (`data/world_portland/chunks.db`) with 64 chunks, 54,450 vertices, 47,886 triangles.
+- **Phase 3: Transactional Warp Subsystem**:
+  - Implemented [`TransactionalCityWarper`](file:///j:/rustRealEarth/engine/streaming/src/warper.rs) with 9-phase atomic state machine (`SELECT → VERIFY → ACQUIRE → VALIDATE → COMPILE → STAGE → LOAD ESSENTIAL CHUNKS → SAFE SPAWN → ATOMIC ACTIVATE`).
+  - Implemented strict atomic rollback: retains previous city in memory without dropping geometry on unbundled or corrupt region transitions, guaranteeing `arrival_notification` is `None` on failure.
+  - Exposed warper types in [`engine/streaming/src/lib.rs`](file:///j:/rustRealEarth/engine/streaming/src/lib.rs).
+- **Phase 4: City Differentiation Quality Gates**:
+  - Authored [`tests/tests/stage_h3_city_warping_and_differentiation_quality_gates.rs`](file:///j:/rustRealEarth/tests/tests/stage_h3_city_warping_and_differentiation_quality_gates.rs) certifying:
+    - Gate 1: Honest Region Catalog Audit (38 cities, exactly 5 InstalledReady, >= 30 DownloadRequired, fail closed).
+    - Gate 2: Three Distinct Reference Cities (disjoint UTM zones and coordinates, disjoint building/road IDs, distinct DEM relief).
+    - Gate 3: Transactional Warp Pipeline & Atomic Rollback (SF -> NYC -> Portland, safe rollback on phoenix and atlantis).
+    - Gate 4: Road/Building Clearance & Collision Integrity (minimum setback clearance > 4.0m across all reference cities).
+    - Gate 5: Continuous Multi-City Exploration (repeated cycling across 7 transitions without orphan chunks or memory leaks).
+  - All 5 release gates **PASSED (100% SUCCESS)**. Full production release binary [`realearth-viewer`](file:///j:/rustRealEarth/target/release/realearth-viewer.exe) builds cleanly.
+
+
 

@@ -1,99 +1,105 @@
 {
-  "name": "New York Lower Manhattan & Financial District Benchmark Region",
-  "state": "NY",
-  "country": "US",
-  "version": "1.0.0",
   "anchor": {
-    "name": "One World Trade Center",
+    "elevation_m": 8.0,
     "lat": 40.7127,
     "lon": -74.0134,
-    "elevation_m": 8.0
+    "name": "One World Trade Center"
   },
   "bbox": {
-    "min_lat": 40.7000,
-    "max_lat": 40.7250,
-    "min_lon": -74.0250,
-    "max_lon": -73.9900
+    "max_lat": 40.725,
+    "max_lon": -73.99,
+    "min_lat": 40.7,
+    "min_lon": -74.025
   },
+  "country": "US",
   "datum": {
     "horizontal": "WGS84 (EPSG:4326)",
     "projected": "UTM Zone 18N (EPSG:32618)",
     "vertical": "NAVD88 (GEOID18/EGM96)"
   },
-  "landmarks": [
-    {
-      "name": "One World Trade Center",
-      "type": "commercial",
-      "lat": 40.7127,
-      "lon": -74.0134,
-      "height_m": 541.3,
-      "levels": 104
-    },
-    {
-      "name": "Empire State Building",
-      "type": "commercial",
-      "lat": 40.7484,
-      "lon": -73.9857,
-      "height_m": 381.0,
-      "levels": 102
-    },
-    {
-      "name": "Woolworth Building",
-      "type": "commercial",
-      "lat": 40.7123,
-      "lon": -74.0082,
-      "height_m": 241.4,
-      "levels": 57
-    },
-    {
-      "name": "40 Wall Street",
-      "type": "commercial",
-      "lat": 40.7070,
-      "lon": -74.0095,
-      "height_m": 282.5,
-      "levels": 71
-    }
-  ],
   "grade_separations": [
     {
-      "name": "Brooklyn Bridge",
       "is_bridge": true,
-      "layer": 1,
       "lanes": 6,
+      "layer": 1,
+      "name": "Brooklyn Bridge",
       "speed_limit_mph": 45
     }
   ],
   "hydrography": [
     {
+      "is_coastline": true,
       "name": "Hudson River",
-      "type": "river",
       "surface_elevation_msl": 0.0,
-      "is_coastline": true
+      "type": "river"
     },
     {
+      "is_coastline": true,
       "name": "East River",
-      "type": "tidal_strait",
       "surface_elevation_msl": 0.0,
-      "is_coastline": true
+      "type": "tidal_strait"
     }
   ],
+  "landmarks": [
+    {
+      "height_m": 541.3,
+      "lat": 40.7127,
+      "levels": 104,
+      "lon": -74.0134,
+      "name": "One World Trade Center",
+      "type": "commercial"
+    },
+    {
+      "height_m": 381.0,
+      "lat": 40.7484,
+      "levels": 102,
+      "lon": -73.9857,
+      "name": "Empire State Building",
+      "type": "commercial"
+    },
+    {
+      "height_m": 241.4,
+      "lat": 40.7123,
+      "levels": 57,
+      "lon": -74.0082,
+      "name": "Woolworth Building",
+      "type": "commercial"
+    },
+    {
+      "height_m": 282.5,
+      "lat": 40.707,
+      "levels": 71,
+      "lon": -74.0095,
+      "name": "40 Wall Street",
+      "type": "commercial"
+    }
+  ],
+  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)",
+  "name": "New York Lower Manhattan & Financial District Benchmark Region",
   "sources": [
     {
+      "license": "ODbL 1.0",
       "name": "OpenStreetMap New York Lower Manhattan Extract",
       "provider": "OpenStreetMap Contributors",
-      "license": "ODbL 1.0",
-      "sha256": "af3efec8b47f014d423022ef6f4f1e2de8a70036f115fa9002b9300ee60b0fe7"
+      "sha256": "dea14f43bd85899d04069b0b3addfb232aae8d2e34e9d14993837a0001d98084"
     },
     {
+      "elevation_range_msl": [
+        0.0,
+        35.0
+      ],
+      "filename": "usgs_3dep_new_york.bin",
+      "grid_dimensions": [
+        64,
+        64
+      ],
+      "license": "Public Domain / CC0 Compatible",
       "name": "USGS 3DEP 1/3 Arc-Second New York Coastal Elevation Model",
       "provider": "USGS",
-      "license": "Public Domain / CC0 Compatible",
-      "filename": "usgs_3dep_new_york.bin",
-      "vertical_datum": "NAVD88",
-      "grid_dimensions": [64, 64],
-      "elevation_range_msl": [0.0, 35.0],
-      "sha256": "0df9ede74c94a33a28bec2157d13c5def3c68160cdb6a0a7df1b900bada38265"
+      "sha256": "0df9ede74c94a33a28bec2157d13c5def3c68160cdb6a0a7df1b900bada38265",
+      "vertical_datum": "NAVD88"
     }
   ],
-  "license": "ODbL 1.0 (OSM) / USGS 3DEP (Public Domain / CC0)"
+  "state": "NY",
+  "version": "1.0.0"
 }
