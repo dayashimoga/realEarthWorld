@@ -1588,47 +1588,334 @@ pub fn build_executive_sedan(lod: VehicleLodLevel) -> LoadedVehicleModel {
     let half_w = 0.93;
     let half_l = 2.42; // 4.85m overall length
     let beltline_y = 0.72;
+    let nose_y = 0.35;
+    let hood_y = 0.66;
     let roof_y = 1.45;
 
+    // -------------------------------------------------------------------------
+    // 1. Sleek Sculpted 3-Box Sedan Chassis & Curved Body Panels
+    // -------------------------------------------------------------------------
     let mut chassis_mesh = ChunkMesh::default();
 
-    // 1. Sleek 3-Box Sedan Chassis (Bumper, Hood, Trunk, Doors)
+    // 1a. Low Front Air Dam & Lower Fascia (Dark Charcoal)
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-half_w * 0.94, 0.18, 2.05),
+        Vec3::new(half_w * 0.94, 0.18, 2.05),
+        Vec3::new(half_w * 0.90, 0.18, half_l),
+        Vec3::new(-half_w * 0.90, 0.18, half_l),
+        -Vec3::Y,
+        AutomotivePalette::CARBON_FIBER,
+    );
+    // Lower front air dam lip
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-half_w * 0.90, 0.18, half_l),
+        Vec3::new(half_w * 0.90, 0.18, half_l),
+        Vec3::new(half_w * 0.88, 0.24, half_l),
+        Vec3::new(-half_w * 0.88, 0.24, half_l),
+        Vec3::Z,
+        AutomotivePalette::CARBON_FIBER,
+    );
+
+    // 1b. Lower Air Intake & Corner Brake Cooling Ducts
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.62, 0.24, half_l - 0.02),
+        Vec3::new(0.62, 0.24, half_l - 0.02),
+        Vec3::new(0.58, 0.38, half_l - 0.05),
+        Vec3::new(-0.58, 0.38, half_l - 0.05),
+        Vec3::Z,
+        [0.08, 0.08, 0.10, 1.0], // Honeycomb intake mesh
+    );
+
+    // 1c. Sloped Front Nose Cone
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.78, 0.38, half_l - 0.08),
+        Vec3::new(0.78, 0.38, half_l - 0.08),
+        Vec3::new(0.74, nose_y + 0.18, half_l - 0.14),
+        Vec3::new(-0.74, nose_y + 0.18, half_l - 0.14),
+        Vec3::new(0.0, 0.35, 0.93).normalize(),
+        AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+    );
+
+    // 1d. Front Executive Grille with Chrome Horizontal Slats
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.48, 0.0),
-        Vec3::new(half_w, 0.24, half_l),
-        AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
-    );
-    // Chrome Front Grille
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(-0.55, 0.32, half_l + 0.01),
-        Vec3::new(0.55, 0.32, half_l + 0.01),
-        Vec3::new(0.50, 0.65, half_l + 0.01),
-        Vec3::new(-0.50, 0.65, half_l + 0.01),
-        Vec3::Z,
+        Vec3::new(0.0, 0.48, half_l - 0.03),
+        Vec3::new(0.48, 0.15, 0.025),
         AutomotivePalette::POLISHED_CHROME,
     );
-    // Sloped Hood
-    add_quad(
-        &mut chassis_mesh,
-        Vec3::new(-0.75, 0.65, half_l - 0.05),
-        Vec3::new(0.75, 0.65, half_l - 0.05),
-        Vec3::new(0.82, beltline_y, 0.75),
-        Vec3::new(-0.82, beltline_y, 0.75),
-        Vec3::new(0.0, 0.25, 0.96).normalize(),
-        AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
-    );
-    // Trunk Decklid
+    for gy in [0.40, 0.46, 0.52, 0.58] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(0.0, gy, half_l - 0.01),
+            Vec3::new(0.45, 0.012, 0.02),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+
+    // 1e. Curved Sculpted Hood with Power Creases
+    let hood_slices = match lod {
+        VehicleLodLevel::Lod0High => 4,
+        VehicleLodLevel::Lod1Medium => 3,
+        VehicleLodLevel::Lod2Low => 2,
+    };
+    for s in 0..hood_slices {
+        let t0 = s as f32 / hood_slices as f32;
+        let t1 = (s + 1) as f32 / hood_slices as f32;
+
+        let z0 = (half_l - 0.14) * (1.0 - t0) + 0.75 * t0;
+        let z1 = (half_l - 0.14) * (1.0 - t1) + 0.75 * t1;
+
+        let y0 = (nose_y + 0.18) * (1.0 - t0) + hood_y * t0 + (t0 * (1.0 - t0) * 0.06);
+        let y1 = (nose_y + 0.18) * (1.0 - t1) + hood_y * t1 + (t1 * (1.0 - t1) * 0.06);
+
+        let w0 = 0.74 * (1.0 - t0) + 0.86 * t0;
+        let w1 = 0.74 * (1.0 - t1) + 0.86 * t1;
+
+        let n = Vec3::new(0.0, z0 - z1, y1 - y0).normalize_or_zero();
+
+        // Left hood slice
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(-w0, y0, z0),
+            Vec3::new(0.0, y0 + 0.015, z0),
+            Vec3::new(0.0, y1 + 0.015, z1),
+            Vec3::new(-w1, y1, z1),
+            n,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Right hood slice
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(0.0, y0 + 0.015, z0),
+            Vec3::new(w0, y0, z0),
+            Vec3::new(w1, y1, z1),
+            Vec3::new(0.0, y1 + 0.015, z1),
+            n,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+    }
+
+    // 1f. Sculpted Front & Rear Fenders with Non-Clipping Wheel Arches & Dark Wheel Liners
+    // Wheelbase 2.70m -> front axle z = 1.35, rear axle z = -1.35. Wheel radius 0.33m -> tire top y = 0.66m.
+    for sign in [-1.0f32, 1.0f32] {
+        let fx = sign * half_w;
+        let fnorm = Vec3::new(sign, 0.0, 0.0);
+        let inner_x = sign * (half_w - 0.10);
+        let liner_color = [0.06, 0.06, 0.08, 1.0];
+
+        // Front Fender: forward section (z = 1.68 to 1.95)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, 1.95),
+            Vec3::new(sign * 0.78, 0.58, 1.95),
+            Vec3::new(sign * 0.80, 0.62, 1.68),
+            Vec3::new(fx, 0.30, 1.68),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Front Wheel Arch Cutout: arch apex at 0.72m (clears tire 0.66m)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, 1.68),
+            Vec3::new(sign * 0.80, 0.62, 1.68),
+            Vec3::new(sign * 0.82, 0.68, 1.35),
+            Vec3::new(fx, 0.72, 1.35),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.72, 1.35),
+            Vec3::new(sign * 0.82, 0.68, 1.35),
+            Vec3::new(sign * 0.82, 0.65, 1.02),
+            Vec3::new(fx, 0.30, 1.02),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Front Fender: aft section (z = 0.75 to 1.02)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, 1.02),
+            Vec3::new(sign * 0.82, 0.65, 1.02),
+            Vec3::new(sign * 0.82, 0.68, 0.75),
+            Vec3::new(fx, 0.30, 0.75),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Front Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.70, 1.02),
+            Vec3::new(fx, 0.72, 1.02),
+            Vec3::new(fx, 0.72, 1.68),
+            Vec3::new(inner_x, 0.70, 1.68),
+            -Vec3::Y,
+            liner_color,
+        );
+
+        // Rear Fender: forward section (z = -0.75 to -1.02)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, -0.75),
+            Vec3::new(sign * 0.82, 0.68, -0.75),
+            Vec3::new(sign * 0.84, 0.70, -1.02),
+            Vec3::new(fx, 0.30, -1.02),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Rear Wheel Arch Cutout: arch apex at 0.72m
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, -1.02),
+            Vec3::new(sign * 0.84, 0.70, -1.02),
+            Vec3::new(sign * 0.85, 0.72, -1.35),
+            Vec3::new(fx, 0.72, -1.35),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.72, -1.35),
+            Vec3::new(sign * 0.85, 0.72, -1.35),
+            Vec3::new(sign * 0.84, 0.70, -1.68),
+            Vec3::new(fx, 0.30, -1.68),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Rear Fender: aft section (z = -1.68 to -2.05)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.30, -1.68),
+            Vec3::new(sign * 0.84, 0.70, -1.68),
+            Vec3::new(sign * 0.82, 0.70, -2.05),
+            Vec3::new(fx, 0.30, -2.05),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Rear Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.70, -1.68),
+            Vec3::new(fx, 0.72, -1.68),
+            Vec3::new(fx, 0.72, -1.02),
+            Vec3::new(inner_x, 0.70, -1.02),
+            -Vec3::Y,
+            liner_color,
+        );
+
+        // Side Doors Mid-Section Panels (z = -0.75 to 0.75)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.26, 0.75),
+            Vec3::new(sign * 0.84, beltline_y, 0.75),
+            Vec3::new(sign * 0.84, beltline_y, -0.75),
+            Vec3::new(fx, 0.26, -0.75),
+            fnorm,
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Lower Chrome Rocker Panel Trim
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(fx + sign * 0.015, 0.25, 0.0),
+            Vec3::new(0.015, 0.02, 0.75),
+            AutomotivePalette::POLISHED_CHROME,
+        );
+    }
+
+    // 1g. Aerodynamic Side Mirrors on Front Doors
+    for sign in [-1.0f32, 1.0f32] {
+        let mir_x = sign * 0.85;
+        let mir_stalk_x = sign * 0.79;
+        let mir_y = beltline_y + 0.10;
+        let mir_z = 0.65;
+
+        // Stalk
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new((mir_x + mir_stalk_x) * 0.5, mir_y - 0.035, mir_z),
+            Vec3::new(0.035, 0.015, 0.02),
+            [0.15, 0.16, 0.18, 1.0],
+        );
+        // Sculpted Teardrop Housing
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(mir_x + sign * 0.05, mir_y, mir_z),
+            Vec3::new(0.065, 0.045, 0.075),
+            AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+        );
+        // Reflective Chrome Mirror Glass Face (-Z facing)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mir_x + sign * 0.01, mir_y - 0.035, mir_z - 0.07),
+            Vec3::new(mir_x + sign * 0.10, mir_y - 0.035, mir_z - 0.07),
+            Vec3::new(mir_x + sign * 0.10, mir_y + 0.035, mir_z - 0.07),
+            Vec3::new(mir_x + sign * 0.01, mir_y + 0.035, mir_z - 0.07),
+            -Vec3::Z,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+    }
+
+    // 1h. Rear Decklid, Trunk Lip & Solid Rear Fascia
     add_quad(
         &mut chassis_mesh,
         Vec3::new(-0.78, beltline_y, -1.35),
         Vec3::new(0.78, beltline_y, -1.35),
-        Vec3::new(0.75, beltline_y - 0.05, -half_l + 0.05),
-        Vec3::new(-0.75, beltline_y - 0.05, -half_l + 0.05),
+        Vec3::new(0.75, beltline_y - 0.03, -half_l + 0.08),
+        Vec3::new(-0.75, beltline_y - 0.03, -half_l + 0.08),
         Vec3::Y,
         AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
     );
+    // Upper Rear Fascia
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.75, beltline_y - 0.03, -half_l + 0.08),
+        Vec3::new(0.75, beltline_y - 0.03, -half_l + 0.08),
+        Vec3::new(0.76, 0.65, -half_l + 0.01),
+        Vec3::new(-0.76, 0.65, -half_l + 0.01),
+        -Vec3::Z,
+        AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+    );
+    // Mid Rear Bumper Face & Recessed License Plate Cove
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.48, -half_l + 0.01),
+        Vec3::new(half_w * 0.90, 0.14, 0.04),
+        AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
+    );
+    // Stamped License Plate
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.18, 0.42, -half_l + 0.035),
+        Vec3::new(0.18, 0.42, -half_l + 0.035),
+        Vec3::new(0.18, 0.56, -half_l + 0.035),
+        Vec3::new(-0.18, 0.56, -half_l + 0.035),
+        -Vec3::Z,
+        [0.92, 0.92, 0.95, 1.0],
+    );
+    // Lower Rear Valance & Dual Chrome Exhaust Tips
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-half_w * 0.88, 0.22, -half_l),
+        Vec3::new(half_w * 0.88, 0.22, -half_l),
+        Vec3::new(half_w * 0.85, 0.34, -half_l + 0.02),
+        Vec3::new(-half_w * 0.85, 0.34, -half_l + 0.02),
+        -Vec3::Z,
+        [0.10, 0.12, 0.14, 1.0],
+    );
+    for ex_sign in [-1.0f32, 1.0f32] {
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(ex_sign * 0.55, 0.26, -half_l - 0.02),
+            0.05,
+            0.04,
+            12,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+    }
 
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Chassis".into(),
@@ -1645,38 +1932,71 @@ pub fn build_executive_sedan(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 2. Sedan Greenhouse Glass
+    // -------------------------------------------------------------------------
+    // 2. Sedan Greenhouse Glass (Windshield, Roof, Rear Backlight, Side Glass)
+    // -------------------------------------------------------------------------
     let mut glass_mesh = ChunkMesh::default();
-    // Windshield
+
+    // 2a. Sloped Panoramic Windshield
     add_quad(
         &mut glass_mesh,
-        Vec3::new(-0.78, beltline_y + 0.01, 0.75),
-        Vec3::new(0.78, beltline_y + 0.01, 0.75),
-        Vec3::new(0.65, roof_y, 0.15),
-        Vec3::new(-0.65, roof_y, 0.15),
+        Vec3::new(-0.76, beltline_y + 0.02, 0.75),
+        Vec3::new(0.76, beltline_y + 0.02, 0.75),
+        Vec3::new(0.64, roof_y, 0.15),
+        Vec3::new(-0.64, roof_y, 0.15),
         Vec3::new(0.0, 0.60, 0.80).normalize(),
         AutomotivePalette::TINTED_GLASS,
     );
-    // Roof
+    // 2b. Contoured Roof with Inlaid Sunroof Glass
     add_quad(
         &mut glass_mesh,
-        Vec3::new(-0.65, roof_y, 0.15),
-        Vec3::new(0.65, roof_y, 0.15),
-        Vec3::new(0.65, roof_y, -0.65),
-        Vec3::new(-0.65, roof_y, -0.65),
+        Vec3::new(-0.64, roof_y, 0.15),
+        Vec3::new(0.64, roof_y, 0.15),
+        Vec3::new(0.64, roof_y, -0.65),
+        Vec3::new(-0.64, roof_y, -0.65),
         Vec3::Y,
         AutomotivePalette::SEDAN_SAPPHIRE_BLUE,
     );
-    // Rear Window
     add_quad(
         &mut glass_mesh,
-        Vec3::new(-0.65, roof_y, -0.65),
-        Vec3::new(0.65, roof_y, -0.65),
-        Vec3::new(0.72, beltline_y + 0.01, -1.35),
-        Vec3::new(-0.72, beltline_y + 0.01, -1.35),
+        Vec3::new(-0.45, roof_y + 0.005, 0.05),
+        Vec3::new(0.45, roof_y + 0.005, 0.05),
+        Vec3::new(0.45, roof_y + 0.005, -0.45),
+        Vec3::new(-0.45, roof_y + 0.005, -0.45),
+        Vec3::Y,
+        [0.05, 0.08, 0.12, 0.85], // Dark tinted sunroof
+    );
+    // 2c. Raked Rear Backlight Window
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.64, roof_y, -0.65),
+        Vec3::new(0.64, roof_y, -0.65),
+        Vec3::new(0.72, beltline_y + 0.02, -1.35),
+        Vec3::new(-0.72, beltline_y + 0.02, -1.35),
         Vec3::new(0.0, 0.60, -0.80).normalize(),
         AutomotivePalette::TINTED_GLASS,
     );
+    // 2d. Left Side Windows (Driver & Passenger)
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.76, beltline_y + 0.02, 0.72),
+        Vec3::new(-0.64, roof_y - 0.02, 0.15),
+        Vec3::new(-0.64, roof_y - 0.02, -0.65),
+        Vec3::new(-0.72, beltline_y + 0.02, -1.30),
+        -Vec3::X,
+        AutomotivePalette::TINTED_GLASS,
+    );
+    // 2e. Right Side Windows
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(0.64, roof_y - 0.02, 0.15),
+        Vec3::new(0.76, beltline_y + 0.02, 0.72),
+        Vec3::new(0.72, beltline_y + 0.02, -1.30),
+        Vec3::new(0.64, roof_y - 0.02, -0.65),
+        Vec3::X,
+        AutomotivePalette::TINTED_GLASS,
+    );
+
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Glass".into(),
         submesh_type: VehicleSubmeshType::GlassGreenhouse,
@@ -1692,7 +2012,222 @@ pub fn build_executive_sedan(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 3. Transformable 4 Wheels
+    // -------------------------------------------------------------------------
+    // 3. Luxury Interior Cockpit (Dashboard, Center Console, Leather Seats)
+    // -------------------------------------------------------------------------
+    let mut interior_mesh = ChunkMesh::default();
+    // Dashboard with Dual Screen Displays
+    add_box_at(
+        &mut interior_mesh,
+        Vec3::new(0.0, 0.72, 0.45),
+        Vec3::new(0.68, 0.12, 0.20),
+        AutomotivePalette::INTERIOR_CHARCOAL,
+    );
+    // Dual Screens (Instrument Binnacle & Center Infotainment)
+    add_quad(
+        &mut interior_mesh,
+        Vec3::new(-0.50, 0.75, 0.35),
+        Vec3::new(-0.20, 0.75, 0.35),
+        Vec3::new(-0.20, 0.84, 0.35),
+        Vec3::new(-0.50, 0.84, 0.35),
+        -Vec3::Z,
+        [0.08, 0.45, 0.85, 1.0], // Glowing virtual cockpit
+    );
+    add_quad(
+        &mut interior_mesh,
+        Vec3::new(-0.12, 0.70, 0.37),
+        Vec3::new(0.15, 0.70, 0.37),
+        Vec3::new(0.15, 0.80, 0.37),
+        Vec3::new(-0.12, 0.80, 0.37),
+        -Vec3::Z,
+        [0.12, 0.65, 0.42, 1.0], // Navigation map
+    );
+    // Center Floor Console
+    add_box_at(
+        &mut interior_mesh,
+        Vec3::new(0.0, 0.48, -0.10),
+        Vec3::new(0.14, 0.14, 0.50),
+        AutomotivePalette::INTERIOR_CHARCOAL,
+    );
+    // Front Luxury Bucket Seats
+    for sign in [-1.0f32, 1.0f32] {
+        let sx = sign * 0.38;
+        // Seat cushion
+        add_box_at(
+            &mut interior_mesh,
+            Vec3::new(sx, 0.45, -0.05),
+            Vec3::new(0.24, 0.08, 0.24),
+            [0.18, 0.16, 0.15, 1.0], // Dark espresso leather
+        );
+        // Backrest with headrest
+        add_box_at(
+            &mut interior_mesh,
+            Vec3::new(sx, 0.75, -0.25),
+            Vec3::new(0.22, 0.25, 0.08),
+            [0.18, 0.16, 0.15, 1.0],
+        );
+    }
+    // Rear Luxury Bench Seat
+    add_box_at(
+        &mut interior_mesh,
+        Vec3::new(0.0, 0.45, -0.85),
+        Vec3::new(0.65, 0.08, 0.25),
+        [0.18, 0.16, 0.15, 1.0],
+    );
+    add_box_at(
+        &mut interior_mesh,
+        Vec3::new(0.0, 0.72, -1.05),
+        Vec3::new(0.65, 0.22, 0.08),
+        [0.18, 0.16, 0.15, 1.0],
+    );
+
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Interior".into(),
+        submesh_type: VehicleSubmeshType::InteriorCockpit,
+        mesh: interior_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::INTERIOR_CHARCOAL,
+            metallic: 0.10,
+            roughness: 0.80,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 4. Projector Headlights with Signature LED DRLs
+    // -------------------------------------------------------------------------
+    let mut hl_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        let x = sign * 0.64;
+        add_cylinder_z(
+            &mut hl_mesh,
+            Vec3::new(x, 0.52, half_l - 0.04),
+            0.08,
+            0.03,
+            12,
+            AutomotivePalette::HEADLIGHT_XENON_ON,
+        );
+        // LED Eyebrow DRL
+        add_quad(
+            &mut hl_mesh,
+            Vec3::new(sign * 0.54, 0.60, half_l - 0.03),
+            Vec3::new(sign * 0.74, 0.60, half_l - 0.03),
+            Vec3::new(sign * 0.74, 0.62, half_l - 0.03),
+            Vec3::new(sign * 0.54, 0.62, half_l - 0.03),
+            Vec3::Z,
+            AutomotivePalette::HEADLIGHT_XENON_ON,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Headlights".into(),
+        submesh_type: VehicleSubmeshType::Headlights,
+        mesh: hl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::HEADLIGHT_XENON_ON,
+            metallic: 0.10,
+            roughness: 0.10,
+            emissive: [1.0, 0.98, 0.88],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 5. LED Taillights & Full-Width Brake Light Ribbon
+    // -------------------------------------------------------------------------
+    let mut bl_mesh = ChunkMesh::default();
+    // Full-width continuous LED light ribbon
+    add_quad(
+        &mut bl_mesh,
+        Vec3::new(-0.72, 0.62, -half_l + 0.02),
+        Vec3::new(0.72, 0.62, -half_l + 0.02),
+        Vec3::new(0.72, 0.68, -half_l + 0.02),
+        Vec3::new(-0.72, 0.68, -half_l + 0.02),
+        -Vec3::Z,
+        AutomotivePalette::TAILLIGHT_RUNNING,
+    );
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "BrakeLights".into(),
+        submesh_type: VehicleSubmeshType::BrakeLights,
+        mesh: bl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TAILLIGHT_RUNNING,
+            metallic: 0.20,
+            roughness: 0.20,
+            emissive: [0.75, 0.05, 0.05],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 6. Reverse Lights
+    // -------------------------------------------------------------------------
+    let mut rl_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut rl_mesh,
+            Vec3::new(sign * 0.22, 0.44, -half_l + 0.038),
+            Vec3::new(sign * 0.32, 0.44, -half_l + 0.038),
+            Vec3::new(sign * 0.32, 0.48, -half_l + 0.038),
+            Vec3::new(sign * 0.22, 0.48, -half_l + 0.038),
+            -Vec3::Z,
+            AutomotivePalette::REVERSE_OFF,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "ReverseLights".into(),
+        submesh_type: VehicleSubmeshType::ReverseLights,
+        mesh: rl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::REVERSE_OFF,
+            metallic: 0.20,
+            roughness: 0.20,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 7. Dynamic Turn Indicator Signals
+    // -------------------------------------------------------------------------
+    let mut ts_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut ts_mesh,
+            Vec3::new(sign * 0.74, 0.50, half_l - 0.03),
+            Vec3::new(sign * 0.84, 0.50, half_l - 0.03),
+            Vec3::new(sign * 0.84, 0.54, half_l - 0.03),
+            Vec3::new(sign * 0.74, 0.54, half_l - 0.03),
+            Vec3::Z,
+            AutomotivePalette::TURN_SIGNAL_AMBER,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "TurnSignals".into(),
+        submesh_type: VehicleSubmeshType::TurnSignals,
+        mesh: ts_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TURN_SIGNAL_AMBER,
+            metallic: 0.10,
+            roughness: 0.10,
+            emissive: [1.0, 0.65, 0.05],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 8. Transformable 4 Luxury Alloy Wheels
+    // -------------------------------------------------------------------------
     let wheel_r = 0.33;
     let wheel_w = 0.235;
     let half_wb = 1.35;
@@ -1762,31 +2297,230 @@ pub fn build_overland_explorer_suv(lod: VehicleLodLevel) -> LoadedVehicleModel {
         });
 
     let half_w = 0.99;
-    let half_l = 2.45;
+    let half_l = 2.45; // 4.90m overall length
+    let beltline_y = 0.92;
+    let hood_y = 0.88;
     let roof_y = 1.75;
 
+    // -------------------------------------------------------------------------
+    // 1. Rugged 4x4 High-Clearance Chassis & Body Panels
+    // -------------------------------------------------------------------------
     let mut chassis_mesh = ChunkMesh::default();
-    // Rugged 2-Box High-Clearance SUV Body
-    add_box_at(
+
+    // 1a. Heavy-Duty Front Skid Plate & Bumper
+    add_quad(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.62, 0.0),
-        Vec3::new(half_w, 0.32, half_l),
-        AutomotivePalette::SUV_GRANITE_GRAY,
+        Vec3::new(-0.65, 0.22, 2.20),
+        Vec3::new(0.65, 0.22, 2.20),
+        Vec3::new(0.60, 0.32, half_l),
+        Vec3::new(-0.60, 0.32, half_l),
+        Vec3::new(0.0, 0.45, 0.89).normalize(),
+        AutomotivePalette::ALLOY_SILVER, // Brushed aluminum skid plate
     );
-    // Lower protective cladding
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 0.35, 0.0),
-        Vec3::new(half_w + 0.02, 0.10, half_l + 0.02),
-        AutomotivePalette::CARBON_FIBER,
-    );
-    // Roof rack rails
+    // Dual Red Recovery Tow Hooks
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sign * 0.75, roof_y + 0.05, -0.2),
-            Vec3::new(0.025, 0.025, 1.1),
+            Vec3::new(sign * 0.40, 0.28, half_l + 0.02),
+            Vec3::new(0.04, 0.04, 0.05),
+            [0.90, 0.15, 0.15, 1.0], // Safety red recovery hooks
+        );
+    }
+    // Lower Front Bumper Cladding (Dark Composite)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.45, half_l - 0.06),
+        Vec3::new(half_w * 0.96, 0.15, 0.08),
+        AutomotivePalette::CARBON_FIBER,
+    );
+
+    // 1b. Upright 7-Slot Bold Off-Road Grille
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.68, half_l - 0.04),
+        Vec3::new(0.58, 0.14, 0.03),
+        [0.12, 0.14, 0.16, 1.0],
+    );
+    for slot in [-0.45, -0.30, -0.15, 0.0, 0.15, 0.30, 0.45] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(slot, 0.68, half_l - 0.025),
+            Vec3::new(0.035, 0.12, 0.02),
+            AutomotivePalette::SUV_GRANITE_GRAY,
+        );
+    }
+
+    // 1c. Clamshell Raised Hood with Cowl Heat Extractors
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.82, 0.82, half_l - 0.08),
+        Vec3::new(0.82, 0.82, half_l - 0.08),
+        Vec3::new(0.86, hood_y, 0.80),
+        Vec3::new(-0.86, hood_y, 0.80),
+        Vec3::new(0.0, 0.22, 0.97).normalize(),
+        AutomotivePalette::SUV_GRANITE_GRAY,
+    );
+
+    // 1d. High-Clearance Squared-Off Wheel Arches with Textured Overfenders & Dark Wheel Liners
+    // Wheelbase 2.85m -> front axle z = 1.425, rear axle z = -1.425. Wheel radius 0.38m -> tire top y = 0.76m.
+    for sign in [-1.0f32, 1.0f32] {
+        let fx = sign * half_w;
+        let fnorm = Vec3::new(sign, 0.0, 0.0);
+        let inner_x = sign * (half_w - 0.12);
+        let cladding_color = [0.10, 0.10, 0.12, 1.0];
+
+        // Front Wheel Arch Overfender: arch apex at 0.84m (clears tire 0.76m)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.42, 1.82),
+            Vec3::new(sign * 0.86, 0.80, 1.82),
+            Vec3::new(sign * 0.88, 0.84, 1.425),
+            Vec3::new(fx, 0.84, 1.425),
+            fnorm,
+            cladding_color,
+        );
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.84, 1.425),
+            Vec3::new(sign * 0.88, 0.84, 1.425),
+            Vec3::new(sign * 0.86, 0.80, 1.05),
+            Vec3::new(fx, 0.42, 1.05),
+            fnorm,
+            cladding_color,
+        );
+        // Front Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.80, 1.05),
+            Vec3::new(fx, 0.84, 1.05),
+            Vec3::new(fx, 0.84, 1.82),
+            Vec3::new(inner_x, 0.80, 1.82),
+            -Vec3::Y,
+            cladding_color,
+        );
+
+        // Rear Wheel Arch Overfender: arch apex at 0.84m
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.42, -1.05),
+            Vec3::new(sign * 0.86, 0.80, -1.05),
+            Vec3::new(sign * 0.88, 0.84, -1.425),
+            Vec3::new(fx, 0.84, -1.425),
+            fnorm,
+            cladding_color,
+        );
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.84, -1.425),
+            Vec3::new(sign * 0.88, 0.84, -1.425),
+            Vec3::new(sign * 0.86, 0.80, -1.82),
+            Vec3::new(fx, 0.42, -1.82),
+            fnorm,
+            cladding_color,
+        );
+        // Rear Inner Wheel Well Cavity Liner
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(inner_x, 0.80, -1.82),
+            Vec3::new(fx, 0.84, -1.82),
+            Vec3::new(fx, 0.84, -1.05),
+            Vec3::new(inner_x, 0.80, -1.05),
+            -Vec3::Y,
+            cladding_color,
+        );
+
+        // Robust Rock Slider Step Bar beneath doors (z = -1.05 to 1.05)
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(fx + sign * 0.04, 0.38, 0.0),
+            Vec3::new(0.045, 0.035, 1.05),
+            AutomotivePalette::CARBON_FIBER,
+        );
+        // Side Door Waistline Panels
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(fx, 0.42, 1.05),
+            Vec3::new(sign * 0.88, beltline_y, 1.05),
+            Vec3::new(sign * 0.88, beltline_y, -1.05),
+            Vec3::new(fx, 0.42, -1.05),
+            fnorm,
+            AutomotivePalette::SUV_GRANITE_GRAY,
+        );
+    }
+
+    // 1e. Aerodynamic Side Mirrors on Front Doors
+    for sign in [-1.0f32, 1.0f32] {
+        let mir_x = sign * 0.92;
+        let mir_stalk_x = sign * 0.84;
+        let mir_y = beltline_y + 0.12;
+        let mir_z = 0.68;
+
+        // Stalk
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new((mir_x + mir_stalk_x) * 0.5, mir_y - 0.04, mir_z),
+            Vec3::new(0.04, 0.02, 0.025),
+            [0.15, 0.16, 0.18, 1.0],
+        );
+        // Dual-Tone Mirror Housing
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(mir_x + sign * 0.06, mir_y, mir_z),
+            Vec3::new(0.075, 0.055, 0.085),
+            AutomotivePalette::SUV_GRANITE_GRAY,
+        );
+        // Reflective Chrome Mirror Glass Face (-Z facing)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mir_x + sign * 0.01, mir_y - 0.045, mir_z - 0.08),
+            Vec3::new(mir_x + sign * 0.12, mir_y - 0.045, mir_z - 0.08),
+            Vec3::new(mir_x + sign * 0.12, mir_y + 0.045, mir_z - 0.08),
+            Vec3::new(mir_x + sign * 0.01, mir_y + 0.045, mir_z - 0.08),
+            -Vec3::Z,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+    }
+
+    // 1f. Upright Rear Liftgate, High-Departure Bumper & Class IV Tow Hitch Receiver
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.84, beltline_y, -2.15),
+        Vec3::new(0.84, beltline_y, -2.15),
+        Vec3::new(0.82, 0.65, -half_l + 0.02),
+        Vec3::new(-0.82, 0.65, -half_l + 0.02),
+        -Vec3::Z,
+        AutomotivePalette::SUV_GRANITE_GRAY,
+    );
+    // Rear Bumper with Step Pad
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.52, -half_l + 0.02),
+        Vec3::new(half_w * 0.95, 0.15, 0.08),
+        [0.12, 0.12, 0.14, 1.0],
+    );
+    // Class IV 2-Inch Square Tow Hitch Receiver
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.38, -half_l + 0.06),
+        Vec3::new(0.06, 0.06, 0.08),
+        AutomotivePalette::CARBON_FIBER,
+    );
+
+    // 1g. Heavy-Duty Tubular Aluminum Roof Rack Rails & Crossbars
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.75, roof_y + 0.06, -0.20),
+            Vec3::new(0.03, 0.03, 1.15),
             AutomotivePalette::ALLOY_SILVER,
+        );
+    }
+    for rz in [-1.0, -0.20, 0.60] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(0.0, roof_y + 0.08, rz),
+            Vec3::new(0.75, 0.02, 0.03),
+            AutomotivePalette::CARBON_FIBER,
         );
     }
 
@@ -1805,7 +2539,247 @@ pub fn build_overland_explorer_suv(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // SUV Wheels
+    // -------------------------------------------------------------------------
+    // 2. SUV Greenhouse Glass (Panoramic Windshield, Roof, Cargo Windows)
+    // -------------------------------------------------------------------------
+    let mut glass_mesh = ChunkMesh::default();
+
+    // 2a. Upright Panoramic Windshield
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.80, beltline_y + 0.02, 0.80),
+        Vec3::new(0.80, beltline_y + 0.02, 0.80),
+        Vec3::new(0.68, roof_y, 0.20),
+        Vec3::new(-0.68, roof_y, 0.20),
+        Vec3::new(0.0, 0.65, 0.76).normalize(),
+        AutomotivePalette::TINTED_GLASS,
+    );
+    // 2b. Dual-Pane Panoramic Sunroof Glass
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.50, roof_y + 0.005, 0.10),
+        Vec3::new(0.50, roof_y + 0.005, 0.10),
+        Vec3::new(0.50, roof_y + 0.005, -0.80),
+        Vec3::new(-0.50, roof_y + 0.005, -0.80),
+        Vec3::Y,
+        [0.05, 0.08, 0.12, 0.85],
+    );
+    // 2c. Upright Rear Liftgate Window
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.68, roof_y, -1.45),
+        Vec3::new(0.68, roof_y, -1.45),
+        Vec3::new(0.78, beltline_y + 0.02, -2.15),
+        Vec3::new(-0.78, beltline_y + 0.02, -2.15),
+        Vec3::new(0.0, 0.70, -0.71).normalize(),
+        AutomotivePalette::TINTED_GLASS,
+    );
+    // 2d. Left Side Privacy Windows
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-0.80, beltline_y + 0.02, 0.78),
+        Vec3::new(-0.68, roof_y - 0.02, 0.20),
+        Vec3::new(-0.68, roof_y - 0.02, -1.45),
+        Vec3::new(-0.78, beltline_y + 0.02, -2.10),
+        -Vec3::X,
+        AutomotivePalette::TINTED_GLASS,
+    );
+    // 2e. Right Side Privacy Windows
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(0.68, roof_y - 0.02, 0.20),
+        Vec3::new(0.80, beltline_y + 0.02, 0.78),
+        Vec3::new(0.78, beltline_y + 0.02, -2.10),
+        Vec3::new(0.68, roof_y - 0.02, -1.45),
+        Vec3::X,
+        AutomotivePalette::TINTED_GLASS,
+    );
+
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Glass".into(),
+        submesh_type: VehicleSubmeshType::GlassGreenhouse,
+        mesh: glass_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TINTED_GLASS,
+            metallic: 0.10,
+            roughness: 0.05,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Blend,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 3. Elevated Command Cockpit Interior (Dashboard, Console, Adventure Seats)
+    // -------------------------------------------------------------------------
+    let mut interior_mesh = ChunkMesh::default();
+    add_box_at(
+        &mut interior_mesh,
+        Vec3::new(0.0, 0.92, 0.50),
+        Vec3::new(0.72, 0.15, 0.22),
+        AutomotivePalette::INTERIOR_CHARCOAL,
+    );
+    add_quad(
+        &mut interior_mesh,
+        Vec3::new(-0.15, 0.90, 0.40),
+        Vec3::new(0.18, 0.90, 0.40),
+        Vec3::new(0.18, 1.02, 0.40),
+        Vec3::new(-0.15, 1.02, 0.40),
+        -Vec3::Z,
+        [0.10, 0.55, 0.85, 1.0], // Large central touchscreen
+    );
+    for sign in [-1.0f32, 1.0f32] {
+        let sx = sign * 0.40;
+        add_box_at(
+            &mut interior_mesh,
+            Vec3::new(sx, 0.65, 0.0),
+            Vec3::new(0.25, 0.10, 0.26),
+            [0.15, 0.16, 0.18, 1.0],
+        );
+        add_box_at(
+            &mut interior_mesh,
+            Vec3::new(sx, 0.98, -0.22),
+            Vec3::new(0.23, 0.28, 0.08),
+            [0.15, 0.16, 0.18, 1.0],
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Interior".into(),
+        submesh_type: VehicleSubmeshType::InteriorCockpit,
+        mesh: interior_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::INTERIOR_CHARCOAL,
+            metallic: 0.10,
+            roughness: 0.80,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 4. Quad LED Headlights with Amber DRL Halos
+    // -------------------------------------------------------------------------
+    let mut hl_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        let x = sign * 0.68;
+        add_cylinder_z(
+            &mut hl_mesh,
+            Vec3::new(x, 0.72, half_l - 0.04),
+            0.10,
+            0.03,
+            12,
+            AutomotivePalette::HEADLIGHT_XENON_ON,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "Headlights".into(),
+        submesh_type: VehicleSubmeshType::Headlights,
+        mesh: hl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::HEADLIGHT_XENON_ON,
+            metallic: 0.10,
+            roughness: 0.10,
+            emissive: [1.0, 0.98, 0.88],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 5. Vertical C-Clamp LED Brake & Taillight Clusters
+    // -------------------------------------------------------------------------
+    let mut bl_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        let tx = sign * 0.78;
+        add_box_at(
+            &mut bl_mesh,
+            Vec3::new(tx, 0.82, -half_l + 0.03),
+            Vec3::new(0.06, 0.22, 0.02),
+            AutomotivePalette::TAILLIGHT_RUNNING,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "BrakeLights".into(),
+        submesh_type: VehicleSubmeshType::BrakeLights,
+        mesh: bl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TAILLIGHT_RUNNING,
+            metallic: 0.20,
+            roughness: 0.20,
+            emissive: [0.75, 0.05, 0.05],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 6. Reverse Lights
+    // -------------------------------------------------------------------------
+    let mut rl_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut rl_mesh,
+            Vec3::new(sign * 0.25, 0.48, -half_l + 0.04),
+            Vec3::new(sign * 0.35, 0.48, -half_l + 0.04),
+            Vec3::new(sign * 0.35, 0.54, -half_l + 0.04),
+            Vec3::new(sign * 0.25, 0.54, -half_l + 0.04),
+            -Vec3::Z,
+            AutomotivePalette::REVERSE_OFF,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "ReverseLights".into(),
+        submesh_type: VehicleSubmeshType::ReverseLights,
+        mesh: rl_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::REVERSE_OFF,
+            metallic: 0.20,
+            roughness: 0.20,
+            emissive: [0.0, 0.0, 0.0],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 7. Dynamic Turn Indicator Signals
+    // -------------------------------------------------------------------------
+    let mut ts_mesh = ChunkMesh::default();
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut ts_mesh,
+            Vec3::new(sign * 0.80, 0.70, half_l - 0.04),
+            Vec3::new(sign * 0.90, 0.70, half_l - 0.04),
+            Vec3::new(sign * 0.90, 0.74, half_l - 0.04),
+            Vec3::new(sign * 0.80, 0.74, half_l - 0.04),
+            Vec3::Z,
+            AutomotivePalette::TURN_SIGNAL_AMBER,
+        );
+    }
+    builder = builder.add_submesh(VehicleSubmesh {
+        name: "TurnSignals".into(),
+        submesh_type: VehicleSubmeshType::TurnSignals,
+        mesh: ts_mesh,
+        local_transform: Affine3A::IDENTITY,
+        pivot: Vec3::ZERO,
+        material: VehiclePbrMaterial {
+            base_color: AutomotivePalette::TURN_SIGNAL_AMBER,
+            metallic: 0.10,
+            roughness: 0.10,
+            emissive: [1.0, 0.65, 0.05],
+            alpha_mode: VehicleAlphaMode::Opaque,
+        },
+    });
+
+    // -------------------------------------------------------------------------
+    // 8. 4 All-Terrain SUV Wheels
+    // -------------------------------------------------------------------------
     let wheel_r = 0.38;
     let wheel_w = 0.265;
     let half_wb = 1.425;
@@ -1865,11 +2839,16 @@ pub fn build_metro_yellow_cab(lod: VehicleLodLevel) -> LoadedVehicleModel {
     model.asset_id = "metro_yellow_cab".into();
     model.display_name = "Metro Yellow Cab".into();
 
-    // Re-color chassis to iconic yellow taxi livery & add illuminated roof lantern
+    // Re-color only blue body paint to iconic yellow taxi livery, preserving chrome/liners
     for submesh in &mut model.submeshes {
         if submesh.submesh_type == VehicleSubmeshType::ChassisBody {
             for v in &mut submesh.mesh.vertices {
-                v.color = AutomotivePalette::TAXI_MUNICIPAL_YELLOW;
+                let is_body_paint = (v.color[0] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[0]).abs() < 0.05
+                    && (v.color[1] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[1]).abs() < 0.05
+                    && (v.color[2] - AutomotivePalette::SEDAN_SAPPHIRE_BLUE[2]).abs() < 0.05;
+                if is_body_paint {
+                    v.color = AutomotivePalette::TAXI_MUNICIPAL_YELLOW;
+                }
             }
             // Add rooftop taxi sign lantern
             add_box_at(
@@ -1878,6 +2857,23 @@ pub fn build_metro_yellow_cab(lod: VehicleLodLevel) -> LoadedVehicleModel {
                 Vec3::new(0.24, 0.065, 0.10),
                 [1.0, 0.95, 0.60, 1.0], // Illuminated taxi sign
             );
+            // Black/white checkerboard decals along door beltline
+            for sign in [-1.0f32, 1.0f32] {
+                for i in 0..8 {
+                    let cz = -0.70 + i as f32 * 0.18;
+                    let check_color = if i % 2 == 0 {
+                        [0.05, 0.05, 0.05, 1.0]
+                    } else {
+                        [0.95, 0.95, 0.95, 1.0]
+                    };
+                    add_box_at(
+                        &mut submesh.mesh,
+                        Vec3::new(sign * (0.93 + 0.012), 0.70, cz),
+                        Vec3::new(0.005, 0.025, 0.08),
+                        check_color,
+                    );
+                }
+            }
         }
     }
 
@@ -1975,6 +2971,58 @@ pub fn build_transcontinental_semi(lod: VehicleLodLevel) -> LoadedVehicleModel {
             0.65,
             14,
             AutomotivePalette::POLISHED_CHROME,
+        );
+    }
+
+    // Aerodynamic West-Coast Side Mirrors on Cab Doors with Wide-Angle Spotters
+    for sign in [-1.0f32, 1.0f32] {
+        let mir_x = sign * (half_w + 0.16);
+        let mir_y = 2.40;
+        let mir_z = 1.25;
+
+        // Chrome upper and lower tubular mounting brackets
+        add_cylinder_x(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w + 0.08), mir_y + 0.22, mir_z),
+            0.018,
+            0.08,
+            8,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        add_cylinder_x(
+            &mut chassis_mesh,
+            Vec3::new(sign * (half_w + 0.08), mir_y - 0.22, mir_z),
+            0.018,
+            0.08,
+            8,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        // Vertical Chrome Mirror Housing
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(mir_x, mir_y, mir_z),
+            Vec3::new(0.045, 0.28, 0.09),
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        // Primary Flat Mirror Glass (-Z facing)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mir_x - 0.035, mir_y - 0.06, mir_z - 0.09),
+            Vec3::new(mir_x + 0.035, mir_y - 0.06, mir_z - 0.09),
+            Vec3::new(mir_x + 0.035, mir_y + 0.26, mir_z - 0.09),
+            Vec3::new(mir_x - 0.035, mir_y + 0.26, mir_z - 0.09),
+            -Vec3::Z,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        // Lower Convex Spotter Mirror (-Z facing)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mir_x - 0.035, mir_y - 0.26, mir_z - 0.09),
+            Vec3::new(mir_x + 0.035, mir_y - 0.26, mir_z - 0.09),
+            Vec3::new(mir_x + 0.035, mir_y - 0.08, mir_z - 0.09),
+            Vec3::new(mir_x - 0.035, mir_y - 0.08, mir_z - 0.09),
+            -Vec3::Z,
+            [0.85, 0.88, 0.92, 1.0],
         );
     }
 
@@ -3240,6 +4288,147 @@ pub fn build_hypersport_rr1000(lod: VehicleLodLevel) -> LoadedVehicleModel {
         );
     }
 
+    // 6b. Authentically Modeled Rider in Aerodynamic Racing Tuck
+    // Leather Racing Suit Pelvis & Lower Torso
+    let leather_color = [0.12, 0.14, 0.16, 1.0]; // Perforated black kangaroo racing leather
+    let accent_leather = [0.95, 0.42, 0.08, 1.0]; // Team racing orange suit graphics
+    let visor_chrome = [0.25, 0.28, 0.32, 1.0];
+
+    // Pelvis seated on seat pad (z = -0.15 to -0.32, y = 0.82)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.82, -0.22),
+        Vec3::new(0.12, 0.08, 0.12),
+        leather_color,
+    );
+    // Torso slanting forward over fuel tank (hips at -0.22 to shoulders at 0.15)
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.14, 0.84, -0.20),
+        Vec3::new(0.14, 0.84, -0.20),
+        Vec3::new(0.16, 0.98, 0.12),
+        Vec3::new(-0.16, 0.98, 0.12),
+        Vec3::new(0.0, 0.85, 0.52).normalize(),
+        leather_color,
+    );
+    // Upper back aerodynamic speed hump (behind neck)
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.06, 0.90, -0.12),
+        Vec3::new(0.06, 0.90, -0.12),
+        Vec3::new(0.05, 1.06, 0.08),
+        Vec3::new(-0.05, 1.06, 0.08),
+        Vec3::new(0.0, 0.95, 0.31).normalize(),
+        accent_leather,
+    );
+    // Speed hump rear fairing taper
+    add_tri(
+        &mut chassis_mesh,
+        Vec3::new(-0.06, 0.90, -0.12),
+        Vec3::new(0.0, 0.84, -0.22),
+        Vec3::new(0.06, 0.90, -0.12),
+        -Vec3::Z,
+        accent_leather,
+    );
+
+    // Full-Face Racing Helmet (Head in racing tuck facing forward)
+    let helmet_center = Vec3::new(0.0, 1.10, 0.22);
+    add_cylinder_z(
+        &mut chassis_mesh,
+        helmet_center,
+        0.11,
+        0.12,
+        14,
+        leather_color,
+    );
+    // Helmet Aerodynamic Rear Spoiler / Diffuser
+    add_tri(
+        &mut chassis_mesh,
+        Vec3::new(-0.07, 1.15, 0.12),
+        Vec3::new(0.0, 1.16, 0.05),
+        Vec3::new(0.07, 1.15, 0.12),
+        Vec3::Y,
+        accent_leather,
+    );
+    // Tinted / Iridium Curved Visor (+Z forward facing)
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.08, 1.06, 0.32),
+        Vec3::new(0.08, 1.06, 0.32),
+        Vec3::new(0.08, 1.16, 0.30),
+        Vec3::new(-0.08, 1.16, 0.30),
+        Vec3::new(0.0, 0.25, 0.96).normalize(),
+        visor_chrome,
+    );
+
+    // Left and Right Arms Gripping Clip-On Handlebars
+    for sign in [-1.0f32, 1.0f32] {
+        let shoulder = Vec3::new(sign * 0.15, 0.98, 0.12);
+        let elbow = Vec3::new(sign * 0.18, 0.86, 0.22);
+        let hand = Vec3::new(sign * 0.20, 0.84, 0.38);
+
+        // Upper arm
+        add_box_at(
+            &mut chassis_mesh,
+            (shoulder + elbow) * 0.5,
+            Vec3::new(0.045, 0.05, 0.08),
+            leather_color,
+        );
+        // Forearm with racing glove gripping clip-on
+        add_box_at(
+            &mut chassis_mesh,
+            (elbow + hand) * 0.5,
+            Vec3::new(0.04, 0.04, 0.09),
+            accent_leather,
+        );
+        // Glove knuckle armor
+        add_box_at(
+            &mut chassis_mesh,
+            hand,
+            Vec3::new(0.035, 0.035, 0.04),
+            AutomotivePalette::CARBON_FIBER,
+        );
+
+        // Thigh hugging fuel tank knee recess
+        let hip = Vec3::new(sign * 0.10, 0.80, -0.18);
+        let knee = Vec3::new(sign * 0.16, 0.62, 0.06);
+        let foot = Vec3::new(sign * 0.16, 0.36, -0.22);
+
+        add_box_at(
+            &mut chassis_mesh,
+            (hip + knee) * 0.5,
+            Vec3::new(0.055, 0.08, 0.14),
+            leather_color,
+        );
+        // Replaceable Dual-Compound Knee Slider
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.19, 0.60, 0.08),
+            Vec3::new(0.02, 0.035, 0.045),
+            [0.95, 0.95, 0.95, 1.0], // White knee slider puck
+        );
+        // Shin / Calf to rearset footpeg
+        add_box_at(
+            &mut chassis_mesh,
+            (knee + foot) * 0.5,
+            Vec3::new(0.045, 0.12, 0.06),
+            leather_color,
+        );
+        // Racing Boot with Ankle Brace & Magnesium Toe Slider
+        add_box_at(
+            &mut chassis_mesh,
+            foot,
+            Vec3::new(0.04, 0.05, 0.09),
+            AutomotivePalette::CARBON_FIBER,
+        );
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 0.18, 0.34, -0.16),
+            Vec3::new(0.015, 0.015, 0.03),
+            AutomotivePalette::ALLOY_SILVER, // Magnesium toe slider
+        );
+    }
+
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Motorcycle_Body".into(),
         submesh_type: VehicleSubmeshType::MotorcycleLeanBody,
@@ -3762,45 +4951,188 @@ pub fn build_golden_gate_ferry(lod: VehicleLodLevel) -> LoadedVehicleModel {
     let mut chassis_mesh = ChunkMesh::default();
     let hull_white = [0.95, 0.95, 0.98, 1.0];
     let hull_navy = [0.10, 0.18, 0.32, 1.0];
-
-    // 1. Twin Catamaran Sponsons with Razor Wave-Piercing Bows
+    let bottom_red = [0.65, 0.20, 0.15, 1.0]; // Anti-fouling copper-red bottom paint
+    let deck_gray = [0.72, 0.74, 0.78, 1.0]; // Non-skid deck coating
     let sponson_x = 4.25;
+
+    // -------------------------------------------------------------------------
+    // 1. Twin Catamaran Sponsons with Wave-Piercing Chined Keels
+    // -------------------------------------------------------------------------
     for sign in [-1.0f32, 1.0f32] {
         let sx = sign * sponson_x;
-        // Main sponson hull
+
+        // 1a. Lower Hydrodynamic V-Keel below waterline (Copper-Red Anti-Fouling)
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sx, 1.80, 0.0),
-            Vec3::new(1.10, 1.20, 19.5),
+            Vec3::new(sx, 0.85, 0.0),
+            Vec3::new(0.85, 0.65, 18.5),
+            bottom_red,
+        );
+        // Razor Knife-Edge Wave-Piercing Bow Slices (z = 18.5 to 21.5)
+        add_tri(
+            &mut chassis_mesh,
+            Vec3::new(sx - 0.40, 0.85, 18.5),
+            Vec3::new(sx + 0.40, 0.85, 18.5),
+            Vec3::new(sx, 1.10, 21.5),
+            Vec3::new(0.0, 0.35, 0.93).normalize(),
+            bottom_red,
+        );
+
+        // 1b. Flared Topsides & Chine Flats (Maritime Navy Blue)
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sx, 2.10, 0.0),
+            Vec3::new(1.15, 0.60, 19.5),
             hull_navy,
         );
-        // Razor wave-piercing knife bow
+        // Forward Flared Stem (z = 19.5 to 21.5)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(sx - 0.75, 1.50, 19.5),
+            Vec3::new(sx + 0.75, 1.50, 19.5),
+            Vec3::new(sx + 0.25, 2.70, 21.5),
+            Vec3::new(sx - 0.25, 2.70, 21.5),
+            Vec3::new(0.0, 0.45, 0.89).normalize(),
+            hull_navy,
+        );
+
+        // 1c. Upper Hull Sheerline & Rubbing Strake (Crisp Maritime White)
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sx, 2.10, 19.5),
-            Vec3::new(0.70, 0.90, 2.5),
+            Vec3::new(sx, 2.95, 0.0),
+            Vec3::new(1.22, 0.25, 19.8),
             hull_white,
         );
+        // Heavy Molded Rubber Docking Fender (Port / Starboard Rubbing Strake)
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sx + sign * 1.25, 2.95, 0.0),
+            Vec3::new(0.04, 0.08, 19.6),
+            [0.10, 0.10, 0.12, 1.0],
+        );
     }
-    // 2. Central Tunnel Deck Bridge & Main Passenger Saloon
+
+    // -------------------------------------------------------------------------
+    // 2. Central Tunnel Deck Bridge & Arched Wet-Deck Cross-Structure
+    // -------------------------------------------------------------------------
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 3.40, -1.5),
-        Vec3::new(5.20, 0.40, 16.0),
-        hull_white,
+        Vec3::new(0.0, 3.10, -1.5),
+        Vec3::new(3.60, 0.30, 16.5),
+        deck_gray,
     );
-    // Enclosed Main Passenger Saloon
+    // Lower arched wet-deck understructure preventing wave slamming
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-3.40, 2.80, -16.0),
+        Vec3::new(3.40, 2.80, -16.0),
+        Vec3::new(3.40, 2.80, 15.0),
+        Vec3::new(-3.40, 2.80, 15.0),
+        -Vec3::Y,
+        hull_navy,
+    );
+
+    // -------------------------------------------------------------------------
+    // 3. Main Enclosed Passenger Saloon & Forward Observation Lounge
+    // -------------------------------------------------------------------------
+    // Main Passenger Saloon Deckhouse
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 5.00, -1.0),
-        Vec3::new(4.80, 1.20, 13.5),
+        Vec3::new(0.0, 4.60, -1.0),
+        Vec3::new(4.85, 1.20, 14.5),
         hull_white,
     );
-    // Upper Promenade Observation Sun Deck & Bridge Wheelhouse
+    // Forward Aerodynamic Observation Lounge Bulkhead
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-4.85, 3.40, 13.5),
+        Vec3::new(4.85, 3.40, 13.5),
+        Vec3::new(4.20, 5.80, 12.0),
+        Vec3::new(-4.20, 5.80, 12.0),
+        Vec3::new(0.0, 0.45, 0.89).normalize(),
+        hull_white,
+    );
+
+    // -------------------------------------------------------------------------
+    // 4. Upper Promenade Observation Sun Deck & Stainless Steel Safety Railings
+    // -------------------------------------------------------------------------
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 5.85, -2.5),
+        Vec3::new(4.75, 0.08, 12.5),
+        deck_gray,
+    );
+    // Perimeter Stainless Steel Safety Stanchions & Handrails (Port, Starboard, Stern)
+    for sign in [-1.0f32, 1.0f32] {
+        let rx = sign * 4.72;
+        // Top safety handrail
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(rx, 6.75, -2.5),
+            Vec3::new(0.02, 0.02, 12.5),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        // Mid guardrail wire
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(rx, 6.35, -2.5),
+            Vec3::new(0.012, 0.012, 12.5),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        // Vertical stanchions
+        for pz in [-14.0, -10.0, -6.0, -2.0, 2.0, 6.0, 9.5] {
+            add_cylinder_y(
+                &mut chassis_mesh,
+                Vec3::new(rx, 6.30, pz),
+                0.016,
+                0.45,
+                6,
+                AutomotivePalette::ALLOY_SILVER,
+            );
+        }
+        // USCG-Compliant Orange Life Rings / Lifebuoys on Deck Bulkheads
+        for bz in [-8.0, 4.0] {
+            add_cylinder_x(
+                &mut chassis_mesh,
+                Vec3::new(sign * 4.86, 6.35, bz),
+                0.32,
+                0.03,
+                12,
+                [0.98, 0.45, 0.08, 1.0], // International safety orange
+            );
+        }
+    }
+    // Aft Stern Safety Railing
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 6.75, -15.0),
+        Vec3::new(4.72, 0.02, 0.02),
+        AutomotivePalette::ALLOY_SILVER,
+    );
+
+    // -------------------------------------------------------------------------
+    // 5. Elevated Navigation Bridge Wheelhouse with Forward-Canted Windows
+    // -------------------------------------------------------------------------
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 6.85, 4.5),
-        Vec3::new(3.80, 0.65, 3.5),
+        Vec3::new(3.85, 0.95, 3.5),
+        hull_white,
+    );
+    // Port and Starboard Docking Bridge Wings
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 4.45, 6.85, 4.5),
+            Vec3::new(0.60, 0.20, 1.8),
+            hull_white,
+        );
+    }
+    // Radar Mast Arch Pedestal
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 8.10, 4.5),
+        Vec3::new(0.95, 0.35, 0.65),
         hull_white,
     );
 
@@ -3819,19 +5151,33 @@ pub fn build_golden_gate_ferry(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 3. Panoramic Ocean View Windows
+    // -------------------------------------------------------------------------
+    // 6. Panoramic Saloon Ocean-View Windows & Forward-Canted Bridge Glass
+    // -------------------------------------------------------------------------
     let mut glass_mesh = ChunkMesh::default();
+    // Port and Starboard Panoramic Saloon Window Strips
     for sign in [-1.0f32, 1.0f32] {
         add_quad(
             &mut glass_mesh,
-            Vec3::new(sign * 4.82, 4.20, -13.0),
-            Vec3::new(sign * 4.82, 4.20, 11.5),
-            Vec3::new(sign * 4.82, 5.80, 11.5),
-            Vec3::new(sign * 4.82, 5.80, -13.0),
+            Vec3::new(sign * 4.87, 4.10, -13.0),
+            Vec3::new(sign * 4.87, 4.10, 12.0),
+            Vec3::new(sign * 4.87, 5.40, 12.0),
+            Vec3::new(sign * 4.87, 5.40, -13.0),
             Vec3::new(sign, 0.0, 0.0),
             AutomotivePalette::TINTED_GLASS,
         );
     }
+    // Forward-Canted Reverse-Raked Bridge Anti-Glare Windows (15 deg forward slant)
+    add_quad(
+        &mut glass_mesh,
+        Vec3::new(-3.60, 6.45, 7.80),
+        Vec3::new(3.60, 6.45, 7.80),
+        Vec3::new(3.60, 7.65, 8.15),
+        Vec3::new(-3.60, 7.65, 8.15),
+        Vec3::new(0.0, 0.25, 0.96).normalize(),
+        AutomotivePalette::TINTED_GLASS,
+    );
+
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Ferry_Glass".into(),
         submesh_type: VehicleSubmeshType::GlassGreenhouse,
@@ -3847,7 +5193,9 @@ pub fn build_golden_gate_ferry(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 4. Rotating Marine Radar Scanner Mast
+    // -------------------------------------------------------------------------
+    // 7. Rotating Marine Radar Scanner Mast
+    // -------------------------------------------------------------------------
     let mut radar_mesh = ChunkMesh::default();
     add_cylinder_y(
         &mut radar_mesh,
@@ -3872,7 +5220,9 @@ pub fn build_golden_gate_ferry(lod: VehicleLodLevel) -> LoadedVehicleModel {
         material: VehiclePbrMaterial::default(),
     });
 
-    // 5. High-Velocity Stern Waterjets
+    // -------------------------------------------------------------------------
+    // 8. High-Velocity Stern Propulsion Waterjets & Directional Steering Nozzles
+    // -------------------------------------------------------------------------
     let mut wj_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
         add_cylinder_z(
@@ -3882,6 +5232,13 @@ pub fn build_golden_gate_ferry(lod: VehicleLodLevel) -> LoadedVehicleModel {
             0.45,
             14,
             [0.25, 0.28, 0.32, 1.0],
+        );
+        // Steering Deflector Bucket
+        add_box_at(
+            &mut wj_mesh,
+            Vec3::new(sign * sponson_x, 0.0, -0.45),
+            Vec3::new(0.48, 0.38, 0.12),
+            [0.20, 0.22, 0.25, 1.0],
         );
     }
     builder = builder.add_submesh(VehicleSubmesh {
@@ -3916,65 +5273,203 @@ pub fn build_skycourier_b737(lod: VehicleLodLevel) -> LoadedVehicleModel {
 
     let mut chassis_mesh = ChunkMesh::default();
     let airliner_white = [0.96, 0.96, 0.98, 1.0];
+    let wing_gray = [0.88, 0.90, 0.94, 1.0];
+    let livery_blue = [0.10, 0.35, 0.85, 1.0]; // Airline blue livery
 
-    // 1. Aerodynamic Cylindrical Fuselage with Nose Radome Cone
+    // -------------------------------------------------------------------------
+    // 1. Aerodynamic Cylindrical Fuselage with Nose Radome & Tail Cone
+    // -------------------------------------------------------------------------
+    // Main passenger cabin cylinder (z = -10.0 to 14.0)
     add_cylinder_z(
         &mut chassis_mesh,
-        Vec3::new(0.0, 2.20, 0.0),
+        Vec3::new(0.0, 2.20, 2.0),
         1.85,
-        15.5,
+        12.0,
         18,
         airliner_white,
     );
-    // Nose Radome
-    add_box_at(
+    // Forward Cockpit & Nose Taper Section (z = 14.0 to 16.5)
+    add_cylinder_z(
         &mut chassis_mesh,
-        Vec3::new(0.0, 1.95, 16.8),
-        Vec3::new(1.20, 1.10, 1.5),
+        Vec3::new(0.0, 2.05, 15.25),
+        1.60,
+        1.25,
+        16,
         airliner_white,
     );
-    // 2. Swept Low Wings (25 degree sweep, wingspan 34.3m) with Blended Winglets
+    // Aerodynamic Nose Radome Cone (z = 16.5 to 18.2)
+    add_cylinder_z(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 1.90, 17.35),
+        1.15,
+        0.85,
+        14,
+        airliner_white,
+    );
+    // Tapering Aft Fuselage Tailcone (z = -10.0 to -16.5)
+    add_cylinder_z(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 2.50, -13.25),
+        1.40,
+        3.25,
+        16,
+        airliner_white,
+    );
+    // Auxiliary Power Unit (APU) Exhaust Nozzle at Extreme Tail Tip
+    add_cylinder_z(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 2.85, -16.8),
+        0.25,
+        0.30,
+        10,
+        [0.22, 0.24, 0.28, 1.0], // Titanium APU exhaust
+    );
+
+    // -------------------------------------------------------------------------
+    // 2. Swept Supercritical Low Wings with Blended Vertical Winglets
+    // -------------------------------------------------------------------------
+    let span_half = 17.15;
     for sign in [-1.0f32, 1.0f32] {
-        let span_half = 17.15;
-        add_box_at(
+        // Multi-Segment Swept Wing (Root chord 6.0m tapering to 1.8m at tip)
+        let root_x = sign * 2.20;
+        let mid_x = sign * 9.50;
+        let tip_x = sign * span_half;
+
+        // Inboard Wing Section (Flap track fairings area)
+        add_quad(
             &mut chassis_mesh,
-            Vec3::new(sign * (span_half * 0.5), 1.65, -0.80),
-            Vec3::new(span_half * 0.5, 0.15, 2.20),
-            [0.88, 0.90, 0.94, 1.0],
+            Vec3::new(root_x, 1.70, 3.20),
+            Vec3::new(mid_x, 1.75, 0.80),
+            Vec3::new(mid_x, 1.75, -2.40),
+            Vec3::new(root_x, 1.70, -2.80),
+            Vec3::Y,
+            wing_gray,
         );
-        // Blended vertical winglets
-        add_box_at(
+        add_quad(
             &mut chassis_mesh,
-            Vec3::new(sign * span_half, 2.65, -1.80),
-            Vec3::new(0.08, 0.95, 0.65),
-            [0.10, 0.35, 0.85, 1.0], // Airline blue winglet
+            Vec3::new(root_x, 1.55, -2.80),
+            Vec3::new(mid_x, 1.60, -2.40),
+            Vec3::new(mid_x, 1.60, 0.80),
+            Vec3::new(root_x, 1.55, 3.20),
+            -Vec3::Y,
+            wing_gray,
+        );
+
+        // Outboard Wing Section (Aileron area)
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mid_x, 1.75, 0.80),
+            Vec3::new(tip_x, 2.10, -2.20),
+            Vec3::new(tip_x, 2.10, -3.80),
+            Vec3::new(mid_x, 1.75, -2.40),
+            Vec3::Y,
+            wing_gray,
+        );
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(mid_x, 1.60, -2.40),
+            Vec3::new(tip_x, 1.95, -3.80),
+            Vec3::new(tip_x, 1.95, -2.20),
+            Vec3::new(mid_x, 1.60, 0.80),
+            -Vec3::Y,
+            wing_gray,
+        );
+
+        // 3 Aerodynamic Flap Track Canoe Fairings beneath each wing
+        for fx in [4.2, 7.0, 11.5] {
+            add_cylinder_z(
+                &mut chassis_mesh,
+                Vec3::new(sign * fx, 1.35, -2.20),
+                0.16,
+                1.40,
+                8,
+                wing_gray,
+            );
+        }
+
+        // Blended Vertical Winglet
+        add_quad(
+            &mut chassis_mesh,
+            Vec3::new(tip_x, 2.10, -2.20),
+            Vec3::new(tip_x + sign * 0.15, 3.85, -2.80),
+            Vec3::new(tip_x + sign * 0.15, 3.85, -3.80),
+            Vec3::new(tip_x, 2.10, -3.80),
+            Vec3::new(sign, 0.0, 0.0),
+            livery_blue,
         );
     }
-    // 3. Swept Vertical Stabilizer Tail Fin and Horizontal Tailplanes
+
+    // -------------------------------------------------------------------------
+    // 3. Swept Vertical Stabilizer Tail Fin & Horizontal Tailplanes
+    // -------------------------------------------------------------------------
+    // Vertical Fin with Dorsal Fillet & Airline Livery
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 3.80, -9.5),
+        Vec3::new(0.0, 8.80, -14.5),
+        Vec3::new(0.0, 8.80, -16.5),
+        Vec3::new(0.0, 3.80, -15.5),
+        Vec3::X,
+        livery_blue,
+    );
     add_box_at(
         &mut chassis_mesh,
         Vec3::new(0.0, 6.20, -14.2),
-        Vec3::new(0.20, 2.80, 2.80),
-        [0.10, 0.35, 0.85, 1.0], // Airline livery tail fin
+        Vec3::new(0.18, 2.60, 2.40),
+        livery_blue,
     );
+    // Swept Horizontal Stabilizers (Left and Right)
     for sign in [-1.0f32, 1.0f32] {
-        add_box_at(
+        let h_span = 6.40;
+        add_quad(
             &mut chassis_mesh,
-            Vec3::new(sign * 3.80, 2.80, -15.5),
-            Vec3::new(3.80, 0.12, 1.40),
+            Vec3::new(0.0, 3.60, -14.2),
+            Vec3::new(sign * h_span, 4.05, -16.5),
+            Vec3::new(sign * h_span, 4.05, -18.2),
+            Vec3::new(0.0, 3.60, -16.8),
+            Vec3::Y,
             airliner_white,
         );
     }
+
+    // -------------------------------------------------------------------------
     // 4. Twin Underwing High-Bypass CFM Turbofan Engine Nacelles
+    // -------------------------------------------------------------------------
     for sign in [-1.0f32, 1.0f32] {
         let ex = sign * 4.80;
+        // Pylon strut connecting wing to engine nacelle
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(ex, 1.35, 1.80),
+            Vec3::new(0.10, 0.35, 1.40),
+            wing_gray,
+        );
+        // Engine Cowl Body
         add_cylinder_z(
             &mut chassis_mesh,
-            Vec3::new(ex, 0.65, 2.80),
-            1.05,
-            1.85,
+            Vec3::new(ex, 0.65, 2.20),
+            1.08,
+            1.80,
             16,
             airliner_white,
+        );
+        // Polished Chrome Engine Intake Lip Ring
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(ex, 0.65, 4.05),
+            1.10,
+            0.08,
+            16,
+            AutomotivePalette::POLISHED_CHROME,
+        );
+        // Core Exhaust Cone (Titanium)
+        add_cylinder_z(
+            &mut chassis_mesh,
+            Vec3::new(ex, 0.65, 0.20),
+            0.55,
+            0.45,
+            12,
+            [0.22, 0.24, 0.28, 1.0],
         );
     }
 
@@ -3993,14 +5488,32 @@ pub fn build_skycourier_b737(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
+    // -------------------------------------------------------------------------
     // 5. Cockpit Windshield & Cabin Window Strips
+    // -------------------------------------------------------------------------
     let mut glass_mesh = ChunkMesh::default();
-    add_box_at(
+    // Multi-Pane Pilot Cockpit Windshield
+    add_quad(
         &mut glass_mesh,
-        Vec3::new(0.0, 2.85, 16.0),
-        Vec3::new(1.10, 0.45, 0.85),
+        Vec3::new(-0.85, 2.65, 15.2),
+        Vec3::new(0.85, 2.65, 15.2),
+        Vec3::new(0.70, 3.25, 14.2),
+        Vec3::new(-0.70, 3.25, 14.2),
+        Vec3::new(0.0, 0.45, 0.89).normalize(),
         AutomotivePalette::TINTED_GLASS,
     );
+    // Port and Starboard Cabin Window Beltlines
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut glass_mesh,
+            Vec3::new(sign * 1.86, 2.45, -8.0),
+            Vec3::new(sign * 1.86, 2.45, 13.0),
+            Vec3::new(sign * 1.86, 2.75, 13.0),
+            Vec3::new(sign * 1.86, 2.75, -8.0),
+            Vec3::new(sign, 0.0, 0.0),
+            AutomotivePalette::TINTED_GLASS,
+        );
+    }
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Cockpit_Glass".into(),
         submesh_type: VehicleSubmeshType::GlassGreenhouse,
@@ -4016,21 +5529,52 @@ pub fn build_skycourier_b737(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 6. Tricycle Landing Gear (Nose Gear & Dual Main Gear)
+    // -------------------------------------------------------------------------
+    // 6. Tricycle Landing Gear (Nose Gear & Dual Main Gear Bogies)
+    // -------------------------------------------------------------------------
     let mut gear_mesh = ChunkMesh::default();
-    add_box_at(
+    // Steerable Dual-Tire Nose Gear with Oleo Strut
+    add_cylinder_y(
         &mut gear_mesh,
-        Vec3::new(0.0, 0.35, 14.5),
-        Vec3::new(0.25, 0.35, 0.35),
-        [0.15, 0.15, 0.16, 1.0],
+        Vec3::new(0.0, 0.85, 14.5),
+        0.06,
+        0.65,
+        8,
+        AutomotivePalette::ALLOY_SILVER,
     );
-    for sign in [-1.0f32, 1.0f32] {
-        add_box_at(
+    for sign in [-0.18f32, 0.18f32] {
+        add_cylinder_x(
             &mut gear_mesh,
-            Vec3::new(sign * 2.85, 0.35, -0.65),
-            Vec3::new(0.35, 0.35, 0.45),
+            Vec3::new(sign, 0.35, 14.5),
+            0.35,
+            0.08,
+            12,
             [0.15, 0.15, 0.16, 1.0],
         );
+    }
+    // Main 4-Wheel Landing Gear Bogies beneath Wing Roots
+    for sign in [-1.0f32, 1.0f32] {
+        let gx = sign * 2.85;
+        add_cylinder_y(
+            &mut gear_mesh,
+            Vec3::new(gx, 0.95, -0.65),
+            0.09,
+            0.75,
+            8,
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        for gz in [-1.15, -0.15] {
+            for wx in [-0.25f32, 0.25f32] {
+                add_cylinder_x(
+                    &mut gear_mesh,
+                    Vec3::new(gx + wx, 0.45, gz),
+                    0.45,
+                    0.10,
+                    14,
+                    [0.15, 0.15, 0.16, 1.0],
+                );
+            }
+        }
     }
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Landing_Gear".into(),
@@ -4047,17 +5591,28 @@ pub fn build_skycourier_b737(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 5. Spinning High-Bypass Turbofan Fan Blades
+    // -------------------------------------------------------------------------
+    // 7. Spinning High-Bypass Turbofan Fan Blades
+    // -------------------------------------------------------------------------
     let mut fan_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
         let ex = sign * 4.80;
         add_cylinder_z(
             &mut fan_mesh,
             Vec3::new(ex, 0.0, 0.0),
-            0.92,
+            0.96,
             0.08,
-            14,
-            [0.20, 0.22, 0.25, 1.0], // Titanium fan blades
+            16,
+            [0.20, 0.22, 0.25, 1.0], // Titanium fan rotor
+        );
+        // Polished Spinner Cone
+        add_cylinder_z(
+            &mut fan_mesh,
+            Vec3::new(ex, 0.0, 0.12),
+            0.22,
+            0.12,
+            12,
+            AutomotivePalette::POLISHED_CHROME,
         );
     }
     builder = builder.add_submesh(VehicleSubmesh {
@@ -4092,65 +5647,139 @@ pub fn build_skyhawk_c172(lod: VehicleLodLevel) -> LoadedVehicleModel {
 
     let mut chassis_mesh = ChunkMesh::default();
     let plane_white = [0.95, 0.96, 0.98, 1.0];
+    let accent_red = [0.85, 0.15, 0.15, 1.0];
 
-    // 1. Fuselage and Cabin
+    // -------------------------------------------------------------------------
+    // 1. Sleek Aluminum Fuselage with Nose Cowl & Tapered Tailcone
+    // -------------------------------------------------------------------------
+    // Cabin Cabin Mid-Section (z = -0.8 to 1.6)
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 1.10, 0.0),
-        Vec3::new(0.60, 0.60, 2.20),
+        Vec3::new(0.0, 1.08, 0.40),
+        Vec3::new(0.55, 0.48, 1.20),
         plane_white,
     );
-    // Forward Engine Cowl with Air Intakes
+    // Forward Engine Cowl with Dual Cooling Nostrils (z = 1.6 to 2.8)
     add_box_at(
         &mut chassis_mesh,
-        Vec3::new(0.0, 0.95, 2.65),
-        Vec3::new(0.48, 0.42, 0.55),
+        Vec3::new(0.0, 0.95, 2.20),
+        Vec3::new(0.48, 0.40, 0.60),
         plane_white,
     );
-    // 2. High Wings with Lift Struts (11m wingspan)
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 1.85, 0.20),
-        Vec3::new(5.50, 0.08, 0.85),
-        plane_white,
-    );
-    // Dual Wing Lift Struts
+    // Dual Front Engine Air Inlets
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut chassis_mesh,
-            Vec3::new(sign * 2.20, 1.15, 0.20),
-            Vec3::new(0.04, 0.45, 0.04),
-            AutomotivePalette::ALLOY_SILVER,
+            Vec3::new(sign * 0.24, 0.92, 2.82),
+            Vec3::new(0.12, 0.08, 0.02),
+            [0.10, 0.10, 0.12, 1.0], // Dark intake honeycomb
         );
     }
-    // 3. Empennage (Vertical Fin, Rudder, Horizontal Stabilizer)
-    add_box_at(
+    // Tapered Aft Fuselage Tailcone (z = -0.8 to -3.8)
+    add_quad(
         &mut chassis_mesh,
-        Vec3::new(0.0, 2.15, -3.85),
-        Vec3::new(0.08, 0.95, 0.95),
-        [0.85, 0.15, 0.15, 1.0], // Red tail accent
-    );
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 1.20, -4.10),
-        Vec3::new(1.85, 0.06, 0.55),
+        Vec3::new(-0.55, 1.56, -0.8),
+        Vec3::new(0.55, 1.56, -0.8),
+        Vec3::new(0.12, 1.15, -3.8),
+        Vec3::new(-0.12, 1.15, -3.8),
+        Vec3::Y,
         plane_white,
     );
-    // 4. Fixed Tricycle Landing Gear with Wheel Pants (Fairings)
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(-0.55, 0.60, -0.8),
+        Vec3::new(-0.12, 0.95, -3.8),
+        Vec3::new(0.12, 0.95, -3.8),
+        Vec3::new(0.55, 0.60, -0.8),
+        -Vec3::Y,
+        plane_white,
+    );
+
+    // -------------------------------------------------------------------------
+    // 2. High Wings with Cambered Airfoil & Dual Tubular V-Lift Struts
+    // -------------------------------------------------------------------------
+    // Main High Wing (11m wingspan, chord 1.5m at y = 1.82)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 1.82, 0.35),
+        Vec3::new(5.50, 0.08, 0.75),
+        plane_white,
+    );
+    // Dual Wing Lift Struts connecting fuselage lower longeron to wing spar
+    for sign in [-1.0f32, 1.0f32] {
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 1.55, 1.25, 0.35),
+            Vec3::new(0.025, 0.45, 0.025),
+            AutomotivePalette::ALLOY_SILVER,
+        );
+        // Wingtip Navigation Lights (Port Red, Starboard Green)
+        let nav_color = if sign < 0.0 {
+            [0.95, 0.10, 0.10, 1.0] // Red port light
+        } else {
+            [0.10, 0.95, 0.10, 1.0] // Green starboard light
+        };
+        add_box_at(
+            &mut chassis_mesh,
+            Vec3::new(sign * 5.48, 1.82, 0.35),
+            Vec3::new(0.04, 0.04, 0.12),
+            nav_color,
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Empennage (Vertical Fin with Red Accent & Horizontal Stabilizer)
+    // -------------------------------------------------------------------------
+    // Swept Vertical Tail Fin with Red Leading Edge Accent
+    add_quad(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 1.15, -2.8),
+        Vec3::new(0.0, 2.35, -3.8),
+        Vec3::new(0.0, 2.35, -4.2),
+        Vec3::new(0.0, 1.15, -4.0),
+        Vec3::X,
+        accent_red,
+    );
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 1.75, -3.5),
+        Vec3::new(0.04, 0.60, 0.60),
+        accent_red,
+    );
+    // Flashing Red Anti-Collision Beacon atop Vertical Fin
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 2.38, -3.8),
+        Vec3::new(0.03, 0.03, 0.03),
+        [1.0, 0.10, 0.10, 1.0],
+    );
+    // Horizontal Stabilizer with Elevators
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 1.18, -3.95),
+        Vec3::new(1.85, 0.04, 0.45),
+        plane_white,
+    );
+
+    // -------------------------------------------------------------------------
+    // 4. Fixed Tricycle Landing Gear with Aerodynamic Speed Fairings (Wheel Pants)
+    // -------------------------------------------------------------------------
+    // Steerable Nose Gear with Speed Fairing (Wheel Pant)
+    add_box_at(
+        &mut chassis_mesh,
+        Vec3::new(0.0, 0.28, 1.65),
+        Vec3::new(0.09, 0.22, 0.30),
+        plane_white,
+    );
+    // Main Landing Gear with Sculpted Teardrop Speed Fairings
     for sign in [-1.0f32, 1.0f32] {
         add_box_at(
             &mut chassis_mesh,
             Vec3::new(sign * 1.11, 0.28, 0.0),
-            Vec3::new(0.12, 0.25, 0.35),
+            Vec3::new(0.11, 0.24, 0.35),
             plane_white,
         );
     }
-    add_box_at(
-        &mut chassis_mesh,
-        Vec3::new(0.0, 0.28, 1.65),
-        Vec3::new(0.10, 0.25, 0.32),
-        plane_white,
-    );
 
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Airframe".into(),
@@ -4167,14 +5796,32 @@ pub fn build_skyhawk_c172(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // Cabin Windshield & Side Windows
+    // -------------------------------------------------------------------------
+    // 5. Cabin Greenhouse Glass (Panoramic Windshield & Windows)
+    // -------------------------------------------------------------------------
     let mut glass_mesh = ChunkMesh::default();
-    add_box_at(
+    // One-Piece Sloped Wraparound Windshield
+    add_quad(
         &mut glass_mesh,
-        Vec3::new(0.0, 1.45, 0.45),
-        Vec3::new(0.55, 0.35, 0.75),
+        Vec3::new(-0.52, 1.35, 1.45),
+        Vec3::new(0.52, 1.35, 1.45),
+        Vec3::new(0.50, 1.78, 0.85),
+        Vec3::new(-0.50, 1.78, 0.85),
+        Vec3::new(0.0, 0.60, 0.80).normalize(),
         AutomotivePalette::TINTED_GLASS,
     );
+    // Left & Right Door Side Windows
+    for sign in [-1.0f32, 1.0f32] {
+        add_quad(
+            &mut glass_mesh,
+            Vec3::new(sign * 0.56, 1.35, -0.60),
+            Vec3::new(sign * 0.56, 1.35, 0.80),
+            Vec3::new(sign * 0.52, 1.78, 0.80),
+            Vec3::new(sign * 0.52, 1.78, -0.60),
+            Vec3::new(sign, 0.0, 0.0),
+            AutomotivePalette::TINTED_GLASS,
+        );
+    }
     builder = builder.add_submesh(VehicleSubmesh {
         name: "Cabin_Glass".into(),
         submesh_type: VehicleSubmeshType::GlassGreenhouse,
@@ -4190,7 +5837,9 @@ pub fn build_skyhawk_c172(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // Tricycle Landing Gear Wheels
+    // -------------------------------------------------------------------------
+    // 6. Tricycle Landing Gear Wheels
+    // -------------------------------------------------------------------------
     let mut gear_mesh = ChunkMesh::default();
     for sign in [-1.0f32, 1.0f32] {
         add_cylinder_z(
@@ -4225,7 +5874,9 @@ pub fn build_skyhawk_c172(lod: VehicleLodLevel) -> LoadedVehicleModel {
         },
     });
 
-    // 5. Spinning Dual-Blade Propeller
+    // -------------------------------------------------------------------------
+    // 7. Spinning Dual-Blade Propeller & Polished Chrome Spinner Cone
+    // -------------------------------------------------------------------------
     let mut prop_mesh = ChunkMesh::default();
     add_cylinder_z(
         &mut prop_mesh,

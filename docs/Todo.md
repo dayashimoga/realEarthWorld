@@ -1654,6 +1654,34 @@
     - [x] Verified Windows release executable build (`cargo build --release --bin realearth-viewer`).
     - [x] Authored `docs/CityWarpingAndMetropolitanCoverageReport.md`.
 
+- [x] Stage H4 — Realistic Vehicle Art and Authentic Multimodal Transport:
+  - [x] Phase 1: Asset Pipeline Audit & glTF Ingestion:
+    - [x] Audited procedural vehicle modeling and set non-placeholder standard threshold ($\ge 800$ vertices, $\ge 350$ triangles at LOD0).
+    - [x] Maintained authoritative `assets/vehicles/LICENSE_ATTRIBUTION.md` with Apache-2.0 / MIT dual licensing and PBR material definitions.
+    - [x] Exported and verified all 16 GLB binary assets in `assets/vehicles/` with valid glTF 2.0 headers and roundtrip parsing via `GltfParser::parse_glb`.
+  - [x] Phase 2: Transport Detail & Anatomical Overhauls:
+    - [x] Executive Sedan: Multi-slice hood crown, front chrome grille, flared fenders clearing 0.33m tires with dark liners, aerodynamic side mirrors with reflective chrome glass, full-width taillight ribbon, integrated dual exhaust tips, and espresso leather front bucket and rear bench seating with dual digital screens.
+    - [x] Overland Explorer SUV: Heavy-duty bumper with aluminum skid plate and dual red tow hooks, 7-slot bold grille, clamshell hood with cowl vents, high-clearance wheel arches with composite overfenders, rock slider step bars, dual-tone mirrors, tubular roof rack, and Class IV tow hitch receiver.
+    - [x] Metro Yellow Cab: Municipal yellow body, black/white checkerboard decals, illuminated rooftop taxi sign, fare card side panels, and preserved chrome grille and mirrors.
+    - [x] Transcontinental Semi: Class 8 cab with west-coast chrome door mirrors (flat + convex spotter), dual chrome exhaust stacks, and fifth-wheel kingpin coupling to 53ft corrugated trailer.
+    - [x] HyperSport RR-1000 Motorcycle: Fully modeled human rider in aerodynamic racing tuck with kangaroo leather racing suit, aerodynamic speed hump on upper back, full-face helmet with rear spoiler and tinted iridium visor, bent arms gripping clip-on handlebars, knee sliders, and racing boots with magnesium toe sliders on footpegs.
+    - [x] Golden Gate Ferry: Twin wave-piercing chined catamaran hulls, anti-fouling copper-red bottom V-keels, arched wet-deck bridging cross-structure, observation passenger saloon with panoramic window ribbons, promenade deck with safety stanchions/railings, USCG lifebuoys, bridge wheelhouse with reverse-raked anti-glare windows and bridge wings, twin stern waterjets with directional steering nozzles and reversing buckets, and rotating marine radar scanner mast.
+    - [x] SkyCourier B737 Airliner: Aerodynamic cylindrical fuselage, nose radome, cockpit greenhouse, cabin window strips, APU exhaust nozzle, swept supercritical low wings with blended vertical winglets, flap track canoe fairings, swept vertical tail fin and horizontal stabs, twin CFM-56 turbofans on pylon mounts with chrome intake lips and spinning fan blades, and tricycle landing gear with 4-wheel bogies.
+    - [x] Skyhawk C172 General Aviation: Sleek tapered fuselage, cowl cooling nostrils, high wings with cambered airfoil and dual tubular V-lift struts, wingtip nav lights, beacon, horizontal stabilizer with elevator, tricycle landing gear with aerodynamic wheel pants, panoramic windscreen, and 2-blade spinning propeller with polished chrome spinner cone.
+  - [x] Phase 3: Authentic Transport Spawning & Constrained Kinematics:
+    - [x] Implemented dynamic rail route discovery via `RailNetworkGraph::build_available_routes(&self)` in `engine/navigation/src/rail_graph.rs`.
+    - [x] Constrained railway motion to 3D track centerlines; prohibited free-roaming locomotive behavior with failsafe emergency braking.
+    - [x] Verified honest rail rejection with `"RAIL DATA REQUIRED / NO VALID SPAWN"`.
+    - [x] Enforced sea-level navigable water depth validation ($\le 1.5\text{m}$ MSL); cleanly rejected landlocked vessel spawning with `"NAVIGABLE WATER REQUIRED / NO VALID SPAWN"`.
+    - [x] Enforced runway heading alignment for aircraft, with safe $+350\text{m}$ AGL open-sky flight corridor fallback.
+    - [x] Enforced road transport collision clearance against `BuildingCollisionWorld`.
+  - [x] Phase 4: Quality Certification:
+    - [x] Connected live simulation parameters to GPU rendering in `apps/world-viewer/src/interactive.rs` (bogie track yaw, wheel roll/steer, radar rotation, turbofan/propeller rotation, bus bi-fold doors, motorcycle cornering lean).
+    - [x] Authored `tests/tests/stage_h4_vehicle_art_and_multimodal_transport_quality_gates.rs` with 5 quality gates (100% pass).
+    - [x] Verified zero regression across all test suites (H0, H1, H2, H3, Stage C, Stage 0.8: 37/37 tests passing).
+    - [x] Authored comprehensive report `docs/RealisticVehicleArtAndMultimodalTransportReport.md`.
+
+
 
 
 

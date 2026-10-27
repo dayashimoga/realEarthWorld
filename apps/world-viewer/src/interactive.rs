@@ -1944,7 +1944,7 @@ impl InteractiveViewerApp {
 
     /// Prepares vehicle models at the authentic ground surface without activating drive mode or moving camera.
     pub fn prepare_initial_vehicle(&mut self, idx: usize) {
-        let (landmark, package_anchor) = if let Some(ref r) = self.region_resources {
+        let (landmark, _package_anchor) = if let Some(ref r) = self.region_resources {
             (r.landmark, r.package_anchor)
         } else {
             (
@@ -1976,23 +1976,46 @@ impl InteractiveViewerApp {
                 )
             }
         } else if idx == 7 {
-            let conv = EnuConverter::new(package_anchor);
-            let lm_enu = conv.wgs84_to_enu(landmark.coord);
-            let e = if let Some(ref gq) = self.ground_query {
-                gq.elevation(lm_enu.east as f32, lm_enu.north as f32)
+            if let Ok(candidate) = self.find_rail_spawn_candidate() {
+                (
+                    candidate.position.x,
+                    candidate.position.z,
+                    candidate.yaw,
+                    candidate.surface_elevation,
+                )
             } else {
-                ground_y
-            };
-            (
-                lm_enu.east as f32,
-                lm_enu.north as f32,
-                landmark_vehicle_yaw,
-                e,
-            )
+                self.find_safe_fallback_spawn_position(
+                    landmark.coord,
+                    landmark_vehicle_yaw,
+                    ground_y,
+                )
+            }
         } else if idx == 8 {
-            (250.0, -100.0, landmark_vehicle_yaw, 0.5)
+            if let Ok(candidate) = self.find_marine_spawn_candidate() {
+                (
+                    candidate.position.x,
+                    candidate.position.z,
+                    candidate.yaw,
+                    candidate.water_elevation + 0.5,
+                )
+            } else {
+                self.find_safe_fallback_spawn_position(
+                    landmark.coord,
+                    landmark_vehicle_yaw,
+                    ground_y,
+                )
+            }
         } else if idx == 9 {
-            (0.0, -200.0, landmark_vehicle_yaw, ground_y + 350.0)
+            if let Ok(candidate) = self.find_aviation_spawn_candidate() {
+                (
+                    candidate.position.x,
+                    candidate.position.z,
+                    candidate.yaw,
+                    candidate.altitude,
+                )
+            } else {
+                (0.0, -200.0, landmark_vehicle_yaw, ground_y + 350.0)
+            }
         } else {
             (0.0, 0.0, landmark_vehicle_yaw, ground_y)
         };
@@ -2082,13 +2105,22 @@ impl InteractiveViewerApp {
                 }
             }
             8 => {
-                self.active_transport_mode = ActiveTransportMode::Marine;
-                self.vehicle_visual_type = VehicleVisualType::MarineVessel;
-                self.marine_vessel = MarineVessel::new_ferry(
-                    "Harbor Passenger Ferry",
-                    glam::Vec3::new(spawn_x, elev, spawn_z),
-                    spawn_yaw,
-                );
+                if let Ok(c) = self.find_marine_spawn_candidate() {
+                    self.active_transport_mode = ActiveTransportMode::Marine;
+                    self.vehicle_visual_type = VehicleVisualType::MarineVessel;
+                    self.marine_vessel = MarineVessel::new_ferry(
+                        "Harbor Passenger Ferry",
+                        glam::Vec3::new(c.position.x, c.water_elevation + 0.5, c.position.z),
+                        c.yaw,
+                    );
+                } else {
+                    self.status_notification = Some((
+                        "⚠️ WATERWAY UNAVAILABLE: Selected region contains no surveyed navigable water bodies or port facilities.".to_string(),
+                        Instant::now(),
+                    ));
+                    self.active_transport_mode = ActiveTransportMode::Car;
+                    self.vehicle_visual_type = VehicleVisualType::SportsCoupe;
+                }
             }
             9 => {
                 self.active_transport_mode = ActiveTransportMode::Aviation;
@@ -3159,16 +3191,17 @@ impl InteractiveViewerApp {
         };
 
         if let Some(ref rg) = rail_graph {
-            let route = RailNetworkGraph::build_caltrain_mainline_route();
-            self.train_consist = TrainConsist::new_caltrain_diesel();
-            self.train_consist
-                .bind_route(rg, route.segment_ids.clone(), staged.package_anchor);
-            if let Some(ref pose) = self.train_consist.track_pose {
-                self.train_position = pose.position;
-                self.train_yaw = pose.yaw;
+            let available_routes = rg.build_available_routes();
+            if let Some(route) = available_routes.first() {
+                self.train_consist = TrainConsist::new_caltrain_diesel();
+                self.train_consist
+                    .bind_route(rg, route.segment_ids.clone(), staged.package_anchor);
+                if let Some(ref pose) = self.train_consist.track_pose {
+                    self.train_position = pose.position;
+                    self.train_yaw = pose.yaw;
+                }
             }
-            self.rail_routes_cache =
-                vec![route, RailNetworkGraph::build_caltrain_yard_siding_route()];
+            self.rail_routes_cache = available_routes;
             self.rail_route_selected_idx = 0;
         } else {
             self.rail_routes_cache.clear();
@@ -5987,6 +6020,15 @@ impl ApplicationHandler for InteractiveViewerApp {
                             fleet_mesh.append(&truck_mesh);
                         }
                         ActiveTransportMode::Train => {
+                            let bogie_angle = self
+                                .train_consist
+                                .track_pose
+                                .as_ref()
+                                .map(|p| (p.curvature_rad_per_m * 5.60) as f32)
+                                .unwrap_or(0.0);
+                            let bogie_angles = [bogie_angle, -bogie_angle];
+                            let train_wheel_spin =
+                                (self.train_consist.total_route_distance / 0.55) as f32;
                             let loco_mesh = generate_vehicle_mesh(&VehicleMeshParams {
                                 position: self.train_position,
                                 orientation: glam::Quat::from_rotation_y(self.train_yaw),
@@ -5994,6 +6036,8 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 vehicle_type: VehicleVisualType::TrainLocomotive,
                                 wheel_steer_angle: 0.0,
                                 trailer_angle: 0.0,
+                                bogie_angles,
+                                wheel_spin_angle: train_wheel_spin,
                                 headlights_on: true,
                                 brake_lights_on: self.train_consist.brake_cylinder_pressure_bar
                                     > 0.5,
@@ -6012,6 +6056,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         vehicle_type: VehicleVisualType::TrainWagon,
                                         wheel_steer_angle: 0.0,
                                         trailer_angle: 0.0,
+                                        wheel_spin_angle: train_wheel_spin,
                                         headlights_on: false,
                                         brake_lights_on: self
                                             .train_consist
@@ -6036,6 +6081,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                         vehicle_type: VehicleVisualType::TrainWagon,
                                         wheel_steer_angle: 0.0,
                                         trailer_angle: 0.0,
+                                        wheel_spin_angle: train_wheel_spin,
                                         headlights_on: false,
                                         brake_lights_on: self
                                             .train_consist
@@ -6056,6 +6102,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 vehicle_type: VehicleVisualType::MarineVessel,
                                 wheel_steer_angle: self.marine_vessel.current_rudder_angle,
                                 trailer_angle: 0.0,
+                                propeller_angle: self.marine_elapsed_time * 4.0, // Continuously scanning radar mast
                                 headlights_on: true,
                                 brake_lights_on: false,
                                 reverse_lights_on: false,
@@ -6071,6 +6118,7 @@ impl ApplicationHandler for InteractiveViewerApp {
                                 vehicle_type: VehicleVisualType::CommercialAirliner,
                                 wheel_steer_angle: 0.0,
                                 trailer_angle: 0.0,
+                                propeller_angle: (self.total_rendered_frames as f32) * 0.65, // High-speed turbofan blades
                                 headlights_on: true,
                                 brake_lights_on: false,
                                 reverse_lights_on: false,

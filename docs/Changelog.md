@@ -2359,5 +2359,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Gate 5: Continuous Multi-City Exploration (repeated cycling across 7 transitions without orphan chunks or memory leaks).
   - All 5 release gates **PASSED (100% SUCCESS)**. Full production release binary [`realearth-viewer`](file:///j:/rustRealEarth/target/release/realearth-viewer.exe) builds cleanly.
 
+## [Stage H4] - 2026-10-27 - Realistic Vehicle Art and Authentic Multimodal Transport
+- **Phase 1: Asset Pipeline & glTF Ingestion Audit**:
+  - Audited vehicle mesh generator and binary GLB exporter against placeholder geometry standards; set minimum $\ge 800$ vertices and $\ge 350$ triangles threshold for LOD0.
+  - Published updated [`assets/vehicles/LICENSE_ATTRIBUTION.md`](file:///j:/rustRealEarth/assets/vehicles/LICENSE_ATTRIBUTION.md) with exact specifications, PBR material sets, and Apache-2.0 / MIT dual licensing.
+  - Exported and verified all 16 GLB binary assets in `assets/vehicles/` with valid 12-byte glTF headers and roundtrip parsing via `GltfParser::parse_glb`.
+- **Phase 2: Transport Fleet Modeling & Anatomical Details**:
+  - Overhauled `build_executive_sedan`: multi-slice hood crown, front horizontal chrome grille, flared fenders clearing 0.33m tires with dark liners, aerodynamic side mirrors with reflective chrome glass, full-width taillight ribbon, integrated dual exhaust tips, and espresso leather front bucket and rear bench seating with dual digital screens.
+  - Overhauled `build_overland_explorer_suv`: heavy-duty front bumper with aluminum skid plate and dual red tow hooks, bold 7-slot front grille, clamshell hood with cowl vents, high-clearance wheel arches with composite overfenders (clearing 0.38m wheels), rock slider step bars, dual-tone mirrors, tubular aluminum roof rack with crossbars, and Class IV tow hitch receiver.
+  - Overhauled `build_metro_yellow_cab`: municipal yellow body panels, black/white checkerboard waistline decals, illuminated rooftop taxi sign, fare card side panels, preserved front horizontal chrome grille, chrome door mirrors, and executive interior.
+  - Updated `build_transcontinental_semi`: aerodynamic west-coast chrome door mirrors with upper flat and lower convex spotter mirrors on Class 8 cab, dual chrome exhaust stacks, and fifth-wheel kingpin coupling to 53ft corrugated trailer.
+  - Overhauled `build_hypersport_rr1000`: fully modeled human rider in aerodynamic racing tuck with kangaroo leather racing suit, aerodynamic speed hump on upper back, full-face helmet with rear spoiler and tinted iridium visor, bent arms gripping clip-on handlebars, knee sliders, and racing boots with magnesium toe sliders on footpegs.
+  - Overhauled `build_golden_gate_ferry`: replaced coarse blocks with twin wave-piercing chined catamaran hulls, anti-fouling copper-red bottom V-keels, arched wet-deck bridging cross-structure, observation passenger saloon with panoramic window ribbons, promenade deck with safety stanchions/railings, USCG lifebuoys, bridge wheelhouse with reverse-raked anti-glare windows and bridge wings, twin stern waterjets with directional steering nozzles and reversing buckets, and rotating marine radar scanner mast.
+  - Overhauled `build_skycourier_b737`: aerodynamic cylindrical fuselage, nose radome, cockpit greenhouse, cabin window strips, APU exhaust nozzle, swept supercritical low wings with blended vertical winglets, flap track canoe fairings, swept vertical tail fin and horizontal stabs, twin CFM-56 turbofans on pylon mounts with chrome intake lips and spinning fan blades, and tricycle landing gear with 4-wheel bogies.
+  - Overhauled `build_skyhawk_c172`: sleek tapered fuselage, cowl cooling nostrils, high wings with cambered airfoil and dual tubular V-lift struts, wingtip nav lights (red port, green stbd), beacon, horizontal stabilizer with elevator, tricycle landing gear with aerodynamic wheel pants, panoramic windscreen, and 2-blade spinning propeller with polished chrome spinner cone.
+- **Phase 3: Authentic Transport Spawning & Infrastructure Constraints**:
+  - Implemented dynamic rail route discovery via `RailNetworkGraph::build_available_routes(&self)` in [`engine/navigation/src/rail_graph.rs`](file:///j:/rustRealEarth/engine/navigation/src/rail_graph.rs), discovering surveyed routes across any metropolitan region.
+  - Enforced track-constrained railway motion along 3D centerlines and elevations; prohibited free-roaming locomotive behavior with automatic emergency brake tripping.
+  - Verified honest rail rejection with `"RAIL DATA REQUIRED / NO VALID SPAWN"` on un-surveyed regions.
+  - Enforced sea-level navigable water depth validation ($\le 1.5\text{m}$ MSL); cleanly rejected landlocked vessel spawning with `"NAVIGABLE WATER REQUIRED / NO VALID SPAWN"`.
+  - Enforced runway heading alignment for aircraft, with safe $+350\text{m}$ AGL open-sky flight corridor fallback.
+  - Enforced road transport collision clearance against `BuildingCollisionWorld`.
+- **Phase 4: Dynamic Animation Pipeline & Quality Gates Certification**:
+  - Connected live simulation parameters to GPU rendering in [`apps/world-viewer/src/interactive.rs`](file:///j:/rustRealEarth/apps/world-viewer/src/interactive.rs): bogie track yaw angles, wheel roll and steering rack deflection, marine radar mast rotation (24 RPM), turbofan fan blades and propeller rotation, bus bi-fold doors, and motorcycle cornering lean banking.
+  - Authored [`tests/tests/stage_h4_vehicle_art_and_multimodal_transport_quality_gates.rs`](file:///j:/rustRealEarth/tests/tests/stage_h4_vehicle_art_and_multimodal_transport_quality_gates.rs) certifying Gates 1-5 (**100% PASS**).
+  - Verified zero regression across all test suites (H0, H1, H2, H3, Stage C, Stage 0.8: 37/37 tests passing).
+
+
 
 
